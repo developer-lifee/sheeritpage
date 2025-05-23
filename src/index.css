@@ -1,0 +1,16 @@
+/* Minimal Swiper CSS imports - only what's needed */
+@import 'swiper/css';
+@import 'swiper/css/navigation';
+@import 'swiper/css/pagination';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Swiper styles with Tailwind */
+.swiper-pagination-bullet {
+  @apply bg-gray-300 dark:bg-gray-500;
+}
+.swiper-pagination-bullet-active {
+  @apply bg-brand-primary;
+}
