@@ -57,6 +57,17 @@ export const platforms = [
           "Entrega en tiempo real",
         ],
       },
+        {
+        id: 14,
+        name: 'Apple One',
+        price: 10000,
+        image: 'https://static.iphoneitalia.com/wp-content/uploads/2020/09/apple-one.png',
+        characteristics: [
+          "Espacio agradable y acojedor",
+          "café y cerveza gratis!",
+          "internet de alta velocidad",
+        ],
+      },
       {
         id: 6,
         name: 'Coworking Alquiler',
@@ -71,7 +82,7 @@ export const platforms = [
       {
         id: 7,
         name: 'Outsorcing',
-        price: desde 12.000/h,
+        price: 'desde 12.000/h',
         image: '/plataform/web.png',
         characteristics: [
           "Cuistomer Care, Desarrollo de Software y mensajeria",
