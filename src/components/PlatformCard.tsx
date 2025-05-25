@@ -34,7 +34,7 @@ export function PlatformCard({ name, price, image, characteristics = [] }: Platf
   const featuresToShow = characteristics.length > 0 ? characteristics : DEFAULT_CHARACTERISTICS;
 
   return (
-    <div className="relative overflow-hidden rounded-xl shadow-lg w-full max-w-sm bg-white dark:bg-gray-800">
+    <div className="relative overflow-hidden rounded-xl shadow-lg w-full max-w-sm bg-white dark:bg-gray-800 flex flex-col">
       {/* Sección superior con la imagen de fondo */}
       <div 
         className="relative h-32 bg-cover bg-center bg-gray-200 dark:bg-gray-700" 
@@ -54,7 +54,7 @@ export function PlatformCard({ name, price, image, characteristics = [] }: Platf
       </div>
 
       {/* Contenido principal */}
-      <div className="p-4 pt-10">
+      <div className="p-4 pt-10 flex flex-col flex-grow">
         {/* Precio */}
         <div className="text-center mb-4">
           <p className="text-xl font-bold text-brand-primary dark:text-brand-light">
@@ -64,8 +64,8 @@ export function PlatformCard({ name, price, image, characteristics = [] }: Platf
 
         <h3 className="text-xl font-bold mb-4 text-center dark:text-white">{name}</h3>
 
-        {/* Lista de características con checks - AHORA DINÁMICA */}
-        <ul className="mb-4 space-y-1 text-gray-600 dark:text-gray-300">
+        {/* Lista de características con checks - ahora flexible */}
+        <ul className="mb-4 space-y-1 text-gray-600 dark:text-gray-300 flex-grow">
           {featuresToShow.map((feature, index) => (
             <li key={index} className="flex items-center">
               <svg
@@ -84,7 +84,7 @@ export function PlatformCard({ name, price, image, characteristics = [] }: Platf
           ))}
         </ul>
 
-        {/* Botón que ocupa todo el ancho de la tarjeta */}
+        {/* Botón que ocupa todo el ancho y siempre se sitúa abajo */}
         <button
           onClick={handleWhatsAppClick}
           className="w-full py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark transition-colors"
