@@ -36,8 +36,15 @@ export const platforms = [
         id: 4,
         name: 'Prime Video',
         price: 10000,
-        image: 'https://th.bing.com/th/id/OIF.g4tRsr3fgICAOxKsUnRp0Q?rs=1&pid=ImgDetMain',
+        image: 'https://th.bing.com/th/id/OIP.hOyeETmfMNoeV9ThyQMNBQHaHa?cb=iwc2&rs=1&pid=ImgDetMain',
         characteristics: [],
+      },
+        {
+        id: 13,
+        name: 'vix premium',
+        price: 7000,
+        image: 'https://th.bing.com/th/id/OIP.fpsYx-rEZwqdPUUznf2I8QHaD4?cb=iwc2&rs=1&pid=ImgDetMain',
+        characteristics: [     ],
       },
       {
         id: 5,
