@@ -53,10 +53,10 @@ export function ComboMenu() {
 
   return (
     <>
-      {/* Botón Crear Combo: tamaño fijo y responsive theme */}
+      {/* Botón Crear Combo (tamaño fijo, igual que antes) */}
       <button
         onClick={() => setIsOpen(true)}
-        className="inline-flex items-center px-6 py-3 bg-brand-primary dark:bg-brand-dark text-white rounded-lg border border-transparent text-base font-medium hover:bg-brand-dark dark:hover:bg-brand-primary transition-colors"
+        className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-dark transition-colors border border-transparent text-base font-medium"
       >
         Crear Combo
       </button>
@@ -66,7 +66,7 @@ export function ComboMenu() {
           {/* Fondo semi-transparente */}
           <div className="absolute inset-0 bg-black/50" />
 
-          {/* Contenedor del modal - con estructura para header y footer fijos */}
+          {/* Contenedor del modal */}
           <div className="relative bg-white dark:bg-gray-800 rounded-lg w-full max-w-md mx-4 max-h-[95vh] flex flex-col">
             {/* Header fijo */}
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10 flex justify-between items-center">
@@ -87,7 +87,7 @@ export function ComboMenu() {
               </p>
 
               {/* Grid de plataformas */}
-              <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-2 gap-4 mb-4">
                 {platforms.map(platform => (
                   <div 
                     key={platform.id} 
@@ -115,7 +115,8 @@ export function ComboMenu() {
                       <span className="text-sm text-brand-primary font-bold">
                         {formatPrice(platform.price)}/mes
                       </span>
-                      
+
+                      {/* Oculta checkbox real */}
                       <input
                         type="checkbox"
                         id={`platform-${platform.id}`}
