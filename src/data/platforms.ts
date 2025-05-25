@@ -63,9 +63,20 @@ export const platforms = [
         price: 10000,
         image: 'https://static.iphoneitalia.com/wp-content/uploads/2020/09/apple-one.png',
         characteristics: [
-          "Espacio agradable y acojedor",
-          "café y cerveza gratis!",
-          "internet de alta velocidad",
+          "345 gb en icloud",
+          "con tu mismo apple id",
+          "apple tv, apple music, apple fitness y apple arcade.",
+        ],
+      },
+        {
+        id: 15,
+        name: 'MICROSOFT 365',
+        price: 12000,
+        image: 'https://th.bing.com/th/id/OIP.9vkItxSZEt6JEXNQy_sVcQHaEJ?cb=iwc2&rs=1&pid=ImgDetMain',
+        characteristics: [
+          "1 tb de almacenamiento",
+          "suite de office con word, excel, power point",
+          "github copilot para tu dia a dia",
         ],
       },
       {
