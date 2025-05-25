@@ -93,7 +93,7 @@ export const platforms = [
       {
         id: 7,
         name: 'Outsorcing',
-        price: 12000/h,
+        price: 96000,
         image: '/plataform/web.png',
         characteristics: [
           "Cuistomer Care, Desarrollo de Software y mensajeria",
