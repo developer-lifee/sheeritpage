@@ -70,13 +70,12 @@ export const platforms = [
       },
       {
         id: 7,
-        name: 'Presencia web',
-        price: 35000,
+        name: 'Outsorcing',
+        price: desde 12.000/h,
         image: '/plataform/web.png',
         characteristics: [
-          "Renovar su suscripcion",
-          "Almacene todos sus productos en la búsqueda",
-          "construcción inmediata del Ecommerce",
+          "Cuistomer Care, Desarrollo de Software y mensajeria",
+
         ],
       },
       {
