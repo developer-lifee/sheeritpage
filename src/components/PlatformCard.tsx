@@ -1,22 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface PlatformCardProps {
+  id: number; // Add ID to props
   name: string;
   price: number;
   image: string;
   characteristics?: string[];  // Make it optional to handle platforms without specific characteristics
 }
 
-// Default characteristics to show if a platform doesn't have specific ones
-const DEFAULT_CHARACTERISTICS = [
-  "Mantenga la misma suscripción",
-  "Renueva todos sus favoritos y listas",
-  "Entrega en tiempo real"
-];
+// Add static variable to track currently open card
+let currentOpenCard: number | null = null;
 
-export function PlatformCard({ name, price, image, characteristics = [] }: PlatformCardProps) {
+export function PlatformCard({ id, name, price, image, characteristics = [] }: PlatformCardProps) {
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   
+  // Reset payment options when a different card is opened
+  useEffect(() => {
+    if (!showPaymentOptions) return;
+    
+    currentOpenCard = id;
+    return () => {
+      if (currentOpenCard === id) {
+        currentOpenCard = null;
+      }
+    };
+  }, [showPaymentOptions, id]);
+
+  const handleShowPaymentOptions = () => {
+    // Reset other cards when opening this one
+    if (currentOpenCard && currentOpenCard !== id) {
+      const event = new CustomEvent('resetPaymentOptions', { detail: currentOpenCard });
+      window.dispatchEvent(event);
+    }
+    setShowPaymentOptions(true);
+  };
+
+  // Listen for reset events
+  useEffect(() => {
+    const handleReset = (event: CustomEvent<number>) => {
+      if (event.detail === id) {
+        setShowPaymentOptions(false);
+      }
+    };
+
+    window.addEventListener('resetPaymentOptions', handleReset as EventListener);
+    return () => {
+      window.removeEventListener('resetPaymentOptions', handleReset as EventListener);
+    };
+  }, [id]);
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
@@ -94,7 +126,7 @@ export function PlatformCard({ name, price, image, characteristics = [] }: Platf
         {/* Payment section - toggles between button and payment options */}
         {!showPaymentOptions ? (
           <button
-            onClick={() => setShowPaymentOptions(true)}
+            onClick={handleShowPaymentOptions}
             className="w-full py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark transition-colors"
           >
             Comprar Ahora
@@ -110,7 +142,7 @@ export function PlatformCard({ name, price, image, characteristics = [] }: Platf
                 alt="PSE" 
                 className="h-5 w-auto mr-2"
               />
-              Pagar con PSE
+              Pagar con PSE (+1.300 COP)
             </button>
             <button
               onClick={handleWhatsAppClick}
