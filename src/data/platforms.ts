@@ -60,7 +60,7 @@ export const platforms = [
         {
         id: 14,
         name: 'Apple One',
-        price: 12000,
+        price: 15000,
         image: 'https://static.iphoneitalia.com/wp-content/uploads/2020/09/apple-one.png',
         characteristics: [
           "345 gb en icloud",
