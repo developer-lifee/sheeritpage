@@ -155,4 +155,16 @@ export const platforms = [
           "Acceso a más de 1000 juegos",
         ],
       },
+  {
+      id: 16, // Assuming the next available ID
+      name: 'Suscripción Platzi Expert',
+      price: 60000,
+      image: 'https://cdn.platzi.com/static/images/logo/platzi.png', // Or another appropriate Platzi logo/image URL
+      characteristics: [
+        "Acceso a todo el catálogo de más de 1200 cursos",
+        "Rutas de aprendizaje especializadas",
+        "Certificados profesionales al finalizar los cursos",
+        "Acceso a la comunidad y eventos exclusivos",
+      ],
+    },
     ];
