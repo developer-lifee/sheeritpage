@@ -49,7 +49,7 @@ export function Footer() {
             <h4 className="text-lg font-semibold mb-4">Soporte</h4>
             <ul className="space-y-2">
               <li><a href="https://sheerit.com.co/aiuda/" className="text-white/80 hover:text-white">Centro de ayuda</a></li>
-              <li><a href="#" className="text-white/80 hover:text-white">Política de reembolso</a></li>
+              <li><a href="/reembolsoSheerit.pdf" className="text-white/80 hover:text-white">Política de reembolso</a></li>
               <li>
                 <a 
                   href="/T&C_sheerit.pdf" 
