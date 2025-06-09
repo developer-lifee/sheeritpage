@@ -1,0 +1,89 @@
+h1{
+  color: #ffff;
+  font-family: Arial, Helvetica, sans-serif;
+  text-align: center;
+}
+  input[type="text"] {
+    padding: 10px;
+    border: 2px solid #e9e9e9;
+    border-radius: 5px 0 0 5px;
+    flex: 1;
+  }
+  button[type="submit"] {
+    background-color: #969696;
+    color: white;
+    font-size: 16px;
+    border: none;
+    border-radius: 0 5px 5px 0;
+    cursor: pointer;
+  }
+  button[type="submit"] i {
+    padding: 10px;
+  }
+
+.contenedor-principal {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  .formulario-buscador {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
+  .formulario-buscador input[type="text"] {
+    width: 300px;
+    height: 50px;
+    font-size: 16px;
+    padding: 10px;
+    border: 2px solid #4CAF50;
+    border-radius: 5px 0 0 5px;
+    background-color: white;
+    background-image: url("https://cdn4.iconfinder.com/data/icons/essential-app-2/16/search-512.png");
+    background-repeat: no-repeat;
+    background-position: 10px center;
+    background-size: 20px 20px;
+  }
+  
+  .formulario-buscador button[type="submit"] {
+    height: 50px;
+    background-color: #e9e9e9;
+    color: white;
+    font-size: 16px;
+    border: none;
+    border-radius: 0 5px 5px 0;
+    cursor: pointer;
+  }
+  
+  .contenedor-botones {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .contenedor-botones button {
+    display: block;
+    margin: 10px;
+    width: 200px;
+    height: 150px;
+    background-color: white;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .contenedor-botones button:hover {
+    background-color: #e9e9e9;
+  }
+
+  body{
+    background-color: #4FE4EF;
+  }
+
+
+  

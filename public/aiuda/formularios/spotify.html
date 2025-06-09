@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="catalogo.css">
+    <title></title>
+</head>
+<body>
+    <div>
+        <h1 class="title">que tipo de problema tienes con tu cuenta?</h1>
+    </div>
+    <section class="contenido">
+        <div class="mostrador" id="mostrador">
+            <div class="fila">
+
+                <div class="item" data-nombre="">
+                    <div class="contenedor-foto">
+                        <img src="errores_img/contraseña_spotify.png" alt="">
+                    </div>
+                    <h2 class="descripcion">contraseña incorecta</h2>
+                    
+                    <button class="boton" onclick="cargar(this.parentElement)">seleccionar</button>
+                </div>
+
+                <div class="item" data-nombre="">
+                    <div class="contenedor-foto">
+                        <img src="errores_img/suscripcion_spotify.png" alt="">
+                    </div>
+                    <h2 class="descripcion">sin premium</h2>
+                    
+                    <button class="boton" onclick="cargar(this.parentElement)">seleccionar</button>
+                </div>
+
+            </div>
+        </div>
+        <!-- CONTENEDOR DEL ITEM SELECCIONADO -->
+        <div class="seleccion" id="seleccion">
+            <div class="cerrar" onclick="cerrar()">
+                &#x2715 <!--esta es la X para cerrar la ventana-->
+            </div>
+            <div class="info">
+                <img src="" alt="" id="img">
+                <h2 id="descripcion">Descripción del Modelo</h2>
+                <h4 id="modelo">accesorio</h4>
+                
+                <div class="fila">
+                    <!-- <button class="button buy" id="buy-button">Cotizar</button> -->
+                </div>
+            </div>
+        </div>
+
+        
+    </section>
+    <script src="catalogo.js"></script> 
+    <script src="compra.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+    
