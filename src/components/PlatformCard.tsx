@@ -7,12 +7,45 @@ const DEFAULT_CHARACTERISTICS = [
   "Entrega en tiempo real"
 ];
 
-// Add PSE fee calculation function
+/**
+ * Calculates the total fee for a given price, including Bold's percentage + fixed fee
+ * and ReteICA percentage.
+ *
+ * This function assumes the 'price' parameter is the *net* amount you desire to receive,
+ * and it calculates the *additional* amount needed to cover the fees.
+ *
+ * @param {number} price The base price of the service (the net amount you want to get).
+ * @returns {number} The total calculated fee (Bold + ReteICA + fixed).
+ */
 const calculatePSEFee = (price: number): number => {
-  const percentage = price * 0.0349; // 3.49%
-  const flatFee = 900; // $900 COP
-  return Math.round(percentage + flatFee);
+    // Define fee percentages and fixed fees
+    const boldFeePercentage = 3.49; // 3.49%
+    const reteICAPercentage = 0.414; // 0.414%
+    const fixedBoldFee = 900; // $900 COP
+
+    // Convert percentages to decimal
+    const boldFeeDecimal = boldFeePercentage / 100;
+    const reteICADecimal = reteICAPercentage / 100;
+
+    // Calculate total percentage that will be deducted from the *gross* price
+    const totalPercentageDecimal = boldFeeDecimal + reteICADecimal; // 0.0349 + 0.00414 = 0.03904
+
+    // This is the core logic: if 'price' is the *net* you want,
+    // we need to find a 'gross' price (X) such that:
+    // net = X - (X * totalPercentageDecimal) - fixedBoldFee
+    // net + fixedBoldFee = X * (1 - totalPercentageDecimal)
+    // X = (net + fixedBoldFee) / (1 - totalPercentageDecimal)
+
+    // Calculate the gross price needed to achieve 'price' net
+    const grossPriceNeeded = (price + fixedBoldFee) / (1 - totalPercentageDecimal);
+
+    // The PSE fee to display is the difference between this gross price and the original net price,
+    // which represents the total cost of the fees.
+    const totalFee = grossPriceNeeded - price;
+
+    return Math.round(totalFee);
 };
+
 
 interface PlatformCardProps {
   id: number;
@@ -27,11 +60,11 @@ let currentOpenCard: number | null = null;
 
 export function PlatformCard({ id, name, price, image, characteristics = [] }: PlatformCardProps) {
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
-  
+
   // Reset payment options when a different card is opened
   useEffect(() => {
     if (!showPaymentOptions) return;
-    
+
     currentOpenCard = id;
     return () => {
       if (currentOpenCard === id) {
@@ -63,13 +96,13 @@ export function PlatformCard({ id, name, price, image, characteristics = [] }: P
     };
   }, [id]);
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (value: number) => { // Renamed parameter to avoid conflict with prop 'price'
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: 'COP',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(price);
+    }).format(value);
   };
 
   const handleWhatsAppClick = () => {
@@ -80,18 +113,23 @@ export function PlatformCard({ id, name, price, image, characteristics = [] }: P
 
   const handlePSEClick = () => {
     // Aquí irá la integración con PSE
+    // For now, it opens a test link
     window.open('https://checkout.wompi.co/l/VPOS_TEST', '_blank');
   };
 
   // Use platform-specific characteristics if available, otherwise use defaults
   const featuresToShow = characteristics.length > 0 ? characteristics : DEFAULT_CHARACTERISTICS;
+
+  // Calculate the PSE fee based on the product's price (which is the desired net)
   const pseFee = calculatePSEFee(price);
+  // The price to display for PSE will be the original price + the calculated fee
+  const pseDisplayPrice = price + pseFee;
 
   return (
     <div className="relative overflow-hidden rounded-xl shadow-lg w-full max-w-sm bg-white dark:bg-gray-800 flex flex-col">
       {/* Sección superior con la imagen de fondo */}
-      <div 
-        className="relative h-32 bg-cover bg-center bg-gray-200 dark:bg-gray-700" 
+      <div
+        className="relative h-32 bg-cover bg-center bg-gray-200 dark:bg-gray-700"
         style={{ backgroundImage: image ? `url(${image})` : 'none' }}
       >
         {/* Overlay oscuro para mejorar visibilidad */}
@@ -152,19 +190,19 @@ export function PlatformCard({ id, name, price, image, characteristics = [] }: P
               onClick={handlePSEClick}
               className="w-full flex items-center justify-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
             >
-              <img 
-                src="https://chukuwata.org.co/wp-content/uploads/2019/01/Boton-Azul-PSE.png" 
-                alt="PSE" 
+              <img
+                src="https://chukuwata.org.co/wp-content/uploads/2019/01/Boton-Azul-PSE.png"
+                alt="PSE"
                 className="h-5 w-auto mr-2"
               />
-              Pagar con PSE (+{formatPrice(pseFee)})
+              Pagar con PSE (+{formatPrice(pseDisplayPrice)})
             </button>
             <button
               onClick={handleWhatsAppClick}
               className="w-full flex items-center justify-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
             >
-              <svg 
-                viewBox="0 0 24 24" 
+              <svg
+                viewBox="0 0 24 24"
                 className="h-5 w-5 mr-2 fill-current"
               >
                 <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm.029 18.88c-1.161 0-2.305-.292-3.318-.844l-3.677.964.984-3.595c-.607-1.052-.927-2.246-.926-3.468.001-3.825 3.113-6.937 6.937-6.937 1.856.001 3.598.723 4.907 2.034 1.31 1.311 2.031 3.054 2.03 4.908-.001 3.825-3.113 6.938-6.937 6.938z" />
