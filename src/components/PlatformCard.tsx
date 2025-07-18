@@ -55,11 +55,25 @@ interface PlatformCardProps {
   characteristics?: string[];
 }
 
+interface CustomerData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  whatsapp: string;
+}
+
 // Add static variable to track currently open card
 let currentOpenCard: number | null = null;
 
 export function PlatformCard({ id, name, price, image, characteristics = [] }: PlatformCardProps) {
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
+  const [customerData, setCustomerData] = useState<CustomerData>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    whatsapp: '',
+  });
 
   // Reset payment options when a different card is opened
   useEffect(() => {
@@ -111,10 +125,43 @@ export function PlatformCard({ id, name, price, image, characteristics = [] }: P
     window.open(`https://api.whatsapp.com/send?phone=573107946794&text=${encodedMessage}`, '_blank');
   };
 
-  const handlePSEClick = () => {
-    // Aquí irá la integración con PSE
-    // For now, it opens a test link
-    window.open('https://checkout.wompi.co/l/VPOS_TEST', '_blank');
+  const handlePSEClick = async () => {
+    setShowCustomerForm(true);
+  };
+
+  const handleCustomerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const response = await fetch('https://api.sheerit.com.co/generar_token.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customer: customerData,
+          platform: {
+            name,
+            price,
+          },
+          numbers: [1] // You might want to modify this based on your needs
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const data = await response.json();
+      
+      // Redirect to Bold's checkout page
+      const boldCheckoutUrl = `https://checkout.bold.co/v2/checkout?apiKey=${data.apiKey}&orderId=${data.orderId}&amount=${data.amount}&currency=${data.currency}&description=${encodeURIComponent(data.description)}&tax=${data.tax}&integritySignature=${data.integritySignature}&redirectionUrl=${encodeURIComponent(data.redirectionUrl)}`;
+      
+      window.location.href = boldCheckoutUrl;
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Hubo un error al procesar el pago. Por favor intente de nuevo.');
+    }
   };
 
   // Use platform-specific characteristics if available, otherwise use defaults
@@ -184,6 +231,54 @@ export function PlatformCard({ id, name, price, image, characteristics = [] }: P
           >
             Comprar Ahora
           </button>
+        ) : showCustomerForm ? (
+          <form onSubmit={handleCustomerSubmit} className="space-y-3 p-4">
+            <input
+              type="text"
+              placeholder="Nombre"
+              value={customerData.firstName}
+              onChange={(e) => setCustomerData({...customerData, firstName: e.target.value})}
+              className="w-full p-2 border rounded"
+              required
+            />
+            <input
+              type="text"
+              placeholder="Apellido"
+              value={customerData.lastName}
+              onChange={(e) => setCustomerData({...customerData, lastName: e.target.value})}
+              className="w-full p-2 border rounded"
+              required
+            />
+            <input
+              type="email"
+              placeholder="Email"
+              value={customerData.email}
+              onChange={(e) => setCustomerData({...customerData, email: e.target.value})}
+              className="w-full p-2 border rounded"
+              required
+            />
+            <input
+              type="tel"
+              placeholder="WhatsApp"
+              value={customerData.whatsapp}
+              onChange={(e) => setCustomerData({...customerData, whatsapp: e.target.value})}
+              className="w-full p-2 border rounded"
+              required
+            />
+            <button
+              type="submit"
+              className="w-full py-2 bg-blue-500 text-white font-bold rounded hover:bg-blue-600"
+            >
+              Continuar con PSE
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCustomerForm(false)}
+              className="w-full py-2 bg-gray-300 text-gray-700 font-bold rounded hover:bg-gray-400"
+            >
+              Cancelar
+            </button>
+          </form>
         ) : (
           <div className="space-y-3">
             <button

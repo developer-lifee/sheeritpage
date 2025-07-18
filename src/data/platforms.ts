@@ -12,7 +12,7 @@ export const platforms = [
       },
         {
         id: 2,
-        name: 'Netflix',
+        name: 'Netflix Extra',
         price: 17000,
         image: 'https://th.bing.com/th/id/R.64d5f8b96325d2be917f9ab402e92b99?rik=1BawFvPFPBGxrg&pid=ImgRaw&r=0',
         characteristics: [
