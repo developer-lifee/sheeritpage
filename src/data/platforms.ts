@@ -130,9 +130,9 @@ export const platforms = [
         price: 8000,
         image: 'https://upload.wikimedia.org/wikipedia/commons/7/74/Spotify_App_Logo.svg',
         characteristics: [
-          "Cuenta separada",
+          "Con tu misma cuenta que manejabas antes",
           "No estará molestado por otros",
-          "Cuenta estable, tarifa prepaga de 12 meses",
+          "Cuenta estable",
         ],
       },
       {
