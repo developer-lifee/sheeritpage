@@ -10,8 +10,19 @@ export const platforms = [
           "Entrega en tiempo real",
         ],
       },
-      {
+        {
         id: 2,
+        name: 'Netflix',
+        price: 17000,
+        image: 'https://th.bing.com/th/id/R.64d5f8b96325d2be917f9ab402e92b99?rik=1BawFvPFPBGxrg&pid=ImgRaw&r=0',
+        characteristics: [
+          "Cuenta completa con un perfil",
+          "Alta definición 4K + HDR con su lista exclusiva",
+          "correo personalizado, ideal para pueblos",
+        ],
+      },
+      {
+        id: 5,
         name: 'Disney+',
         price: 13000,
         image: 'https://mdcthereporter.com/wp-content/uploads/2019/09/Disney-Logo.jpeg',
@@ -47,7 +58,7 @@ export const platforms = [
         characteristics: [     ],
       },
       {
-        id: 5,
+        id: 6,
         name: 'ChatGPT Plus',
         price: 20000,
         image: 'https://th.bing.com/th/id/OIP.PcgoreK_H_utzQX-eTNbrQHaHa?rs=1&pid=ImgDetMain',
@@ -80,7 +91,7 @@ export const platforms = [
         ],
       },
       {
-        id: 6,
+        id: 17,
         name: 'Coworking Alquiler',
         price: 50000,
         image: '/plataform/alquilar.png',
@@ -90,16 +101,7 @@ export const platforms = [
           "internet de alta velocidad",
         ],
       },
-      {
-        id: 7,
-        name: 'Outsorcing',
-        price: 96000,
-        image: '/plataform/web.png',
-        characteristics: [
-          "Cuistomer Care, Desarrollo de Software y mensajeria",
 
-        ],
-      },
       {
         id: 8,
         name: 'YouTube Premium',
@@ -115,7 +117,7 @@ export const platforms = [
         id: 9,
         name: 'Paramount+',
         price: 6000,
-        image: '/plataform/paramount.webp',
+        image: 'https://th.bing.com/th/id/R.b80c8814890d78ad63b43c0bc2f4b401?rik=M95rQ%2fqeKRSHPQ&pid=ImgRaw&r=0',
         characteristics: [
           "Calidad de video HDR 4K",
           "Audio premium sin publicidad",
