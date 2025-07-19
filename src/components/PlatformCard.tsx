@@ -122,7 +122,7 @@ export function PlatformCard({ id, name, price, image, characteristics = [] }: P
   const handleWhatsAppClick = () => {
     const message = `Hola, estoy interesado en una suscripción de: ${name}. Precio: ${formatPrice(price)}/mes`;
     const encodedMessage = encodeURIComponent(message);
-    window.open(`https://api.whatsapp.com/send?phone=573107946794&text=${encodedMessage}`, '_blank');
+    window.open(`https://api.whatsapp.com/send?phone=573118587974&text=${encodedMessage}`, '_blank');
   };
 
   const handlePSEClick = async () => {

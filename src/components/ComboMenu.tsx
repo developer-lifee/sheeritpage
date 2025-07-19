@@ -61,7 +61,7 @@ export function ComboMenu() {
     const total = calculateTotal();
     const message = `Hola, estoy interesado en una suscripción de: ${selectedPlatformNames}\nCosto Total: ${formatPrice(total)}`;
     const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/+573107946794/?text=${encodedMessage}`, '_blank');
+    window.open(`https://wa.me/+573118587974/?text=${encodedMessage}`, '_blank');
   };
 
   return (
