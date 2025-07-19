@@ -133,7 +133,7 @@ export function PlatformCard({ id, name, price, image, characteristics = [] }: P
     e.preventDefault();
     
     try {
-      const response = await fetch('https://api.sheerit.com.co/generar_token.php', {
+      const response = await fetch('https://sheerit.com.co/pago/generar_token.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,7 +144,7 @@ export function PlatformCard({ id, name, price, image, characteristics = [] }: P
             name,
             price,
           },
-          numbers: [1] // You might want to modify this based on your needs
+          numbers: [1]
         })
       });
 
