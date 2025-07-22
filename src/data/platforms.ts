@@ -18,7 +18,7 @@ export const platforms = [
         characteristics: [
           "Cuenta completa con un perfil",
           "Alta definición 4K + HDR con su lista exclusiva",
-          "correo personalizado, ideal para pueblos",
+          "correo personalizado, ideal para usos en diferentes locaciones",
         ],
       },
       {
@@ -87,7 +87,7 @@ export const platforms = [
         characteristics: [
           "1 tb de almacenamiento",
           "suite de office con word, excel, power point",
-          "github copilot para tu dia a dia",
+          "con tu mismo correo de microsoft",
         ],
       },
       {
