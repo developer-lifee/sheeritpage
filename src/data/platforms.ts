@@ -63,9 +63,10 @@ export const platforms = [
         price: 20000,
         image: 'https://th.bing.com/th/id/OIP.PcgoreK_H_utzQX-eTNbrQHaHa?rs=1&pid=ImgDetMain',
         characteristics: [
-          "Plan de larga duracion",
+          "voz de larga duracion",
           "ia actualizada y deslimitada",
           "Entrega en tiempo real",
+"cuenta compartida",
         ],
       },
         {
