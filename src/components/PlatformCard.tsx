@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { CustomerFormModal } from './CustomerFormModal';
 
 // Move constants outside of component
 const DEFAULT_CHARACTERISTICS = [
@@ -144,7 +145,7 @@ export function PlatformCard({ id, name, price, image, characteristics = [] }: P
             name,
             price,
           },
-          numbers: [1]
+          numbers: name // Store platform name instead of numbers
         })
       });
 
@@ -232,53 +233,14 @@ export function PlatformCard({ id, name, price, image, characteristics = [] }: P
             Comprar Ahora
           </button>
         ) : showCustomerForm ? (
-          <form onSubmit={handleCustomerSubmit} className="space-y-3 p-4">
-            <input
-              type="text"
-              placeholder="Nombre"
-              value={customerData.firstName}
-              onChange={(e) => setCustomerData({...customerData, firstName: e.target.value})}
-              className="w-full p-2 border rounded"
-              required
-            />
-            <input
-              type="text"
-              placeholder="Apellido"
-              value={customerData.lastName}
-              onChange={(e) => setCustomerData({...customerData, lastName: e.target.value})}
-              className="w-full p-2 border rounded"
-              required
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={customerData.email}
-              onChange={(e) => setCustomerData({...customerData, email: e.target.value})}
-              className="w-full p-2 border rounded"
-              required
-            />
-            <input
-              type="tel"
-              placeholder="WhatsApp"
-              value={customerData.whatsapp}
-              onChange={(e) => setCustomerData({...customerData, whatsapp: e.target.value})}
-              className="w-full p-2 border rounded"
-              required
-            />
-            <button
-              type="submit"
-              className="w-full py-2 bg-blue-500 text-white font-bold rounded hover:bg-blue-600"
-            >
-              Continuar con PSE
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowCustomerForm(false)}
-              className="w-full py-2 bg-gray-300 text-gray-700 font-bold rounded hover:bg-gray-400"
-            >
-              Cancelar
-            </button>
-          </form>
+          <CustomerFormModal
+            onSubmit={handleCustomerSubmit}
+            customerData={customerData}
+            onChange={setCustomerData}
+            onClose={() => setShowCustomerForm(false)}
+            platform={name}
+            price={price}
+          />
         ) : (
           <div className="space-y-3">
             <button

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { platforms } from '../data/platforms';
+import { CustomerFormModal } from './CustomerFormModal';
 
 const DISCOUNT_PER_PLATFORM = 1000; // Descuento de mil por cada plataforma adicional
 
@@ -15,6 +16,13 @@ export function ComboMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedPlatforms, setSelectedPlatforms] = useState<number[]>([]);
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
+  const [customerData, setCustomerData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    whatsapp: '',
+  });
 
   const calculateTotal = () => {
     if (selectedPlatforms.length === 0) return 0;
@@ -46,22 +54,46 @@ export function ComboMenu() {
   };
 
   const handlePSEClick = () => {
-    const total = calculateTotal();
-    window.open('https://checkout.wompi.co/l/VPOS_TEST', '_blank');
+    setShowCustomerForm(true);
   };
 
-  const handleWhatsAppClick = () => {
-    if (selectedPlatforms.length === 0) return;
-
+  const handleCustomerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     const selectedPlatformNames = selectedPlatforms
       .map(id => platforms.find(p => p.id === id)?.name)
-      .filter(Boolean)
-      .join(', ');
+      .filter(Boolean) as string[];
 
-    const total = calculateTotal();
-    const message = `Hola, estoy interesado en una suscripción de: ${selectedPlatformNames}\nCosto Total: ${formatPrice(total)}`;
-    const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/+573118587974/?text=${encodedMessage}`, '_blank');
+    try {
+      const response = await fetch('https://sheerit.com.co/pago/generar_token.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customer: customerData,
+          platform: {
+            name: `Combo: ${selectedPlatformNames.join(', ')}`,
+            price: calculateTotal(),
+          },
+          numbers: selectedPlatformNames.join(', ') // Concatenate platform names
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const data = await response.json();
+      
+      // Redirect to Bold's checkout page
+      const boldCheckoutUrl = `https://checkout.bold.co/v2/checkout?apiKey=${data.apiKey}&orderId=${data.orderId}&amount=${data.amount}&currency=${data.currency}&description=${encodeURIComponent(data.description)}&tax=${data.tax}&integritySignature=${data.integritySignature}&redirectionUrl=${encodeURIComponent(data.redirectionUrl)}`;
+      
+      window.location.href = boldCheckoutUrl;
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Hubo un error al procesar el pago. Por favor intente de nuevo.');
+    }
   };
 
   return (
@@ -73,6 +105,20 @@ export function ComboMenu() {
       >
         Crear Combo
       </button>
+
+      {showCustomerForm && (
+        <CustomerFormModal
+          onSubmit={handleCustomerSubmit}
+          customerData={customerData}
+          onChange={setCustomerData}
+          onClose={() => setShowCustomerForm(false)}
+          platform={`Combo: ${selectedPlatforms
+            .map(id => platforms.find(p => p.id === id)?.name)
+            .filter(Boolean)
+            .join(', ')}`}
+          price={calculateTotal()}
+        />
+      )}
 
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -178,15 +224,7 @@ export function ComboMenu() {
                 </span>
               </div>
 
-              {!showPaymentOptions ? (
-                <button
-                  onClick={() => setShowPaymentOptions(true)}
-                  disabled={selectedPlatforms.length === 0}
-                  className="w-full py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Solicitar este combo
-                </button>
-              ) : (
+              {showPaymentOptions ? (
                 <div className="space-y-3">
                   <button
                     onClick={handlePSEClick}
@@ -212,6 +250,14 @@ export function ComboMenu() {
                     Pagar por WhatsApp
                   </button>
                 </div>
+              ) : (
+                <button
+                  onClick={() => setShowPaymentOptions(true)}
+                  disabled={selectedPlatforms.length === 0}
+                  className="w-full py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Solicitar este combo
+                </button>
               )}
             </div>
           </div>
