@@ -76,7 +76,7 @@ export function ComboMenu() {
             name: `Combo: ${selectedPlatformNames.join(', ')}`,
             price: calculateTotal(),
           },
-          numbers: selectedPlatformNames.join(', ') // Concatenate platform names
+          numbers: selectedPlatformNames // Enviar como array, no como string concatenado
         })
       });
 
@@ -85,6 +85,10 @@ export function ComboMenu() {
       }
 
       const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
       
       // Redirect to Bold's checkout page
       const boldCheckoutUrl = `https://checkout.bold.co/v2/checkout?apiKey=${data.apiKey}&orderId=${data.orderId}&amount=${data.amount}&currency=${data.currency}&description=${encodeURIComponent(data.description)}&tax=${data.tax}&integritySignature=${data.integritySignature}&redirectionUrl=${encodeURIComponent(data.redirectionUrl)}`;
@@ -227,7 +231,7 @@ export function ComboMenu() {
               {showPaymentOptions ? (
                 <div className="space-y-3">
                   <button
-                    onClick={handlePSEClick}
+                    onClick={() => setShowCustomerForm(true)} // Changed to show form first
                     className="w-full flex items-center justify-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
                   >
                     <img 
