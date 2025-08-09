@@ -54,6 +54,8 @@ export function ComboMenu() {
   };
 
   const handlePSEClick = () => {
+    const total = calculateTotal();
+    const pseFee = calculatePSEFee(total);
     setShowCustomerForm(true);
   };
 
@@ -63,6 +65,10 @@ export function ComboMenu() {
     const selectedPlatformNames = selectedPlatforms
       .map(id => platforms.find(p => p.id === id)?.name)
       .filter(Boolean) as string[];
+
+    const total = calculateTotal();
+    const pseFee = calculatePSEFee(total);
+    const totalWithFee = total + pseFee;
 
     try {
       const response = await fetch('https://sheerit.com.co/pago/generar_token.php', {
@@ -74,7 +80,7 @@ export function ComboMenu() {
           customer: customerData,
           platform: {
             name: `Combo: ${selectedPlatformNames.join(', ')}`,
-            price: calculateTotal(),
+            price: totalWithFee, // Enviamos el precio total con la tarifa PSE incluida
           },
           numbers: selectedPlatformNames // Enviar como array, no como string concatenado
         })

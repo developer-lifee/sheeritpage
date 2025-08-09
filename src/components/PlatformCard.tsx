@@ -127,6 +127,8 @@ export function PlatformCard({ id, name, price, image, characteristics = [] }: P
   };
 
   const handlePSEClick = async () => {
+    // Calcula el precio total (precio base + tarifa PSE)
+    const totalPrice = price + pseFee;
     setShowCustomerForm(true);
   };
 
@@ -143,7 +145,7 @@ export function PlatformCard({ id, name, price, image, characteristics = [] }: P
           customer: customerData,
           platform: {
             name,
-            price,
+            price: price + pseFee, // Enviamos el precio total incluyendo la tarifa PSE
           },
           numbers: name // Store platform name instead of numbers
         })
