@@ -15,6 +15,12 @@ interface CustomerFormModalProps {
   price: number;
 }
 
+function calculatePSEFee(price: number): number {
+  // Aquí puedes definir la lógica para calcular la tarifa PSE
+  const feePercentage = 0.03; // Por ejemplo, un 3% del precio
+  return price * feePercentage;
+}
+
 export function CustomerFormModal({
   onSubmit,
   customerData,
@@ -23,6 +29,9 @@ export function CustomerFormModal({
   platform,
   price
 }: CustomerFormModalProps) {
+  const pseFee = calculatePSEFee(price);
+  const totalPrice = price + pseFee;
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
@@ -43,7 +52,19 @@ export function CustomerFormModal({
             Plataforma: <span className="font-bold">{platform}</span>
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            Precio: <span className="font-bold">{price.toLocaleString('es-CO', {
+            Precio base: <span className="font-bold">{price.toLocaleString('es-CO', {
+              style: 'currency',
+              currency: 'COP'
+            })}</span>
+          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Tarifa PSE: <span className="font-bold">{pseFee.toLocaleString('es-CO', {
+              style: 'currency',
+              currency: 'COP'
+            })}</span>
+          </p>
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-2">
+            Total a pagar: <span className="font-bold">{totalPrice.toLocaleString('es-CO', {
               style: 'currency',
               currency: 'COP'
             })}</span>

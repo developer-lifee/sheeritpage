@@ -237,7 +237,7 @@ export function ComboMenu() {
               {showPaymentOptions ? (
                 <div className="space-y-3">
                   <button
-                    onClick={() => setShowCustomerForm(true)} // Changed to show form first
+                    onClick={handlePSEClick}
                     className="w-full flex items-center justify-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
                   >
                     <img 
