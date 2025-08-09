@@ -16,9 +16,23 @@ interface CustomerFormModalProps {
 }
 
 function calculatePSEFee(price: number): number {
-  // Aquí puedes definir la lógica para calcular la tarifa PSE
-  const feePercentage = 0.03; // Por ejemplo, un 3% del precio
-  return price * feePercentage;
+  // Define fee percentages and fixed fees
+  const boldFeePercentage = 3.49; // 3.49%
+  const reteICAPercentage = 0.414; // 0.414%
+  const fixedBoldFee = 900; // $900 COP
+
+  // Convert percentages to decimal
+  const boldFeeDecimal = boldFeePercentage / 100;
+  const reteICADecimal = reteICAPercentage / 100;
+
+  // Calculate total percentage that will be deducted
+  const totalPercentageDecimal = boldFeeDecimal + reteICADecimal;
+
+  // Calculate the gross price needed
+  const grossPriceNeeded = (price + fixedBoldFee) / (1 - totalPercentageDecimal);
+
+  // Return the total fee
+  return Math.round(grossPriceNeeded - price);
 }
 
 export function CustomerFormModal({
