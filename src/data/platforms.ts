@@ -170,4 +170,16 @@ export const platforms = [
         "Acceso a la comunidad y eventos exclusivos",
       ],
     },
+      {
+    id: 18, // New ID
+    name: 'IPTV',
+    price: 10000, // Example price
+    image: 'https://i.vimeocdn.com/video/1293078923-a82ea0a74666f155e160abf709c7000958e0532c5cbb06f01', // Generic IPTV image
+    characteristics: [
+      "Más de 10,000 canales en vivo nacionales e internacionales incluidos WIN + Y DIRECTV",
+      "Catálogo de películas y series actualizado (VOD)",
+      "Calidad de video HD, FHD y 4K",
+      "Compatible con Smart TV, TV Box, celulares y computadores",
+    ],
+  },
     ];
