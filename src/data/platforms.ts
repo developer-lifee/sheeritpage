@@ -174,7 +174,7 @@ export const platforms = [
     id: 18, // New ID
     name: 'IPTV',
     price: 10000, // Example price
-    image: 'https://play.google.com/store/apps/details?id=com.player.myiptv.myiptv&hl=es_PY', // Generic IPTV image
+    image: 'https://play-lh.googleusercontent.com/TtmQHrL1HRwBzyMSkT5XOqZZcGDqjy9265IqSEKpgKxJDgSkZhXRHuRa-eSwWzPZqW0=w480-h960-rw', // Generic IPTV image
     characteristics: [
       "Más de 10,000 canales en vivo nacionales e internacionales incluidos WIN + Y DIRECTV",
       "Catálogo de películas y series actualizado (VOD)",
@@ -186,7 +186,7 @@ export const platforms = [
       id: 19,
       name: 'Gemini Pro',
       price: 20000,
-      image: 'https://www.google.com/url?sa=i&url=https%3A%2F%2Fbubble.io%2Fplugin%2Fgemini-pro---free-1722945187589x122397323128995840&psig=AOvVaw0yu3q3tX-NdQ-Y9ONXRb3S&ust=1755276796023000&source=images&cd=vfe&opi=89978449&ved=0CBUQjRxqFwoTCLDSgOPhio8DFQAAAAAdAAAAABAE',
+      image: 'https://meta-q.cdn.bubble.io/f1724422026295x667563819270324800/GeminiStreamingPro2.svg',
       characteristics: [
         "Acceso a nuestro modelo más potente 2.5 Pro",
         "Razonamiento lógico y seguimiento de instrucciones con detalles sutiles",
