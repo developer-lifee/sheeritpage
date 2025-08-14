@@ -182,4 +182,18 @@ export const platforms = [
       "Compatible con Smart TV, TV Box, celulares y computadores",
     ],
   },
+  {
+      id: 19,
+      name: 'Gemini Pro',
+      price: 20000,
+      image: '/aiuda/img/Gemini_Advanced_logo.png',
+      characteristics: [
+        "Acceso a nuestro modelo más potente 2.5 Pro",
+        "Razonamiento lógico y seguimiento de instrucciones con detalles sutiles",
+        "Capacidad para analizar y resumir materiales extensos (hasta 1,500 páginas)",
+        "Integrado en Gmail, Documentos, Presentaciones y más",
+        "Funciones de codificación avanzadas",
+        "2 TB de almacenamiento en Google One",
+      ],
+    },
     ];
