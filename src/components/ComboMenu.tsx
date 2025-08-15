@@ -2,15 +2,9 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { platforms } from '../data/platforms';
 import { CustomerFormModal } from './CustomerFormModal';
+import { calculatePSEFee } from '../utils/fees';
 
 const DISCOUNT_PER_PLATFORM = 1000; // Descuento de mil por cada plataforma adicional
-
-// Add PSE fee calculation
-const calculatePSEFee = (price: number): number => {
-  const percentage = price * 0.0349; // 3.49%
-  const flatFee = 900; // $900 COP
-  return Math.round(percentage + flatFee);
-};
 
 export function ComboMenu() {
   const [isOpen, setIsOpen] = useState(false);
@@ -54,9 +48,18 @@ export function ComboMenu() {
   };
 
   const handlePSEClick = () => {
-    const total = calculateTotal();
-    const pseFee = calculatePSEFee(total);
     setShowCustomerForm(true);
+  };
+
+  const handleWhatsAppClick = () => {
+    const total = calculateTotal();
+    const selectedPlatformNames = selectedPlatforms
+      .map(id => platforms.find(p => p.id === id)?.name)
+      .filter(Boolean) as string[];
+
+    const message = `Hola, estoy interesado en el siguiente combo: ${selectedPlatformNames.join(', ')}. Precio total: ${formatPrice(total)}/mes`;
+    const encodedMessage = encodeURIComponent(message);
+    window.open(`https://api.whatsapp.com/send?phone=573118587974&text=${encodedMessage}`, '_blank');
   };
 
   const handleCustomerSubmit = async (e: React.FormEvent) => {

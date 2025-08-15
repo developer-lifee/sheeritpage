@@ -1,5 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { calculatePSEFee } from '../utils/fees';
 
 interface CustomerFormModalProps {
   onSubmit: (e: React.FormEvent) => void;
@@ -13,12 +14,6 @@ interface CustomerFormModalProps {
   onClose: () => void;
   platform: string;
   price: number;
-}
-
-function calculatePSEFee(price: number): number {
-  // Aquí puedes definir la lógica para calcular la tarifa PSE
-  const feePercentage = 0.03; // Por ejemplo, un 3% del precio
-  return price * feePercentage;
 }
 
 export function CustomerFormModal({
@@ -118,6 +113,11 @@ export function CustomerFormModal({
           >
             Continuar con PSE
           </button>
+        </form>
+      </div>
+    </div>
+  );
+}
         </form>
       </div>
     </div>
