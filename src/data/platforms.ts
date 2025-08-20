@@ -128,7 +128,7 @@ export const platforms = [
       {
         id: 10,
         name: 'Spotify',
-        price: 8000,
+        price: 9000,
         image: 'https://upload.wikimedia.org/wikipedia/commons/7/74/Spotify_App_Logo.svg',
         characteristics: [
           "Con tu misma cuenta que manejabas antes",
