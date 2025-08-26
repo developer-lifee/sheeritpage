@@ -280,12 +280,3 @@ export function ComboMenu() {
     </>
   );
 }
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
