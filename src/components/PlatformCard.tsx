@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CustomerFormModal } from './CustomerFormModal';
+import { calculatePSEFee } from '../utils/fees';
 
 // Move constants outside of component
 const DEFAULT_CHARACTERISTICS = [
@@ -18,7 +19,7 @@ const DEFAULT_CHARACTERISTICS = [
  * @param {number} price The base price of the service (the net amount you want to get).
  * @returns {number} The total calculated fee (Bold + ReteICA + fixed).
  */
-const calculatePSEFee = (price: number): number => {
+const calculatePSEFeeLegacy = (price: number): number => {
     // Define fee percentages and fixed fees
     const boldFeePercentage = 3.49; // 3.49%
     const reteICAPercentage = 0.414; // 0.414%
@@ -127,8 +128,8 @@ export function PlatformCard({ id, name, price, image, characteristics = [] }: P
   };
 
   const handlePSEClick = async () => {
-    // Calcula el precio total (precio base + tarifa PSE)
-    const totalPrice = price + pseFee;
+    // Calculate total price with PSE fee
+    const pseFee = calculatePSEFee(price);
     setShowCustomerForm(true);
   };
 

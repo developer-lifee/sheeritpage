@@ -128,7 +128,7 @@ export const platforms = [
       {
         id: 10,
         name: 'Spotify',
-        price: 8000,
+        price: 9000,
         image: 'https://upload.wikimedia.org/wikipedia/commons/7/74/Spotify_App_Logo.svg',
         characteristics: [
           "Con tu misma cuenta que manejabas antes",
@@ -168,6 +168,32 @@ export const platforms = [
         "Rutas de aprendizaje especializadas",
         "Certificados profesionales al finalizar los cursos",
         "Acceso a la comunidad y eventos exclusivos",
+      ],
+    },
+      {
+    id: 18, // New ID
+    name: 'IPTV',
+    price: 10000, // Example price
+    image: 'https://play-lh.googleusercontent.com/TtmQHrL1HRwBzyMSkT5XOqZZcGDqjy9265IqSEKpgKxJDgSkZhXRHuRa-eSwWzPZqW0=w480-h960-rw', // Generic IPTV image
+    characteristics: [
+      "Más de 10,000 canales en vivo nacionales e internacionales incluidos WIN + Y DIRECTV",
+      "Catálogo de películas y series actualizado (VOD)",
+      "Calidad de video HD, FHD y 4K",
+      "Compatible con Smart TV, TV Box, celulares y computadores",
+    ],
+  },
+  {
+      id: 19,
+      name: 'Gemini Pro',
+      price: 20000,
+      image: 'https://meta-q.cdn.bubble.io/f1724422026295x667563819270324800/GeminiStreamingPro2.svg',
+      characteristics: [
+        "Acceso a nuestro modelo más potente 2.5 Pro",
+        "Razonamiento lógico y seguimiento de instrucciones con detalles sutiles",
+        "Capacidad para analizar y resumir materiales extensos (hasta 1,500 páginas)",
+        "Integrado en Gmail, Documentos, Presentaciones y más",
+        "Funciones de codificación avanzadas",
+        "2 TB de almacenamiento en Google One",
       ],
     },
     ];

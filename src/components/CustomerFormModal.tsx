@@ -1,5 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { calculatePSEFee } from '../utils/fees';
 
 interface CustomerFormModalProps {
   onSubmit: (e: React.FormEvent) => void;
@@ -46,6 +47,16 @@ export function CustomerFormModal({
   const pseFee = calculatePSEFee(price);
   const totalPrice = price + pseFee;
 
+  // Function to format price to COP currency
+  const formatPrice = (value: number) => {
+    return value.toLocaleString('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    });
+  };
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
@@ -66,22 +77,13 @@ export function CustomerFormModal({
             Plataforma: <span className="font-bold">{platform}</span>
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            Precio base: <span className="font-bold">{price.toLocaleString('es-CO', {
-              style: 'currency',
-              currency: 'COP'
-            })}</span>
+            Precio base: <span className="font-bold">{formatPrice(price)}</span>
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            Tarifa PSE: <span className="font-bold">{pseFee.toLocaleString('es-CO', {
-              style: 'currency',
-              currency: 'COP'
-            })}</span>
+            Tarifa PSE: <span className="font-bold">{formatPrice(pseFee)}</span>
           </p>
           <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-2">
-            Total a pagar: <span className="font-bold">{totalPrice.toLocaleString('es-CO', {
-              style: 'currency',
-              currency: 'COP'
-            })}</span>
+            Total a pagar: <span className="font-bold">{formatPrice(totalPrice)}</span>
           </p>
         </div>
 
