@@ -82,10 +82,14 @@ export function ComboMenu() {
         body: JSON.stringify({
           customer: customerData,
           platform: {
-            name: `Combo: ${selectedPlatformNames.join(', ')}`,
-            price: totalWithFee, // Enviamos el precio total con la tarifa PSE incluida
+            name: selectedPlatformNames.length > 1 
+              ? `Combo: ${selectedPlatformNames.join(', ')}` 
+              : selectedPlatformNames[0],
+            price: totalWithFee,
           },
-          numbers: selectedPlatformNames // Enviar como array, no como string concatenado
+          numbers: [selectedPlatformNames.length > 1 
+            ? `Combo: ${selectedPlatformNames.join(', ')}` 
+            : selectedPlatformNames[0]]
         })
       });
 
@@ -107,15 +111,6 @@ export function ComboMenu() {
       console.error('Error:', error);
       alert('Hubo un error al procesar el pago. Por favor intente de nuevo.');
     }
-  };
-
-  const handleWhatsAppClick = () => {
-    const message = `Hola, estoy interesado en el combo: ${selectedPlatforms
-      .map(id => platforms.find(p => p.id === id)?.name)
-      .filter(Boolean)
-      .join(', ')}. Precio: ${formatPrice(calculateTotal())}/mes`;
-    const encodedMessage = encodeURIComponent(message);
-    window.open(`https://api.whatsapp.com/send?phone=573118587974&text=${encodedMessage}`, '_blank');
   };
 
   return (
@@ -276,6 +271,15 @@ export function ComboMenu() {
                   </div>
                 ) : (
                   "Solicitar este combo"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
                 )}
               </button>
             </div>

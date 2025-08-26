@@ -146,9 +146,9 @@ export function PlatformCard({ id, name, price, image, characteristics = [] }: P
           customer: customerData,
           platform: {
             name,
-            price: price + pseFee, // Enviamos el precio total incluyendo la tarifa PSE
+            price: price + pseFee,
           },
-          numbers: name // Store platform name instead of numbers
+          numbers: [name] // Enviamos el nombre de la plataforma como un array de un solo elemento
         })
       });
 
