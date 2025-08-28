@@ -94,7 +94,7 @@ export function CustomerFormModal({
               placeholder="Nombre"
               value={customerData.firstName}
               onChange={(e) => onChange({ ...customerData, firstName: e.target.value })}
-              className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+              className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               required
             />
           </div>
@@ -104,7 +104,7 @@ export function CustomerFormModal({
               placeholder="Apellido"
               value={customerData.lastName}
               onChange={(e) => onChange({ ...customerData, lastName: e.target.value })}
-              className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+              className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               required
             />
           </div>
@@ -114,7 +114,7 @@ export function CustomerFormModal({
               placeholder="Email"
               value={customerData.email}
               onChange={(e) => onChange({ ...customerData, email: e.target.value })}
-              className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+              className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               required
             />
           </div>
@@ -124,7 +124,7 @@ export function CustomerFormModal({
               placeholder="WhatsApp"
               value={customerData.whatsapp}
               onChange={(e) => onChange({ ...customerData, whatsapp: e.target.value })}
-              className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+              className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               required
             />
           </div>
