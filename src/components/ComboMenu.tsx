@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { platforms } from '../data/platforms';
 import { CustomerFormModal } from './CustomerFormModal';
@@ -19,8 +19,10 @@ export function ComboMenu() {
     whatsapp: '',
   });
 
+  const getSelectedEntries = () => (Object.entries(selectedQuantities) as [string, number][]).filter(([, qty]) => qty > 0);
+
   const calculateTotal = () => {
-    const entries = Object.entries(selectedQuantities).filter(([, qty]) => qty > 0);
+    const entries = getSelectedEntries();
     if (entries.length === 0) return 0;
     const baseTotal = entries.reduce((total, [idStr, qty]) => {
       const id = Number(idStr);
@@ -34,12 +36,21 @@ export function ComboMenu() {
     return baseTotal - discount;
   };
 
+  const getTotalItems = () => getSelectedEntries().reduce((s, [, qty]) => s + qty, 0);
+
+  const getSelectedPlatformNamesFlattened = () =>
+    getSelectedEntries().flatMap(([idStr, qty]) => {
+      const platform = platforms.find(p => p.id === Number(idStr));
+      if (!platform || qty <= 0) return [] as string[];
+      return Array.from({ length: qty }, () => platform.name);
+    });
+
   const handleIncrement = (platformId: number) => {
-    setSelectedQuantities(prev => ({ ...prev, [platformId]: (prev[platformId] || 0) + 1 }));
+    setSelectedQuantities((prev: Record<number, number>) => ({ ...prev, [platformId]: (prev[platformId] || 0) + 1 }));
   };
 
   const handleDecrement = (platformId: number) => {
-    setSelectedQuantities(prev => {
+    setSelectedQuantities((prev: Record<number, number>) => {
       const current = prev[platformId] || 0;
       if (current <= 1) {
         const { [platformId]: _, ...rest } = prev;
@@ -66,13 +77,7 @@ export function ComboMenu() {
 
   const handleWhatsAppClick = () => {
     const total = calculateTotal();
-    const selectedPlatformNames = Object.entries(selectedQuantities)
-      .flatMap(([idStr, qty]) => {
-        const platform = platforms.find(p => p.id === Number(idStr));
-        if (!platform || qty <= 0) return [];
-        return Array.from({ length: qty }, () => platform.name);
-      })
-      .filter(Boolean) as string[];
+  const selectedPlatformNames = getSelectedPlatformNamesFlattened();
 
     const message = `Hola, estoy interesado en el siguiente combo: ${selectedPlatformNames.join(', ')}. Precio total: ${formatPrice(total)}/mes`;
     const encodedMessage = encodeURIComponent(message);
@@ -82,15 +87,9 @@ export function ComboMenu() {
   const handleCustomerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const selectedPlatformNames = Object.entries(selectedQuantities)
-      .flatMap(([idStr, qty]) => {
-        const platform = platforms.find(p => p.id === Number(idStr));
-        if (!platform || qty <= 0) return [];
-        return Array.from({ length: qty }, () => platform.name);
-      })
-      .filter(Boolean) as string[];
+  const selectedPlatformNames = getSelectedPlatformNamesFlattened();
 
-    const total = calculateTotal();
+  const total = calculateTotal();
     const pseFee = calculatePSEFee(total);
     const totalWithFee = total + pseFee;
 
@@ -150,10 +149,7 @@ export function ComboMenu() {
           customerData={customerData}
           onChange={setCustomerData}
           onClose={() => setShowCustomerForm(false)}
-          platform={`Combo: ${selectedPlatforms
-            .map(id => platforms.find(p => p.id === id)?.name)
-            .filter(Boolean)
-            .join(', ')}`}
+          platform={`Combo: ${getSelectedPlatformNamesFlattened().join(', ')}`}
           price={calculateTotal()}
         />
       )}
@@ -188,10 +184,9 @@ export function ComboMenu() {
                 {platforms.map(platform => (
                   <div 
                     key={platform.id} 
-                    className={`relative cursor-pointer transition-all ${
-                      selectedPlatforms.includes(platform.id) ? 'ring-2 ring-brand-primary scale-105' : 'opacity-85 hover:opacity-100'
+                    className={`relative transition-all ${
+                      isSelected(platform.id) ? 'ring-2 ring-brand-primary scale-105' : 'opacity-85 hover:opacity-100'
                     }`}
-                    onClick={() => handleCheckboxChange(platform.id)}
                     data-nombre={platform.name}
                   >
                     <div className="flex flex-col items-center">
@@ -213,17 +208,26 @@ export function ComboMenu() {
                         {formatPrice(platform.price)}/mes
                       </span>
 
-                      {/* Oculta checkbox real */}
-                      <input
-                        type="checkbox"
-                        id={`platform-${platform.id}`}
-                        checked={selectedPlatforms.includes(platform.id)}
-                        onChange={() => {}}
-                        className="sr-only"
-                        value={platform.price}
-                      />
-                      
-                      {selectedPlatforms.includes(platform.id) && (
+                      {/* Quantity controls */}
+                      <div className="mt-2 flex items-center space-x-2">
+                        <button
+                          onClick={() => handleDecrement(platform.id)}
+                          className="px-2 py-1 bg-gray-200 rounded-md text-sm"
+                          aria-label={`Disminuir ${platform.name}`}
+                        >-
+                        </button>
+                        <div className="text-sm font-medium">
+                          {selectedQuantities[platform.id] || 0}
+                        </div>
+                        <button
+                          onClick={() => handleIncrement(platform.id)}
+                          className="px-2 py-1 bg-gray-200 rounded-md text-sm"
+                          aria-label={`Aumentar ${platform.name}`}
+                        >+
+                        </button>
+                      </div>
+
+                      {isSelected(platform.id) && (
                         <div className="absolute -top-1 -right-1 bg-brand-primary text-white rounded-full w-6 h-6 flex items-center justify-center">
                           <svg 
                             xmlns="http://www.w3.org/2000/svg" 
