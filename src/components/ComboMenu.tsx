@@ -218,17 +218,7 @@ export function ComboMenu() {
                 Selecciona las plataformas que deseas para tu combo personalizado.
               </p>
 
-              {/* Dynamic message preview for WhatsApp */}
-              <div className="mb-4">
-                <div className="w-full p-3 rounded-lg bg-brand-primary text-white text-sm">
-                  {messagePreview}
-                </div>
-                {getPlatformSummary().length > 0 && (
-                  <div className="mt-2 text-xs text-gray-700 dark:text-gray-300">
-                    {getPlatformSummary().join(' • ')}
-                  </div>
-                )}
-              </div>
+              {/* (Preview and savings shown in header) */}
 
               {/* Grid de plataformas */}
               <div className="grid grid-cols-2 gap-4 mb-4">
@@ -304,17 +294,7 @@ export function ComboMenu() {
                 ))}
               </div>
 
-              {getTotalItems() > 1 && (
-                <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                  <p className="text-sm text-green-700 dark:text-green-300">
-                    {(() => {
-                      const items = getTotalItems();
-                      const savings = (items - 1) * DISCOUNT_PER_PLATFORM;
-                      return `¡Ahorro aplicado! -${formatPrice(savings)} por ${items - 1} unidad${items - 1 > 1 ? 'es' : ''} adicional${items - 1 > 1 ? 'es' : ''}.`;
-                    })()}
-                  </p>
-                </div>
-              )}
+              {/* Savings shown in header only */}
             </div>
 
             {/* Footer fijo */}
