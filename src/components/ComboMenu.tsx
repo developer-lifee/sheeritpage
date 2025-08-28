@@ -154,6 +154,10 @@ export function ComboMenu() {
     }
   };
 
+  // precompute totals for header display
+  const preTotalItems = getTotalItems();
+  const preSavings = preTotalItems > 1 ? (preTotalItems - 1) * DISCOUNT_PER_PLATFORM : 0;
+
   return (
     <>
       {/* Botón Crear Combo (tamaño fijo, igual que antes) */}
@@ -184,15 +188,28 @@ export function ComboMenu() {
           {/* Contenedor del modal */}
           <div className="relative bg-white dark:bg-gray-800 rounded-lg w-full max-w-md mx-4 max-h-[95vh] flex flex-col">
             {/* Header fijo */}
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Crea tu Combo</h3>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-300"
-                title="Cerrar"
-              >
-                <X className="w-5 h-5" />
-              </button>
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Crea tu Combo</h3>
+                <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                  {messagePreview}
+                </div>
+                {preSavings > 0 && (
+                  <div className="mt-2 inline-block px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-md text-sm font-medium">
+                    Ahorro aplicado: -{formatPrice(preSavings)}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-start">
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-300"
+                  title="Cerrar"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Contenido con scroll */}
