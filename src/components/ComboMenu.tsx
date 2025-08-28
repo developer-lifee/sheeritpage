@@ -19,7 +19,10 @@ export function ComboMenu() {
     whatsapp: '',
   });
 
-  const getSelectedEntries = () => (Object.entries(selectedQuantities) as [string, number][]).filter(([, qty]) => qty > 0);
+  const getSelectedEntries = () =>
+    (Object.entries(selectedQuantities) as [string, unknown][])
+      .map(([id, qty]) => [id, Number(qty) || 0] as [string, number])
+      .filter(([, qty]) => qty > 0);
 
   const calculateTotal = () => {
     const entries = getSelectedEntries();
@@ -77,11 +80,15 @@ export function ComboMenu() {
 
   const handleWhatsAppClick = () => {
     const total = calculateTotal();
-  const selectedPlatformNames = getSelectedPlatformNamesFlattened();
+    const selectedPlatformNames = getSelectedPlatformNamesFlattened();
 
     const message = `Hola, estoy interesado en el siguiente combo: ${selectedPlatformNames.join(', ')}. Precio total: ${formatPrice(total)}/mes`;
     const encodedMessage = encodeURIComponent(message);
-    window.open(`https://api.whatsapp.com/send?phone=573118587974&text=${encodedMessage}`, '_blank');
+    try {
+      window.open(`https://api.whatsapp.com/send?phone=573118587974&text=${encodedMessage}`, '_blank');
+    } catch (err) {
+      console.error('No se pudo abrir WhatsApp', err);
+    }
   };
 
   const handleCustomerSubmit = async (e: React.FormEvent) => {
@@ -137,13 +144,14 @@ export function ComboMenu() {
     <>
       {/* Botón Crear Combo (tamaño fijo, igual que antes) */}
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
         className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-dark transition-colors border border-transparent text-base font-medium"
       >
         Crear Combo
       </button>
 
-      {showCustomerForm && (
+  {showCustomerForm && (
         <CustomerFormModal
           onSubmit={handleCustomerSubmit}
           customerData={customerData}
@@ -211,6 +219,7 @@ export function ComboMenu() {
                       {/* Quantity controls */}
                       <div className="mt-2 flex items-center space-x-2">
                         <button
+                          type="button"
                           onClick={() => handleDecrement(platform.id)}
                           className="px-2 py-1 bg-gray-200 rounded-md text-sm"
                           aria-label={`Disminuir ${platform.name}`}
@@ -220,6 +229,7 @@ export function ComboMenu() {
                           {selectedQuantities[platform.id] || 0}
                         </div>
                         <button
+                          type="button"
                           onClick={() => handleIncrement(platform.id)}
                           className="px-2 py-1 bg-gray-200 rounded-md text-sm"
                           aria-label={`Aumentar ${platform.name}`}
@@ -248,10 +258,14 @@ export function ComboMenu() {
                 ))}
               </div>
 
-              {selectedPlatforms.length > 1 && (
+              {getTotalItems() > 1 && (
                 <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                   <p className="text-sm text-green-700 dark:text-green-300">
-                    ¡Ahorro aplicado! <span className="font-bold">-{formatPrice((selectedPlatforms.length - 1) * DISCOUNT_PER_PLATFORM)}</span> por {selectedPlatforms.length - 1} plataforma{selectedPlatforms.length > 2 ? 's' : ''} adicional{selectedPlatforms.length > 2 ? 'es' : ''}.
+                    {(() => {
+                      const items = getTotalItems();
+                      const savings = (items - 1) * DISCOUNT_PER_PLATFORM;
+                      return `¡Ahorro aplicado! -${formatPrice(savings)} por ${items - 1} unidad${items - 1 > 1 ? 'es' : ''} adicional${items - 1 > 1 ? 'es' : ''}.`;
+                    })()}
                   </p>
                 </div>
               )}
@@ -267,13 +281,15 @@ export function ComboMenu() {
               </div>
 
               <button
+                type="button"
                 onClick={() => setShowPaymentOptions(true)}
-                disabled={selectedPlatforms.length === 0}
+                disabled={getTotalItems() === 0}
                 className="w-full py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {showPaymentOptions ? (
                   <div className="space-y-3">
                     <button
+                      type="button"
                       onClick={handlePSEClick}
                       className="w-full flex items-center justify-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
                     >
@@ -285,6 +301,7 @@ export function ComboMenu() {
                       Pagar con PSE (+{formatPrice(calculatePSEFee(calculateTotal()))})
                     </button>
                     <button
+                      type="button"
                       onClick={handleWhatsAppClick}
                       className="w-full flex items-center justify-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
                     >
