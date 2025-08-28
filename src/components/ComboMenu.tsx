@@ -47,6 +47,7 @@ export function ComboMenu() {
       if (!platform || qty <= 0) return [] as string[];
       return Array.from({ length: qty }, () => platform.name);
     });
+ 
 
   const handleIncrement = (platformId: number) => {
     setSelectedQuantities((prev: Record<number, number>) => ({ ...prev, [platformId]: (prev[platformId] || 0) + 1 }));
@@ -73,6 +74,19 @@ export function ComboMenu() {
       maximumFractionDigits: 0
     }).format(price);
   };
+
+  const getPlatformSummary = () =>
+    getSelectedEntries().map(([idStr, qty]) => {
+      const platform = platforms.find(p => p.id === Number(idStr));
+      return platform ? `${qty}× ${platform.name}` : '';
+    }).filter(Boolean);
+
+  const messagePreview = (() => {
+    const items = getPlatformSummary();
+    const total = calculateTotal();
+    if (items.length === 0) return 'Aún no hay plataformas en el combo.';
+    return `Hola, estoy interesado en el siguiente combo: ${items.join(', ')}. Precio total: ${formatPrice(total)}/mes`;
+  })();
 
   const handlePSEClick = () => {
     setShowCustomerForm(true);
@@ -183,9 +197,21 @@ export function ComboMenu() {
 
             {/* Contenido con scroll */}
             <div className="p-6 overflow-y-auto flex-1">
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
+              <p className="text-gray-600 dark:text-gray-300 mb-2">
                 Selecciona las plataformas que deseas para tu combo personalizado.
               </p>
+
+              {/* Dynamic message preview for WhatsApp */}
+              <div className="mb-4">
+                <div className="w-full p-3 rounded-lg bg-brand-primary text-white text-sm">
+                  {messagePreview}
+                </div>
+                {getPlatformSummary().length > 0 && (
+                  <div className="mt-2 text-xs text-gray-700 dark:text-gray-300">
+                    {getPlatformSummary().join(' • ')}
+                  </div>
+                )}
+              </div>
 
               {/* Grid de plataformas */}
               <div className="grid grid-cols-2 gap-4 mb-4">
@@ -217,21 +243,24 @@ export function ComboMenu() {
                       </span>
 
                       {/* Quantity controls */}
-                      <div className="mt-2 flex items-center space-x-2">
+                      <div className="mt-2 flex items-center space-x-3">
                         <button
                           type="button"
                           onClick={() => handleDecrement(platform.id)}
-                          className="px-2 py-1 bg-gray-200 rounded-md text-sm"
+                          className="px-2 py-1 bg-red-500 text-white rounded-md text-sm hover:bg-red-600"
                           aria-label={`Disminuir ${platform.name}`}
                         >-
                         </button>
-                        <div className="text-sm font-medium">
+
+                        {/* Prominent quantity badge */}
+                        <div className="text-sm font-medium px-3 py-1 bg-brand-primary text-white rounded-full shadow-sm">
                           {selectedQuantities[platform.id] || 0}
                         </div>
+
                         <button
                           type="button"
                           onClick={() => handleIncrement(platform.id)}
-                          className="px-2 py-1 bg-gray-200 rounded-md text-sm"
+                          className="px-2 py-1 bg-brand-primary text-white rounded-md text-sm hover:bg-brand-dark"
                           aria-label={`Aumentar ${platform.name}`}
                         >+
                         </button>
