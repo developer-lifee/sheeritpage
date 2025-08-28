@@ -91,6 +91,17 @@ export const platforms = [
           "con tu mismo correo de microsoft",
         ],
       },
+      {
+        id: 20,
+        name: 'MICROSOFT Compartida',
+        price: 5000,
+        image: 'https://th.bing.com/th/id/OIP.9vkItxSZEt6JEXNQy_sVcQHaEJ?cb=iwc2&rs=1&pid=ImgDetMain',
+        characteristics: [
+          "Cuenta compartida con correo nuestro",
+          "Ideal si quieres una tener office original menor costo",
+          "almacenamiento de onedrive",
+        ],
+      },
       {
         id: 17,
         name: 'Coworking Alquiler',

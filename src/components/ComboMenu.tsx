@@ -8,7 +8,8 @@ const DISCOUNT_PER_PLATFORM = 1000; // Descuento de mil por cada plataforma adic
 
 export function ComboMenu() {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedPlatforms, setSelectedPlatforms] = useState<number[]>([]);
+  // selectedQuantities maps platformId -> quantity (allows multiple of same product)
+  const [selectedQuantities, setSelectedQuantities] = useState<Record<number, number>>({});
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [customerData, setCustomerData] = useState({
@@ -19,24 +20,36 @@ export function ComboMenu() {
   });
 
   const calculateTotal = () => {
-    if (selectedPlatforms.length === 0) return 0;
-    const baseTotal = selectedPlatforms.reduce(
-      (total, id) => total + (platforms.find(p => p.id === id)?.price || 0),
-      0
-    );
-    const discount = selectedPlatforms.length > 1
-      ? (selectedPlatforms.length - 1) * DISCOUNT_PER_PLATFORM
-      : 0;
+    const entries = Object.entries(selectedQuantities).filter(([, qty]) => qty > 0);
+    if (entries.length === 0) return 0;
+    const baseTotal = entries.reduce((total, [idStr, qty]) => {
+      const id = Number(idStr);
+      const price = platforms.find(p => p.id === id)?.price || 0;
+      return total + price * qty;
+    }, 0);
+
+    // Count total number of items (sum of quantities) to apply discount per additional platform
+    const totalItems = entries.reduce((s, [, qty]) => s + qty, 0);
+    const discount = totalItems > 1 ? (totalItems - 1) * DISCOUNT_PER_PLATFORM : 0;
     return baseTotal - discount;
   };
 
-  const handleCheckboxChange = (platformId: number) => {
-    setSelectedPlatforms(prev =>
-      prev.includes(platformId)
-        ? prev.filter(id => id !== platformId)
-        : [...prev, platformId]
-    );
+  const handleIncrement = (platformId: number) => {
+    setSelectedQuantities(prev => ({ ...prev, [platformId]: (prev[platformId] || 0) + 1 }));
   };
+
+  const handleDecrement = (platformId: number) => {
+    setSelectedQuantities(prev => {
+      const current = prev[platformId] || 0;
+      if (current <= 1) {
+        const { [platformId]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [platformId]: current - 1 };
+    });
+  };
+
+  const isSelected = (platformId: number) => !!(selectedQuantities[platformId] && selectedQuantities[platformId] > 0);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-CO', {
@@ -53,8 +66,12 @@ export function ComboMenu() {
 
   const handleWhatsAppClick = () => {
     const total = calculateTotal();
-    const selectedPlatformNames = selectedPlatforms
-      .map(id => platforms.find(p => p.id === id)?.name)
+    const selectedPlatformNames = Object.entries(selectedQuantities)
+      .flatMap(([idStr, qty]) => {
+        const platform = platforms.find(p => p.id === Number(idStr));
+        if (!platform || qty <= 0) return [];
+        return Array.from({ length: qty }, () => platform.name);
+      })
       .filter(Boolean) as string[];
 
     const message = `Hola, estoy interesado en el siguiente combo: ${selectedPlatformNames.join(', ')}. Precio total: ${formatPrice(total)}/mes`;
@@ -65,8 +82,12 @@ export function ComboMenu() {
   const handleCustomerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const selectedPlatformNames = selectedPlatforms
-      .map(id => platforms.find(p => p.id === id)?.name)
+    const selectedPlatformNames = Object.entries(selectedQuantities)
+      .flatMap(([idStr, qty]) => {
+        const platform = platforms.find(p => p.id === Number(idStr));
+        if (!platform || qty <= 0) return [];
+        return Array.from({ length: qty }, () => platform.name);
+      })
       .filter(Boolean) as string[];
 
     const total = calculateTotal();
