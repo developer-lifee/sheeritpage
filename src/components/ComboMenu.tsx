@@ -187,29 +187,30 @@ export function ComboMenu() {
 
           {/* Contenedor del modal */}
           <div className="relative bg-white dark:bg-gray-800 rounded-lg w-full max-w-md mx-4 max-h-[95vh] flex flex-col">
-            {/* Header fijo */}
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex-1">
+            {/* Header fijo: título + equis inline, preview y ahorro debajo */}
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
+              {/* Top row: title + close (placed immediately next to title for better mobile UX) */}
+              <div className="flex items-center gap-3">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">Crea tu Combo</h3>
-                <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                  {messagePreview}
-                </div>
-                {preSavings > 0 && (
-                  <div className="mt-2 inline-block px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-md text-sm font-medium">
-                    Ahorro aplicado: -{formatPrice(preSavings)}
-                  </div>
-                )}
-              </div>
-              <div className="flex items-start">
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-300"
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-300"
                   title="Cerrar"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
+
+              {/* Preview y ahorro debajo del título */}
+              <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                {messagePreview}
+              </div>
+              {preSavings > 0 && (
+                <div className="mt-2 inline-block px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-md text-sm font-medium">
+                  Ahorro aplicado: -{formatPrice(preSavings)}
+                </div>
+              )}
             </div>
 
             {/* Contenido con scroll */}
@@ -223,25 +224,34 @@ export function ComboMenu() {
               {/* Grid de plataformas */}
               <div className="grid grid-cols-2 gap-4 mb-4">
                 {platforms.map(platform => (
-                  <div 
-                    key={platform.id} 
-                    className={`relative transition-all ${
+                  <div
+                    key={platform.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleIncrement(platform.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleIncrement(platform.id);
+                      }
+                    }}
+                    className={`relative transition-all cursor-pointer ${
                       isSelected(platform.id) ? 'ring-2 ring-brand-primary scale-105' : 'opacity-85 hover:opacity-100'
                     }`}
                     data-nombre={platform.name}
                   >
                     <div className="flex flex-col items-center">
                       <div className="w-20 h-20 rounded-full overflow-hidden mb-2 shadow-md">
-                        <img 
-                          src={platform.image} 
+                        <img
+                          src={platform.image}
                           alt={platform.name}
-                          className="w-full h-full object-cover" 
+                          className="w-full h-full object-cover"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = `https://via.placeholder.com/80?text=${platform.name}`;
                           }}
                         />
                       </div>
-                      
+
                       <h4 className="font-medium text-center text-gray-800 dark:text-white">
                         {platform.name}
                       </h4>
@@ -253,7 +263,7 @@ export function ComboMenu() {
                       <div className="mt-2 flex items-center space-x-3">
                         <button
                           type="button"
-                          onClick={() => handleDecrement(platform.id)}
+                          onClick={(e) => { e.stopPropagation(); handleDecrement(platform.id); }}
                           className="px-2 py-1 bg-gray-300 text-gray-800 dark:bg-gray-600 dark:text-white rounded-md text-sm hover:bg-gray-400 dark:hover:bg-gray-500"
                           aria-label={`Disminuir ${platform.name}`}
                         >-
@@ -266,7 +276,7 @@ export function ComboMenu() {
 
                         <button
                           type="button"
-                          onClick={() => handleIncrement(platform.id)}
+                          onClick={(e) => { e.stopPropagation(); handleIncrement(platform.id); }}
                           className="px-2 py-1 bg-brand-primary text-white rounded-md text-sm hover:bg-brand-dark"
                           aria-label={`Aumentar ${platform.name}`}
                         >+
@@ -275,16 +285,16 @@ export function ComboMenu() {
 
                       {isSelected(platform.id) && (
                         <div className="absolute -top-1 -right-1 bg-brand-primary text-white rounded-full w-6 h-6 flex items-center justify-center">
-                          <svg 
-                            xmlns="http://www.w3.org/2000/svg" 
-                            className="h-4 w-4" 
-                            viewBox="0 0 20 20" 
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4"
+                            viewBox="0 0 20 20"
                             fill="currentColor"
                           >
-                            <path 
-                              fillRule="evenodd" 
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" 
-                              clipRule="evenodd" 
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
                             />
                           </svg>
                         </div>
