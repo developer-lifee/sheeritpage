@@ -115,37 +115,60 @@ export function ComboMenu() {
     const totalWithFee = total + pseFee;
 
     try {
+      const payload = {
+        customer: customerData,
+        platform: {
+          name: selectedPlatformNames.length > 1
+            ? `Combo: ${selectedPlatformNames.join(', ')}`
+            : selectedPlatformNames[0],
+          price: totalWithFee,
+        },
+        numbers: [
+          selectedPlatformNames.length > 1
+            ? `Combo: ${selectedPlatformNames.join(', ')}`
+            : selectedPlatformNames[0],
+        ],
+      } as any;
+
+      // DEBUG: mostrar payload que se enviará al backend
+      console.log('Enviar a generar_token.php -> payload:', payload);
+
       const response = await fetch('https://sheerit.com.co/pago/generar_token.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          customer: customerData,
-          platform: {
-            name: selectedPlatformNames.length > 1 
-              ? `Combo: ${selectedPlatformNames.join(', ')}` 
-              : selectedPlatformNames[0],
-            price: totalWithFee,
-          },
-          numbers: [selectedPlatformNames.length > 1 
-            ? `Combo: ${selectedPlatformNames.join(', ')}` 
-            : selectedPlatformNames[0]]
-        })
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
         throw new Error('Network response was not ok');
       }
 
-      const data = await response.json();
-      
+      const text = await response.text();
+      let data: any = null;
+      try {
+        data = JSON.parse(text);
+      } catch (err) {
+        console.error('Respuesta no JSON de generar_token.php:', text);
+        throw new Error('Respuesta inválida del servidor');
+      }
+
+      // DEBUG: mostrar response info y origen del apiKey
+      console.log('generar_token.php HTTP status:', response.status, 'url:', response.url);
+      try {
+        console.log('generar_token.php response parsed:', data);
+        console.log('apiKey recibido de backend:', data?.apiKey);
+      } catch (err) {
+        console.warn('No se pudo loggear data completo', err);
+      }
+
       if (data.error) {
         throw new Error(data.error);
       }
       
       // Redirect to Bold's checkout page
-      const boldCheckoutUrl = `https://checkout.bold.co/v2/checkout?apiKey=${data.apiKey}&orderId=${data.orderId}&amount=${data.amount}&currency=${data.currency}&description=${encodeURIComponent(data.description)}&tax=${data.tax}&integritySignature=${data.integritySignature}&redirectionUrl=${encodeURIComponent(data.redirectionUrl)}`;
+      const boldCheckoutUrl = `https://checkout.bold.co/v2/checkout?apiKey=${data.apiKey}PUTAAA&orderId=${data.orderId}&amount=${data.amount}&currency=${data.currency}&description=${encodeURIComponent(data.description)}&tax=${data.tax}&integritySignature=${data.integritySignature}&redirectionUrl=${encodeURIComponent(data.redirectionUrl)}`;
       
       window.location.href = boldCheckoutUrl;
     } catch (error) {
