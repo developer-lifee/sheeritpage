@@ -1,19 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { calculatePSEFee } from '../utils/fees';
-
-
-// Cálculo de tarifa PSE y desglose
-function calculatePSEFee(price: number): number {
-  const boldFeePercentage = 3.49;
-  const reteICAPercentage = 0.414;
-  const fixedBoldFee = 900;
-  const boldFeeDecimal = boldFeePercentage / 100;
-  const reteICADecimal = reteICAPercentage / 100;
-  const totalPercentageDecimal = boldFeeDecimal + reteICADecimal;
-  const grossPriceNeeded = (price + fixedBoldFee) / (1 - totalPercentageDecimal);
-  return Math.round(grossPriceNeeded - price);
-}
 
 interface CustomerFormModalProps {
   platform: {
@@ -35,12 +22,11 @@ export function CustomerFormModal({ platform, onClose }: CustomerFormModalProps)
   const [paymentReady, setPaymentReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cálculo de desglose
+  // Tu lógica de cálculo de tarifas, ahora usando la función importada
   const pseFee = calculatePSEFee(platform.price);
   const totalPrice = platform.price + pseFee;
   const formatPrice = (value: number) => value.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-  // Envío del formulario y generación del botón Bold
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -49,31 +35,41 @@ export function CustomerFormModal({ platform, onClose }: CustomerFormModalProps)
       const response = await fetch('https://sheerit.com.co/pago/generar_token.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        // El body coincide con el formato que tu PHP espera
         body: JSON.stringify({
-          amount: totalPrice.toString().replace('.', ''),
-          description: `Compra de ${platform.name}`,
-          customerData: customer,
+          platform: {
+            name: platform.name,
+            price: totalPrice.toString().replace('.', ''), // Se usa el precio total
+          },
+          customer: customer,
+          numbers: [`Suscripción a ${platform.name}`],
         }),
       });
+
       if (!response.ok) {
         const err = await response.json();
         throw new Error(err.error || 'Error del servidor. Inténtalo de nuevo.');
       }
+
       const paymentConfig = await response.json();
       const container = document.getElementById('bold-button-container');
       if (container) {
         container.innerHTML = '';
         const boldScript = document.createElement('script');
         boldScript.src = "https://checkout.bold.co/library/boldPaymentButton.js";
+        
         boldScript.setAttribute('data-bold-button', 'true');
-        boldScript.setAttribute('data-api-key', 'YCJ9yFnOlrWiS9Mq4KZLfize2ApawYb8rqrj0pge6p');
+        boldScript.setAttribute('data-api-key', 'YCJ9yFnOlrWiS9Mq4KZLfize2ApawYb8rqrj0pge6pM');
         boldScript.setAttribute('data-order-id', paymentConfig.orderId);
         boldScript.setAttribute('data-amount', paymentConfig.amount);
         boldScript.setAttribute('data-integrity-signature', paymentConfig.integritySignature);
         boldScript.setAttribute('data-redirection-url', paymentConfig.redirectionUrl);
         boldScript.setAttribute('data-description', paymentConfig.description);
         boldScript.setAttribute('data-currency', paymentConfig.currency);
-        boldScript.setAttribute('data-customer-data', paymentConfig.customerDataString);
+        
+        // Atributo clave para que el pago se abra en un modal
+        boldScript.setAttribute('data-render-mode', 'embedded');
+
         container.appendChild(boldScript);
         setPaymentReady(true);
       }
@@ -90,6 +86,7 @@ export function CustomerFormModal({ platform, onClose }: CustomerFormModalProps)
     setCustomer(prev => ({ ...prev, [name]: value }));
   };
 
+  // Tu JSX original con todos los estilos
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
