@@ -1,9 +1,9 @@
-// sheeritpage/src/components/CustomerFormModal.tsx (CORREGIDO)
+// src/components/CustomerFormModal.tsx (Actualizado)
 
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { calculatePSEFee } from '../utils/fees';
-import { BoldPaymentButton } from './BoldPaymentButton';
+import { useBold } from '../hooks/useBold'; // 1. Importa el nuevo hook
 
 // Interfaz para las props que el modal necesita
 interface CustomerFormModalProps {
@@ -12,7 +12,7 @@ interface CustomerFormModalProps {
   onClose: () => void;
 }
 
-// Tipo para la configuración del pago
+// Tipo para la configuración del pago (debe coincidir con la del hook)
 type PaymentConfig = {
   orderId: string;
   amount: string;
@@ -32,14 +32,16 @@ export function CustomerFormModal({ platformName, platformPrice, onClose }: Cust
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
+  
+  // 2. Usa el hook de Bold
+  const { loadAndOpenCheckout, isScriptLoading, scriptError } = useBold();
 
   // Lógica de precios
   const pseFee = calculatePSEFee(platformPrice);
   const totalPrice = platformPrice + pseFee;
   const formatPrice = (value: number) => value.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-  // Lógica de envío (ahora vive DENTRO del modal)
+  // 3. Modifica la lógica de envío
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -64,7 +66,9 @@ export function CustomerFormModal({ platformName, platformPrice, onClose }: Cust
       }
       
       const config: PaymentConfig = await response.json();
-      setPaymentConfig(config);
+      
+      // En lugar de guardar la config, abre el checkout directamente
+      loadAndOpenCheckout(config, "1y0D48xaDriWO_CNz7oXUopfkKx5VjiExsdDW0gj2eA");
 
     } catch (error: any) {
       setError(error.message);
@@ -98,25 +102,21 @@ export function CustomerFormModal({ platformName, platformPrice, onClose }: Cust
           <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-2">Total a pagar: <span className="font-bold">{formatPrice(totalPrice)}</span></p>
         </div>
 
-        {!paymentConfig ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
+        {/* 4. Simplifica el formulario, ya no necesita renderizado condicional */}
+        <form onSubmit={handleSubmit} className="space-y-4">
             <input type="text" name="firstName" placeholder="Nombre" value={customer.firstName} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
             <input type="text" name="lastName" placeholder="Apellido" value={customer.lastName} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
             <input type="email" name="email" placeholder="Email" value={customer.email} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
             <input type="tel" name="whatsapp" placeholder="WhatsApp" value={customer.whatsapp} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
-            <button type="submit" className="w-full py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark" disabled={isLoading}>{isLoading ? 'Preparando pago...' : 'Continuar con PSE'}</button>
-          </form>
-        ) : (
-          <div className="text-center">
-            <p className="mb-4 dark:text-gray-300">Casi listo. Haz clic en el botón para completar tu pago de forma segura.</p>
-            <BoldPaymentButton
-              apiKey="1y0D48xaDriWO_CNz7oXUopfkKx5VjiExsdDW0gj2eA"
-              paymentConfig={paymentConfig}
-            />
-          </div>
-        )}
+            <button 
+                type="submit" 
+                className="w-full py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark disabled:opacity-50" 
+                disabled={isLoading || isScriptLoading}>
+                {isLoading ? 'Preparando pago...' : isScriptLoading ? 'Cargando...' : 'Continuar con PSE'}
+            </button>
+        </form>
 
-        {error && <p className="text-red-500 mt-4 text-center">{error}</p>}
+        {(error || scriptError) && <p className="text-red-500 mt-4 text-center">{error || scriptError}</p>}
       </div>
     </div>
   );
