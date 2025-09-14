@@ -1,60 +1,93 @@
-import React from 'react';
+
+
+import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import { calculatePSEFee } from '../utils/fees';
 
-interface CustomerFormModalProps {
-  onSubmit: (e: React.FormEvent) => void;
-  customerData: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    whatsapp: string;
-  };
-  onChange: (data: any) => void;
-  onClose: () => void;
-  platform: string;
-  price: number;
-}
-
+// Cálculo de tarifa PSE y desglose
 function calculatePSEFee(price: number): number {
-  // Define fee percentages and fixed fees
-  const boldFeePercentage = 3.49; // 3.49%
-  const reteICAPercentage = 0.414; // 0.414%
-  const fixedBoldFee = 900; // $900 COP
-
-  // Convert percentages to decimal
+  const boldFeePercentage = 3.49;
+  const reteICAPercentage = 0.414;
+  const fixedBoldFee = 900;
   const boldFeeDecimal = boldFeePercentage / 100;
   const reteICADecimal = reteICAPercentage / 100;
-
-  // Calculate total percentage that will be deducted
   const totalPercentageDecimal = boldFeeDecimal + reteICADecimal;
-
-  // Calculate the gross price needed
   const grossPriceNeeded = (price + fixedBoldFee) / (1 - totalPercentageDecimal);
-
-  // Return the total fee
   return Math.round(grossPriceNeeded - price);
 }
 
-export function CustomerFormModal({
-  onSubmit,
-  customerData,
-  onChange,
-  onClose,
-  platform,
-  price
-}: CustomerFormModalProps) {
-  const pseFee = calculatePSEFee(price);
-  const totalPrice = price + pseFee;
+interface CustomerFormModalProps {
+  platform: {
+    id: number;
+    name: string;
+    price: number;
+  };
+  onClose: () => void;
+}
 
-  // Function to format price to COP currency
-  const formatPrice = (value: number) => {
-    return value.toLocaleString('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    });
+export function CustomerFormModal({ platform, onClose }: CustomerFormModalProps) {
+  const [customer, setCustomer] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    whatsapp: '',
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [paymentReady, setPaymentReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Cálculo de desglose
+  const pseFee = calculatePSEFee(platform.price);
+  const totalPrice = platform.price + pseFee;
+  const formatPrice = (value: number) => value.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+  // Envío del formulario y generación del botón Bold
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('https://sheerit.com.co/pago/generar_token.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: totalPrice.toString().replace('.', ''),
+          description: `Compra de ${platform.name}`,
+          customerData: customer,
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Error del servidor. Inténtalo de nuevo.');
+      }
+      const paymentConfig = await response.json();
+      const container = document.getElementById('bold-button-container');
+      if (container) {
+        container.innerHTML = '';
+        const boldScript = document.createElement('script');
+        boldScript.src = "https://checkout.bold.co/library/boldPaymentButton.js";
+        boldScript.setAttribute('data-bold-button', 'true');
+        boldScript.setAttribute('data-api-key', 'YCJ9yFnOlrWiS9Mq4KZLfize2ApawYb8rqrj0pge6p');
+        boldScript.setAttribute('data-order-id', paymentConfig.orderId);
+        boldScript.setAttribute('data-amount', paymentConfig.amount);
+        boldScript.setAttribute('data-integrity-signature', paymentConfig.integritySignature);
+        boldScript.setAttribute('data-redirection-url', paymentConfig.redirectionUrl);
+        boldScript.setAttribute('data-description', paymentConfig.description);
+        boldScript.setAttribute('data-currency', paymentConfig.currency);
+        boldScript.setAttribute('data-customer-data', paymentConfig.customerDataString);
+        container.appendChild(boldScript);
+        setPaymentReady(true);
+      }
+    } catch (error: any) {
+      console.error("Error al preparar el pago:", error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setCustomer(prev => ({ ...prev, [name]: value }));
   };
 
   return (
@@ -71,13 +104,13 @@ export function CustomerFormModal({
         <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
           Completar Pedido
         </h3>
-        
+
         <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded">
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            Plataforma: <span className="font-bold">{platform}</span>
+            Plataforma: <span className="font-bold">{platform.name}</span>
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            Precio base: <span className="font-bold">{formatPrice(price)}</span>
+            Precio base: <span className="font-bold">{formatPrice(platform.price)}</span>
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-300">
             Tarifa PSE: <span className="font-bold">{formatPrice(pseFee)}</span>
@@ -87,54 +120,70 @@ export function CustomerFormModal({
           </p>
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div>
-            <input
-              type="text"
-              placeholder="Nombre"
-              value={customerData.firstName}
-              onChange={(e) => onChange({ ...customerData, firstName: e.target.value })}
-              className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              required
-            />
+        {!paymentReady ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <input
+                type="text"
+                name="firstName"
+                placeholder="Nombre"
+                value={customer.firstName}
+                onChange={handleInputChange}
+                className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                required
+              />
+            </div>
+            <div>
+              <input
+                type="text"
+                name="lastName"
+                placeholder="Apellido"
+                value={customer.lastName}
+                onChange={handleInputChange}
+                className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                required
+              />
+            </div>
+            <div>
+              <input
+                type="email"
+                name="email"
+                placeholder="Email"
+                value={customer.email}
+                onChange={handleInputChange}
+                className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                required
+              />
+            </div>
+            <div>
+              <input
+                type="tel"
+                name="whatsapp"
+                placeholder="WhatsApp"
+                value={customer.whatsapp}
+                onChange={handleInputChange}
+                className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Preparando pago...' : 'Continuar con PSE'}
+            </button>
+          </form>
+        ) : (
+          <div className="text-center">
+            <p className="mb-4 dark:text-gray-300">Casi listo. Haz clic en el botón para completar tu pago de forma segura.</p>
+            <div id="bold-button-container" className="flex justify-center">
+              {/* El script insertará el botón de Bold aquí */}
+            </div>
           </div>
-          <div>
-            <input
-              type="text"
-              placeholder="Apellido"
-              value={customerData.lastName}
-              onChange={(e) => onChange({ ...customerData, lastName: e.target.value })}
-              className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              required
-            />
-          </div>
-          <div>
-            <input
-              type="email"
-              placeholder="Email"
-              value={customerData.email}
-              onChange={(e) => onChange({ ...customerData, email: e.target.value })}
-              className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              required
-            />
-          </div>
-          <div>
-            <input
-              type="tel"
-              placeholder="WhatsApp"
-              value={customerData.whatsapp}
-              onChange={(e) => onChange({ ...customerData, whatsapp: e.target.value })}
-              className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark"
-          >
-            Continuar con PSE
-          </button>
-        </form>
+        )}
+
+        {error && <p className="text-red-500 mt-4 text-center">{error}</p>}
       </div>
     </div>
   );
