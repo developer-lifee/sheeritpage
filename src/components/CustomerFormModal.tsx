@@ -1,7 +1,11 @@
+// Archivo: CustomerFormModal.tsx (versión final)
+
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { calculatePSEFee } from '../utils/fees';
+import { BoldPaymentButton } from './BoldPaymentButton'; // <-- 1. Importa el nuevo componente
 
+// (Asegúrate de que la interfaz de props sea la misma)
 interface CustomerFormModalProps {
   platform: {
     id: number;
@@ -11,6 +15,16 @@ interface CustomerFormModalProps {
   onClose: () => void;
 }
 
+// (Opcional) Define un tipo para la configuración para mayor seguridad
+type PaymentConfig = {
+  orderId: string;
+  amount: string;
+  integritySignature: string;
+  redirectionUrl: string;
+  description: string;
+  currency: string;
+};
+
 export function CustomerFormModal({ platform, onClose }: CustomerFormModalProps) {
   const [customer, setCustomer] = useState({
     firstName: '',
@@ -19,15 +33,16 @@ export function CustomerFormModal({ platform, onClose }: CustomerFormModalProps)
     whatsapp: '',
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [paymentReady, setPaymentReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Tu lógica de cálculo de tarifas, intacta
+  // 2. Nuevo estado para guardar la configuración del pago del backend.
+  const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
+
+  // Lógica de precios (sin cambios)
   const pseFee = calculatePSEFee(platform.price);
   const totalPrice = platform.price + pseFee;
   const formatPrice = (value: number) => value.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-  // --- ÚNICA SECCIÓN MODIFICADA ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -36,7 +51,6 @@ export function CustomerFormModal({ platform, onClose }: CustomerFormModalProps)
       const response = await fetch('https://sheerit.com.co/pago/generar_token.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // 1. El 'body' se ajusta a lo que tu PHP espera
         body: JSON.stringify({
           platform: {
             name: platform.name,
@@ -52,33 +66,11 @@ export function CustomerFormModal({ platform, onClose }: CustomerFormModalProps)
         throw new Error(err.error || 'Error del servidor. Inténtalo de nuevo.');
       }
       
-      const paymentConfig = await response.json();
-      const container = document.getElementById('bold-button-container');
+      const config: PaymentConfig = await response.json();
+      
+      // 3. En lugar de tocar el DOM, actualizamos el estado con la configuración.
+      setPaymentConfig(config);
 
-      if (container) {
-        container.innerHTML = '';
-        const boldScript = document.createElement('script');
-        boldScript.src = "https://checkout.bold.co/library/boldPaymentButton.js";
-        
-        boldScript.setAttribute('data-bold-button', 'true');
-        
-        // 2. Usando tu Llave de Identidad de PRODUCCIÓN
-        boldScript.setAttribute('data-api-key', '1y0D48xaDriWO_CNz7oXUopfkKx5VjiExsdDW0gj2eA');
-        
-        // Atributos que vienen del backend
-        boldScript.setAttribute('data-order-id', paymentConfig.orderId);
-        boldScript.setAttribute('data-amount', paymentConfig.amount);
-        boldScript.setAttribute('data-integrity-signature', paymentConfig.integritySignature);
-        boldScript.setAttribute('data-redirection-url', paymentConfig.redirectionUrl);
-        boldScript.setAttribute('data-description', paymentConfig.description);
-        boldScript.setAttribute('data-currency', paymentConfig.currency);
-        
-        // 3. Atributo CLAVE para que el pago se abra en un MODAL
-        boldScript.setAttribute('data-render-mode', 'embedded');
-
-        container.appendChild(boldScript);
-        setPaymentReady(true);
-      }
     } catch (error: any) {
       console.error("Error al preparar el pago:", error);
       setError(error.message);
@@ -86,14 +78,13 @@ export function CustomerFormModal({ platform, onClose }: CustomerFormModalProps)
       setIsLoading(false);
     }
   };
-  // --- FIN DE LA SECCIÓN MODIFICADA ---
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setCustomer(prev => ({ ...prev, [name]: value }));
   };
 
-  // Tu JSX y estilos originales, intactos
+  // JSX (con la nueva lógica de renderizado)
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
@@ -110,80 +101,28 @@ export function CustomerFormModal({ platform, onClose }: CustomerFormModalProps)
         </h3>
 
         <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded">
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            Plataforma: <span className="font-bold">{platform.name}</span>
-          </p>
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            Precio base: <span className="font-bold">{formatPrice(platform.price)}</span>
-          </p>
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            Tarifa PSE: <span className="font-bold">{formatPrice(pseFee)}</span>
-          </p>
-          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-2">
-            Total a pagar: <span className="font-bold">{formatPrice(totalPrice)}</span>
-          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-300">Plataforma: <span className="font-bold">{platform.name}</span></p>
+          <p className="text-sm text-gray-600 dark:text-gray-300">Precio base: <span className="font-bold">{formatPrice(platform.price)}</span></p>
+          <p className="text-sm text-gray-600 dark:text-gray-300">Tarifa PSE: <span className="font-bold">{formatPrice(pseFee)}</span></p>
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-2">Total a pagar: <span className="font-bold">{formatPrice(totalPrice)}</span></p>
         </div>
 
-        {!paymentReady ? (
+        {/* 4. Lógica de renderizado condicional: o se muestra el formulario o el botón de pago. */}
+        {!paymentConfig ? (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <input
-                type="text"
-                name="firstName"
-                placeholder="Nombre"
-                value={customer.firstName}
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                required
-              />
-            </div>
-            <div>
-              <input
-                type="text"
-                name="lastName"
-                placeholder="Apellido"
-                value={customer.lastName}
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                required
-              />
-            </div>
-            <div>
-              <input
-                type="email"
-                name="email"
-                placeholder="Email"
-                value={customer.email}
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                required
-              />
-            </div>
-            <div>
-              <input
-                type="tel"
-                name="whatsapp"
-                placeholder="WhatsApp"
-                value={customer.whatsapp}
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Preparando pago...' : 'Continuar con PSE'}
-            </button>
+            <div><input type="text" name="firstName" placeholder="Nombre" value={customer.firstName} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required /></div>
+            <div><input type="text" name="lastName" placeholder="Apellido" value={customer.lastName} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required /></div>
+            <div><input type="email" name="email" placeholder="Email" value={customer.email} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required /></div>
+            <div><input type="tel" name="whatsapp" placeholder="WhatsApp" value={customer.whatsapp} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required /></div>
+            <button type="submit" className="w-full py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark" disabled={isLoading}>{isLoading ? 'Preparando pago...' : 'Continuar con PSE'}</button>
           </form>
         ) : (
           <div className="text-center">
             <p className="mb-4 dark:text-gray-300">Casi listo. Haz clic en el botón para completar tu pago de forma segura.</p>
-            <div id="bold-button-container" className="flex justify-center">
-              {/* El script insertará el botón de Bold aquí */}
-            </div>
+            <BoldPaymentButton
+              apiKey="1y0D48xaDriWO_CNz7oXUopfkKx5VjiExsdDW0gj2eA"
+              paymentConfig={paymentConfig}
+            />
           </div>
         )}
 
