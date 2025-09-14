@@ -1,21 +1,18 @@
-// Archivo: CustomerFormModal.tsx (versión final)
+// sheeritpage/src/components/CustomerFormModal.tsx (CORREGIDO)
 
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { calculatePSEFee } from '../utils/fees';
-import { BoldPaymentButton } from './BoldPaymentButton'; // <-- 1. Importa el nuevo componente
+import { BoldPaymentButton } from './BoldPaymentButton';
 
-// (Asegúrate de que la interfaz de props sea la misma)
+// Interfaz para las props que el modal necesita
 interface CustomerFormModalProps {
-  platform: {
-    id: number;
-    name: string;
-    price: number;
-  };
+  platformName: string;
+  platformPrice: number;
   onClose: () => void;
 }
 
-// (Opcional) Define un tipo para la configuración para mayor seguridad
+// Tipo para la configuración del pago
 type PaymentConfig = {
   orderId: string;
   amount: string;
@@ -25,7 +22,8 @@ type PaymentConfig = {
   currency: string;
 };
 
-export function CustomerFormModal({ platform, onClose }: CustomerFormModalProps) {
+export function CustomerFormModal({ platformName, platformPrice, onClose }: CustomerFormModalProps) {
+  // Manejo de estado interno
   const [customer, setCustomer] = useState({
     firstName: '',
     lastName: '',
@@ -34,15 +32,14 @@ export function CustomerFormModal({ platform, onClose }: CustomerFormModalProps)
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // 2. Nuevo estado para guardar la configuración del pago del backend.
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
 
-  // Lógica de precios (sin cambios)
-  const pseFee = calculatePSEFee(platform.price);
-  const totalPrice = platform.price + pseFee;
+  // Lógica de precios
+  const pseFee = calculatePSEFee(platformPrice);
+  const totalPrice = platformPrice + pseFee;
   const formatPrice = (value: number) => value.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
+  // Lógica de envío (ahora vive DENTRO del modal)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -53,11 +50,11 @@ export function CustomerFormModal({ platform, onClose }: CustomerFormModalProps)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           platform: {
-            name: platform.name,
+            name: platformName,
             price: totalPrice.toString().replace('.', ''),
           },
           customer: customer,
-          numbers: [`Suscripción a ${platform.name}`],
+          numbers: [`Suscripción a ${platformName}`],
         }),
       });
 
@@ -67,12 +64,9 @@ export function CustomerFormModal({ platform, onClose }: CustomerFormModalProps)
       }
       
       const config: PaymentConfig = await response.json();
-      
-      // 3. En lugar de tocar el DOM, actualizamos el estado con la configuración.
       setPaymentConfig(config);
 
     } catch (error: any) {
-      console.error("Error al preparar el pago:", error);
       setError(error.message);
     } finally {
       setIsLoading(false);
@@ -84,7 +78,6 @@ export function CustomerFormModal({ platform, onClose }: CustomerFormModalProps)
     setCustomer(prev => ({ ...prev, [name]: value }));
   };
 
-  // JSX (con la nueva lógica de renderizado)
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
@@ -96,24 +89,21 @@ export function CustomerFormModal({ platform, onClose }: CustomerFormModalProps)
           <X className="w-5 h-5" />
         </button>
 
-        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
-          Completar Pedido
-        </h3>
+        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Completar Pedido</h3>
 
         <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded">
-          <p className="text-sm text-gray-600 dark:text-gray-300">Plataforma: <span className="font-bold">{platform.name}</span></p>
-          <p className="text-sm text-gray-600 dark:text-gray-300">Precio base: <span className="font-bold">{formatPrice(platform.price)}</span></p>
+          <p className="text-sm text-gray-600 dark:text-gray-300">Producto: <span className="font-bold">{platformName}</span></p>
+          <p className="text-sm text-gray-600 dark:text-gray-300">Precio base: <span className="font-bold">{formatPrice(platformPrice)}</span></p>
           <p className="text-sm text-gray-600 dark:text-gray-300">Tarifa PSE: <span className="font-bold">{formatPrice(pseFee)}</span></p>
           <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-2">Total a pagar: <span className="font-bold">{formatPrice(totalPrice)}</span></p>
         </div>
 
-        {/* 4. Lógica de renderizado condicional: o se muestra el formulario o el botón de pago. */}
         {!paymentConfig ? (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div><input type="text" name="firstName" placeholder="Nombre" value={customer.firstName} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required /></div>
-            <div><input type="text" name="lastName" placeholder="Apellido" value={customer.lastName} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required /></div>
-            <div><input type="email" name="email" placeholder="Email" value={customer.email} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required /></div>
-            <div><input type="tel" name="whatsapp" placeholder="WhatsApp" value={customer.whatsapp} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required /></div>
+            <input type="text" name="firstName" placeholder="Nombre" value={customer.firstName} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
+            <input type="text" name="lastName" placeholder="Apellido" value={customer.lastName} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
+            <input type="email" name="email" placeholder="Email" value={customer.email} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
+            <input type="tel" name="whatsapp" placeholder="WhatsApp" value={customer.whatsapp} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
             <button type="submit" className="w-full py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark" disabled={isLoading}>{isLoading ? 'Preparando pago...' : 'Continuar con PSE'}</button>
           </form>
         ) : (

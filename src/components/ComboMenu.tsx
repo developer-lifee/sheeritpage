@@ -1,98 +1,95 @@
+// sheeritpage/src/components/ComboMenu.tsx (CORREGIDO)
+
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { platforms } from '../data/platforms';
 import { CustomerFormModal } from './CustomerFormModal';
 import { calculatePSEFee } from '../utils/fees';
 
-const DISCOUNT_PER_PLATFORM = 1000; // Descuento de mil por cada plataforma adicional
+const DISCOUNT_PER_PLATFORM = 1000;
 
 export function ComboMenu() {
   const [isOpen, setIsOpen] = useState(false);
-  // selectedQuantities maps platformId -> quantity (allows multiple of same product)
   const [selectedQuantities, setSelectedQuantities] = useState<Record<number, number>>({});
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
-  const [showCustomerForm, setShowCustomerForm] = useState(false);
-  const [customerData, setCustomerData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    whatsapp: '',
+  const [showCustomerForm, setShowCustomerForm] = useState(false); // Este estado solo controla si el modal es visible
+
+  // ... (todas tus funciones de cálculo como getSelectedEntries, calculateTotal, etc. se mantienen igual)
+  const getSelectedEntries = () =>
+  (Object.entries(selectedQuantities) as [string, unknown][])
+    .map(([id, qty]) => [id, Number(qty) || 0] as [string, number])
+    .filter(([, qty]) => qty > 0);
+
+const calculateTotal = () => {
+  const entries = getSelectedEntries();
+  if (entries.length === 0) return 0;
+  const baseTotal = entries.reduce((total, [idStr, qty]) => {
+    const id = Number(idStr);
+    const price = platforms.find(p => p.id === id)?.price || 0;
+    return total + price * qty;
+  }, 0);
+
+  const totalItems = entries.reduce((s, [, qty]) => s + qty, 0);
+  const discount = totalItems > 1 ? (totalItems - 1) * DISCOUNT_PER_PLATFORM : 0;
+  return baseTotal - discount;
+};
+
+const getTotalItems = () => getSelectedEntries().reduce((s, [, qty]) => s + qty, 0);
+
+const getSelectedPlatformNamesFlattened = () =>
+  getSelectedEntries().flatMap(([idStr, qty]) => {
+    const platform = platforms.find(p => p.id === Number(idStr));
+    if (!platform || qty <= 0) return [] as string[];
+    return Array.from({ length: qty }, () => platform.name);
   });
 
-  const getSelectedEntries = () =>
-    (Object.entries(selectedQuantities) as [string, unknown][])
-      .map(([id, qty]) => [id, Number(qty) || 0] as [string, number])
-      .filter(([, qty]) => qty > 0);
 
-  const calculateTotal = () => {
-    const entries = getSelectedEntries();
-    if (entries.length === 0) return 0;
-    const baseTotal = entries.reduce((total, [idStr, qty]) => {
-      const id = Number(idStr);
-      const price = platforms.find(p => p.id === id)?.price || 0;
-      return total + price * qty;
-    }, 0);
+const handleIncrement = (platformId: number) => {
+  setSelectedQuantities((prev: Record<number, number>) => ({ ...prev, [platformId]: (prev[platformId] || 0) + 1 }));
+};
 
-    // Count total number of items (sum of quantities) to apply discount per additional platform
-    const totalItems = entries.reduce((s, [, qty]) => s + qty, 0);
-    const discount = totalItems > 1 ? (totalItems - 1) * DISCOUNT_PER_PLATFORM : 0;
-    return baseTotal - discount;
-  };
+const handleDecrement = (platformId: number) => {
+  setSelectedQuantities((prev: Record<number, number>) => {
+    const current = prev[platformId] || 0;
+    if (current <= 1) {
+      const { [platformId]: _, ...rest } = prev;
+      return rest;
+    }
+    return { ...prev, [platformId]: current - 1 };
+  });
+};
 
-  const getTotalItems = () => getSelectedEntries().reduce((s, [, qty]) => s + qty, 0);
+const isSelected = (platformId: number) => !!(selectedQuantities[platformId] && selectedQuantities[platformId] > 0);
 
-  const getSelectedPlatformNamesFlattened = () =>
-    getSelectedEntries().flatMap(([idStr, qty]) => {
-      const platform = platforms.find(p => p.id === Number(idStr));
-      if (!platform || qty <= 0) return [] as string[];
-      return Array.from({ length: qty }, () => platform.name);
-    });
- 
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(price);
+};
 
-  const handleIncrement = (platformId: number) => {
-    setSelectedQuantities((prev: Record<number, number>) => ({ ...prev, [platformId]: (prev[platformId] || 0) + 1 }));
-  };
+const getPlatformSummary = () =>
+  getSelectedEntries().map(([idStr, qty]) => {
+    const platform = platforms.find(p => p.id === Number(idStr));
+    return platform ? `${qty}× ${platform.name}` : '';
+  }).filter(Boolean);
 
-  const handleDecrement = (platformId: number) => {
-    setSelectedQuantities((prev: Record<number, number>) => {
-      const current = prev[platformId] || 0;
-      if (current <= 1) {
-        const { [platformId]: _, ...rest } = prev;
-        return rest;
-      }
-      return { ...prev, [platformId]: current - 1 };
-    });
-  };
+const messagePreview = (() => {
+  const items = getPlatformSummary();
+  const total = calculateTotal();
+  if (items.length === 0) return 'Aún no hay plataformas en el combo.';
+  return `Hola, estoy interesado en el siguiente combo: ${items.join(', ')}. Precio total: ${formatPrice(total)}/mes`;
+})();
 
-  const isSelected = (platformId: number) => !!(selectedQuantities[platformId] && selectedQuantities[platformId] > 0);
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(price);
-  };
-
-  const getPlatformSummary = () =>
-    getSelectedEntries().map(([idStr, qty]) => {
-      const platform = platforms.find(p => p.id === Number(idStr));
-      return platform ? `${qty}× ${platform.name}` : '';
-    }).filter(Boolean);
-
-  const messagePreview = (() => {
-    const items = getPlatformSummary();
-    const total = calculateTotal();
-    if (items.length === 0) return 'Aún no hay plataformas en el combo.';
-    return `Hola, estoy interesado en el siguiente combo: ${items.join(', ')}. Precio total: ${formatPrice(total)}/mes`;
-  })();
 
   const handlePSEClick = () => {
-    setShowCustomerForm(true);
+    setShowCustomerForm(true); // Simplemente abre el modal
   };
 
   const handleWhatsAppClick = () => {
+    // ... (esta función ya estaba bien)
     const total = calculateTotal();
     const selectedPlatformNames = getSelectedPlatformNamesFlattened();
 
@@ -105,85 +102,11 @@ export function ComboMenu() {
     }
   };
 
-  const handleCustomerSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-  const selectedPlatformNames = getSelectedPlatformNamesFlattened();
-
-  const total = calculateTotal();
-    const pseFee = calculatePSEFee(total);
-    const totalWithFee = total + pseFee;
-
-    try {
-      const payload = {
-        customer: customerData,
-        platform: {
-          name: selectedPlatformNames.length > 1
-            ? `Combo: ${selectedPlatformNames.join(', ')}`
-            : selectedPlatformNames[0],
-          price: totalWithFee,
-        },
-        numbers: [
-          selectedPlatformNames.length > 1
-            ? `Combo: ${selectedPlatformNames.join(', ')}`
-            : selectedPlatformNames[0],
-        ],
-      } as any;
-
-      // DEBUG: mostrar payload que se enviará al backend
-      console.log('Enviar a generar_token.php -> payload:', payload);
-
-      const response = await fetch('https://sheerit.com.co/pago/generar_token.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      const text = await response.text();
-      let data: any = null;
-      try {
-        data = JSON.parse(text);
-      } catch (err) {
-        console.error('Respuesta no JSON de generar_token.php:', text);
-        throw new Error('Respuesta inválida del servidor');
-      }
-
-      // DEBUG: mostrar response info y origen del apiKey
-      console.log('generar_token.php HTTP status:', response.status, 'url:', response.url);
-      try {
-        console.log('generar_token.php response parsed:', data);
-        console.log('apiKey recibido de backend:', data?.apiKey);
-      } catch (err) {
-        console.warn('No se pudo loggear data completo', err);
-      }
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      
-      // Redirect to Bold's checkout page
-      const boldCheckoutUrl = `https://checkout.bold.co/v2/checkout?apiKey=${data.apiKey}PUTAAA&orderId=${data.orderId}&amount=${data.amount}&currency=${data.currency}&description=${encodeURIComponent(data.description)}&tax=${data.tax}&integritySignature=${data.integritySignature}&redirectionUrl=${encodeURIComponent(data.redirectionUrl)}`;
-      
-      window.location.href = boldCheckoutUrl;
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Hubo un error al procesar el pago. Por favor intente de nuevo.');
-    }
-  };
-
-  // precompute totals for header display
   const preTotalItems = getTotalItems();
   const preSavings = preTotalItems > 1 ? (preTotalItems - 1) * DISCOUNT_PER_PLATFORM : 0;
 
   return (
     <>
-      {/* Botón Crear Combo (tamaño fijo, igual que antes) */}
       <button
         type="button"
         onClick={() => setIsOpen(true)}
@@ -192,145 +115,139 @@ export function ComboMenu() {
         Crear Combo
       </button>
 
-  {showCustomerForm && (
+      {/* La llamada al modal ahora es mucho más simple */}
+      {showCustomerForm && (
         <CustomerFormModal
-          onSubmit={handleCustomerSubmit}
-          customerData={customerData}
-          onChange={setCustomerData}
           onClose={() => setShowCustomerForm(false)}
-          platform={`Combo: ${getSelectedPlatformNamesFlattened().join(', ')}`}
-          price={calculateTotal()}
+          platformName={`Combo: ${getSelectedPlatformNamesFlattened().join(', ')}`}
+          platformPrice={calculateTotal()}
         />
       )}
 
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Fondo semi-transparente */}
-          <div className="absolute inset-0 bg-black/50" />
+        {/* Fondo semi-transparente */}
+        <div className="absolute inset-0 bg-black/50" />
 
-          {/* Contenedor del modal */}
-          <div className="relative bg-white dark:bg-gray-800 rounded-lg w-full max-w-md mx-4 max-h-[95vh] flex flex-col">
-            {/* Header fijo: título + equis inline, preview y ahorro debajo */}
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
-              {/* Top row: title + close (placed immediately next to title for better mobile UX) */}
-              <div className="flex items-center gap-3">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Crea tu Combo</h3>
-                <button
-                  type="button"
-                  onClick={() => setIsOpen(false)}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-300"
-                  title="Cerrar"
+        {/* Contenedor del modal */}
+        <div className="relative bg-white dark:bg-gray-800 rounded-lg w-full max-w-md mx-4 max-h-[95vh] flex flex-col">
+          {/* Header fijo: título + equis inline, preview y ahorro debajo */}
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
+            {/* Top row: title + close (placed immediately next to title for better mobile UX) */}
+            <div className="flex items-center gap-3">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Crea tu Combo</h3>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-300"
+                title="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Preview y ahorro debajo del título */}
+            <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+              {messagePreview}
+            </div>
+            {preSavings > 0 && (
+              <div className="mt-2 inline-block px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-md text-sm font-medium">
+                Ahorro aplicado: -{formatPrice(preSavings)}
+              </div>
+            )}
+          </div>
+
+          {/* Contenido con scroll */}
+          <div className="p-6 overflow-y-auto flex-1">
+            <p className="text-gray-600 dark:text-gray-300 mb-2">
+              Selecciona las plataformas que deseas para tu combo personalizado.
+            </p>
+
+            {/* (Preview and savings shown in header) */}
+
+            {/* Grid de plataformas */}
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              {platforms.map(platform => (
+                <div
+                  key={platform.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleIncrement(platform.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleIncrement(platform.id);
+                    }
+                  }}
+                  className={`relative transition-all cursor-pointer ${
+                    isSelected(platform.id) ? 'ring-2 ring-brand-primary scale-105' : 'opacity-85 hover:opacity-100'
+                  }`}
+                  data-nombre={platform.name}
                 >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Preview y ahorro debajo del título */}
-              <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                {messagePreview}
-              </div>
-              {preSavings > 0 && (
-                <div className="mt-2 inline-block px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-md text-sm font-medium">
-                  Ahorro aplicado: -{formatPrice(preSavings)}
-                </div>
-              )}
-            </div>
-
-            {/* Contenido con scroll */}
-            <div className="p-6 overflow-y-auto flex-1">
-              <p className="text-gray-600 dark:text-gray-300 mb-2">
-                Selecciona las plataformas que deseas para tu combo personalizado.
-              </p>
-
-              {/* (Preview and savings shown in header) */}
-
-              {/* Grid de plataformas */}
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                {platforms.map(platform => (
-                  <div
-                    key={platform.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => handleIncrement(platform.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handleIncrement(platform.id);
-                      }
-                    }}
-                    className={`relative transition-all cursor-pointer ${
-                      isSelected(platform.id) ? 'ring-2 ring-brand-primary scale-105' : 'opacity-85 hover:opacity-100'
-                    }`}
-                    data-nombre={platform.name}
-                  >
-                    <div className="flex flex-col items-center">
-                      <div className="w-20 h-20 rounded-full overflow-hidden mb-2 shadow-md">
-                        <img
-                          src={platform.image}
-                          alt={platform.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = `https://via.placeholder.com/80?text=${platform.name}`;
-                          }}
-                        />
-                      </div>
-
-                      <h4 className="font-medium text-center text-gray-800 dark:text-white">
-                        {platform.name}
-                      </h4>
-                      <span className="text-sm text-brand-primary font-bold">
-                        {formatPrice(platform.price)}/mes
-                      </span>
-
-                      {/* Quantity controls */}
-                      <div className="mt-2 flex items-center space-x-3">
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); handleDecrement(platform.id); }}
-                          className="px-2 py-1 bg-gray-300 text-gray-800 dark:bg-gray-600 dark:text-white rounded-md text-sm hover:bg-gray-400 dark:hover:bg-gray-500"
-                          aria-label={`Disminuir ${platform.name}`}
-                        >-
-                        </button>
-
-                        {/* Prominent quantity badge */}
-                        <div className="text-sm font-medium px-3 py-1 bg-brand-primary text-white rounded-full shadow-sm">
-                          {selectedQuantities[platform.id] || 0}
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); handleIncrement(platform.id); }}
-                          className="px-2 py-1 bg-brand-primary text-white rounded-md text-sm hover:bg-brand-dark"
-                          aria-label={`Aumentar ${platform.name}`}
-                        >+
-                        </button>
-                      </div>
-
-                      {isSelected(platform.id) && (
-                        <div className="absolute -top-1 -right-1 bg-brand-primary text-white rounded-full w-6 h-6 flex items-center justify-center">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </div>
-                      )}
+                  <div className="flex flex-col items-center">
+                    <div className="w-20 h-20 rounded-full overflow-hidden mb-2 shadow-md">
+                      <img
+                        src={platform.image}
+                        alt={platform.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = `https://via.placeholder.com/80?text=${platform.name}`;
+                        }}
+                      />
                     </div>
+
+                    <h4 className="font-medium text-center text-gray-800 dark:text-white">
+                      {platform.name}
+                    </h4>
+                    <span className="text-sm text-brand-primary font-bold">
+                      {formatPrice(platform.price)}/mes
+                    </span>
+
+                    {/* Quantity controls */}
+                    <div className="mt-2 flex items-center space-x-3">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleDecrement(platform.id); }}
+                        className="px-2 py-1 bg-gray-300 text-gray-800 dark:bg-gray-600 dark:text-white rounded-md text-sm hover:bg-gray-400 dark:hover:bg-gray-500"
+                        aria-label={`Disminuir ${platform.name}`}
+                      >-
+                      </button>
+
+                      {/* Prominent quantity badge */}
+                      <div className="text-sm font-medium px-3 py-1 bg-brand-primary text-white rounded-full shadow-sm">
+                        {selectedQuantities[platform.id] || 0}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleIncrement(platform.id); }}
+                        className="px-2 py-1 bg-brand-primary text-white rounded-md text-sm hover:bg-brand-dark"
+                        aria-label={`Aumentar ${platform.name}`}
+                      >+
+                      </button>
+                    </div>
+
+                    {isSelected(platform.id) && (
+                      <div className="absolute -top-1 -right-1 bg-brand-primary text-white rounded-full w-6 h-6 flex items-center justify-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-
-              {/* Savings shown in header only */}
+                </div>
+              ))}
             </div>
-
-            {/* Footer fijo */}
+          </div>
             <div className="p-6 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800 z-10">
               <div className="flex justify-between items-center mb-4">
                 <span className="text-lg font-bold text-gray-800 dark:text-white">Total:</span>
