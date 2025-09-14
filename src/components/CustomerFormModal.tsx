@@ -1,7 +1,7 @@
-
-
-import React, { useState } from 'react';
+import React from 'react';
 import { X } from 'lucide-react';
+import { calculatePSEFee } from '../utils/fees';
+
 
 // Cálculo de tarifa PSE y desglose
 function calculatePSEFee(price: number): number {
