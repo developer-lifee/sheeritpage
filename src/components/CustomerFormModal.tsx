@@ -1,9 +1,9 @@
-// src/components/CustomerFormModal.tsx (Actualizado)
+// src/components/CustomerFormModal.tsx (CORREGIDO)
 
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { calculatePSEFee } from '../utils/fees';
-import { useBold } from '../hooks/useBold'; // 1. Importa el nuevo hook
+import { useBold } from '../hooks/useBold'; // RUTA CORREGIDA
 
 // Interfaz para las props que el modal necesita
 interface CustomerFormModalProps {
@@ -12,7 +12,7 @@ interface CustomerFormModalProps {
   onClose: () => void;
 }
 
-// Tipo para la configuración del pago (debe coincidir con la del hook)
+// Tipo para la configuración del pago
 type PaymentConfig = {
   orderId: string;
   amount: string;
@@ -33,7 +33,6 @@ export function CustomerFormModal({ platformName, platformPrice, onClose }: Cust
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // 2. Usa el hook de Bold
   const { loadAndOpenCheckout, isScriptLoading, scriptError } = useBold();
 
   // Lógica de precios
@@ -41,7 +40,7 @@ export function CustomerFormModal({ platformName, platformPrice, onClose }: Cust
   const totalPrice = platformPrice + pseFee;
   const formatPrice = (value: number) => value.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-  // 3. Modifica la lógica de envío
+  // Lógica de envío actualizada
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -67,7 +66,7 @@ export function CustomerFormModal({ platformName, platformPrice, onClose }: Cust
       
       const config: PaymentConfig = await response.json();
       
-      // En lugar de guardar la config, abre el checkout directamente
+      // Llamamos a la función del hook para cargar y abrir el checkout
       loadAndOpenCheckout(config, "1y0D48xaDriWO_CNz7oXUopfkKx5VjiExsdDW0gj2eA");
 
     } catch (error: any) {
@@ -102,7 +101,6 @@ export function CustomerFormModal({ platformName, platformPrice, onClose }: Cust
           <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-2">Total a pagar: <span className="font-bold">{formatPrice(totalPrice)}</span></p>
         </div>
 
-        {/* 4. Simplifica el formulario, ya no necesita renderizado condicional */}
         <form onSubmit={handleSubmit} className="space-y-4">
             <input type="text" name="firstName" placeholder="Nombre" value={customer.firstName} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
             <input type="text" name="lastName" placeholder="Apellido" value={customer.lastName} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
