@@ -6,94 +6,91 @@ import { platforms } from '../data/platforms';
 import { CustomerFormModal } from './CustomerFormModal';
 import { calculatePSEFee } from '../utils/fees';
 
+
 const DISCOUNT_PER_PLATFORM = 1000;
 
+// Nuevo estado: selecciona planes específicos
 export function ComboMenu() {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedQuantities, setSelectedQuantities] = useState<Record<number, number>>({});
+  const [selectedPlans, setSelectedPlans] = useState<Record<number, number>>({}); // planId -> cantidad
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
-  const [showCustomerForm, setShowCustomerForm] = useState(false); // Este estado solo controla si el modal es visible
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
 
-  // ... (todas tus funciones de cálculo como getSelectedEntries, calculateTotal, etc. se mantienen igual)
-  const getSelectedEntries = () =>
-  (Object.entries(selectedQuantities) as [string, unknown][])
-    .map(([id, qty]) => [id, Number(qty) || 0] as [string, number])
-    .filter(([, qty]) => qty > 0);
+  // Selección de planes
+  const handlePlanSelection = (planId: number, quantity: number) => {
+    setSelectedPlans(prev => {
+      const newPlans = { ...prev };
+      if (quantity <= 0) {
+        delete newPlans[planId];
+      } else {
+        newPlans[planId] = quantity;
+      }
+      return newPlans;
+    });
+  };
 
-const calculateTotal = () => {
-  const entries = getSelectedEntries();
-  if (entries.length === 0) return 0;
-  const baseTotal = entries.reduce((total, [idStr, qty]) => {
-    const id = Number(idStr);
-    const price = platforms.find(p => p.id === id)?.price || 0;
-    return total + price * qty;
-  }, 0);
+  // Obtiene los planes seleccionados y su cantidad
+  const getSelectedEntries = () => Object.entries(selectedPlans).map(([id, qty]) => [Number(id), qty]);
 
-  const totalItems = entries.reduce((s, [, qty]) => s + qty, 0);
-  const discount = totalItems > 1 ? (totalItems - 1) * DISCOUNT_PER_PLATFORM : 0;
-  return baseTotal - discount;
-};
+  // Calcula el total del combo
+  const calculateTotal = () => {
+    const entries = getSelectedEntries();
+    if (entries.length === 0) return 0;
+    let totalItems = 0;
+    const baseTotal = entries.reduce((total, [planId, qty]) => {
+      const platform = platforms.find(p => p.plans.some(plan => plan.id === planId));
+      const plan = platform?.plans.find(p => p.id === planId);
+      if (!plan) return total;
+      totalItems += qty;
+      return total + (plan.price * qty);
+    }, 0);
+    const discount = totalItems > 1 ? (totalItems - 1) * DISCOUNT_PER_PLATFORM : 0;
+    return baseTotal - discount;
+  };
 
-const getTotalItems = () => getSelectedEntries().reduce((s, [, qty]) => s + qty, 0);
+  const getTotalItems = () => getSelectedEntries().reduce((s, [, qty]) => s + qty, 0);
 
-const getSelectedPlatformNamesFlattened = () =>
-  getSelectedEntries().flatMap(([idStr, qty]) => {
-    const platform = platforms.find(p => p.id === Number(idStr));
-    if (!platform || qty <= 0) return [] as string[];
-    return Array.from({ length: qty }, () => platform.name);
-  });
+  // Obtiene nombres de los planes seleccionados
+  const getSelectedPlanNamesFlattened = () =>
+    getSelectedEntries().flatMap(([planId, qty]) => {
+      const platform = platforms.find(p => p.plans.some(plan => plan.id === planId));
+      const plan = platform?.plans.find(p => p.id === planId);
+      if (!plan || qty <= 0) return [] as string[];
+      return Array.from({ length: qty }, () => `${platform?.name} - ${plan.name}`);
+    });
 
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(price);
+  };
 
-const handleIncrement = (platformId: number) => {
-  setSelectedQuantities((prev: Record<number, number>) => ({ ...prev, [platformId]: (prev[platformId] || 0) + 1 }));
-};
+  // Mensaje resumen para WhatsApp
+  const getComboSummary = () =>
+    getSelectedEntries().map(([planId, qty]) => {
+      const platform = platforms.find(p => p.plans.some(plan => plan.id === planId));
+      const plan = platform?.plans.find(p => p.id === planId);
+      return plan ? `${qty}× ${platform?.name} - ${plan.name}` : '';
+    }).filter(Boolean);
 
-const handleDecrement = (platformId: number) => {
-  setSelectedQuantities((prev: Record<number, number>) => {
-    const current = prev[platformId] || 0;
-    if (current <= 1) {
-      const { [platformId]: _, ...rest } = prev;
-      return rest;
-    }
-    return { ...prev, [platformId]: current - 1 };
-  });
-};
-
-const isSelected = (platformId: number) => !!(selectedQuantities[platformId] && selectedQuantities[platformId] > 0);
-
-const formatPrice = (price: number) => {
-  return new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(price);
-};
-
-const getPlatformSummary = () =>
-  getSelectedEntries().map(([idStr, qty]) => {
-    const platform = platforms.find(p => p.id === Number(idStr));
-    return platform ? `${qty}× ${platform.name}` : '';
-  }).filter(Boolean);
-
-const messagePreview = (() => {
-  const items = getPlatformSummary();
-  const total = calculateTotal();
-  if (items.length === 0) return 'Aún no hay plataformas en el combo.';
-  return `Hola, estoy interesado en el siguiente combo: ${items.join(', ')}. Precio total: ${formatPrice(total)}/mes`;
-})();
-
+  const messagePreview = (() => {
+    const items = getComboSummary();
+    const total = calculateTotal();
+    if (items.length === 0) return 'Aún no hay planes en el combo.';
+    return `Hola, estoy interesado en el siguiente combo: ${items.join(', ')}. Precio total: ${formatPrice(total)}/mes`;
+  })();
 
   const handlePSEClick = () => {
-    setShowCustomerForm(true); // Simplemente abre el modal
+    setShowCustomerForm(true);
   };
 
   const handleWhatsAppClick = () => {
-    // ... (esta función ya estaba bien)
     const total = calculateTotal();
-    const selectedPlatformNames = getSelectedPlatformNamesFlattened();
-
-    const message = `Hola, estoy interesado en el siguiente combo: ${selectedPlatformNames.join(', ')}. Precio total: ${formatPrice(total)}/mes`;
+    const selectedPlanNames = getSelectedPlanNamesFlattened();
+    const message = `Hola, estoy interesado en el siguiente combo: ${selectedPlanNames.join(', ')}. Precio total: ${formatPrice(total)}/mes`;
     const encodedMessage = encodeURIComponent(message);
     try {
       window.open(`https://api.whatsapp.com/send?phone=573118587974&text=${encodedMessage}`, '_blank');
@@ -116,10 +113,11 @@ const messagePreview = (() => {
       </button>
 
       {/* La llamada al modal ahora es mucho más simple */}
+
       {showCustomerForm && (
         <CustomerFormModal
           onClose={() => setShowCustomerForm(false)}
-          platformName={`Combo: ${getSelectedPlatformNamesFlattened().join(', ')}`}
+          platformName={`Combo: ${getSelectedPlanNamesFlattened().join(', ')}`}
           platformPrice={calculateTotal()}
         />
       )}
@@ -165,84 +163,25 @@ const messagePreview = (() => {
 
             {/* (Preview and savings shown in header) */}
 
-            {/* Grid de plataformas */}
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            {/* Grid de plataformas y planes */}
+            <div className="space-y-4">
               {platforms.map(platform => (
-                <div
-                  key={platform.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => handleIncrement(platform.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleIncrement(platform.id);
-                    }
-                  }}
-                  className={`relative transition-all cursor-pointer ${
-                    isSelected(platform.id) ? 'ring-2 ring-brand-primary scale-105' : 'opacity-85 hover:opacity-100'
-                  }`}
-                  data-nombre={platform.name}
-                >
-                  <div className="flex flex-col items-center">
-                    <div className="w-20 h-20 rounded-full overflow-hidden mb-2 shadow-md">
-                      <img
-                        src={platform.image}
-                        alt={platform.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = `https://via.placeholder.com/80?text=${platform.name}`;
-                        }}
-                      />
-                    </div>
-
-                    <h4 className="font-medium text-center text-gray-800 dark:text-white">
-                      {platform.name}
-                    </h4>
-                    <span className="text-sm text-brand-primary font-bold">
-                      {formatPrice(platform.price)}/mes
-                    </span>
-
-                    {/* Quantity controls */}
-                    <div className="mt-2 flex items-center space-x-3">
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleDecrement(platform.id); }}
-                        className="px-2 py-1 bg-gray-300 text-gray-800 dark:bg-gray-600 dark:text-white rounded-md text-sm hover:bg-gray-400 dark:hover:bg-gray-500"
-                        aria-label={`Disminuir ${platform.name}`}
-                      >-
-                      </button>
-
-                      {/* Prominent quantity badge */}
-                      <div className="text-sm font-medium px-3 py-1 bg-brand-primary text-white rounded-full shadow-sm">
-                        {selectedQuantities[platform.id] || 0}
+                <div key={platform.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <h4 className="font-bold dark:text-white">{platform.name}</h4>
+                  <div className="mt-2 space-y-2">
+                    {platform.plans.map(plan => (
+                      <div key={plan.id} className="flex items-center justify-between">
+                        <div>
+                          <p>{plan.name}</p>
+                          <p className="text-sm text-brand-primary font-semibold">{formatPrice(plan.price)}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => handlePlanSelection(plan.id, (selectedPlans[plan.id] || 0) - 1)} className="px-2 py-1 rounded bg-gray-200">-</button>
+                          <span>{selectedPlans[plan.id] || 0}</span>
+                          <button onClick={() => handlePlanSelection(plan.id, (selectedPlans[plan.id] || 0) + 1)} className="px-2 py-1 rounded bg-gray-200">+</button>
+                        </div>
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleIncrement(platform.id); }}
-                        className="px-2 py-1 bg-brand-primary text-white rounded-md text-sm hover:bg-brand-dark"
-                        aria-label={`Aumentar ${platform.name}`}
-                      >+
-                      </button>
-                    </div>
-
-                    {isSelected(platform.id) && (
-                      <div className="absolute -top-1 -right-1 bg-brand-primary text-white rounded-full w-6 h-6 flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </div>
-                    )}
+                    ))}
                   </div>
                 </div>
               ))}
