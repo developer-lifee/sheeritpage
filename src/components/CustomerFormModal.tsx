@@ -67,7 +67,7 @@ export function CustomerFormModal({ platformName, platformPrice, onClose }: Cust
       const config: PaymentConfig = await response.json();
       
       // Llamamos a la función del hook para cargar y abrir el checkout
-      loadAndOpenCheckout(config, "1y0D48xaDriWO_CNz7oXUopfkKx5VjiExsdDW0gj2eA");
+      loadAndOpenCheckout(config, "YCJ9yFnOlrWiS9Mq4KZLfize2ApawYb8rqrj0pge6pM");
 
     } catch (error: any) {
       setError(error.message);
