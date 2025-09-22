@@ -30,10 +30,11 @@ export function ComboMenu() {
   };
 
   // Obtiene los planes seleccionados y su cantidad
-  const getSelectedEntries = () => Object.entries(selectedPlans).map(([id, qty]) => [Number(id), qty]);
+  const getSelectedEntries = (): Array<[number, number]> =>
+    Object.entries(selectedPlans).map(([id, qty]) => [Number(id), Number(qty)] as [number, number]);
 
   // Calcula el total del combo
-  const calculateTotal = () => {
+  const calculateTotal = (): number => {
     const entries = getSelectedEntries();
     if (entries.length === 0) return 0;
     let totalItems = 0;
@@ -42,20 +43,20 @@ export function ComboMenu() {
       const plan = platform?.plans.find(p => p.id === planId);
       if (!plan) return total;
       totalItems += qty;
-      return total + (plan.price * qty);
+      return total + plan.price * qty;
     }, 0);
     const discount = totalItems > 1 ? (totalItems - 1) * DISCOUNT_PER_PLATFORM : 0;
     return baseTotal - discount;
   };
 
-  const getTotalItems = () => getSelectedEntries().reduce((s, [, qty]) => s + qty, 0);
+  const getTotalItems = (): number => getSelectedEntries().reduce((s, [, qty]) => s + qty, 0);
 
   // Obtiene nombres de los planes seleccionados
-  const getSelectedPlanNamesFlattened = () =>
+  const getSelectedPlanNamesFlattened = (): string[] =>
     getSelectedEntries().flatMap(([planId, qty]) => {
       const platform = platforms.find(p => p.plans.some(plan => plan.id === planId));
       const plan = platform?.plans.find(p => p.id === planId);
-      if (!plan || qty <= 0) return [] as string[];
+      if (!plan || qty <= 0) return [];
       return Array.from({ length: qty }, () => `${platform?.name} - ${plan.name}`);
     });
 
@@ -69,12 +70,14 @@ export function ComboMenu() {
   };
 
   // Mensaje resumen para WhatsApp
-  const getComboSummary = () =>
-    getSelectedEntries().map(([planId, qty]) => {
-      const platform = platforms.find(p => p.plans.some(plan => plan.id === planId));
-      const plan = platform?.plans.find(p => p.id === planId);
-      return plan ? `${qty}× ${platform?.name} - ${plan.name}` : '';
-    }).filter(Boolean);
+  const getComboSummary = (): string[] =>
+    getSelectedEntries()
+      .map(([planId, qty]) => {
+        const platform = platforms.find(p => p.plans.some(plan => plan.id === planId));
+        const plan = platform?.plans.find(p => p.id === planId);
+        return plan ? `${qty}× ${platform?.name} - ${plan.name}` : '';
+      })
+      .filter(Boolean) as string[];
 
   const messagePreview = (() => {
     const items = getComboSummary();
@@ -167,18 +170,38 @@ export function ComboMenu() {
             <div className="space-y-4">
               {platforms.map(platform => (
                 <div key={platform.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <h4 className="font-bold dark:text-white">{platform.name}</h4>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-md overflow-hidden bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                      {platform.image ? (
+                        <img
+                          src={platform.image}
+                          alt={platform.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      ) : (
+                        <span className="text-xs text-gray-500">N/A</span>
+                      )}
+                    </div>
+                    <h4 className="font-bold dark:text-white flex-1">{platform.name}</h4>
+                  </div>
                   <div className="mt-2 space-y-2">
                     {platform.plans.map(plan => (
                       <div key={plan.id} className="flex items-center justify-between">
                         <div>
-                          <p>{plan.name}</p>
-                          <p className="text-sm text-brand-primary font-semibold">{formatPrice(plan.price)}</p>
+                          <p className="text-sm font-medium">{plan.name}</p>
+                          <p className="text-xs text-brand-primary font-semibold">{formatPrice(plan.price)}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <button onClick={() => handlePlanSelection(plan.id, (selectedPlans[plan.id] || 0) - 1)} className="px-2 py-1 rounded bg-gray-200">-</button>
-                          <span>{selectedPlans[plan.id] || 0}</span>
-                          <button onClick={() => handlePlanSelection(plan.id, (selectedPlans[plan.id] || 0) + 1)} className="px-2 py-1 rounded bg-gray-200">+</button>
+                          <button
+                            onClick={() => handlePlanSelection(plan.id, (selectedPlans[plan.id] || 0) - 1)}
+                            className="px-2 py-1 rounded bg-gray-200 dark:bg-gray-600 text-sm"
+                          >-</button>
+                          <span className="text-sm w-5 text-center">{selectedPlans[plan.id] || 0}</span>
+                          <button
+                            onClick={() => handlePlanSelection(plan.id, (selectedPlans[plan.id] || 0) + 1)}
+                            className="px-2 py-1 rounded bg-gray-200 dark:bg-gray-600 text-sm"
+                          >+</button>
                         </div>
                       </div>
                     ))}
