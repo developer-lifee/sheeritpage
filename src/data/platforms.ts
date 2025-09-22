@@ -37,7 +37,7 @@ export const platforms = [
                 price: 15000,
                 characteristics: [
                     "Cuenta compartida",
-                    "IA actualizada y sin límites",
+                    "IA actualizada y límites amplios",
                     "Entrega en tiempo real",
                 ],
             },
@@ -46,9 +46,9 @@ export const platforms = [
                 name: 'Individual',
                 price: 35000,
                 characteristics: [
-                    "Cuenta personal y privada",
+                    "Cuenta privada",
                     "Acceso completo a funciones Plus",
-                    "Usa tu propio correo electrónico",
+                    "generacion de video con sora",
                 ],
             },
         ],
@@ -129,9 +129,6 @@ export const platforms = [
         plans: [{ id: 1301, name: 'Suscripción', price: 7000, characteristics: [] }],
     },
     // ... (y así sucesivamente para las demás plataformas)
-];
-        ],
-    },
     {
         id: 14,
         name: 'Apple One',
