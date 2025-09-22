@@ -1,6 +1,6 @@
 // sheeritpage/src/components/PlatformCard.tsx (CORREGIDO)
-
-
+import React, { useState } from 'react';
+import { CustomerFormModal } from './CustomerFormModal';
 // Nueva estructura: cada plataforma tiene varios planes
 interface Plan {
   id: number;
@@ -30,8 +30,9 @@ export function PlatformCard({ id, name, image, plans }: PlatformCardProps) {
     setShowCustomerForm(true);
   };
 
-  const lowestPrice = Math.min(...plans.map(p => p.price));
-  const defaultCharacteristics = plans[0]?.characteristics || [];
+  const safePlans = Array.isArray(plans) && plans.length > 0 ? plans : [];
+  const lowestPrice = safePlans.length ? Math.min(...safePlans.map(p => p.price)) : 0;
+  const defaultCharacteristics = safePlans[0]?.characteristics || [];
 
   return (
     <>
@@ -82,7 +83,7 @@ export function PlatformCard({ id, name, image, plans }: PlatformCardProps) {
             </>
           ) : (
             <div className="space-y-3">
-              {plans.map(plan => (
+              {safePlans.map(plan => (
                 <div key={plan.id} className="p-2 border rounded-md">
                   <p className="font-bold">{plan.name} - {formatPrice(plan.price)}</p>
                   <ul className="text-xs text-gray-500 mt-1">

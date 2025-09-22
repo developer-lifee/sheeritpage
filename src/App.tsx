@@ -55,11 +55,10 @@ export default function App() {
             {filteredPlatforms.map((platform) => (
               <PlatformCard
                 key={platform.id}
-                id={platform.id} // Add this line
+                id={platform.id}
                 name={platform.name}
-                price={platform.price}
                 image={platform.image}
-                characteristics={platform.characteristics}
+                plans={platform.plans}
               />
             ))}
           </div>
