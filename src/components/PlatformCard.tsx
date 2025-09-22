@@ -1,22 +1,21 @@
 // sheeritpage/src/components/PlatformCard.tsx (CORREGIDO)
 import React, { useState } from 'react';
 import { CustomerFormModal } from './CustomerFormModal';
-// Nueva estructura: cada plataforma tiene varios planes
-interface Plan {
-  id: number;
-  name: string;
-  price: number;
-  characteristics: string[];
-}
+import { calculatePSEFee } from '../utils/fees';
 
+interface Plan { id: number; name: string; price: number; characteristics: string[]; }
 interface PlatformCardProps {
   id: number;
   name: string;
   image: string;
-  plans: Plan[];
+  // Formato antiguo
+  price?: number;
+  characteristics?: string[];
+  // Formato nuevo
+  plans?: Plan[];
 }
 
-export function PlatformCard({ id, name, image, plans }: PlatformCardProps) {
+export function PlatformCard({ id, name, image, price, characteristics, plans }: PlatformCardProps) {
   const [showOptions, setShowOptions] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
@@ -30,9 +29,12 @@ export function PlatformCard({ id, name, image, plans }: PlatformCardProps) {
     setShowCustomerForm(true);
   };
 
-  const safePlans = Array.isArray(plans) && plans.length > 0 ? plans : [];
-  const lowestPrice = safePlans.length ? Math.min(...safePlans.map(p => p.price)) : 0;
-  const defaultCharacteristics = safePlans[0]?.characteristics || [];
+  const safePlans: Plan[] = Array.isArray(plans) ? plans : [];
+  const hasPlans = safePlans.length > 0;
+  const basePrice = hasPlans ? Math.min(...safePlans.map(p => p.price)) : (price || 0);
+  const defaultCharacteristics = hasPlans ? (safePlans[0]?.characteristics || []) : (characteristics || []);
+  const pseFee = basePrice ? calculatePSEFee(basePrice) : 0;
+  const totalWithPSE = basePrice + pseFee;
 
   return (
     <>
@@ -54,10 +56,10 @@ export function PlatformCard({ id, name, image, plans }: PlatformCardProps) {
         <div className="p-4 pt-10 flex flex-col flex-grow">
           <div className="text-center mb-4">
             <span className="text-gray-500 dark:text-gray-400 text-sm">
-              {plans.length > 1 ? 'Desde' : ''}
+              {hasPlans && safePlans.length > 1 ? 'Desde' : ''}
             </span>
             <p className="text-xl font-bold text-brand-primary dark:text-brand-light">
-              {formatPrice(lowestPrice)}/mes
+              {formatPrice(basePrice)}/mes
             </p>
           </div>
           <h3 className="text-xl font-bold mb-4 text-center dark:text-white">{name}</h3>
@@ -74,11 +76,15 @@ export function PlatformCard({ id, name, image, plans }: PlatformCardProps) {
                   </li>
                 ))}
               </ul>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                <p>Pagando por PSE aprox: <strong>{formatPrice(totalWithPSE)}</strong></p>
+                <p className="opacity-70">Incluye comisión estimada</p>
+              </div>
               <button
-                onClick={() => setShowOptions(true)}
+                onClick={() => hasPlans && safePlans.length > 1 ? setShowOptions(true) : handleBuyClick(hasPlans ? safePlans[0] : { id: id * 1000, name: 'Suscripción', price: basePrice, characteristics: defaultCharacteristics })}
                 className="w-full mt-auto py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark transition-colors"
               >
-                Comprar Ahora
+                {hasPlans && safePlans.length > 1 ? 'Ver Planes' : 'Comprar Ahora'}
               </button>
             </>
           ) : (

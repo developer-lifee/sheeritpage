@@ -58,6 +58,8 @@ export default function App() {
                 id={platform.id}
                 name={platform.name}
                 image={platform.image}
+                price={platform.price}
+                characteristics={platform.characteristics}
                 plans={platform.plans}
               />
             ))}
