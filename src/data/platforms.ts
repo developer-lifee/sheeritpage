@@ -36,7 +36,7 @@ export const platforms = [
     id: 6,
     name: 'ChatGPT',
     image: 'https://th.bing.com/th/id/OIP.PcgoreK_H_utzQX-eTNbrQHaHa?rs=1&pid=ImgDetMain',
-    price: 15000,
+    price: 20000,
     characteristics: [
       'Cuenta compartida',
       'IA actualizada y límites amplios',
@@ -46,21 +46,11 @@ export const platforms = [
       {
         id: 601,
         name: 'Compartida',
-        price: 15000,
+        price: 20000,
         characteristics: [
           'Cuenta compartida',
           'IA actualizada y límites amplios',
           'Entrega en tiempo real'
-        ]
-      },
-      {
-        id: 602,
-        name: 'Individual',
-        price: 35000,
-        characteristics: [
-          'Cuenta personal y privada',
-          'Acceso completo a funciones Plus',
-          'Generación de video con Sora'
         ]
       }
     ]
@@ -362,7 +352,7 @@ export const platforms = [
     id: 16,
     name: 'Platzi Expert',
     image: 'https://latamlist.com/wp-content/uploads/2018/05/platzi-logo-huge.png',
-    price: 60000,
+    price: 20000,
     characteristics: [
       'Acceso a 1200+ cursos',
       'Rutas de aprendizaje',
@@ -372,13 +362,24 @@ export const platforms = [
     plans: [
       {
         id: 1601,
-        name: 'Suscripción',
-        price: 60000,
+        name: 'Compartida',
+        price: 20000,
         characteristics: [
+          'Cuenta compartida mensual',
           'Acceso a 1200+ cursos',
           'Rutas de aprendizaje',
-          'Certificados profesionales',
-          'Comunidad y eventos'
+          'Certificados profesionales'
+        ]
+      },
+      {
+        id: 1602,
+        name: 'Trimestral Personal',
+        price: 150000,
+        characteristics: [
+          'Compra mínima 3 meses',
+          'Precio total $150.000',
+          'Certificados a tu nombre',
+          'Acceso Expert completo'
         ]
       }
     ]
@@ -412,27 +413,33 @@ export const platforms = [
     id: 19,
     name: 'Gemini Pro',
     image: 'https://meta-q.cdn.bubble.io/f1724422026295x667563819270324800/GeminiStreamingPro2.svg',
-    price: 20000,
+    price: 10000,
     characteristics: [
       'Modelo 2.5 Pro',
       'Razonamiento lógico avanzado',
-      'Resume hasta 1500 páginas',
       'Integrado en Google',
-      'Funciones de código',
-      '2 TB Google One'
+      'Funciones de código'
     ],
     plans: [
       {
         id: 1901,
-        name: 'Pro',
-        price: 20000,
+        name: 'Compartida',
+        price: 10000,
         characteristics: [
-          'Modelo 2.5 Pro',
-          'Razonamiento lógico avanzado',
-          'Resume hasta 1500 páginas',
-          'Integrado en Google',
-          'Funciones de código',
-          '2 TB Google One'
+          'Cuenta compartida',
+          'Modelo 2.5 Pro avanzado',
+          'Acceso económico a IA'
+        ]
+      },
+      {
+        id: 1902,
+        name: 'Correo Propio',
+        price: 22000,
+        characteristics: [
+          'Activación en tu correo personal',
+          'Privacidad total de datos',
+          '2 TB Google One incluidos',
+          'Integración completa Google Workspace'
         ]
       }
     ]
