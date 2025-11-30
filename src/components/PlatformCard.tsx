@@ -131,9 +131,9 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
           ) : (
             <div className="space-y-3">
               {safePlans.map(plan => (
-                <div key={plan.id} className="p-2 border rounded-md">
-                  <p className="font-bold">{plan.name} - {formatPrice(plan.price)}</p>
-                  <ul className="text-xs text-gray-500 mt-1">
+                <div key={plan.id} className="p-2 border rounded-md bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600">
+                  <p className="font-bold text-gray-900 dark:text-white">{plan.name} - {formatPrice(plan.price)}</p>
+                  <ul className="text-xs text-gray-500 dark:text-gray-300 mt-1">
                     {plan.characteristics.map(c => <li key={c}>- {c}</li>)}
                   </ul>
                   <button
@@ -146,7 +146,7 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
               ))}
               <button
                 onClick={() => setShowOptions(false)}
-                className="w-full text-center text-sm text-gray-500 hover:underline mt-2"
+                className="w-full text-center text-sm text-gray-500 dark:text-gray-300 hover:underline mt-2"
               >
                 Cancelar
               </button>
