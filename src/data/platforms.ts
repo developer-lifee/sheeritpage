@@ -325,25 +325,37 @@ export const platforms = [
       }
     ]
   },
-  {
+{
     id: 12,
     name: 'Xbox Game Pass',
     image: 'https://th.bing.com/th/id/R.6b6125b82e9694dae2125c36b7d917c3?rik=aFR3QZK9HRmLIw&pid=ImgRaw&r=0',
-    price: 30000,
+    price: 40000, // Precio base de la opción de entrada
     characteristics: [
-      'Renovar misma suscripción',
-      'Juego en la nube con VPN',
-      'Acceso a 1000+ juegos'
+      'Acceso a 1000+ juegos',
+      'Juego en la nube disponible',
+      'Incluye EA Play y Gold'
     ],
     plans: [
       {
         id: 1201,
-        name: 'Ultimate',
-        price: 30000,
+        name: 'Mensual (Cuenta Proporcionada)',
+        price: 40000,
         characteristics: [
-          'Renovar misma suscripción',
+          'Cuenta entregada por nosotros',
+          'Acceso a todo el catálogo',
           'Juego en la nube con VPN',
-          'Acceso a 1000+ juegos'
+          'Acceso a EA Play con nuestra cuenta'
+        ]
+      },
+      {
+        id: 1202,
+        name: 'Trimestral (Cuenta Propia)',
+        price: 100000,
+        characteristics: [
+          'Activación en tu propio correo',
+          'Suscripción por 3 meses',
+          'Sin pérdida de progreso/logros',
+          'Acceso a EA con tu cuenta'
         ]
       }
     ]
