@@ -213,12 +213,12 @@ export const platforms = [
   {
     id: 17,
     name: 'Coworking Alquiler',
-    image: '/plataform/alquilar.png',
+    image: 'https://scratchup.com.co/images/design-mode/logo.png',
     price: 50000,
     characteristics: [
       'Espacio agradable y acogedor',
-      'Café y cerveza gratis',
-      'Internet alta velocidad'
+      'Café y bebidas gratis',
+      'Internet y herramientas para trabajar'
     ],
     plans: [
       {
