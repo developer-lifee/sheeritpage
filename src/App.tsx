@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { Features } from './components/Features';
@@ -6,13 +6,43 @@ import { PlatformCard } from './components/PlatformCard';
 import { ReviewsSection } from './components/ReviewsSection';
 import { Footer } from './components/Footer';
 import { WhatsAppButton } from './components/WhatsAppButton';
-import { platforms } from './data/platforms';
 import { useDarkMode } from './hooks/useDarkMode';
 import { Search } from 'lucide-react';
+
+interface Plan {
+  id: number;
+  name: string;
+  price: number;
+  characteristics: string[];
+}
+
+interface Platform {
+  id: number;
+  name: string;
+  image: string;
+  price: number;
+  characteristics: string[];
+  plans: Plan[];
+}
 
 export default function App() {
   const [isDark, toggleDark] = useDarkMode();
   const [searchTerm, setSearchTerm] = useState('');
+  const [platforms, setPlatforms] = useState<Platform[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/data/platforms.json')
+      .then(response => response.json())
+      .then(data => {
+        setPlatforms(data);
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error('Error cargando precios:', error);
+        setLoading(false);
+      });
+  }, []);
   
   // Filter platforms based on search term
   const filteredPlatforms = platforms.filter(platform => 
@@ -44,7 +74,13 @@ export default function App() {
           </div>
         </div>
         
-        {filteredPlatforms.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-10">
+            <p className="text-gray-600 dark:text-gray-300 text-lg">
+              Cargando plataformas...
+            </p>
+          </div>
+        ) : filteredPlatforms.length === 0 ? (
           <div className="text-center py-10">
             <p className="text-gray-600 dark:text-gray-300 text-lg">
               No se encontraron plataformas que coincidan con tu búsqueda.

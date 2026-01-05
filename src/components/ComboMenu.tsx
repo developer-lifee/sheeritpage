@@ -1,11 +1,25 @@
 // sheeritpage/src/components/ComboMenu.tsx (CORREGIDO)
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { platforms } from '../data/platforms';
 import { CustomerFormModal } from './CustomerFormModal';
 import { calculatePSEFee } from '../utils/fees';
 
+interface Plan {
+  id: number;
+  name: string;
+  price: number;
+  characteristics: string[];
+}
+
+interface Platform {
+  id: number;
+  name: string;
+  image: string;
+  price: number;
+  characteristics: string[];
+  plans: Plan[];
+}
 
 const DISCOUNT_PER_PLATFORM = 1000;
 
@@ -15,6 +29,14 @@ export function ComboMenu() {
   const [selectedPlans, setSelectedPlans] = useState<Record<number, number>>({}); // planId -> cantidad
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
+  const [platforms, setPlatforms] = useState<Platform[]>([]);
+
+  useEffect(() => {
+    fetch('/data/platforms.json')
+      .then(response => response.json())
+      .then(data => setPlatforms(data))
+      .catch(error => console.error('Error cargando precios:', error));
+  }, []);
 
   // Selección de planes
   const handlePlanSelection = (planId: number, quantity: number) => {
