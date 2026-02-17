@@ -92,7 +92,7 @@
     "id": 5,
     "name": "Disney+",
     "image": "https://mdcthereporter.com/wp-content/uploads/2019/09/Disney-Logo.jpeg",
-    "price": 13000,
+    "price": 14000,
     "characteristics": [
       "Cuenta estable, tarifa prepaga de 12 meses",
       "Clasificación de cine: 18+/R21/TV-MA",
@@ -102,7 +102,7 @@
       {
         "id": 501,
         "name": "Suscripción",
-        "price": 13000,
+        "price": 14000,
         "characteristics": [
           "Cuenta estable, tarifa prepaga de 12 meses",
           "Clasificación de cine: 18+/R21/TV-MA",
@@ -456,4 +456,36 @@
       }
     ]
   }
+],
+{
+    "id": 20,
+    "name": "Canva pro",
+    "image": "https://www.nintenderos.com/2024/10/que-es-canva-y-como-crear-tus-propios-disenos/",
+    "price": 7000,
+    "characteristics": [
+      "Especialistas en creación de contenido",
+      "Más de 3.6 millones de plantillas (incluidas las premium)",
+      "Más de 141 millones de fotos, videos, elementos gráficos y audios premium",
+      "Acceso sin límites a más de 25 herramientas con IA",
+      "100GB"
+  
+    ],
+    "plans": [
+      {
+        "id": 2001,
+        "name": "Mensual",
+        "price": 7000
+
+        ]
+      },
+      {
+        "id": 2002,
+        "name": "Anual",
+        "price": 55000
+      
+        ]
+      }
+    ]
+  }
 ]
+
