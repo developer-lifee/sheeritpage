@@ -458,31 +458,36 @@
   }
 ],
 {
-    "id": 20,
-    "name": "Canva pro",
+    "id": 21,
+    "name": "Canva Pro",
     "image": "https://www.nintenderos.com/2024/10/que-es-canva-y-como-crear-tus-propios-disenos/",
     "price": 7000,
     "characteristics": [
       "Especialistas en creación de contenido",
       "Más de 3.6 millones de plantillas (incluidas las premium)",
-      "Más de 141 millones de fotos, videos, elementos gráficos y audios premium",
+      "Más de 141 millones de fotos, videos y elementos premium",
       "Acceso sin límites a más de 25 herramientas con IA",
-      "100GB"
-  
+      "100GB de almacenamiento"
     ],
     "plans": [
       {
-        "id": 2001,
+        "id": 2101,
         "name": "Mensual",
-        "price": 7000
-
+        "price": 7000,
+        "characteristics": [
+          "Acceso completo a Canva Pro",
+          "Todas las herramientas premium",
+          "100GB de almacenamiento"
         ]
       },
       {
-        "id": 2002,
+        "id": 2102,
         "name": "Anual",
-        "price": 55000
-      
+        "price": 55000,
+        "characteristics": [
+          "Acceso completo a Canva Pro",
+          "Todas las herramientas premium",
+          "Ahorro frente al plan mensual"
         ]
       }
     ]
