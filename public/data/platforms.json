@@ -214,20 +214,20 @@
     "id": 17,
     "name": "Coworking Alquiler",
     "image": "https://scratchup.com.co/images/design-mode/logo.png",
-    "price": 50000,
+    "price": 10000,
     "characteristics": [
       "Espacio agradable y acogedor",
-      "Café y bebidas gratis",
+      "Una Hora de Barra libre",
       "Internet y herramientas para trabajar"
     ],
     "plans": [
       {
         "id": 1701,
-        "name": "Espacio",
-        "price": 50000,
+        "name": "Espacio / Hora",
+        "price": 10000,
         "characteristics": [
           "Espacio agradable y acogedor",
-          "Café y cerveza gratis",
+          "Una Hora de Barra libre",
           "Internet alta velocidad"
         ]
       }
