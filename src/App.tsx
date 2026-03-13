@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { Features } from './components/Features';
@@ -6,6 +6,7 @@ import { PlatformCard } from './components/PlatformCard';
 import { ReviewsSection } from './components/ReviewsSection';
 import { Footer } from './components/Footer';
 import { WhatsAppButton } from './components/WhatsAppButton';
+import { SupportSection } from './components/SupportSection';
 import { useDarkMode } from './hooks/useDarkMode';
 import { Search } from 'lucide-react';
 
@@ -25,7 +26,10 @@ interface Platform {
   plans: Plan[];
 }
 
+export type ViewState = 'home' | 'support';
+
 export default function App() {
+  const [currentView, setCurrentView] = useState<ViewState>('home');
   const [isDark, toggleDark] = useDarkMode();
   const [searchTerm, setSearchTerm] = useState('');
   const [platforms, setPlatforms] = useState<Platform[]>([]);
@@ -51,11 +55,17 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Navbar isDark={isDark} toggleDark={() => toggleDark(!isDark)} />
+      <Navbar 
+        isDark={isDark} 
+        toggleDark={() => toggleDark(!isDark)} 
+        onNavigate={setCurrentView}
+      />
       
-      <Hero />
-      
-      <main id="platforms-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {currentView === 'home' && (
+        <>
+          <Hero />
+          
+          <main id="platforms-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4 md:mb-0">
             Plataformas Destacadas
@@ -102,9 +112,19 @@ export default function App() {
           </div>
         )}
       </main>
+        </>
+      )}
+      
+      {currentView === 'support' && (
+        <SupportSection />
+      )}
 
-      <Features />
-      <ReviewsSection />
+      {currentView === 'home' && (
+        <>
+          <Features />
+          <ReviewsSection />
+        </>
+      )}
       <Footer />
       <WhatsAppButton />
     </div>

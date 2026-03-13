@@ -1,15 +1,17 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Menu, User, HelpCircle, Home, X } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 
 // Removed ComboMenu import since we'll move it to Hero
+import { ViewState } from '../App';
 
 interface NavbarProps {
   isDark: boolean;
   toggleDark: () => void;
+  onNavigate: (view: ViewState) => void;
 }
 
-export function Navbar({ isDark, toggleDark }: NavbarProps) {
+export function Navbar({ isDark, toggleDark, onNavigate }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -54,14 +56,20 @@ export function Navbar({ isDark, toggleDark }: NavbarProps) {
             {/* Dropdown Menu */}
             {isMenuOpen && (
               <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden z-20">
-                <a href="/" className="flex items-center px-4 py-3 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                <button 
+                  onClick={() => { onNavigate('home'); setIsMenuOpen(false); }}
+                  className="w-full flex items-center px-4 py-3 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
                   <Home className="h-5 w-5 mr-3" />
                   <span>Inicio</span>
-                </a>
-                <a href="https://sheerit.com.co/aiuda/" target="_blank" rel="noopener noreferrer" className="flex items-center px-4 py-3 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                </button>
+                <button 
+                  onClick={() => { onNavigate('support'); setIsMenuOpen(false); }}
+                  className="w-full flex items-center px-4 py-3 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
                   <HelpCircle className="h-5 w-5 mr-3" />
                   <span>Ayuda con mi cuenta</span>
-                </a>
+                </button>
                 <a href="#" className="flex items-center px-4 py-3 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
                   <User className="h-5 w-5 mr-3" />
                   <span>Registro / Inicio de sesión</span>
@@ -122,14 +130,20 @@ export function Navbar({ isDark, toggleDark }: NavbarProps) {
         {isMobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-white/10">
             <div className="flex flex-col space-y-3">
-              <a href="/" className="flex items-center px-2 py-2 text-white hover:bg-white/10 rounded-md">
+              <button 
+                onClick={() => { onNavigate('home'); setIsMobileMenuOpen(false); }}
+                className="w-full flex items-center px-2 py-2 text-white hover:bg-white/10 rounded-md"
+              >
                 <Home className="h-5 w-5 mr-3" />
                 <span>Inicio</span>
-              </a>
-              <a href="https://sheerit.com.co/aiuda/" className="flex items-center px-2 py-2 text-white hover:bg-white/10 rounded-md">
+              </button>
+              <button 
+                onClick={() => { onNavigate('support'); setIsMobileMenuOpen(false); }}
+                className="w-full flex items-center px-2 py-2 text-white hover:bg-white/10 rounded-md"
+              >
                 <HelpCircle className="h-5 w-5 mr-3" />
                 <span>Ayuda con mi cuenta</span>
-              </a>
+              </button>
               <a href="#" className="flex items-center px-2 py-2 text-white hover:bg-white/10 rounded-md">
                 <User className="h-5 w-5 mr-3" />
                 <span>Registro / Inicio de sesión</span>
