@@ -2,7 +2,7 @@
   {
     "id": "netflix",
     "name": "Netflix",
-    "logo": "/img/Netflix_Logo.png",
+    "logo": "https://th.bing.com/th/id/R.64d5f8b96325d2be917f9ab402e92b99?rik=1BawFvPFPBGxrg&pid=ImgRaw&r=0",
     "issues": [
       {
         "id": "codigo_acceso",
@@ -63,7 +63,7 @@
   {
     "id": "disney",
     "name": "Disney+",
-    "logo": "/img/Disney_Logo.png",
+    "logo": "https://mdcthereporter.com/wp-content/uploads/2019/09/Disney-Logo.jpeg",
     "issues": [
       {
         "id": "codigo_acceso",
@@ -111,7 +111,7 @@
   {
     "id": "hbo",
     "name": "Max",
-    "logo": "/img/HBO_Max_Logo.png",
+    "logo": "https://filmhounds.co.uk/wp-content/uploads/2023/05/max-logo.jpg",
     "issues": [
       {
         "id": "contrasena_incorrecta",
@@ -147,7 +147,7 @@
   {
     "id": "prime",
     "name": "Prime Video",
-    "logo": "/img/prime_video.png",
+    "logo": "https://th.bing.com/th/id/OIP.hOyeETmfMNoeV9ThyQMNBQHaHa?cb=iwc2&rs=1&pid=ImgDetMain",
     "issues": [
       {
         "id": "bloqueo",
@@ -203,7 +203,7 @@
   {
     "id": "spotify",
     "name": "Spotify",
-    "logo": "/img/Spotify_Logo.png",
+    "logo": "https://upload.wikimedia.org/wikipedia/commons/7/74/Spotify_App_Logo.svg",
     "issues": [
       {
         "id": "contrasena_incorrecta",
@@ -228,7 +228,7 @@
   {
     "id": "youtube",
     "name": "YouTube",
-    "logo": "/img/youtube.webp.png",
+    "logo": "https://cdn.pixabay.com/photo/2021/09/11/18/21/youtube-6616310_1280.png",
     "issues": [
       {
         "id": "sin_premium",
@@ -245,7 +245,7 @@
   {
     "id": "paramount",
     "name": "Paramount+",
-    "logo": "/img/Paramount_Logo.png",
+    "logo": "https://th.bing.com/th/id/R.b80c8814890d78ad63b43c0bc2f4b401?rik=M95rQ%2fqeKRSHPQ&pid=ImgRaw&r=0",
     "issues": [
       {
         "id": "contrasena_incorrecta",
@@ -270,7 +270,7 @@
   {
     "id": "crunchyroll",
     "name": "Crunchyroll",
-    "logo": "/img/Crunchyroll_Logo.png",
+    "logo": "https://i.pinimg.com/originals/d3/af/7d/d3af7d3ac568b0890b42370d2be192c8.png",
     "issues": [
       {
         "id": "contrasena_incorrecta",
@@ -304,7 +304,7 @@
   {
     "id": "gamepass",
     "name": "Xbox Game Pass",
-    "logo": "/img/Gamepass_logo.png",
+    "logo": "https://th.bing.com/th/id/R.6b6125b82e9694dae2125c36b7d917c3?rik=aFR3QZK9HRmLIw&pid=ImgRaw&r=0",
     "issues": [
       {
         "id": "sin_premium",
@@ -321,7 +321,7 @@
   {
     "id": "gemini",
     "name": "Gemini",
-    "logo": "/img/Gemini_Advanced_logo.png",
+    "logo": "https://meta-q.cdn.bubble.io/f1724422026295x667563819270324800/GeminiStreamingPro2.svg",
     "issues": [
       {
         "id": "sin_premium",
@@ -337,7 +337,7 @@
   {
     "id": "vix",
     "name": "ViX",
-    "logo": "/img/ViX_Logo.png",
+    "logo": "https://th.bing.com/th/id/OIP.fpsYx-rEZwqdPUUznf2I8QHaD4?cb=iwc2&rs=1&pid=ImgDetMain",
     "issues": [
       {
         "id": "contrasena_incorrecta",
@@ -371,7 +371,7 @@
   {
     "id": "gpt",
     "name": "ChatGPT",
-    "logo": "/img/GPT_logo.png",
+    "logo": "https://th.bing.com/th/id/OIP.PcgoreK_H_utzQX-eTNbrQHaHa?rs=1&pid=ImgDetMain",
     "issues": [
       {
         "id": "contrasena_incorrecta",
