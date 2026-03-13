@@ -7,6 +7,7 @@ import { ReviewsSection } from './components/ReviewsSection';
 import { Footer } from './components/Footer';
 import { WhatsAppButton } from './components/WhatsAppButton';
 import { SupportSection } from './components/SupportSection';
+import { AdminSupport } from './components/AdminSupport';
 import { useDarkMode } from './hooks/useDarkMode';
 import { Search } from 'lucide-react';
 
@@ -26,10 +27,45 @@ interface Platform {
   plans: Plan[];
 }
 
-export type ViewState = 'home' | 'support';
+export type ViewState = 'home' | 'support' | 'admin';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewState>('home');
+
+  useEffect(() => {
+    // Handle initial route
+    const path = window.location.pathname;
+    if (path === '/aiuda') {
+      setCurrentView('support');
+    } else if (path === '/admin') {
+      setCurrentView('admin');
+    } else {
+      setCurrentView('home');
+    }
+
+    // Handle back/forward buttons
+    const handlePopState = () => {
+      const currentPath = window.location.pathname;
+      if (currentPath === '/aiuda') {
+        setCurrentView('support');
+      } else if (currentPath === '/admin') {
+        setCurrentView('admin');
+      } else {
+        setCurrentView('home');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateTo = (view: ViewState) => {
+    setCurrentView(view);
+    const path = view === 'home' ? '/' : `/${view === 'support' ? 'aiuda' : 'admin'}`;
+    window.history.pushState({}, '', path);
+    window.scrollTo(0, 0);
+  };
+
   const [isDark, toggleDark] = useDarkMode();
   const [searchTerm, setSearchTerm] = useState('');
   const [platforms, setPlatforms] = useState<Platform[]>([]);
@@ -58,7 +94,7 @@ export default function App() {
       <Navbar 
         isDark={isDark} 
         toggleDark={() => toggleDark(!isDark)} 
-        onNavigate={setCurrentView}
+        onNavigate={navigateTo}
       />
       
       {currentView === 'home' && (
@@ -117,6 +153,10 @@ export default function App() {
       
       {currentView === 'support' && (
         <SupportSection />
+      )}
+
+      {currentView === 'admin' && (
+        <AdminSupport />
       )}
 
       {currentView === 'home' && (

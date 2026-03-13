@@ -1,14 +1,40 @@
-import { useState } from 'react';
-import { SupportPlatform, SupportIssue, supportData } from '../data/supportData';
-import { ArrowLeft, MessageCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+interface Step {
+  text: string;
+}
+
+interface Issue {
+  id: string;
+  title: string;
+  image: string;
+  whatsappMessage: string;
+  steps: Step[];
+}
+
+interface SupportPlatform {
+  id: string;
+  name: string;
+  logo: string;
+  issues: Issue[];
+}
+
+import { ArrowLeft, MessageCircle, CheckCircle2 } from 'lucide-react';
 
 export function SupportSection() {
+  const [data, setData] = useState<SupportPlatform[]>([]);
   const [selectedPlatform, setSelectedPlatform] = useState<SupportPlatform | null>(null);
-  const [selectedIssue, setSelectedIssue] = useState<SupportIssue | null>(null);
+  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
+
+  useEffect(() => {
+    fetch('/api/support.json')
+      .then(res => res.json())
+      .then(json => setData(json))
+      .catch(err => console.error('Error loading support data:', err));
+  }, []);
 
   const WHATSAPP_NUMBER = "573133866170"; // From previous WhatsAppButton component
 
-  const handleIssueSelect = (issue: SupportIssue) => {
+  const handleIssueSelect = (issue: Issue) => {
     setSelectedIssue(issue);
   };
 
@@ -55,7 +81,7 @@ export function SupportSection() {
       {!selectedPlatform ? (
         // Grid de Plataformas
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
-          {supportData.map((platform) => (
+          {data.map((platform) => (
             <button
               key={platform.id}
               onClick={() => setSelectedPlatform(platform)}
@@ -117,33 +143,61 @@ export function SupportSection() {
       ) : (
         // Detalle del Problema
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden max-w-3xl mx-auto flex flex-col md:flex-row">
-          <div className="md:w-1/2 p-6 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800">
+          <div className="md:w-1/2 p-6 flex flex-col items-center bg-gray-50 dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800">
             <h3 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-6">
               {selectedIssue.title}
             </h3>
-            <img 
-              src={selectedIssue.image} 
-              alt={selectedIssue.title}
-              className="w-full max-w-sm rounded-xl object-cover shadow-md"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300';
-              }}
-            />
+            {selectedIssue.image && (
+              <img 
+                src={selectedIssue.image} 
+                alt={selectedIssue.title}
+                className="w-full max-w-sm rounded-xl object-cover shadow-md mb-6"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            )}
+            <div className="w-full bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+               <h4 className="font-bold text-brand-primary mb-3">Si no funciona:</h4>
+               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                 Si después de seguir los pasos el problema persiste, contacta directamente a un asesor.
+               </p>
+               <button
+                 onClick={handleContactSupport}
+                 className="flex items-center justify-center w-full bg-[#25D366] hover:bg-[#1ebe57] text-white py-2 px-4 rounded-lg font-bold transition-colors"
+               >
+                 <MessageCircle className="w-5 h-5 mr-2" />
+                 Hablar con Soporte
+               </button>
+            </div>
           </div>
-          <div className="md:w-1/2 p-8 flex flex-col justify-center">
-            <h4 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              ¿Cómo proceder?
+          <div className="md:w-1/2 p-8 flex flex-col">
+            <h4 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+              Sigue estos pasos para solucionar:
             </h4>
-            <p className="text-gray-600 dark:text-gray-300 mb-8">
-              Para resolver este inconveniente con {selectedPlatform.name}, comunícate directamente con nuestro equipo de soporte por WhatsApp. Analizaremos tu caso e intentaremos solucionarlo lo antes posible.
-            </p>
-            <button
-              onClick={handleContactSupport}
-              className="flex items-center justify-center w-full bg-[#25D366] hover:bg-[#1ebe57] text-white py-3 px-6 rounded-xl font-bold text-lg transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-            >
-              <MessageCircle className="w-6 h-6 mr-3" />
-              Contactar Soporte
-            </button>
+            <div className="space-y-6 flex-grow">
+              {selectedIssue.steps && selectedIssue.steps.length > 0 ? (
+                selectedIssue.steps.map((step, idx) => (
+                  <div key={idx} className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-brand-primary/10 text-brand-primary rounded-full flex items-center justify-center font-bold">
+                      {idx + 1}
+                    </div>
+                    <p className="text-gray-700 dark:text-gray-300 pt-1">
+                      {step.text}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 italic">No hay pasos documentados. Por favor contacta soporte.</p>
+              )}
+            </div>
+            
+            <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700">
+              <div className="flex items-center justify-center text-green-600 dark:text-green-400 font-medium">
+                <CheckCircle2 className="w-5 h-5 mr-2" />
+                Solución verificada por Sheerit
+              </div>
+            </div>
           </div>
         </div>
       )}

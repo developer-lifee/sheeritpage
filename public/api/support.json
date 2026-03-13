@@ -1,0 +1,61 @@
+[
+  {
+    "id": "netflix",
+    "name": "Netflix",
+    "logo": "/img/Netflix_Logo.png",
+    "issues": [
+      {
+        "id": "codigo_acceso",
+        "title": "Código de acceso",
+        "image": "/errores_img/codigo_netflix.png",
+        "whatsappMessage": "Hola, necesito ayuda con un código de acceso para Netflix.",
+        "steps": [
+          { "text": "Abre Netflix en tu dispositivo." },
+          { "text": "Si te pide un código de acceso, espera un momento." },
+          { "text": "El código te llegará por WhatsApp o correo si es una cuenta compartida." },
+          { "text": "Si no recibes el código en 2 minutos, contacta a soporte." }
+        ]
+      },
+      {
+        "id": "actualizacion_hogar",
+        "title": "Actualización de hogar",
+        "image": "/errores_img/actualizacion_netflix.png",
+        "whatsappMessage": "Hola, me aparece el mensaje de actualización de hogar en Netflix.",
+        "steps": [
+          { "text": "Si ves el mensaje 'Este televisor no forma parte de tu Hogar Netflix', selecciona 'Actualizar Hogar'." },
+          { "text": "Selecciona recibir el código por correo." },
+          { "text": "Escríbenos para proporcionarte el código de confirmación." }
+        ]
+      },
+      {
+        "id": "contrasena_incorrecta",
+        "title": "Contraseña incorrecta",
+        "image": "/errores_img/contraseña_netflix.png",
+        "whatsappMessage": "Hola, tengo un problema de contraseña incorrecta con mi cuenta de Netflix.",
+        "steps": [
+          { "text": "Verifica que estés escribiendo la contraseña correctamente (mayúsculas y minúsculas)." },
+          { "text": "Si persiste, es posible que la cuenta haya sido renovada y la clave haya cambiado." },
+          { "text": "Contacta a soporte para darte la nueva clave." }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "disney",
+    "name": "Disney+",
+    "logo": "/img/Disney_Logo.png",
+    "issues": [
+      {
+        "id": "codigo_acceso",
+        "title": "Código de acceso",
+        "image": "/errores_img/codigo_disney.png",
+        "whatsappMessage": "Hola, necesito ayuda con un código de acceso para Disney+.",
+        "steps": [
+          { "text": "Ingresa tu correo y contraseña en Disney+." },
+          { "text": "Si te pide un código de 6 dígitos, selecciona enviar al correo." },
+          { "text": "Pídenos el código por WhatsApp." }
+        ]
+      }
+    ]
+  }
+]
