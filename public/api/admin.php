@@ -21,8 +21,14 @@ if (isset($_POST['action'])) {
     if ($_POST['action'] === 'save') {
         if (isset($_POST['data'])) {
             $data = $_POST['data'];
+            
+            // Create backup of current version
+            if (file_exists($jsonPath)) {
+                copy($jsonPath, 'support_backup.json');
+            }
+            
             if (file_put_contents($jsonPath, $data)) {
-                echo json_encode(['success' => true, 'message' => 'Datos guardados correctamente']);
+                echo json_encode(['success' => true, 'message' => 'Datos guardados (respaldo creado)']);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Error al guardar el archivo JSON']);
             }
