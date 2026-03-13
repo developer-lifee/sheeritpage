@@ -37,7 +37,7 @@ export default function App() {
     const path = window.location.pathname;
     if (path === '/aiuda') {
       setCurrentView('support');
-    } else if (path === '/admin') {
+    } else if (path === '/aiuda/admin') {
       setCurrentView('admin');
     } else {
       setCurrentView('home');
@@ -48,7 +48,7 @@ export default function App() {
       const currentPath = window.location.pathname;
       if (currentPath === '/aiuda') {
         setCurrentView('support');
-      } else if (currentPath === '/admin') {
+      } else if (currentPath === '/aiuda/admin') {
         setCurrentView('admin');
       } else {
         setCurrentView('home');
@@ -61,7 +61,7 @@ export default function App() {
 
   const navigateTo = (view: ViewState) => {
     setCurrentView(view);
-    const path = view === 'home' ? '/' : `/${view === 'support' ? 'aiuda' : 'admin'}`;
+    const path = view === 'home' ? '/' : `/${view === 'support' ? 'aiuda' : 'aiuda/admin'}`;
     window.history.pushState({}, '', path);
     window.scrollTo(0, 0);
   };
