@@ -85,6 +85,32 @@ export function AdminSupport() {
     }
   };
 
+  const handleUpload = async (pIndex: number, iIndex: number, file: File) => {
+    setLoading(true);
+    const formData = new FormData();
+    formData.append('password', password);
+    formData.append('action', 'upload');
+    formData.append('image', file);
+
+    try {
+      const response = await fetch('/api/admin.php', {
+        method: 'POST',
+        body: formData
+      });
+      const result = await response.json();
+      if (result.success) {
+        updateIssue(pIndex, iIndex, 'image', result.url);
+        setMessage('Imagen subida con éxito');
+      } else {
+        setMessage('Error al subir: ' + result.message);
+      }
+    } catch (err) {
+      setMessage('Error de conexión al subir');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const addPlatform = () => {
     const newPlatform: SupportPlatform = {
       id: 'nueva-' + Date.now(),
@@ -281,13 +307,27 @@ export function AdminSupport() {
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-xs text-gray-500">Url de la Imagen (Guía visual)</label>
-                    <input 
-                      value={issue.image}
-                      onChange={(e) => updateIssue(pIndex, iIndex, 'image', e.target.value)}
-                      placeholder="/errores_img/archivo.png"
-                      className="w-full px-2 py-1 border rounded dark:bg-gray-800 dark:text-white"
-                    />
+                    <label className="block text-xs text-gray-500">Imagen de Referencia (Guía visual)</label>
+                    <div className="flex gap-2 items-center">
+                      <input 
+                        value={issue.image}
+                        onChange={(e) => updateIssue(pIndex, iIndex, 'image', e.target.value)}
+                        placeholder="/errores_img/archivo.png"
+                        className="flex-grow px-2 py-1 border rounded dark:bg-gray-800 dark:text-white"
+                      />
+                      <label className="bg-brand-primary text-white px-3 py-1 rounded cursor-pointer text-xs font-bold">
+                        Subir Imagen
+                        <input 
+                          type="file" 
+                          className="hidden" 
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleUpload(pIndex, iIndex, file);
+                          }}
+                        />
+                      </label>
+                    </div>
                   </div>
 
                   <div className="ml-4">
