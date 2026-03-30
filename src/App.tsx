@@ -3,6 +3,7 @@ import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { Features } from './components/Features';
 import { PlatformCard } from './components/PlatformCard';
+import { InvestmentCard } from './components/InvestmentCard';
 import { ReviewsSection } from './components/ReviewsSection';
 import { Footer } from './components/Footer';
 import { WhatsAppButton } from './components/WhatsAppButton';
@@ -147,6 +148,10 @@ export default function App() {
             ))}
           </div>
         )}
+        
+        <div className="mt-20 px-4 md:px-0">
+          <InvestmentCard />
+        </div>
       </main>
         </>
       )}

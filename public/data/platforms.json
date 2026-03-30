@@ -327,35 +327,23 @@
   },
   {
     "id": 12,
-    "name": "Xbox Game Pass",
+    "name": "Xbox Game Pass Ultimate",
     "image": "https://th.bing.com/th/id/R.6b6125b82e9694dae2125c36b7d917c3?rik=aFR3QZK9HRmLIw&pid=ImgRaw&r=0",
-    "price": 40000,
+    "price": 15000,
     "characteristics": [
-      "Acceso a 1000+ juegos",
-      "Juego en la nube disponible",
-      "Incluye EA Play y Gold"
+      "Acceso a todo el catálogo Ultimate",
+      "Cuenta compartida por horarios (1/7 del mes)",
+      "Incluye EA Play, PC y Consola"
     ],
     "plans": [
       {
         "id": 1201,
-        "name": "Mensual (Cuenta Proporcionada)",
-        "price": 60000,
+        "name": "Compartida por horarios",
+        "price": 15000,
         "characteristics": [
-          "Cuenta entregada por nosotros",
-          "Acceso a todo el catálogo",
-          "Juego en la nube con VPN",
-          "Acceso a EA Play con nuestra cuenta"
-        ]
-      },
-      {
-        "id": 1202,
-        "name": "Trimestral (Cuenta Propia)",
-        "price": 150000,
-        "characteristics": [
-          "Activación en tu propio correo",
-          "Suscripción por 3 meses",
-          "Sin pérdida de progreso/logros",
-          "Acceso a EA con tu cuenta"
+          "Elige tus franjas horarias (pico y valle)",
+          "Juega 1/7 parte del mes",
+          "Cuenta administrada por nosotros, sin cortes"
         ]
       }
     ]

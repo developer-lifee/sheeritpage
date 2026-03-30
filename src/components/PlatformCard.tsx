@@ -1,6 +1,7 @@
 // sheeritpage/src/components/PlatformCard.tsx (CORREGIDO)
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { CustomerFormModal } from './CustomerFormModal';
+import { XboxScheduleModal } from './XboxScheduleModal';
 import { calculatePSEFee } from '../utils/fees';
 
 interface Plan { id: number; name: string; price: number; characteristics: string[]; }
@@ -20,6 +21,8 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null); // plan elegido
   const [showCustomerForm, setShowCustomerForm] = useState(false); // modal PSE
   const [showPaymentChoice, setShowPaymentChoice] = useState(false); // elegir método pago
+  const [showXboxModal, setShowXboxModal] = useState(false); // Modal de horarios Xbox
+  const [xboxSchedule, setXboxSchedule] = useState(''); // Text format con selección
 
   const formatPrice = (value: number) => new Intl.NumberFormat('es-CO', {
     style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0
@@ -27,6 +30,16 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
 
   const handlePlanChosen = (plan: Plan) => {
     setSelectedPlan(plan);
+    if (id === 12) {
+      setShowXboxModal(true);
+    } else {
+      setShowPaymentChoice(true);
+    }
+  };
+
+  const handleXboxConfirm = (schedule: string) => {
+    setXboxSchedule(schedule);
+    setShowXboxModal(false);
     setShowPaymentChoice(true);
   };
 
@@ -43,7 +56,10 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
 
   const openWhatsApp = () => {
     if (!selectedPlan) return;
-    const message = `Hola, estoy interesado en ${name} - ${selectedPlan.name} por ${formatPrice(selectedPlan.price)}/mes`;
+    let message = `Hola, estoy interesado en ${name} - ${selectedPlan.name} por ${formatPrice(selectedPlan.price)}/mes`;
+    if (id === 12 && xboxSchedule) {
+      message += `\nMis horarios elegidos son: ${xboxSchedule}`;
+    }
     const url = `https://api.whatsapp.com/send?phone=573118587974&text=${encodeURIComponent(message)}`;
     try { window.open(url, '_blank'); } catch (e) { console.error('No se pudo abrir WhatsApp', e); }
     setShowPaymentChoice(false);
@@ -61,10 +77,18 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
       {showCustomerForm && selectedPlan && (
         <CustomerFormModal
           onClose={() => setShowCustomerForm(false)}
-          platformName={`${name} - ${selectedPlan.name}`}
+          platformName={`${name} - ${selectedPlan.name}${id === 12 && xboxSchedule ? ' (Horarios específicos)' : ''}`}
           platformPrice={selectedPlan.price}
         />
       )}
+      
+      {showXboxModal && selectedPlan && (
+        <XboxScheduleModal 
+          onClose={() => setShowXboxModal(false)}
+          onConfirm={handleXboxConfirm}
+        />
+      )}
+      
       {/* Selector de método de pago */}
       {showPaymentChoice && selectedPlan && !showCustomerForm && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center">
