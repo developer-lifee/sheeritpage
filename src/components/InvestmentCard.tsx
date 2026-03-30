@@ -47,8 +47,10 @@ export function InvestmentCard() {
     } else if (totalAmount === 1000000) {
       benefits.push("📦 Una libra entera de café a domicilio (Bogotá).");
     } else if (totalAmount > 1000000) {
-      benefits.push("🚚 Una libra entera de café enviada a TODA COLOMBIA.");
     }
+
+    return benefits;
+  };
 
   const handleOpenWhatsApp = () => {
     let message = `Hola, estoy interesado en comprar participación de la franquicia de cafe por un monto de ${formatPrice(totalAmount)}.`;
