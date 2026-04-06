@@ -478,6 +478,40 @@
         ]
       }
     ]
+  },
+  {
+    "id": 22,
+    "name": "Gamma App",
+    "image": "https://pbs.twimg.com/profile_images/1638210332304916480/P_4_8_v_V_400x400.jpg",
+    "price": 10000,
+    "characteristics": [
+      "Presentaciones con IA en minutos",
+      "Interfaz intuitiva y moderna",
+      "Exportación a PDF y PPT"
+    ],
+    "plans": [
+      {
+        "id": 2201,
+        "name": "Plan Plus ($8)",
+        "price": 10000,
+        "characteristics": [
+          "Créditos de IA mensuales",
+          "Sin marca de agua",
+          "Exportación completa"
+        ]
+      },
+      {
+        "id": 2202,
+        "name": "Plan Pro ($19)",
+        "price": 20000,
+        "characteristics": [
+          "Uso ilimitado de IA",
+          "Analíticas avanzadas",
+          "Fuentes personalizadas",
+          "Soporte prioritario"
+        ]
+      }
+    ]
   }
 ]
 

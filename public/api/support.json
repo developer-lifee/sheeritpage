@@ -403,5 +403,22 @@
         ]
       }
     ]
+  },
+  {
+    "id": "gamma",
+    "name": "Gamma App",
+    "logo": "https://pbs.twimg.com/profile_images/1638210332304916480/P_4_8_v_V_400x400.jpg",
+    "issues": [
+      {
+        "id": "acceso_cuenta",
+        "title": "Problemas de acceso",
+        "image": "https://images.unsplash.com/photo-1614064641938-3bbee52942c7?q=80&w=1470&auto=format&fit=crop",
+        "whatsappMessage": "Hola, tengo problemas para acceder a mi cuenta de Gamma App.",
+        "steps": [
+          { "text": "Verifica que el correo y contraseña sean los correctos." },
+          { "text": "Si el error persiste, contacta a soporte para validar tu suscripción." }
+        ]
+      }
+    ]
   }
 ]
