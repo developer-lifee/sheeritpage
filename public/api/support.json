@@ -407,7 +407,7 @@
   {
     "id": "gamma",
     "name": "Gamma App",
-    "logo": "https://pbs.twimg.com/profile_images/1638210332304916480/P_4_8_v_V_400x400.jpg",
+    "logo": "https://cdn.mos.cms.futurecdn.net/cfo9wrPuw9H2NXugivFUJh-1200-80.jpg.webp",
     "issues": [
       {
         "id": "acceso_cuenta",
@@ -417,6 +417,24 @@
         "steps": [
           { "text": "Verifica que el correo y contraseña sean los correctos." },
           { "text": "Si el error persiste, contacta a soporte para validar tu suscripción." }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "iptv",
+    "name": "IPTV",
+    "logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSR_3LgQH4bN0fLG2u4f8twZWR8ASq6-P_XIg&s",
+    "issues": [
+      {
+        "id": "lista_canales",
+        "title": "Problemas con la lista",
+        "image": "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?q=80&w=1470&auto=format&fit=crop",
+        "whatsappMessage": "Hola, tengo problemas con mi lista de canales de IPTV.",
+        "steps": [
+          { "text": "Reinicia tu aplicación de IPTV." },
+          { "text": "Verifica tu conexión a internet." },
+          { "text": "Si los canales no cargan, solicítanos la actualización de la lista." }
         ]
       }
     ]
