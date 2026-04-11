@@ -58,6 +58,16 @@
           { "text": "Busca entre los perfiles creados." },
           { "text": "Si el tuyo no aparece, infórmalo a soporte para restaurarlo o asignarte uno nuevo." }
         ]
+      },
+      {
+        "id": "cuentas_extras",
+        "title": "Acceso a cuentas extra",
+        "image": "/errores_img/cuentas_extras_netflix.png",
+        "whatsappMessage": "Hola, ¿cómo accedo a mi cuenta extra de Netflix?",
+        "steps": [
+          { "text": "Si compraste una cuenta extra, te enviaremos una invitación o te daremos un correo (@yopmail.com)." },
+          { "text": "Revisa la información que te proporcionamos e inicia sesión usando esos datos." }
+        ]
       }
     ]
   },
@@ -223,6 +233,16 @@
         "steps": [
           { "text": "Si tu cuenta volvió a ser gratuita, envíanos tu correo para reinvitarte al plan familiar o renovar." }
         ]
+      },
+      {
+        "id": "unirse_plan",
+        "title": "Aceptar invitación al plan",
+        "image": "/errores_img/invitacion_spotify.png",
+        "whatsappMessage": "Hola, ¿cómo acepto la invitación de Spotify?",
+        "steps": [
+          { "text": "Haz clic en el enlace de invitación que te enviamos, inicia sesión con tu cuenta personal y únete." },
+          { "text": "Si te pide una dirección, usa exactamente la que te enviamos junto con el link." }
+        ]
       }
     ]
   },
@@ -239,6 +259,16 @@
         "steps": [
           { "text": "Asegúrate de que estás usando el correo que nos diste para la activación." },
           { "text": "Si el premium venció, solicita la renovación por WhatsApp." }
+        ]
+      },
+      {
+        "id": "unirse_plan",
+        "title": "Aceptar invitación al plan",
+        "image": "/errores_img/invitacion_youtube.png",
+        "whatsappMessage": "Hola, ¿cómo acepto la invitación de YouTube Premium?",
+        "steps": [
+          { "text": "Abre el correo donde te enviamos la invitación para unirte al grupo familiar." },
+          { "text": "Haz clic en el botón de aceptar invitación y sigue los pasos en pantalla." }
         ]
       }
     ]
@@ -401,6 +431,17 @@
           { "text": "Dinos si el código te lo pide por correo o por SMS." },
           { "text": "Escríbenos para darte acceso." }
         ]
+      },
+      {
+        "id": "desactivar_memoria",
+        "title": "Desactivar Memoria",
+        "image": "/errores_img/memoria_gpt.png",
+        "whatsappMessage": "Hola, necesito saber cómo desactivar la memoria en ChatGPT.",
+        "steps": [
+          { "text": "Entra a chat.openai.com e inicia sesión." },
+          { "text": "Haz clic en tu foto de perfil (esquina inferior izquierda) y ve a 'Configuración' (Settings)." },
+          { "text": "Entra a la sección 'Memoria' (Memory) y apaga el interruptor principal." }
+        ]
       }
     ]
   },
@@ -435,6 +476,16 @@
           { "text": "Reinicia tu aplicación de IPTV." },
           { "text": "Verifica tu conexión a internet." },
           { "text": "Si los canales no cargan, solicítanos la actualización de la lista." }
+        ]
+      },
+      {
+        "id": "configuracion_inicial",
+        "title": "Configuración inicial",
+        "image": "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?q=80&w=1470&auto=format&fit=crop",
+        "whatsappMessage": "Hola, necesito ayuda para configurar mi servicio de IPTV.",
+        "steps": [
+          { "text": "Usa el usuario, contraseña y la lista que te enviamos e ingrésalos en la app de IPTV." },
+          { "text": "Si tienes problemas durante la instalación, escríbenos para ayudarte con el paso a paso." }
         ]
       }
     ]

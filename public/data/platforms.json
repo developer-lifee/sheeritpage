@@ -12,7 +12,7 @@
     "plans": [
       {
         "id": 101,
-        "name": "Básico",
+        "name": "Netflix 4K",
         "price": 13000,
         "characteristics": [
           "Cuenta estable y renovable",
@@ -90,11 +90,11 @@
   },
   {
     "id": 5,
-    "name": "Disney+",
+    "name": "Disney+ Premium",
     "image": "https://mdcthereporter.com/wp-content/uploads/2019/09/Disney-Logo.jpeg",
     "price": 14000,
     "characteristics": [
-      "Cuenta estable, tarifa prepaga de 12 meses",
+      "Cuenta estable, con ESPN",
       "Clasificación de cine: 18+/R21/TV-MA",
       "Entrega en tiempo real"
     ],
@@ -444,7 +444,7 @@
       }
     ]
   },
-{
+  {
     "id": 21,
     "name": "Canva Pro",
     "image": "https://www.nintenderos.com/wp-content/uploads/2024/10/Canva.jpg.webp",
@@ -514,4 +514,3 @@
     ]
   }
 ]
-
