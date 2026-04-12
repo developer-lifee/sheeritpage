@@ -26,7 +26,8 @@ export function SupportSection() {
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
 
   useEffect(() => {
-    fetch('/api/support.json')
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    fetch(`${apiUrl}/api/support`)
       .then(res => res.json())
       .then(json => setData(json))
       .catch(err => console.error('Error loading support data:', err));

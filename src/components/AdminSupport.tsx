@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, LogOut } from 'lucide-react';
+import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy } from 'lucide-react';
+import { ClientsView } from './ClientsView';
+import { NetflixMatchView } from './NetflixMatchView';
 
 interface Step {
   text: string;
@@ -26,6 +28,7 @@ export function AdminSupport() {
   const [data, setData] = useState<SupportPlatform[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix'>('support');
 
   // Platforms to recycle logos from
   const availableLogos = [
@@ -44,7 +47,8 @@ export function AdminSupport() {
   ];
 
   useEffect(() => {
-    fetch('/api/support.json')
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    fetch(`${apiUrl}/api/support`)
       .then(res => res.json())
       .then(json => setData(json))
       .catch(err => console.error('Error loading data:', err));
@@ -68,7 +72,8 @@ export function AdminSupport() {
     formData.append('data', JSON.stringify(data, null, 2));
 
     try {
-      const response = await fetch('/api/admin.php', {
+      const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+      const response = await fetch(`${apiUrl}/api/support/save`, {
         method: 'POST',
         body: formData
       });
@@ -93,7 +98,8 @@ export function AdminSupport() {
     formData.append('image', file);
 
     try {
-      const response = await fetch('/api/admin.php', {
+      const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+      const response = await fetch(`${apiUrl}/api/support/upload`, {
         method: 'POST',
         body: formData
       });
@@ -229,12 +235,38 @@ export function AdminSupport() {
         </div>
       </div>
 
-      {message && (
+        {message && (
         <div className={`p-4 rounded-xl mb-6 ${message.includes('éxito') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
           {message}
         </div>
       )}
 
+      {/* Tabs Navigation */}
+      <div className="flex space-x-2 mb-8 border-b border-gray-200 dark:border-gray-700 pb-4">
+        <button 
+          onClick={() => setActiveTab('support')}
+          className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'support' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <LifeBuoy className="w-5 h-5 mr-2" /> Guías Soporte
+        </button>
+        <button 
+          onClick={() => setActiveTab('db')}
+          className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'db' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <Database className="w-5 h-5 mr-2" /> Base de Datos (Graph)
+        </button>
+        <button 
+          onClick={() => setActiveTab('netflix')}
+          className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'netflix' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-red-50 dark:text-gray-400 dark:hover:bg-red-900/30'}`}
+        >
+          <Tv className="w-5 h-5 mr-2" /> Predictor Netflix
+        </button>
+      </div>
+
+      {activeTab === 'db' && <ClientsView />}
+      {activeTab === 'netflix' && <NetflixMatchView />}
+
+      {activeTab === 'support' && (
       <div className="space-y-8">
         {data.map((platform, pIndex) => (
           <div key={platform.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6">
@@ -368,6 +400,7 @@ export function AdminSupport() {
         <Plus className="w-6 h-6 mr-2" />
         Agregar Nueva Plataforma
       </button>
+      )}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { Footer } from './components/Footer';
 import { WhatsAppButton } from './components/WhatsAppButton';
 import { SupportSection } from './components/SupportSection';
 import { AdminSupport } from './components/AdminSupport';
+import { VerificationPage } from './components/VerificationPage';
 import { useDarkMode } from './hooks/useDarkMode';
 import { Search } from 'lucide-react';
 
@@ -28,10 +29,11 @@ interface Platform {
   plans: Plan[];
 }
 
-export type ViewState = 'home' | 'support' | 'admin';
+export type ViewState = 'home' | 'support' | 'admin' | 'verificar';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewState>('home');
+  const [isAdminAuth, setIsAdminAuth] = useState(false);
 
   useEffect(() => {
     // Handle initial route
@@ -40,6 +42,8 @@ export default function App() {
       setCurrentView('support');
     } else if (path === '/aiuda/admin') {
       setCurrentView('admin');
+    } else if (path === '/verificar') {
+      setCurrentView('verificar');
     } else {
       setCurrentView('home');
     }
@@ -51,6 +55,8 @@ export default function App() {
         setCurrentView('support');
       } else if (currentPath === '/aiuda/admin') {
         setCurrentView('admin');
+      } else if (currentPath === '/verificar') {
+        setCurrentView('verificar');
       } else {
         setCurrentView('home');
       }
@@ -62,7 +68,7 @@ export default function App() {
 
   const navigateTo = (view: ViewState) => {
     setCurrentView(view);
-    const path = view === 'home' ? '/' : `/${view === 'support' ? 'aiuda' : 'aiuda/admin'}`;
+    const path = view === 'home' ? '/' : `/${view === 'support' ? 'aiuda' : (view === 'verificar' ? 'verificar' : 'aiuda/admin')}`;
     window.history.pushState({}, '', path);
     window.scrollTo(0, 0);
   };
@@ -160,8 +166,26 @@ export default function App() {
         <SupportSection />
       )}
 
+      {currentView === 'verificar' && (
+        <VerificationPage />
+      )}
+
       {currentView === 'admin' && (
-        <AdminSupport />
+        isAdminAuth ? <AdminSupport /> : (
+          <div className="min-h-[60vh] flex items-center justify-center">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow border border-gray-200 dark:border-gray-700 w-full max-w-sm">
+              <h2 className="text-xl font-bold mb-4 text-center dark:text-white">Acceso Restringido</h2>
+              <input 
+                type="password" 
+                placeholder="Contraseña"
+                className="w-full mb-4 px-4 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                onChange={(e) => {
+                  if (e.target.value === 'Admin123') setIsAdminAuth(true);
+                }}
+              />
+            </div>
+          </div>
+        )
       )}
 
       {currentView === 'home' && (
