@@ -46,7 +46,8 @@ export function CustomerFormModal({ platformName, platformPrice, onClose }: Cust
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('https://sheerit.com.co/pago/generar_token.php', {
+      const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+      const response = await fetch(`${apiUrl}/api/bold/generate-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

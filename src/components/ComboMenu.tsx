@@ -27,6 +27,7 @@ const DISCOUNT_PER_PLATFORM = 1000;
 export function ComboMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedPlans, setSelectedPlans] = useState<Record<number, number>>({}); // planId -> cantidad
+  const [duration, setDuration] = useState<'1' | '3' | '6' | '12'>('1');
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [platforms, setPlatforms] = useState<Platform[]>([]);
@@ -68,7 +69,11 @@ export function ComboMenu() {
       return total + plan.price * qty;
     }, 0);
     const discount = totalItems > 1 ? (totalItems - 1) * DISCOUNT_PER_PLATFORM : 0;
-    return baseTotal - discount;
+    let finalTotal = (baseTotal - discount) * parseInt(duration);
+    if (duration === '3') finalTotal *= 0.97;
+    if (duration === '6') finalTotal *= 0.93;
+    if (duration === '12') finalTotal *= 0.85;
+    return Math.floor(finalTotal / 1000) * 1000;
   };
 
   const getTotalItems = (): number => getSelectedEntries().reduce((s, [, qty]) => s + qty, 0);
@@ -105,7 +110,8 @@ export function ComboMenu() {
     const items = getComboSummary();
     const total = calculateTotal();
     if (items.length === 0) return 'Aún no hay planes en el combo.';
-    return `Hola, estoy interesado en el siguiente combo: ${items.join(', ')}. Precio total: ${formatPrice(total)}/mes`;
+    const mesStr = duration === '1' ? '1 mes' : `${duration} meses`;
+    return `Hola, estoy interesado en el siguiente combo por ${mesStr}: ${items.join(', ')}. Precio total: ${formatPrice(total)}`;
   })();
 
   const handlePSEClick = () => {
@@ -115,7 +121,8 @@ export function ComboMenu() {
   const handleWhatsAppClick = () => {
     const total = calculateTotal();
     const selectedPlanNames = getSelectedPlanNamesFlattened();
-    const message = `Hola, estoy interesado en el siguiente combo: ${selectedPlanNames.join(', ')}. Precio total: ${formatPrice(total)}/mes`;
+    const mesStr = duration === '1' ? '1 mes' : `${duration} meses`;
+    const message = `Hola, estoy interesado en el siguiente combo por ${mesStr}: ${selectedPlanNames.join(', ')}. Precio total: ${formatPrice(total)}`;
     const encodedMessage = encodeURIComponent(message);
     try {
       window.open(`https://api.whatsapp.com/send?phone=573118587974&text=${encodedMessage}`, '_blank');
@@ -142,7 +149,7 @@ export function ComboMenu() {
       {showCustomerForm && (
         <CustomerFormModal
           onClose={() => setShowCustomerForm(false)}
-          platformName={`Combo: ${getSelectedPlanNamesFlattened().join(', ')}`}
+          platformName={`Combo (${duration} mes${duration === '1' ? '' : 'es'}): ${getSelectedPlanNamesFlattened().join(', ')}`}
           platformPrice={calculateTotal()}
         />
       )}
@@ -233,12 +240,25 @@ export function ComboMenu() {
             </div>
           </div>
             <div className="p-6 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800 z-10">
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-lg font-bold text-gray-800 dark:text-white">Total:</span>
-                <span className="text-xl font-bold text-brand-primary">
-                  {formatPrice(calculateTotal())}/mes
-                </span>
-              </div>
+            <div className="flex gap-2 mb-4 justify-center">
+              {(['1', '3', '6', '12'] as const).map(d => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setDuration(d)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${duration === d ? 'bg-brand-primary text-white shadow-md' : 'bg-gray-100 dark:bg-gray-700 dark:text-gray-300'}`}
+                >
+                  {d} Mes{d !== '1' ? 'es' : ''}
+                </button>
+              ))}
+            </div>
+            
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-lg font-bold text-gray-800 dark:text-white">Total:</span>
+              <span className="text-xl font-bold text-brand-primary">
+                {formatPrice(calculateTotal())}
+              </span>
+            </div>
 
               <button
                 type="button"

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy } from 'lucide-react';
+import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator } from 'lucide-react';
 import { ClientsView } from './ClientsView';
 import { NetflixMatchView } from './NetflixMatchView';
+import { AnalyticsDashboard } from './AnalyticsDashboard';
+import { AddSaleForm } from './AddSaleForm';
 
 interface Step {
   text: string;
@@ -28,7 +30,7 @@ export function AdminSupport() {
   const [data, setData] = useState<SupportPlatform[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix'>('support');
+  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales'>('stats');
 
   // Platforms to recycle logos from
   const availableLogos = [
@@ -247,13 +249,25 @@ export function AdminSupport() {
           onClick={() => setActiveTab('support')}
           className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'support' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
-          <LifeBuoy className="w-5 h-5 mr-2" /> Guías Soporte
+          <LifeBuoy className="w-5 h-5 mr-2" /> Guías
         </button>
         <button 
           onClick={() => setActiveTab('db')}
           className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'db' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
-          <Database className="w-5 h-5 mr-2" /> Base de Datos (Graph)
+          <Database className="w-5 h-5 mr-2" /> Base de Datos
+        </button>
+        <button 
+          onClick={() => setActiveTab('stats')}
+          className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'stats' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <TrendingUp className="w-5 h-5 mr-2" /> Analítica
+        </button>
+        <button 
+          onClick={() => setActiveTab('sales')}
+          className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'sales' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <Calculator className="w-5 h-5 mr-2" /> Nueva Venta
         </button>
         <button 
           onClick={() => setActiveTab('netflix')}
@@ -265,6 +279,8 @@ export function AdminSupport() {
 
       {activeTab === 'db' && <ClientsView />}
       {activeTab === 'netflix' && <NetflixMatchView />}
+      {activeTab === 'stats' && <AnalyticsDashboard />}
+      {activeTab === 'sales' && <AddSaleForm />}
 
       {activeTab === 'support' && (
       <div className="space-y-8">

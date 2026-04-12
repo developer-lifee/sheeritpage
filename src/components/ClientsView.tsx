@@ -25,6 +25,25 @@ export const ClientsView: React.FC = () => {
         (c.numero || '').toString().includes(searchTerm)
     );
 
+    const handleSendAction = async (phone: string, type: 'credentials' | 'payment') => {
+        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+        try {
+            const res = await fetch(`${apiUrl}/api/admin/actions/send-info`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone, type, password: 'admin123' })
+            });
+            const result = await res.json();
+            if (result.success) {
+                alert(`✅ Mensaje de ${type} enviado con éxito a ${phone}`);
+            } else {
+                alert(`❌ Error: ${result.message}`);
+            }
+        } catch (err) {
+            alert("❌ Error de comunicación con el bot.");
+        }
+    };
+
     return (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6">
             <div className="flex justify-between items-center mb-6">
@@ -55,6 +74,7 @@ export const ClientsView: React.FC = () => {
                                 <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">Servicio</th>
                                 <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">Cuenta / Correo</th>
                                 <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">Vencimiento</th>
+                                <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -69,6 +89,24 @@ export const ClientsView: React.FC = () => {
                                     </td>
                                     <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">{c.correo || '-'}</td>
                                     <td className="py-3 px-4 text-sm font-mono dark:text-gray-300">{c.deben ? `${c.deben}` : c.vencimiento || '-'}</td>
+                                    <td className="py-3 px-4 text-sm">
+                                        <div className="flex gap-2">
+                                            <button 
+                                                onClick={() => handleSendAction(c.numero, 'credentials')}
+                                                className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded text-xs font-bold transition-colors"
+                                                title="Enviar Credenciales"
+                                            >
+                                                🔑 Creds
+                                            </button>
+                                            <button 
+                                                onClick={() => handleSendAction(c.numero, 'payment')}
+                                                className="bg-green-100 hover:bg-green-200 text-green-700 px-2 py-1 rounded text-xs font-bold transition-colors"
+                                                title="Cobrar"
+                                            >
+                                                💰 Cobro
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
