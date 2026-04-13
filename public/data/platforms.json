@@ -115,20 +115,32 @@
     "id": 3,
     "name": "Max",
     "image": "https://filmhounds.co.uk/wp-content/uploads/2023/05/max-logo.jpg",
-    "price": 10000,
+    "price": 7000,
     "characteristics": [
       "Renueva la misma suscripción",
       "Mantén todos tus favoritos y listas",
-      "Entrega en tiempo real"
+      "Calidad desde HD hasta 4K"
     ],
     "plans": [
       {
         "id": 301,
-        "name": "Suscripción",
-        "price": 10000,
+        "name": "Estándar",
+        "price": 7000,
         "characteristics": [
-          "Renueva la misma suscripción",
-          "Mantén todos tus favoritos y listas",
+          "Calidad HD",
+          "Precio económico",
+          "Probables indisponibilidades ocasionales",
+          "Entrega en tiempo real"
+        ]
+      },
+      {
+        "id": 302,
+        "name": "Platino",
+        "price": 11000,
+        "characteristics": [
+          "Calidad 4K UHD",
+          "Máxima estabilidad (Sin caídas)",
+          "Contenido HDR y Dolby Atmos",
           "Entrega en tiempo real"
         ]
       }
@@ -166,23 +178,35 @@
   },
   {
     "id": 14,
-    "name": "Apple One",
+    "name": "Apple",
     "image": "https://static.iphoneitalia.com/wp-content/uploads/2020/09/apple-one.png",
-    "price": 22000,
+    "price": 8000,
     "characteristics": [
-      "345 GB en iCloud",
+      "Contenido original exclusivo",
       "Con tu mismo Apple ID",
-      "Incluye TV, Music, Fitness y Arcade"
+      "Calidad 4K HDR"
     ],
     "plans": [
       {
         "id": 1401,
-        "name": "Suscripción",
+        "name": "Apple One (345GB)",
         "price": 22000,
         "characteristics": [
           "345 GB en iCloud",
           "Con tu mismo Apple ID",
-          "Incluye TV, Music, Fitness y Arcade"
+          "Incluye TV, Music, Fitness y Arcade",
+          "Acceso Familiar"
+        ]
+      },
+      {
+        "id": 1402,
+        "name": "Apple TV+",
+        "price": 8000,
+        "characteristics": [
+          "Acceso exclusivo a Películas y Series",
+          "4K HDR y Dolby Atmos",
+          "acceso garantizado por nosotros",
+          "Producciones originales"
         ]
       }
     ]
