@@ -283,7 +283,8 @@ export function AdminSupport() {
       {activeTab === 'sales' && <AddSaleForm />}
 
       {activeTab === 'support' && (
-      <div className="space-y-8">
+        <>
+          <div className="space-y-8">
         {data.map((platform, pIndex) => (
           <div key={platform.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6">
             <div className="flex justify-between items-start mb-6">
@@ -416,6 +417,7 @@ export function AdminSupport() {
         <Plus className="w-6 h-6 mr-2" />
         Agregar Nueva Plataforma
       </button>
+      </>
       )}
     </div>
   );
