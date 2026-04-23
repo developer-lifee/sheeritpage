@@ -536,5 +536,30 @@
         ]
       }
     ]
+  },
+  {
+    "id": 23,
+    "name": "Claude Pro",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Claude_AI_logo.svg/1024px-Claude_AI_logo.svg.png",
+    "price": 20000,
+    "characteristics": [
+      "Cuenta compartida",
+      "Acceso a Claude 3.5 Sonnet y Opus",
+      "Ideal para código e investigación"
+    ],
+    "plans": [
+      {
+        "id": 2301,
+        "name": "Compartida",
+        "price": 20000,
+        "characteristics": [
+          "Acceso a los mejores modelos de Claude",
+          "Cuenta compartida estable",
+          "Proyectos ilimitados para organizar chats",
+          "Límites de uso mucho más amplios",
+          "Entrega en tiempo real"
+        ]
+      }
+    ]
   }
 ]
