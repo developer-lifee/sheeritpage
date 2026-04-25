@@ -439,10 +439,11 @@
     "image": "https://meta-q.cdn.bubble.io/f1724422026295x667563819270324800/GeminiStreamingPro2.svg",
     "price": 10000,
     "characteristics": [
-      "Modelo 2.5 Pro",
-      "Razonamiento lógico avanzado",
-      "Integrado en Google",
-      "Funciones de código"
+      "Modelo 3.1 Pro (Última versión)",
+      "1,000 créditos de IA mensuales",
+      "5 TB de almacenamiento total",
+      "Gemini en Gmail, Docs y más",
+      "Acceso a Veo 3.1 y Whisk"
     ],
     "plans": [
       {
@@ -450,9 +451,11 @@
         "name": "Compartida",
         "price": 10000,
         "characteristics": [
-          "Cuenta compartida",
-          "Modelo 2.5 Pro avanzado",
-          "Acceso económico a IA"
+          "Cuenta compartida (Login compartido)",
+          "Sin almacenamiento personal",
+          "Créditos de IA compartidos con otros usuarios",
+          "Modelo 3.1 Pro (Uso básico)",
+          "La opción más económica"
         ]
       },
       {
@@ -460,10 +463,11 @@
         "name": "Correo Propio",
         "price": 22000,
         "characteristics": [
-          "Activación en tu correo personal",
-          "Privacidad total de datos",
-          "2 TB Google One incluidos",
-          "Integración completa Google Workspace"
+          "En tu propio correo (Plan Familiar)",
+          "1 TB de almacenamiento personal",
+          "200 créditos de IA mensuales propios",
+          "Privacidad total (Nadie ve tus archivos/chats)",
+          "Gemini en Workspace (Gmail, Docs, etc.)"
         ]
       }
     ]
