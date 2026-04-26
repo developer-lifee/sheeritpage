@@ -520,7 +520,7 @@
     "plans": [
       {
         "id": 2201,
-        "name": "Plan Plus ($8)",
+        "name": "Plan Plus",
         "price": 10000,
         "characteristics": [
           "Créditos de IA mensuales",
@@ -530,7 +530,7 @@
       },
       {
         "id": 2202,
-        "name": "Plan Pro ($19)",
+        "name": "Plan Pro",
         "price": 20000,
         "characteristics": [
           "Uso ilimitado de IA",
