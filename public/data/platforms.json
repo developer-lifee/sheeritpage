@@ -314,7 +314,7 @@
     "id": 10,
     "name": "Spotify",
     "image": "https://upload.wikimedia.org/wikipedia/commons/7/74/Spotify_App_Logo.svg",
-    "price": 8000,
+    "price": 5000,
     "characteristics": [
       "Ninguna cuenta es compartida",
       "Uso 100% personal",
@@ -323,23 +323,25 @@
     "plans": [
       {
         "id": 1001,
-        "name": "Cuenta Nueva",
-        "price": 8000,
+        "name": "Cuenta Nueva o Renovación",
+        "price": 5000,
         "characteristics": [
           "Cuenta proporcionada por nosotros",
           "Uso personal, no compartida",
           "Cuenta estable"
-        ]
+        ],
+        "detalles": "Se entrega una cuenta nueva o se renueva una cuenta que ya te hayamos proporcionado antes."
       },
       {
         "id": 1002,
-        "name": "Personal",
-        "price": 10000,
+        "name": "Personal (Tu Correo)",
+        "price": 5000,
         "characteristics": [
           "Se activa en tu cuenta personal",
           "Uso personal, no compartida",
           "Mantén tus listas y favoritos"
-        ]
+        ],
+        "detalles": "Activamos el premium en tu propia cuenta de Spotify con tu mismo correo. Privacidad total."
       }
     ]
   },
