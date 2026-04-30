@@ -18,7 +18,8 @@
           "Cuenta estable y renovable",
           "Alta definición 4K + HDR con su lista exclusiva",
           "Entrega en tiempo real"
-        ]
+        ],
+        "detalles": "Perfil en una cuenta compartida de Sheerit. Sujeto a restricciones de hogar de Netflix si se usa en TV."
       },
       {
         "id": 102,
@@ -28,7 +29,8 @@
           "Cuenta completa con un perfil",
           "Alta definición 4K + HDR con su lista exclusiva",
           "Correo personalizado, ideal para diferentes locaciones"
-        ]
+        ],
+        "detalles": "Perfil individual con tu propio correo y clave. Ideal para evitar el bloqueo de 'Hogar Netflix' en cualquier ciudad u operador."
       }
     ]
   },
@@ -51,7 +53,8 @@
           "Cuenta compartida",
           "IA actualizada y límites amplios",
           "Entrega en tiempo real"
-        ]
+        ],
+        "detalles": "Te entregamos correo y clave. Cuenta compartida. Se recomienda desactivar la 'Memoria' en ajustes para privacidad."
       }
     ]
   },
@@ -74,7 +77,8 @@
           "Cuenta compartida con nuestro correo",
           "Ideal para tener Office original a menor costo",
           "Almacenamiento en OneDrive"
-        ]
+        ],
+        "detalles": "Acceso mediante un correo de Sheerit. Recomendado solo para uso básico de Office."
       },
       {
         "id": 1502,
@@ -84,7 +88,8 @@
           "1 TB de almacenamiento",
           "Suite de Office (Word, Excel, PowerPoint)",
           "Usa tu propio correo de Microsoft"
-        ]
+        ],
+        "detalles": "Se activa en tu propio correo personal. Incluye 1TB de OneDrive y suite completa con privacidad total."
       }
     ]
   },
@@ -196,7 +201,8 @@
           "Con tu mismo Apple ID",
           "Incluye TV, Music, Fitness y Arcade",
           "Acceso Familiar"
-        ]
+        ],
+        "detalles": "Se activa en tu propio Apple ID vía invitación familiar. Incluye Music, TV+, Arcade, Fitness+ y 345GB de iCloud."
       },
       {
         "id": 1402,
@@ -207,7 +213,8 @@
           "4K HDR y Dolby Atmos",
           "acceso garantizado por nosotros",
           "Producciones originales"
-        ]
+        ],
+        "detalles": "Acceso a una cuenta con el servicio de streaming Apple TV+. Calidad 4K y producciones originales."
       }
     ]
   },
@@ -307,21 +314,31 @@
     "id": 10,
     "name": "Spotify",
     "image": "https://upload.wikimedia.org/wikipedia/commons/7/74/Spotify_App_Logo.svg",
-    "price": 9000,
+    "price": 8000,
     "characteristics": [
-      "Con tu misma cuenta",
-      "Sin molestias de otros",
-      "Cuenta estable"
+      "Ninguna cuenta es compartida",
+      "Uso 100% personal",
+      "Música sin anuncios y a la carta"
     ],
     "plans": [
       {
         "id": 1001,
-        "name": "Premium",
-        "price": 9000,
+        "name": "Cuenta Nueva",
+        "price": 8000,
         "characteristics": [
-          "Con tu misma cuenta",
-          "Sin molestias de otros",
+          "Cuenta proporcionada por nosotros",
+          "Uso personal, no compartida",
           "Cuenta estable"
+        ]
+      },
+      {
+        "id": 1002,
+        "name": "Personal",
+        "price": 10000,
+        "characteristics": [
+          "Se activa en tu cuenta personal",
+          "Uso personal, no compartida",
+          "Mantén tus listas y favoritos"
         ]
       }
     ]
@@ -456,7 +473,8 @@
           "Créditos de IA compartidos con otros usuarios",
           "Modelo 3.1 Pro (Uso básico)",
           "La opción más económica"
-        ]
+        ],
+        "detalles": "Cuenta compartida (Login de Sheerit). Créditos de IA y uso de modelos avanzados compartidos con otros."
       },
       {
         "id": 1902,
@@ -468,7 +486,8 @@
           "200 créditos de IA mensuales propios",
           "Privacidad total (Nadie ve tus archivos/chats)",
           "Gemini en Workspace (Gmail, Docs, etc.)"
-        ]
+        ],
+        "detalles": "Se activa en tu propio correo personal. 1TB de espacio, 200 créditos de IA propios al mes y privacidad total."
       }
     ]
   },
