@@ -314,7 +314,7 @@
     "id": 10,
     "name": "Spotify",
     "image": "https://upload.wikimedia.org/wikipedia/commons/7/74/Spotify_App_Logo.svg",
-    "price": 5000,
+    "price": 8000,
     "characteristics": [
       "Ninguna cuenta es compartida",
       "Uso 100% personal",
@@ -324,7 +324,7 @@
       {
         "id": 1001,
         "name": "Cuenta Nueva o Renovación",
-        "price": 5000,
+        "price": 8000,
         "characteristics": [
           "Cuenta proporcionada por nosotros",
           "Uso personal, no compartida",
@@ -335,7 +335,7 @@
       {
         "id": 1002,
         "name": "Personal (Tu Correo)",
-        "price": 5000,
+        "price": 10000,
         "characteristics": [
           "Se activa en tu cuenta personal",
           "Uso personal, no compartida",
