@@ -49,8 +49,7 @@ export function AdminSupport() {
   ];
 
   useEffect(() => {
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
-    fetch(`${apiUrl}/api/support`)
+    fetch('/data/support.json')
       .then(res => res.json())
       .then(json => setData(json))
       .catch(err => console.error('Error loading data:', err));

@@ -23,7 +23,7 @@ export const AddSaleForm: React.FC = () => {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    fetch('https://sheerit.com.co/data/platforms.json')
+    fetch('/data/platforms.json')
       .then(res => res.json())
       .then(data => setPlatforms(data))
       .catch(err => console.error("Error loading platforms:", err));
