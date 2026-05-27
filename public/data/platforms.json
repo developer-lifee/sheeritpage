@@ -218,29 +218,7 @@
       }
     ]
   },
-  {
-    "id": 20,
-    "name": "Microsoft 365 Compartida",
-    "image": "https://th.bing.com/th/id/OIP.9vkItxSZEt6JEXNQy_sVcQHaEJ?cb=iwc2&rs=1&pid=ImgDetMain",
-    "price": 5000,
-    "characteristics": [
-      "Cuenta compartida con correo nuestro",
-      "Ideal para Office a menor costo",
-      "Almacenamiento en OneDrive"
-    ],
-    "plans": [
-      {
-        "id": 2001,
-        "name": "Compartida",
-        "price": 5000,
-        "characteristics": [
-          "Cuenta compartida con correo nuestro",
-          "Ideal para Office a menor costo",
-          "Almacenamiento en OneDrive"
-        ]
-      }
-    ]
-  },
+
   {
     "id": 17,
     "name": "Coworking Alquiler",

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { Menu, User, HelpCircle, Home, X } from 'lucide-react';
+import { Menu, User, HelpCircle, Home, X, ShoppingCart } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
+import { useComboCart } from '../hooks/useComboCart';
 
 // Removed ComboMenu import since we'll move it to Hero
 import { ViewState } from '../App';
@@ -15,6 +16,8 @@ export function Navbar({ isDark, toggleDark, onNavigate }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { getTotalItems, setIsComboOpen } = useComboCart();
+  const cartCount = getTotalItems();
   
   // Close the menu when clicking outside
   useEffect(() => {
@@ -113,8 +116,20 @@ export function Navbar({ isDark, toggleDark, onNavigate }: NavbarProps) {
               </div>
             </div>
             
-            {/* Right column - theme toggle */}
-            <div className="flex items-center justify-end">
+            {/* Right column - theme toggle & cart */}
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setIsComboOpen(true)}
+                className="relative p-2 rounded-lg hover:bg-white/10 transition-colors flex items-center justify-center"
+                title="Ver mi combo"
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {cartCount > 0 && (
+                  <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold rounded-full h-4.5 w-4.5 flex items-center justify-center border border-brand-primary animate-pulse">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
               <ThemeToggle isDark={isDark} toggle={toggleDark} />
             </div>
           </div>
@@ -122,7 +137,18 @@ export function Navbar({ isDark, toggleDark, onNavigate }: NavbarProps) {
           {/* Desktop Menu Items */}
           <div className="hidden md:flex items-center space-x-4">
             <ThemeToggle isDark={isDark} toggle={toggleDark} />
-            {/* Removed ComboMenu from here */}
+            <button
+              onClick={() => setIsComboOpen(true)}
+              className="relative p-2 rounded-lg hover:bg-white/10 transition-colors flex items-center gap-1.5"
+              title="Ver mi combo"
+            >
+              <ShoppingCart className="h-6 w-6" />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center border-2 border-brand-primary animate-pulse">
+                  {cartCount}
+                </span>
+              )}
+            </button>
           </div>
         </div>
         

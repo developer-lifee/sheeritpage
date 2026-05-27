@@ -1,6 +1,6 @@
 import React from 'react';
 import { Play } from 'lucide-react';
-import { ComboMenu } from './ComboMenu';
+import { useComboCart } from '../hooks/useComboCart';
 
 export function Hero() {
   const scrollToPlatforms = () => {
@@ -12,6 +12,8 @@ export function Hero() {
       });
     }
   };
+  
+  const { setIsComboOpen } = useComboCart();
   
   return (
     <div className="relative bg-brand-primary dark:bg-gray-800 text-white">
@@ -40,8 +42,13 @@ export function Hero() {
               Explorar plataformas
             </button>
             
-            {/* Added ComboMenu here */}
-            <ComboMenu />
+            {/* Trigger Custom Combo modal */}
+            <button
+              onClick={() => setIsComboOpen(true)}
+              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-emerald-500 hover:bg-emerald-600 transition-colors shadow-lg"
+            >
+              Crear Combo
+            </button>
           </div>
         </div>
       </div>

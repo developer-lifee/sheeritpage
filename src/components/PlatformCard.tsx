@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { CustomerFormModal } from './CustomerFormModal';
 import { XboxScheduleModal } from './XboxScheduleModal';
 import { calculatePSEFee } from '../utils/fees';
+import { useComboCart } from '../hooks/useComboCart';
 
 interface Plan { id: number; name: string; price: number; characteristics: string[]; }
 interface PlatformCardProps {
@@ -23,6 +24,7 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
   const [showPaymentChoice, setShowPaymentChoice] = useState(false); // elegir método pago
   const [showXboxModal, setShowXboxModal] = useState(false); // Modal de horarios Xbox
   const [xboxSchedule, setXboxSchedule] = useState(''); // Text format con selección
+  const { addToCombo } = useComboCart();
 
   const formatPrice = (value: number) => new Intl.NumberFormat('es-CO', {
     style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0
@@ -145,12 +147,36 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
                 <p>Pagando por PSE aprox: <strong>{formatPrice(totalWithPSE)}</strong></p>
                 <p className="opacity-70">Incluye comisión estimada</p>
               </div>
-              <button
-                onClick={() => hasPlans && safePlans.length > 1 ? setShowOptions(true) : (hasPlans ? handlePlanChosen(safePlans[0]) : handleDirectBuy())}
-                className="w-full mt-auto py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark transition-colors"
-              >
-                {hasPlans && safePlans.length > 1 ? 'Ver Planes' : 'Comprar Ahora'}
-              </button>
+              {hasPlans && safePlans.length > 1 ? (
+                <button
+                  onClick={() => setShowOptions(true)}
+                  className="w-full mt-auto py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark transition-colors"
+                >
+                  Ver Planes
+                </button>
+              ) : (
+                <div className="flex gap-2 mt-auto">
+                  <button
+                    onClick={() => hasPlans ? handlePlanChosen(safePlans[0]) : handleDirectBuy()}
+                    className="flex-grow py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark transition-colors text-sm"
+                  >
+                    Comprar Ahora
+                  </button>
+                  <button
+                    onClick={() => {
+                      const targetPlanId = hasPlans ? safePlans[0].id : (id * 1000);
+                      addToCombo(targetPlanId);
+                    }}
+                    className="py-2 px-3 bg-emerald-500 text-white font-bold rounded-lg hover:bg-emerald-600 transition-colors flex items-center justify-center gap-1 text-sm"
+                    title="Agregar a mi combo"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    Combo
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             <div className="space-y-3">
@@ -160,12 +186,23 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
                   <ul className="text-xs text-gray-500 dark:text-gray-300 mt-1">
                     {plan.characteristics.map(c => <li key={c}>- {c}</li>)}
                   </ul>
-                  <button
-                    onClick={() => handlePlanChosen(plan)}
-                    className="w-full mt-2 py-1 bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-white font-bold rounded-lg hover:bg-gray-300"
-                  >
-                    Seleccionar
-                  </button>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => handlePlanChosen(plan)}
+                      className="flex-grow py-1 px-2 bg-brand-primary text-white text-xs font-bold rounded-lg hover:bg-brand-dark transition-all duration-200"
+                    >
+                      Pagar Directo
+                    </button>
+                    <button
+                      onClick={() => addToCombo(plan.id)}
+                      className="py-1 px-2 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600 transition-all duration-200 flex items-center justify-center gap-1"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                      </svg>
+                      Combo
+                    </button>
+                  </div>
                 </div>
               ))}
               <button

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
+import { ComboMenu } from './components/ComboMenu';
 import { Features } from './components/Features';
 import { PlatformCard } from './components/PlatformCard';
 import { InvestmentCard } from './components/InvestmentCard';
@@ -11,7 +12,8 @@ import { SupportSection } from './components/SupportSection';
 import { AdminSupport } from './components/AdminSupport';
 import { VerificationPage } from './components/VerificationPage';
 import { useDarkMode } from './hooks/useDarkMode';
-import { Search } from 'lucide-react';
+import { Search, ShoppingCart } from 'lucide-react';
+import { ComboCartProvider, useComboCart } from './hooks/useComboCart';
 
 interface Plan {
   id: number;
@@ -31,7 +33,7 @@ interface Platform {
 
 export type ViewState = 'home' | 'support' | 'admin' | 'verificar';
 
-export default function App() {
+function AppContent() {
   const [currentView, setCurrentView] = useState<ViewState>('home');
   const [isAdminAuth, setIsAdminAuth] = useState(false);
 
@@ -196,6 +198,43 @@ export default function App() {
       )}
       <Footer />
       <WhatsAppButton />
+      
+      {/* Floating Custom Combo Cart Button */}
+      <FloatingCartButton />
+      
+      {/* Global Combo Cart Modal */}
+      <ComboMenu />
     </div>
+  );
+}
+
+function FloatingCartButton() {
+  const { getTotalItems, setIsComboOpen } = useComboCart();
+  const count = getTotalItems();
+
+  if (count === 0) return null;
+
+  return (
+    <button
+      onClick={() => setIsComboOpen(true)}
+      className="fixed bottom-24 right-6 z-40 flex items-center gap-2 px-4 py-3 bg-brand-primary text-white rounded-full shadow-2xl hover:bg-brand-dark transition-all duration-300 transform hover:scale-105 active:scale-95 animate-bounce-slow"
+      title="Ver mi combo"
+    >
+      <div className="relative">
+        <ShoppingCart className="h-6 w-6" />
+        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-extrabold rounded-full h-5 w-5 flex items-center justify-center border-2 border-brand-primary animate-pulse">
+          {count}
+        </span>
+      </div>
+      <span className="font-bold text-sm hidden sm:inline">Mi Combo</span>
+    </button>
+  );
+}
+
+export default function App() {
+  return (
+    <ComboCartProvider>
+      <AppContent />
+    </ComboCartProvider>
   );
 }

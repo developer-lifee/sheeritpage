@@ -1,6 +1,7 @@
 // sheeritpage/src/components/ComboMenu.tsx (CORREGIDO)
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useComboCart } from '../hooks/useComboCart';
 import { X } from 'lucide-react';
 import { CustomerFormModal } from './CustomerFormModal';
 import { calculatePSEFee } from '../utils/fees';
@@ -25,31 +26,21 @@ const DISCOUNT_PER_PLATFORM = 1000;
 
 // Nuevo estado: selecciona planes específicos
 export function ComboMenu() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedPlans, setSelectedPlans] = useState<Record<number, number>>({}); // planId -> cantidad
+  const {
+    selectedPlans,
+    isComboOpen,
+    setIsComboOpen,
+    updatePlanQuantity,
+    platforms
+  } = useComboCart();
+
   const [duration, setDuration] = useState<'1' | '3' | '6' | '12'>('1');
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
-  const [platforms, setPlatforms] = useState<Platform[]>([]);
-
-  useEffect(() => {
-    fetch('/data/platforms.json')
-      .then(response => response.json())
-      .then(data => setPlatforms(data))
-      .catch(error => console.error('Error cargando precios:', error));
-  }, []);
 
   // Selección de planes
   const handlePlanSelection = (planId: number, quantity: number) => {
-    setSelectedPlans(prev => {
-      const newPlans = { ...prev };
-      if (quantity <= 0) {
-        delete newPlans[planId];
-      } else {
-        newPlans[planId] = quantity;
-      }
-      return newPlans;
-    });
+    updatePlanQuantity(planId, quantity);
   };
 
   // Obtiene los planes seleccionados y su cantidad
@@ -136,13 +127,6 @@ export function ComboMenu() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className="inline-flex items-center px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-dark transition-colors border border-transparent text-base font-medium"
-      >
-        Crear Combo
-      </button>
 
       {/* La llamada al modal ahora es mucho más simple */}
 
@@ -154,7 +138,7 @@ export function ComboMenu() {
         />
       )}
 
-      {isOpen && (
+      {isComboOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
         {/* Fondo semi-transparente */}
         <div className="absolute inset-0 bg-black/50" />
@@ -168,7 +152,7 @@ export function ComboMenu() {
               <h3 className="text-xl font-bold text-gray-900 dark:text-white">Crea tu Combo</h3>
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
+                onClick={() => setIsComboOpen(false)}
                 className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-300"
                 title="Cerrar"
               >
