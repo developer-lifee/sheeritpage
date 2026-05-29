@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useComboCart } from '../hooks/useComboCart';
-import { X } from 'lucide-react';
+import { X, ShoppingCart } from 'lucide-react';
 import { CustomerFormModal } from './CustomerFormModal';
 import { calculatePSEFee } from '../utils/fees';
 
@@ -173,55 +173,82 @@ export function ComboMenu() {
 
           {/* Contenido con scroll */}
           <div className="p-6 overflow-y-auto flex-1">
-            <p className="text-gray-600 dark:text-gray-300 mb-2">
-              Selecciona las plataformas que deseas para tu combo personalizado.
-            </p>
+            {preTotalItems === 0 ? (
+              <div className="text-center py-10 flex flex-col items-center justify-center">
+                <ShoppingCart className="w-16 h-16 text-gray-400 mb-4 animate-pulse" />
+                <p className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Tu combo está vacío</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-xs text-center">¡Agrega plataformas desde la página principal para armar tu combo y obtener descuentos!</p>
+                <button
+                  onClick={() => setIsComboOpen(false)}
+                  className="px-6 py-2 bg-brand-primary hover:bg-brand-dark text-white font-bold rounded-lg transition-colors"
+                >
+                  Ver plataformas
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="text-gray-600 dark:text-gray-300 mb-4 font-semibold text-sm border-b pb-2">
+                  Plataformas en tu Combo:
+                </p>
 
-            {/* (Preview and savings shown in header) */}
-
-            {/* Grid de plataformas y planes */}
-            <div className="space-y-4">
-              {platforms.map(platform => (
-                <div key={platform.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 rounded-md overflow-hidden bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
-                      {platform.image ? (
-                        <img
-                          src={platform.image}
-                          alt={platform.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                        />
-                      ) : (
-                        <span className="text-xs text-gray-500">N/A</span>
-                      )}
-                    </div>
-                    <h4 className="font-bold dark:text-white flex-1">{platform.name}</h4>
-                  </div>
-                  <div className="mt-2 space-y-2">
-                    {platform.plans.map(plan => (
-                      <div key={plan.id} className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium">{plan.name}</p>
-                          <p className="text-xs text-brand-primary font-semibold">{formatPrice(plan.price)}</p>
+                {/* Grid de plataformas y planes seleccionados */}
+                <div className="space-y-4">
+                  {platforms
+                    .filter(platform => platform.plans.some(plan => (selectedPlans[plan.id] || 0) > 0))
+                    .map(platform => (
+                      <div key={platform.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-10 h-10 rounded-md overflow-hidden bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                            {platform.image ? (
+                              <img
+                                src={platform.image}
+                                alt={platform.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                              />
+                            ) : (
+                              <span className="text-xs text-gray-500">N/A</span>
+                            )}
+                          </div>
+                          <h4 className="font-bold dark:text-white flex-1">{platform.name}</h4>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handlePlanSelection(plan.id, (selectedPlans[plan.id] || 0) - 1)}
-                            className="px-2 py-1 rounded bg-gray-200 dark:bg-gray-600 text-sm"
-                          >-</button>
-                          <span className="text-sm w-5 text-center">{selectedPlans[plan.id] || 0}</span>
-                          <button
-                            onClick={() => handlePlanSelection(plan.id, (selectedPlans[plan.id] || 0) + 1)}
-                            className="px-2 py-1 rounded bg-gray-200 dark:bg-gray-600 text-sm"
-                          >+</button>
+                        <div className="mt-2 space-y-2">
+                          {platform.plans
+                            .filter(plan => (selectedPlans[plan.id] || 0) > 0)
+                            .map(plan => (
+                              <div key={plan.id} className="flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700">
+                                <div>
+                                  <p className="text-sm font-medium">{plan.name}</p>
+                                  <p className="text-xs text-brand-primary font-semibold">{formatPrice(plan.price)}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handlePlanSelection(plan.id, (selectedPlans[plan.id] || 0) - 1)}
+                                    className="px-2 py-1 rounded bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-sm font-bold transition-colors"
+                                  >-</button>
+                                  <span className="text-sm w-5 text-center font-semibold">{selectedPlans[plan.id] || 0}</span>
+                                  <button
+                                    onClick={() => handlePlanSelection(plan.id, (selectedPlans[plan.id] || 0) + 1)}
+                                    className="px-2 py-1 rounded bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-sm font-bold transition-colors"
+                                  >+</button>
+                                </div>
+                              </div>
+                            ))}
                         </div>
                       </div>
                     ))}
-                  </div>
                 </div>
-              ))}
-            </div>
+
+                <div className="mt-6 text-center border-t pt-4 border-gray-100 dark:border-gray-700">
+                  <button
+                    onClick={() => setIsComboOpen(false)}
+                    className="text-brand-primary hover:text-brand-dark font-bold hover:underline text-sm transition-colors"
+                  >
+                    + Agregar más plataformas al combo
+                  </button>
+                </div>
+              </>
+            )}
           </div>
             <div className="p-6 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800 z-10">
             <div className="flex gap-2 mb-4 justify-center">

@@ -24,7 +24,7 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
   const [showPaymentChoice, setShowPaymentChoice] = useState(false); // elegir método pago
   const [showXboxModal, setShowXboxModal] = useState(false); // Modal de horarios Xbox
   const [xboxSchedule, setXboxSchedule] = useState(''); // Text format con selección
-  const { addToCombo } = useComboCart();
+  const { addToCombo, getTotalItems, setIsComboOpen } = useComboCart();
 
   const formatPrice = (value: number) => new Intl.NumberFormat('es-CO', {
     style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0
@@ -156,25 +156,43 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
                 </button>
               ) : (
                 <div className="flex gap-2 mt-auto">
-                  <button
-                    onClick={() => hasPlans ? handlePlanChosen(safePlans[0]) : handleDirectBuy()}
-                    className="flex-grow py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark transition-colors text-sm"
-                  >
-                    Comprar Ahora
-                  </button>
-                  <button
-                    onClick={() => {
-                      const targetPlanId = hasPlans ? safePlans[0].id : (id * 1000);
-                      addToCombo(targetPlanId);
-                    }}
-                    className="py-2 px-3 bg-emerald-500 text-white font-bold rounded-lg hover:bg-emerald-600 transition-colors flex items-center justify-center gap-1 text-sm"
-                    title="Agregar a mi combo"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                    Combo
-                  </button>
+                  {getTotalItems() > 0 ? (
+                    <button
+                      onClick={() => {
+                        const targetPlanId = hasPlans ? safePlans[0].id : (id * 1000);
+                        addToCombo(targetPlanId);
+                        setIsComboOpen(true);
+                      }}
+                      className="flex-grow py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-lg transition-colors text-sm flex items-center justify-center gap-1"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                      </svg>
+                      Agregar y Pagar
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => hasPlans ? handlePlanChosen(safePlans[0]) : handleDirectBuy()}
+                        className="flex-grow py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark transition-colors text-sm"
+                      >
+                        Comprar Ahora
+                      </button>
+                      <button
+                        onClick={() => {
+                          const targetPlanId = hasPlans ? safePlans[0].id : (id * 1000);
+                          addToCombo(targetPlanId);
+                        }}
+                        className="py-2 px-3 bg-emerald-500 text-white font-bold rounded-lg hover:bg-emerald-600 transition-colors flex items-center justify-center gap-1 text-sm"
+                        title="Agregar a mi combo"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        Combo
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </>
@@ -187,21 +205,38 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
                     {plan.characteristics.map(c => <li key={c}>- {c}</li>)}
                   </ul>
                   <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={() => handlePlanChosen(plan)}
-                      className="flex-grow py-1 px-2 bg-brand-primary text-white text-xs font-bold rounded-lg hover:bg-brand-dark transition-all duration-200"
-                    >
-                      Pagar Directo
-                    </button>
-                    <button
-                      onClick={() => addToCombo(plan.id)}
-                      className="py-1 px-2 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600 transition-all duration-200 flex items-center justify-center gap-1"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                      </svg>
-                      Combo
-                    </button>
+                    {getTotalItems() > 0 ? (
+                      <button
+                        onClick={() => {
+                          addToCombo(plan.id);
+                          setIsComboOpen(true);
+                        }}
+                        className="w-full py-1.5 px-2 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600 transition-all duration-200 flex items-center justify-center gap-1"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        Agregar y Pagar
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handlePlanChosen(plan)}
+                          className="flex-grow py-1 px-2 bg-brand-primary text-white text-xs font-bold rounded-lg hover:bg-brand-dark transition-all duration-200"
+                        >
+                          Pagar Directo
+                        </button>
+                        <button
+                          onClick={() => addToCombo(plan.id)}
+                          className="py-1 px-2 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600 transition-all duration-200 flex items-center justify-center gap-1"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                          </svg>
+                          Combo
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
