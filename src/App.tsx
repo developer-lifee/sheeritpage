@@ -157,9 +157,9 @@ function AppContent() {
           </div>
         )}
         
-        <div className="mt-20 px-4 md:px-0">
+        {/* <div className="mt-20 px-4 md:px-0">
           <InvestmentCard />
-        </div>
+        </div> */}
       </main>
         </>
       )}
