@@ -17,7 +17,7 @@ export function Footer() {
               <h3 className="text-xl font-bold">HEERIT</h3>
             </div>
             <p className="text-white/80">
-              Tu destino único para todas las plataformas de streaming.
+              Democratizando el acceso a tus plataformas favoritas de entretenimiento y productividad al precio justo.
             </p>
             <div className="flex space-x-4 mt-6">
               <a href="https://www.facebook.com/sheer.it/" className="text-white/80 hover:text-white transition-colors" aria-label="Facebook">

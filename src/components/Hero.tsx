@@ -28,10 +28,10 @@ export function Hero() {
       <div className="relative max-w-7xl mx-auto px-4 py-24 sm:px-6 lg:px-8">
         <div className="text-center">
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
-            Todo el entretenimiento en un solo lugar
+            Todas tus suscripciones al precio justo
           </h1>
-          <p className="mt-6 text-xl max-w-3xl mx-auto">
-            Descubre las mejores plataformas de streaming y encuentra la combinación perfecta para tu entretenimiento.
+          <p className="mt-6 text-xl max-w-3xl mx-auto opacity-90">
+            Democratizamos el acceso a tus plataformas favoritas de entretenimiento y productividad. Paga el precio justo por lo que usas y arma tu combinación ideal.
           </p>
           <div className="mt-10 space-y-4 sm:space-y-0 sm:space-x-4 sm:flex sm:justify-center">
             <button 
