@@ -68,9 +68,9 @@ export function Footer() {
           <div>
             <h4 className="text-lg font-semibold mb-4">Contacto</h4>
             <ul className="space-y-2 text-white/80">
-              <li>Email: soporte@sheerit.com.co</li>
               <li>WhatsApp: +57 3118587974</li>
-              <li>Horario: 24/7</li>
+              <li>Horario Automático: 24/7</li>
+              <li>Horario Humano: 10:00 AM - 6:00 PM</li>
             </ul>
           </div>
         </div>
