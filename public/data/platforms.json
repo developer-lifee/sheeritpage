@@ -156,13 +156,23 @@
     "name": "Prime Video",
     "image": "https://th.bing.com/th/id/OIP.hOyeETmfMNoeV9ThyQMNBQHaHa?cb=iwc2&rs=1&pid=ImgDetMain",
     "price": 10000,
-    "characteristics": [],
+    "characteristics": [
+      "Cuenta estable y garantizada",
+      "Calidad 4K Ultra HD + HDR",
+      "Acceso limitado a todo el catálogo",
+      "Entrega en tiempo real"
+    ],
     "plans": [
       {
         "id": 401,
         "name": "Suscripción",
         "price": 10000,
-        "characteristics": []
+        "characteristics": [
+          "Cuenta estable y garantizada",
+          "Calidad 4K Ultra HD + HDR",
+          "Acceso ilimitado a todo el catálogo",
+          "Entrega en tiempo real"
+        ]
       }
     ]
   },
@@ -171,13 +181,23 @@
     "name": "Vix Premium",
     "image": "https://th.bing.com/th/id/OIP.fpsYx-rEZwqdPUUznf2I8QHaD4?cb=iwc2&rs=1&pid=ImgDetMain",
     "price": 7000,
-    "characteristics": [],
+    "characteristics": [
+      "Transmisiones de fútbol en vivo (Liga MX)",
+      "Todo el contenido en español",
+      "Series, películas y novelas exclusivas",
+      "Entrega en tiempo real"
+    ],
     "plans": [
       {
         "id": 1301,
         "name": "Suscripción",
         "price": 7000,
-        "characteristics": []
+        "characteristics": [
+          "Transmisiones de fútbol en vivo (Liga MX)",
+          "Todo el contenido en español",
+          "Series, películas y novelas exclusivas",
+          "Entrega en tiempo real"
+        ]
       }
     ]
   },
@@ -218,7 +238,6 @@
       }
     ]
   },
-
   {
     "id": 8,
     "name": "YouTube Premium",
@@ -487,23 +506,13 @@
     "id": 22,
     "name": "Gamma App",
     "image": "https://cdn.mos.cms.futurecdn.net/cfo9wrPuw9H2NXugivFUJh-1200-80.jpg.webp",
-    "price": 10000,
+    "price": 20000,
     "characteristics": [
-      "Presentaciones con IA en minutos",
-      "Interfaz intuitiva y moderna",
-      "Exportación a PDF y PPT"
+      "Uso ilimitado de IA para presentaciones",
+      "Exportación completa a PDF y PPT",
+      "Sin marca de agua y analíticas avanzadas"
     ],
     "plans": [
-      {
-        "id": 2201,
-        "name": "Plan Plus",
-        "price": 10000,
-        "characteristics": [
-          "Créditos de IA mensuales",
-          "Sin marca de agua",
-          "Exportación completa"
-        ]
-      },
       {
         "id": 2202,
         "name": "Plan Pro",
