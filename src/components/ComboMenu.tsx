@@ -47,23 +47,45 @@ export function ComboMenu() {
   const getSelectedEntries = (): Array<[number, number]> =>
     Object.entries(selectedPlans).map(([id, qty]) => [Number(id), Number(qty)] as [number, number]);
 
+  const isFixedPlan = (planName: string): boolean => {
+    const name = planName.toLowerCase();
+    return name.includes('anual') || name.includes('trimestral') || name.includes('semestral') || name.includes('12 meses') || name.includes('3 meses');
+  };
+
   // Calcula el total del combo
   const calculateTotal = (): number => {
     const entries = getSelectedEntries();
     if (entries.length === 0) return 0;
+    
     let totalItems = 0;
-    const baseTotal = entries.reduce((total, [planId, qty]) => {
+    let monthlyBaseTotal = 0;
+    let fixedTotal = 0;
+    
+    entries.forEach(([planId, qty]) => {
       const platform = platforms.find(p => p.plans.some(plan => plan.id === planId));
       const plan = platform?.plans.find(p => p.id === planId);
-      if (!plan) return total;
+      if (!plan) return;
+      
       totalItems += qty;
-      return total + plan.price * qty;
-    }, 0);
+      if (isFixedPlan(plan.name)) {
+        fixedTotal += plan.price * qty;
+      } else {
+        monthlyBaseTotal += plan.price * qty;
+      }
+    });
+    
+    // Descuento de combo multilínea ($1000 por plataforma adicional)
     const discount = totalItems > 1 ? (totalItems - 1) * DISCOUNT_PER_PLATFORM : 0;
-    let finalTotal = (baseTotal - discount) * parseInt(duration);
-    if (duration === '3') finalTotal *= 0.97;
-    if (duration === '6') finalTotal *= 0.93;
-    if (duration === '12') finalTotal *= 0.85;
+    
+    // Los planes mensuales se multiplican por la duración elegida y se les aplica el descuento de duración
+    let monthlyFinalTotal = (monthlyBaseTotal - discount) * parseInt(duration);
+    if (duration === '3') monthlyFinalTotal *= 0.97;
+    if (duration === '6') monthlyFinalTotal *= 0.93;
+    if (duration === '12') monthlyFinalTotal *= 0.85;
+    
+    // Los planes anuales/trimestrales ya son prepagados y fijos (no se multiplican por la duración del combo)
+    const finalTotal = Math.max(0, monthlyFinalTotal) + fixedTotal;
+    
     return Math.floor(finalTotal / 1000) * 1000;
   };
 
@@ -123,7 +145,24 @@ export function ComboMenu() {
   };
 
   const preTotalItems = getTotalItems();
-  const preSavings = preTotalItems > 1 ? (preTotalItems - 1) * DISCOUNT_PER_PLATFORM : 0;
+  const getBaseTotalSum = (): number => {
+    const entries = getSelectedEntries();
+    return entries.reduce((total, [planId, qty]) => {
+      const platform = platforms.find(p => p.plans.some(plan => plan.id === planId));
+      const plan = platform?.plans.find(p => p.id === planId);
+      if (!plan) return total;
+      
+      const multiplier = isFixedPlan(plan.name) ? 1 : parseInt(duration);
+      return total + (plan.price * qty * multiplier);
+    }, 0);
+  };
+  const preSavings = (() => {
+    const standardCost = getBaseTotalSum();
+    if (standardCost === 0) return 0;
+    const actualCost = calculateTotal();
+    const savings = standardCost - actualCost;
+    return savings > 0 ? savings : 0;
+  })();
 
   return (
     <>
@@ -252,14 +291,24 @@ export function ComboMenu() {
           </div>
             <div className="p-6 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800 z-10">
             <div className="flex gap-2 mb-4 justify-center">
-              {(['1', '3', '6', '12'] as const).map(d => (
+              {[
+                { d: '1', label: '1 Mes', desc: '' },
+                { d: '3', label: '3 Meses', desc: '3% dto' },
+                { d: '6', label: '6 Meses', desc: '7% dto' },
+                { d: '12', label: '12 Meses', desc: '15% dto' }
+              ].map(({ d, label, desc }) => (
                 <button
                   key={d}
                   type="button"
-                  onClick={() => setDuration(d)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${duration === d ? 'bg-brand-primary text-white shadow-md' : 'bg-gray-100 dark:bg-gray-700 dark:text-gray-300'}`}
+                  onClick={() => setDuration(d as any)}
+                  className={`px-2 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all flex flex-col items-center justify-center min-w-[70px] ${duration === d ? 'bg-brand-primary text-white shadow-md' : 'bg-gray-100 dark:bg-gray-700 dark:text-gray-300'}`}
                 >
-                  {d} Mes{d !== '1' ? 'es' : ''}
+                  <span>{label}</span>
+                  {desc && (
+                    <span className={`text-[10px] ${duration === d ? 'text-white/80' : 'text-green-600 dark:text-green-400 font-medium'}`}>
+                      {desc}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>

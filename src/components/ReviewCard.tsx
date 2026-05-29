@@ -1,5 +1,4 @@
-import React from 'react';
-import { Star } from 'lucide-react';
+import { Star, ShieldCheck } from 'lucide-react';
 
 interface ReviewCardProps {
   name: string;
@@ -14,9 +13,17 @@ export function ReviewCard({ name, platform, rating, comment, avatar, date }: Re
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
       <div className="flex items-center mb-4">
-        <img src={avatar} alt={name} className="w-12 h-12 rounded-full object-cover" />
+        <div className="w-12 h-12 rounded-full bg-brand-primary/10 text-brand-primary flex items-center justify-center font-bold text-lg dark:bg-brand-primary/20 shrink-0">
+          {name.charAt(0).toUpperCase()}
+        </div>
         <div className="ml-4">
-          <h4 className="font-semibold text-gray-900 dark:text-white">{name}</h4>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <h4 className="font-semibold text-gray-900 dark:text-white">{name}</h4>
+            <span className="text-[10px] bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5" title="Foto anonimizada por privacidad">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Verificado
+            </span>
+          </div>
           <p className="text-sm text-gray-500 dark:text-gray-400">{platform}</p>
         </div>
       </div>
