@@ -1,6 +1,6 @@
 // sheeritpage/src/components/ComboMenu.tsx (CORREGIDO)
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useComboCart } from '../hooks/useComboCart';
 import { X, ShoppingCart } from 'lucide-react';
 import { CustomerFormModal } from './CustomerFormModal';
@@ -20,9 +20,37 @@ interface Platform {
   price: number;
   characteristics: string[];
   plans: Plan[];
+  discountTier?: string;
 }
 
-const DISCOUNT_PER_PLATFORM = 1000;
+interface PricingRules {
+  discountPerPlatform: number;
+  durationDiscounts: Record<string, Record<string, { duration: number; factor: number; label: string; name: string }>>;
+}
+
+const DEFAULT_RULES: PricingRules = {
+  discountPerPlatform: 1000,
+  durationDiscounts: {
+    "A": {
+      "1": { duration: 1, factor: 1.00, label: "mes", name: "mensual" },
+      "3": { duration: 3, factor: 0.97, label: "trimestre", name: "trimestral" },
+      "6": { duration: 6, factor: 0.93, label: "semestre", name: "semestral" },
+      "12": { duration: 12, factor: 0.85, label: "año", name: "anual" }
+    },
+    "B": {
+      "1": { duration: 1, factor: 1.00, label: "mes", name: "mensual" },
+      "3": { duration: 3, factor: 0.98, label: "trimestre", name: "trimestral" },
+      "6": { duration: 6, factor: 0.95, label: "semestre", name: "semestral" },
+      "12": { duration: 12, factor: 0.90, label: "año", name: "anual" }
+    },
+    "C": {
+      "1": { duration: 1, factor: 1.00, label: "mes", name: "mensual" },
+      "3": { duration: 3, factor: 0.99, label: "trimestre", name: "trimestral" },
+      "6": { duration: 6, factor: 0.97, label: "semestre", name: "semestral" },
+      "12": { duration: 12, factor: 0.94, label: "año", name: "anual" }
+    }
+  }
+};
 
 // Nuevo estado: selecciona planes específicos
 export function ComboMenu() {
@@ -37,6 +65,18 @@ export function ComboMenu() {
   const [duration, setDuration] = useState<'1' | '3' | '6' | '12'>('1');
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
+  const [rules, setRules] = useState<PricingRules>(DEFAULT_RULES);
+
+  useEffect(() => {
+    fetch('/data/rules.json')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.durationDiscounts) {
+          setRules(data);
+        }
+      })
+      .catch(err => console.error("Error loading pricing rules in ComboMenu:", err));
+  }, []);
 
   // Selección de planes
   const handlePlanSelection = (planId: number, quantity: number) => {
@@ -58,7 +98,6 @@ export function ComboMenu() {
     if (entries.length === 0) return 0;
     
     let totalItems = 0;
-    let monthlyBaseTotal = 0;
     let fixedTotal = 0;
     
     entries.forEach(([planId, qty]) => {
@@ -66,27 +105,36 @@ export function ComboMenu() {
       const plan = platform?.plans.find(p => p.id === planId);
       if (!plan) return;
       
-      totalItems += qty;
       if (isFixedPlan(plan.name)) {
         fixedTotal += plan.price * qty;
       } else {
-        monthlyBaseTotal += plan.price * qty;
+        totalItems += qty;
       }
     });
     
-    // Descuento de combo multilínea ($1000 por plataforma adicional)
-    const discount = totalItems > 1 ? (totalItems - 1) * DISCOUNT_PER_PLATFORM : 0;
+    const discountPerItem = totalItems > 1 ? ((totalItems - 1) * rules.discountPerPlatform) / totalItems : 0;
     
-    // Los planes mensuales se multiplican por la duración elegida y se les aplica el descuento de duración
-    let monthlyFinalTotal = (monthlyBaseTotal - discount) * parseInt(duration);
-    if (duration === '3') monthlyFinalTotal *= 0.97;
-    if (duration === '6') monthlyFinalTotal *= 0.93;
-    if (duration === '12') monthlyFinalTotal *= 0.85;
+    let monthlyFinalTotal = 0;
+    entries.forEach(([planId, qty]) => {
+      const platform = platforms.find(p => p.plans.some(plan => plan.id === planId));
+      const plan = platform?.plans.find(p => p.id === planId);
+      if (!plan || !platform) return;
+      
+      if (!isFixedPlan(plan.name)) {
+        const tier = (platform as any).discountTier || 'A';
+        const tierRules = rules.durationDiscounts[tier] || rules.durationDiscounts['A'];
+        const durationRule = tierRules[duration];
+        const factor = durationRule ? durationRule.factor : 1.0;
+        
+        // Poner el precio unitario base mensual descontando la parte proporcional del combo
+        const itemMonthlyPrice = plan.price - discountPerItem;
+        monthlyFinalTotal += (itemMonthlyPrice * qty * parseInt(duration)) * factor;
+      }
+    });
     
-    // Los planes anuales/trimestrales ya son prepagados y fijos (no se multiplican por la duración del combo)
     const finalTotal = Math.max(0, monthlyFinalTotal) + fixedTotal;
     
-    return Math.floor(finalTotal / 1000) * 1000;
+    return Math.ceil(finalTotal / 1000) * 1000;
   };
 
   const getTotalItems = (): number => getSelectedEntries().reduce((s, [, qty]) => s + qty, 0);

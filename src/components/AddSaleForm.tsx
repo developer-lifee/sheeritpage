@@ -21,39 +21,74 @@ export const AddSaleForm: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [rules, setRules] = useState<any>(null);
 
   useEffect(() => {
     fetch('/data/platforms.json')
       .then(res => res.json())
       .then(data => setPlatforms(data))
       .catch(err => console.error("Error loading platforms:", err));
+
+    fetch('/data/rules.json')
+      .then(res => res.json())
+      .then(data => setRules(data))
+      .catch(err => console.error("Error loading pricing rules:", err));
   }, []);
 
   useEffect(() => {
     calculateTotal();
-  }, [selectedItems, duration]);
+  }, [selectedItems, duration, rules, platforms]);
 
   const calculateTotal = () => {
-    let subtotal = 0;
+    if (selectedItems.length === 0) {
+      setTotal(0);
+      return;
+    }
+
+    const activeRules = rules || {
+      discountPerPlatform: 1000,
+      durationDiscounts: {
+        "A": {
+          "1": { factor: 1.00 },
+          "3": { factor: 0.97 },
+          "6": { factor: 0.93 },
+          "12": { factor: 0.85 }
+        },
+        "B": {
+          "1": { factor: 1.00 },
+          "3": { factor: 0.98 },
+          "6": { factor: 0.95 },
+          "12": { factor: 0.90 }
+        },
+        "C": {
+          "1": { factor: 1.00 },
+          "3": { factor: 0.99 },
+          "6": { factor: 0.97 },
+          "12": { factor: 0.94 }
+        }
+      }
+    };
+
+    const numPlatforms = selectedItems.length;
+    const discountPerItem = numPlatforms > 1 ? ((numPlatforms - 1) * activeRules.discountPerPlatform) / numPlatforms : 0;
+
+    let finalTotal = 0;
     selectedItems.forEach(item => {
       const plat = platforms.find(p => p.id === item.platformId);
       const plan = plat?.plans.find(p => p.name === item.planName);
-      if (plan) subtotal += plan.price;
+      if (!plan || !plat) return;
+      
+      const tier = (plat as any).discountTier || 'A';
+      const tierRules = activeRules.durationDiscounts[tier] || activeRules.durationDiscounts['A'];
+      const durationRule = tierRules[duration];
+      const factor = durationRule ? durationRule.factor : 1.0;
+      
+      const itemMonthlyPrice = plan.price - discountPerItem;
+      finalTotal += (itemMonthlyPrice * parseInt(duration)) * factor;
     });
 
-    // Combo discount: (N - 1) * 1000
-    if (selectedItems.length > 1) {
-      subtotal -= (selectedItems.length - 1) * 1000;
-    }
-
-    // Duration discount
-    let finalTotal = subtotal * parseInt(duration);
-    if (duration === '3') finalTotal *= 0.97;
-    if (duration === '6') finalTotal *= 0.93;
-    if (duration === '12') finalTotal *= 0.85;
-
-    // Round to nearest 1000
-    setTotal(Math.floor(finalTotal / 1000) * 1000);
+    // Round to nearest 1000 using Math.ceil
+    setTotal(Math.ceil(finalTotal / 1000) * 1000);
   };
 
   const addItem = () => {

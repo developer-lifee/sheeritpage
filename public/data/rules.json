@@ -1,0 +1,35 @@
+{
+  "discountPerPlatform": 1000,
+  "durationDiscounts": {
+    "A": {
+      "1": { "months": 1, "factor": 1.00, "label": "mes", "name": "mensual" },
+      "3": { "months": 3, "factor": 0.97, "label": "trimestre", "name": "trimestral" },
+      "6": { "months": 6, "factor": 0.93, "label": "semestre", "name": "semestral" },
+      "12": { "months": 12, "factor": 0.85, "label": "año", "name": "anual" },
+      "mensual": { "months": 1, "factor": 1.00, "label": "mes", "name": "mensual" },
+      "trimestral": { "months": 3, "factor": 0.97, "label": "trimestre", "name": "trimestral" },
+      "semestral": { "months": 6, "factor": 0.93, "label": "semestre", "name": "semestral" },
+      "anual": { "months": 12, "factor": 0.85, "label": "año", "name": "anual" }
+    },
+    "B": {
+      "1": { "months": 1, "factor": 1.00, "label": "mes", "name": "mensual" },
+      "3": { "months": 3, "factor": 0.98, "label": "trimestre", "name": "trimestral" },
+      "6": { "months": 6, "factor": 0.95, "label": "semestre", "name": "semestral" },
+      "12": { "months": 12, "factor": 0.90, "label": "año", "name": "anual" },
+      "mensual": { "months": 1, "factor": 1.00, "label": "mes", "name": "mensual" },
+      "trimestral": { "months": 3, "factor": 0.98, "label": "trimestre", "name": "trimestral" },
+      "semestral": { "months": 6, "factor": 0.95, "label": "semestre", "name": "semestral" },
+      "anual": { "months": 12, "factor": 0.90, "label": "año", "name": "anual" }
+    },
+    "C": {
+      "1": { "months": 1, "factor": 1.00, "label": "mes", "name": "mensual" },
+      "3": { "months": 3, "factor": 0.99, "label": "trimestre", "name": "trimestral" },
+      "6": { "months": 6, "factor": 0.97, "label": "semestre", "name": "semestral" },
+      "12": { "months": 12, "factor": 0.94, "label": "año", "name": "anual" },
+      "mensual": { "months": 1, "factor": 1.00, "label": "mes", "name": "mensual" },
+      "trimestral": { "months": 3, "factor": 0.99, "label": "trimestre", "name": "trimestral" },
+      "semestral": { "months": 6, "factor": 0.97, "label": "semestre", "name": "semestral" },
+      "anual": { "months": 12, "factor": 0.94, "label": "año", "name": "anual" }
+    }
+  }
+}
