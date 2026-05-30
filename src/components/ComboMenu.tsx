@@ -65,18 +65,6 @@ export function ComboMenu() {
   const [duration, setDuration] = useState<'1' | '3' | '6' | '12'>('1');
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
-  const [rules, setRules] = useState<PricingRules>(DEFAULT_RULES);
-
-  useEffect(() => {
-    fetch('/data/rules.json')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.durationDiscounts) {
-          setRules(data);
-        }
-      })
-      .catch(err => console.error("Error loading pricing rules in ComboMenu:", err));
-  }, []);
 
   // Selección de planes
   const handlePlanSelection = (planId: number, quantity: number) => {
@@ -112,7 +100,7 @@ export function ComboMenu() {
       }
     });
     
-    const discountPerItem = totalItems > 1 ? ((totalItems - 1) * rules.discountPerPlatform) / totalItems : 0;
+    const discountPerItem = totalItems > 1 ? ((totalItems - 1) * DEFAULT_RULES.discountPerPlatform) / totalItems : 0;
     
     let monthlyFinalTotal = 0;
     entries.forEach(([planId, qty]) => {
@@ -122,7 +110,7 @@ export function ComboMenu() {
       
       if (!isFixedPlan(plan.name)) {
         const tier = (platform as any).discountTier || 'A';
-        const tierRules = rules.durationDiscounts[tier] || rules.durationDiscounts['A'];
+        const tierRules = DEFAULT_RULES.durationDiscounts[tier] || DEFAULT_RULES.durationDiscounts['A'];
         const durationRule = tierRules[duration];
         const factor = durationRule ? durationRule.factor : 1.0;
         

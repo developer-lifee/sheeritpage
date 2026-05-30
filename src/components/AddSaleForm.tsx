@@ -10,7 +10,32 @@ interface Platform {
   id: string;
   name: string;
   plans: Plan[];
+  discountTier?: string;
 }
+
+const DEFAULT_RULES = {
+  discountPerPlatform: 1000,
+  durationDiscounts: {
+    "A": {
+      "1": { factor: 1.00 },
+      "3": { factor: 0.97 },
+      "6": { factor: 0.93 },
+      "12": { factor: 0.85 }
+    },
+    "B": {
+      "1": { factor: 1.00 },
+      "3": { factor: 0.98 },
+      "6": { factor: 0.95 },
+      "12": { factor: 0.90 }
+    },
+    "C": {
+      "1": { factor: 1.00 },
+      "3": { factor: 0.99 },
+      "6": { factor: 0.97 },
+      "12": { factor: 0.94 }
+    }
+  }
+};
 
 export const AddSaleForm: React.FC = () => {
   const [platforms, setPlatforms] = useState<Platform[]>([]);
@@ -21,23 +46,17 @@ export const AddSaleForm: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [rules, setRules] = useState<any>(null);
 
   useEffect(() => {
     fetch('/data/platforms.json')
       .then(res => res.json())
       .then(data => setPlatforms(data))
       .catch(err => console.error("Error loading platforms:", err));
-
-    fetch('/data/rules.json')
-      .then(res => res.json())
-      .then(data => setRules(data))
-      .catch(err => console.error("Error loading pricing rules:", err));
   }, []);
 
   useEffect(() => {
     calculateTotal();
-  }, [selectedItems, duration, rules, platforms]);
+  }, [selectedItems, duration, platforms]);
 
   const calculateTotal = () => {
     if (selectedItems.length === 0) {
@@ -45,32 +64,8 @@ export const AddSaleForm: React.FC = () => {
       return;
     }
 
-    const activeRules = rules || {
-      discountPerPlatform: 1000,
-      durationDiscounts: {
-        "A": {
-          "1": { factor: 1.00 },
-          "3": { factor: 0.97 },
-          "6": { factor: 0.93 },
-          "12": { factor: 0.85 }
-        },
-        "B": {
-          "1": { factor: 1.00 },
-          "3": { factor: 0.98 },
-          "6": { factor: 0.95 },
-          "12": { factor: 0.90 }
-        },
-        "C": {
-          "1": { factor: 1.00 },
-          "3": { factor: 0.99 },
-          "6": { factor: 0.97 },
-          "12": { factor: 0.94 }
-        }
-      }
-    };
-
     const numPlatforms = selectedItems.length;
-    const discountPerItem = numPlatforms > 1 ? ((numPlatforms - 1) * activeRules.discountPerPlatform) / numPlatforms : 0;
+    const discountPerItem = numPlatforms > 1 ? ((numPlatforms - 1) * DEFAULT_RULES.discountPerPlatform) / numPlatforms : 0;
 
     let finalTotal = 0;
     selectedItems.forEach(item => {
@@ -78,9 +73,9 @@ export const AddSaleForm: React.FC = () => {
       const plan = plat?.plans.find(p => p.name === item.planName);
       if (!plan || !plat) return;
       
-      const tier = (plat as any).discountTier || 'A';
-      const tierRules = activeRules.durationDiscounts[tier] || activeRules.durationDiscounts['A'];
-      const durationRule = tierRules[duration];
+      const tier = plat.discountTier || 'A';
+      const tierRules = DEFAULT_RULES.durationDiscounts[tier as keyof typeof DEFAULT_RULES.durationDiscounts] || DEFAULT_RULES.durationDiscounts['A'];
+      const durationRule = tierRules[duration as keyof typeof tierRules];
       const factor = durationRule ? durationRule.factor : 1.0;
       
       const itemMonthlyPrice = plan.price - discountPerItem;
