@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator } from 'lucide-react';
+import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail } from 'lucide-react';
 import { ClientsView } from './ClientsView';
 import { NetflixMatchView } from './NetflixMatchView';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { AddSaleForm } from './AddSaleForm';
+import { TicketsView } from './TicketsView';
+import { GptAccountsView } from './GptAccountsView';
+import { ManagedEmailsView } from './ManagedEmailsView';
 
 interface Step {
   text: string;
@@ -30,7 +33,7 @@ export function AdminSupport() {
   const [data, setData] = useState<SupportPlatform[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales'>('stats');
+  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails'>('tickets');
 
   // Platforms to recycle logos from
   const availableLogos = [
@@ -245,6 +248,12 @@ export function AdminSupport() {
       {/* Tabs Navigation */}
       <div className="flex space-x-2 mb-8 border-b border-gray-200 dark:border-gray-700 pb-4">
         <button 
+          onClick={() => setActiveTab('tickets')}
+          className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'tickets' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <MessageSquare className="w-5 h-5 mr-2" /> Tickets
+        </button>
+        <button 
           onClick={() => setActiveTab('support')}
           className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'support' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
@@ -274,12 +283,27 @@ export function AdminSupport() {
         >
           <Tv className="w-5 h-5 mr-2" /> Predictor Netflix
         </button>
+        <button 
+          onClick={() => setActiveTab('gpt')}
+          className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'gpt' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <Key className="w-5 h-5 mr-2" /> Cuentas GPT
+        </button>
+        <button 
+          onClick={() => setActiveTab('emails')}
+          className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'emails' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <Mail className="w-5 h-5 mr-2" /> Correos
+        </button>
       </div>
 
+      {activeTab === 'tickets' && <TicketsView />}
       {activeTab === 'db' && <ClientsView />}
       {activeTab === 'netflix' && <NetflixMatchView />}
       {activeTab === 'stats' && <AnalyticsDashboard />}
       {activeTab === 'sales' && <AddSaleForm />}
+      {activeTab === 'gpt' && <GptAccountsView />}
+      {activeTab === 'emails' && <ManagedEmailsView />}
 
       {activeTab === 'support' && (
         <>

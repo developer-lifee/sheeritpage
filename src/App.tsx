@@ -39,7 +39,9 @@ function AppContent() {
 
   useEffect(() => {
     // Handle initial route
-    const path = window.location.pathname;
+    const rawPath = window.location.pathname;
+    const path = rawPath === '/' ? '/' : rawPath.replace(/\/$/, '');
+    
     if (path === '/aiuda') {
       setCurrentView('support');
     } else if (path === '/aiuda/admin') {
@@ -52,7 +54,9 @@ function AppContent() {
 
     // Handle back/forward buttons
     const handlePopState = () => {
-      const currentPath = window.location.pathname;
+      const rawCurrentPath = window.location.pathname;
+      const currentPath = rawCurrentPath === '/' ? '/' : rawCurrentPath.replace(/\/$/, '');
+      
       if (currentPath === '/aiuda') {
         setCurrentView('support');
       } else if (currentPath === '/aiuda/admin') {

@@ -20,10 +20,10 @@ export const ClientsView: React.FC = () => {
             });
     }, []);
 
-    const filtered = clients.filter(c => 
-        (c.Nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-        (c.numero || '').toString().includes(searchTerm)
-    );
+    const filtered = clients.filter(c => {
+        const num = (c.numero || c.Numero || '').toString();
+        return (c.Nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) || num.includes(searchTerm);
+    });
 
     const handleSendAction = async (phone: string, type: 'credentials' | 'payment') => {
         const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
@@ -81,7 +81,7 @@ export const ClientsView: React.FC = () => {
                             {filtered.slice(0, 50).map((c, i) => (
                                 <tr key={i} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                     <td className="py-3 px-4 text-sm dark:text-gray-200">{c.Nombre || 'N/A'}</td>
-                                    <td className="py-3 px-4 text-sm dark:text-gray-200">{c.numero}</td>
+                                    <td className="py-3 px-4 text-sm dark:text-gray-200">{c.numero || c.Numero}</td>
                                     <td className="py-3 px-4 text-sm dark:text-gray-200">
                                         <span className="bg-brand-primary/10 text-brand-primary px-2 py-1 rounded-md text-xs font-bold">
                                             {c.Streaming || 'N/A'}
@@ -92,14 +92,14 @@ export const ClientsView: React.FC = () => {
                                     <td className="py-3 px-4 text-sm">
                                         <div className="flex gap-2">
                                             <button 
-                                                onClick={() => handleSendAction(c.numero, 'credentials')}
+                                                onClick={() => handleSendAction(c.numero || c.Numero, 'credentials')}
                                                 className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded text-xs font-bold transition-colors"
                                                 title="Enviar Credenciales"
                                             >
                                                 🔑 Creds
                                             </button>
                                             <button 
-                                                onClick={() => handleSendAction(c.numero, 'payment')}
+                                                onClick={() => handleSendAction(c.numero || c.Numero, 'payment')}
                                                 className="bg-green-100 hover:bg-green-200 text-green-700 px-2 py-1 rounded text-xs font-bold transition-colors"
                                                 title="Cobrar"
                                             >
