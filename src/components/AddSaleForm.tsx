@@ -42,10 +42,17 @@ export const AddSaleForm: React.FC = () => {
   const [selectedItems, setSelectedItems] = useState<{ platformId: string, planName: string }[]>([]);
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
-  const [duration, setDuration] = useState<'1' | '3' | '6' | '12'>('1');
+  const [duration, setDuration] = useState<string>('1');
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+
+  // Client verification / Renewal state
+  const [customerServices, setCustomerServices] = useState<any[]>([]);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isRenewal, setIsRenewal] = useState(false);
+  const [selectedServiceToRenew, setSelectedServiceToRenew] = useState<any | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState('Nequi');
 
   useEffect(() => {
     fetch('/data/platforms.json')
@@ -75,7 +82,10 @@ export const AddSaleForm: React.FC = () => {
       
       const tier = plat.discountTier || 'A';
       const tierRules = DEFAULT_RULES.durationDiscounts[tier as keyof typeof DEFAULT_RULES.durationDiscounts] || DEFAULT_RULES.durationDiscounts['A'];
-      const durationRule = tierRules[duration as keyof typeof tierRules];
+      
+      // Fallback in case of custom months
+      const durationKey = ['1', '3', '6', '12'].includes(duration) ? duration : '1';
+      const durationRule = tierRules[durationKey as keyof typeof tierRules];
       const factor = durationRule ? durationRule.factor : 1.0;
       
       const itemMonthlyPrice = plan.price - discountPerItem;
@@ -84,6 +94,49 @@ export const AddSaleForm: React.FC = () => {
 
     // Round to nearest 1000 using Math.ceil
     setTotal(Math.ceil(finalTotal / 1000) * 1000);
+  };
+
+  const handleVerifyClient = async () => {
+    if (!phone) {
+      setMessage('⚠️ Por favor ingresa el número de WhatsApp.');
+      return;
+    }
+    setIsVerifying(true);
+    setMessage('');
+    
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    try {
+      const response = await fetch(`${apiUrl}/api/admin/clients`);
+      const allClients = await response.json();
+      
+      const cleanSearchPhone = phone.replace(/\D/g, '');
+      if (!cleanSearchPhone) {
+        setMessage('⚠️ Número de WhatsApp no válido.');
+        setIsVerifying(false);
+        return;
+      }
+      
+      const filtered = allClients.filter((c: any) => {
+        const cPhone = String(c.whatsapp || c.numero || '').replace(/\D/g, '');
+        return cPhone && cPhone.includes(cleanSearchPhone);
+      });
+      
+      setCustomerServices(filtered);
+      if (filtered.length > 0) {
+        setName(filtered[0].Nombre || filtered[0].nombre || '');
+        setMessage(`🔍 Encontrado cliente con ${filtered.length} servicio(s) activo(s).`);
+      } else {
+        setMessage('ℹ️ No se encontraron servicios activos para este número. Procediendo como Venta Nueva.');
+        setCustomerServices([]);
+        setIsRenewal(false);
+        setSelectedServiceToRenew(null);
+      }
+    } catch (err) {
+      console.error(err);
+      setMessage('❌ Error al conectar con el servidor de clientes.');
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   const addItem = () => {
@@ -104,11 +157,29 @@ export const AddSaleForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone || !name || selectedItems.length === 0) return;
+    if (!phone || !name || (selectedItems.length === 0 && !isRenewal)) return;
     
     setLoading(true);
     const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
     
+    // Prepare items based on mode
+    let requestItems = [];
+    if (isRenewal && selectedServiceToRenew) {
+      requestItems = [{
+        platformName: selectedServiceToRenew.Streaming,
+        _rowNumber: selectedServiceToRenew.rowNumber,
+        correo: selectedServiceToRenew.correo,
+        contraseña: selectedServiceToRenew.contraseña,
+        pin: selectedServiceToRenew['pin perfil'] || selectedServiceToRenew.pin || null,
+        deben: selectedServiceToRenew.deben || null
+      }];
+    } else {
+      requestItems = selectedItems.map(item => {
+        const p = platforms.find(plt => plt.id === item.platformId);
+        return { platformName: p?.name };
+      });
+    }
+
     try {
       const response = await fetch(`${apiUrl}/api/admin/sales/create`, {
         method: 'POST',
@@ -116,22 +187,24 @@ export const AddSaleForm: React.FC = () => {
         body: JSON.stringify({
           phone,
           name,
-          items: selectedItems.map(item => {
-             const p = platforms.find(plt => plt.id === item.platformId);
-             return { platformName: p?.name };
-          }),
+          items: requestItems,
           duration,
           total,
+          isRenewal,
+          paymentMethod,
           password: 'admin123'
         })
       });
       
       const result = await response.json();
       if (result.success) {
-        setMessage('✅ Venta registrada con éxito y cupos asignados.');
+        setMessage(isRenewal ? '✅ Renovación registrada con éxito en Excel.' : '✅ Venta registrada con éxito y cupos asignados.');
         setSelectedItems([]);
         setPhone('');
         setName('');
+        setCustomerServices([]);
+        setIsRenewal(false);
+        setSelectedServiceToRenew(null);
       } else {
         setMessage('❌ Error: ' + result.message);
       }
@@ -158,14 +231,24 @@ export const AddSaleForm: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-semibold mb-2 dark:text-gray-300">WhatsApp del Cliente</label>
-            <input 
-              type="text" 
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="Ej: 57313..."
-              className="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              required
-            />
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Ej: 57313..."
+                className="flex-grow px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                required
+              />
+              <button
+                type="button"
+                onClick={handleVerifyClient}
+                disabled={isVerifying}
+                className="px-4 py-3 bg-brand-primary hover:bg-brand-dark text-white rounded-xl font-bold transition-all disabled:opacity-50 text-sm whitespace-nowrap"
+              >
+                {isVerifying ? 'Verificando...' : 'Verificar'}
+              </button>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-semibold mb-2 dark:text-gray-300">Nombre del Cliente</label>
@@ -180,55 +263,143 @@ export const AddSaleForm: React.FC = () => {
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="font-bold dark:text-white">Servicios Seleccionados</h3>
-            <button 
-              type="button" 
-              onClick={addItem}
-              className="flex items-center text-sm font-bold text-brand-primary"
+        {/* Customer Active Services (for Renewals) */}
+        {customerServices.length > 0 && (
+          <div className="bg-blue-50/40 dark:bg-blue-900/10 p-5 rounded-2xl border border-blue-100 dark:border-blue-900/30 space-y-3">
+            <h3 className="text-sm font-black text-blue-900 dark:text-blue-200">Servicios Activos Encontrados (Selecciona uno para Renovar)</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {customerServices.map((service, index) => {
+                const isSelected = selectedServiceToRenew?.rowNumber === service.rowNumber && isRenewal;
+                return (
+                  <div key={index} className={`flex justify-between items-center p-3 rounded-xl border transition-all ${
+                    isSelected 
+                      ? 'bg-green-50 border-green-300 dark:bg-green-950/20 dark:border-green-900/50' 
+                      : 'bg-white border-gray-150 dark:bg-gray-750 dark:border-gray-700'
+                  }`}>
+                    <div className="min-w-0 pr-2">
+                      <span className="text-[10px] font-black text-brand-primary uppercase tracking-wider block">{service.Streaming}</span>
+                      <p className="text-xs font-bold text-gray-800 dark:text-gray-250 truncate">{service.correo}</p>
+                      <span className="text-[10px] text-gray-400 block mt-0.5">Vence: {service.vencimiento}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRenewal(true);
+                        setSelectedServiceToRenew(service);
+                        // Try matching platform id if available to compute totals
+                        const cleanPlatName = String(service.Streaming).split(' ')[0].toLowerCase();
+                        const matchedPlat = platforms.find(p => p.name.toLowerCase().includes(cleanPlatName));
+                        if (matchedPlat) {
+                          setSelectedItems([{ platformId: matchedPlat.id, planName: matchedPlat.plans[0]?.name || '' }]);
+                        }
+                      }}
+                      className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase transition-all ${
+                        isSelected
+                          ? 'bg-green-600 text-white shadow-sm'
+                          : 'bg-brand-primary/10 text-brand-primary hover:bg-brand-primary/25'
+                      }`}
+                    >
+                      {isSelected ? '✓ Activo' : 'Renovar'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Renewal Banner */}
+        {isRenewal && selectedServiceToRenew && (
+          <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/50 p-4 rounded-xl flex justify-between items-center text-xs">
+            <span className="text-green-800 dark:text-green-300 font-medium">
+              <b>Modo Renovación Activo:</b> Se renovará el servicio <b>{selectedServiceToRenew.Streaming}</b> ({selectedServiceToRenew.correo}).
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setIsRenewal(false);
+                setSelectedServiceToRenew(null);
+                setSelectedItems([]);
+              }}
+              className="text-red-500 hover:underline font-bold"
             >
-              <Plus className="w-4 h-4 mr-1" /> Agregar Servicio
+              Cambiar a Venta Nueva
             </button>
           </div>
+        )}
 
-          {selectedItems.map((item, index) => (
-            <div key={index} className="flex gap-4 items-end animate-in slide-in-from-left duration-300">
-              <div className="flex-grow">
-                <select 
-                  value={item.platformId}
-                  onChange={(e) => updateItem(index, 'platformId', e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                >
-                  {platforms.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </div>
+        {/* Services Selection: Hide or show depending on renewal mode */}
+        {!isRenewal && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-bold dark:text-white">Servicios Seleccionados</h3>
               <button 
                 type="button" 
-                onClick={() => removeItem(index)}
-                className="p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl"
+                onClick={addItem}
+                className="flex items-center text-sm font-bold text-brand-primary"
               >
-                <Trash2 className="w-5 h-5" />
+                <Plus className="w-4 h-4 mr-1" /> Agregar Servicio
               </button>
             </div>
-          ))}
-        </div>
 
-        <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex gap-4">
-            {(['1', '3', '6', '12'] as const).map(d => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => setDuration(d)}
-                className={`px-4 py-2 rounded-lg font-bold transition-all ${duration === d ? 'bg-brand-primary text-white scale-110 shadow-lg' : 'bg-white dark:bg-gray-700 dark:text-gray-300'}`}
-              >
-                {d === '1' ? '1 Mes' : d === '3' ? '3 Meses' : d === '6' ? '6 Meses' : '1 Año'}
-              </button>
+            {selectedItems.map((item, index) => (
+              <div key={index} className="flex gap-4 items-end animate-in slide-in-from-left duration-300">
+                <div className="flex-grow">
+                  <select 
+                    value={item.platformId}
+                    onChange={(e) => updateItem(index, 'platformId', e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  >
+                    {platforms.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => removeItem(index)}
+                  className="p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
             ))}
           </div>
+        )}
 
-          <div className="text-right">
+        {/* Pricing, payment method and custom months selectors */}
+        <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-stretch md:items-center gap-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] uppercase font-bold text-gray-450 tracking-wider">Duración (Meses)</span>
+              <select
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                className="px-4 py-2 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white font-bold"
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                  <option key={m} value={String(m)}>
+                    {m === 1 ? '1 Mes' : `${m} Meses`}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] uppercase font-bold text-gray-450 tracking-wider">Método de Pago</span>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="px-4 py-2 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white font-bold"
+              >
+                <option value="Nequi">Nequi</option>
+                <option value="Daviplata">Daviplata</option>
+                <option value="Bancolombia">Bancolombia</option>
+                <option value="Efectivo">Efectivo</option>
+                <option value="Bold Pagos">Bold Pagos</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="text-right flex flex-col justify-center">
             <div className="text-sm text-gray-500 font-medium tracking-wide">TOTAL ESTIMADO</div>
             <div className="text-3xl font-black text-brand-primary tracking-tight">
               ${total.toLocaleString()} COP
@@ -244,11 +415,11 @@ export const AddSaleForm: React.FC = () => {
 
         <button 
           type="submit" 
-          disabled={loading || selectedItems.length === 0}
+          disabled={loading || (selectedItems.length === 0 && !isRenewal)}
           className="w-full bg-brand-primary text-white py-4 rounded-2xl font-black text-lg shadow-xl shadow-brand-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center disabled:opacity-50"
         >
           <Send className="w-6 h-6 mr-2" />
-          {loading ? 'Procesando registro...' : 'Registrar Venta y Notificar Client'}
+          {loading ? 'Procesando registro...' : isRenewal ? 'Registrar Renovación en Excel' : 'Registrar Venta y Notificar Cliente'}
         </button>
       </form>
     </div>

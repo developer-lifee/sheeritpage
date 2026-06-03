@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Search, Trash2, PlusCircle, RefreshCw, AlertTriangle, CheckCircle, ExternalLink, ArrowRight, X, User } from 'lucide-react';
+import { Mail, Search, Trash2, PlusCircle, RefreshCw, AlertTriangle, CheckCircle, ExternalLink, ArrowRight, X, User, Copy, Check, ShieldAlert, CreditCard } from 'lucide-react';
 
 interface EmailMessage {
   id: string;
@@ -8,11 +8,142 @@ interface EmailMessage {
   date: string;
   internalDate: string;
   snippet: string;
+  body?: string;
 }
+
+interface ParsedEmail {
+  type: 'payment' | 'otp' | 'general';
+  brand: string;
+  brandColor: string;
+  amount?: string;
+  reference?: string;
+  sender?: string;
+  code?: string;
+  link?: string;
+  platformName?: string;
+}
+
+const parseEmailData = (msg: EmailMessage): ParsedEmail => {
+  const textToSearch = `${msg.subject} ${msg.snippet} ${msg.body || ''}`.toLowerCase();
+  
+  // 1. Check for OTP / Security codes
+  const isOtp = /código|code|pin|otp|verificac|inici|seguridad/i.test(msg.subject) || 
+                /código de verificación|verification code|código de acceso|security code/i.test(textToSearch);
+  
+  if (isOtp) {
+    let platform = 'Código';
+    let brandColor = 'bg-gray-50 border-gray-300 dark:bg-gray-900/40 dark:border-gray-700';
+    if (textToSearch.includes('netflix')) {
+      platform = 'Netflix';
+      brandColor = 'bg-red-50 border-red-200 text-red-800 dark:bg-red-950/20 dark:border-red-900/50';
+    } else if (textToSearch.includes('disney')) {
+      platform = 'Disney+';
+      brandColor = 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-950/20 dark:border-blue-900/50';
+    } else if (textToSearch.includes('max') || textToSearch.includes('hbo')) {
+      platform = 'Max';
+      brandColor = 'bg-indigo-50 border-indigo-200 text-indigo-800 dark:bg-indigo-950/20 dark:border-indigo-900/50';
+    } else if (textToSearch.includes('crunchy')) {
+      platform = 'Crunchyroll';
+      brandColor = 'bg-orange-50 border-orange-200 text-orange-800 dark:bg-orange-950/20 dark:border-orange-900/50';
+    } else if (textToSearch.includes('prime') || textToSearch.includes('amazon')) {
+      platform = 'Prime Video';
+      brandColor = 'bg-cyan-50 border-cyan-200 text-cyan-800 dark:bg-cyan-950/20 dark:border-cyan-900/50';
+    }
+
+    // Try to extract 4 to 8 digit code
+    let code = '';
+    const codeMatch = textToSearch.match(/\b([0-9]{6})\b/) || 
+                      textToSearch.match(/\b([0-9]{4})\b/) || 
+                      textToSearch.match(/\b([0-9]{5})\b/) ||
+                      textToSearch.match(/\b([0-9]{8})\b/) ||
+                      textToSearch.match(/\b([A-Z0-9]{6,8})\b/i);
+    if (codeMatch) {
+      code = codeMatch[1].toUpperCase();
+    }
+
+    // Extract link
+    const linkMatch = (msg.body || '').match(/https?:\/\/(?:www\.)?(?:netflix\.com|disneyplus\.com|starplus\.com|max\.com|hbomax\.com|primevideo\.com|amazon\.com|auth\.max\.com)[^\s<>"']+/i);
+    const link = linkMatch ? linkMatch[0] : undefined;
+
+    return {
+      type: 'otp',
+      brand: platform,
+      brandColor,
+      code,
+      link,
+      platformName: platform
+    };
+  }
+
+  // 2. Check for payments / transfers
+  const isNequi = textToSearch.includes('nequi') || msg.from.toLowerCase().includes('nequi');
+  const isDaviplata = textToSearch.includes('daviplata') || textToSearch.includes('davivienda') || msg.from.toLowerCase().includes('davivienda');
+  const isBancolombia = textToSearch.includes('bancolombia') || msg.from.toLowerCase().includes('bancolombia');
+  const isBreb = textToSearch.includes('bre-b') || textToSearch.includes('breb');
+
+  if (isNequi || isDaviplata || isBancolombia || isBreb) {
+    let brand = 'Transferencia';
+    let brandColor = 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/50';
+    
+    if (isNequi) {
+      brand = 'Nequi';
+      brandColor = 'bg-fuchsia-50 border-fuchsia-200 dark:bg-fuchsia-950/20 dark:border-fuchsia-900/50';
+    } else if (isDaviplata) {
+      brand = 'Daviplata';
+      brandColor = 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900/50';
+    } else if (isBancolombia) {
+      brand = 'Bancolombia';
+      brandColor = 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/50';
+    } else if (isBreb) {
+      brand = 'Bre-B';
+      brandColor = 'bg-sky-50 border-sky-200 dark:bg-sky-950/20 dark:border-sky-900/50';
+    }
+
+    // Extract amount
+    let amount = '';
+    const amountMatch = textToSearch.match(/(?:monto|valor|por|transfirió|recibiste|de)\s*(?:\$)?\s*([0-9]{1,3}(?:\.[0-9]{3})+(?:,[0-9]{2})?)/i) ||
+                        textToSearch.match(/(?:\$)\s*([0-9]{1,3}(?:\.[0-9]{3})*)/);
+    if (amountMatch) {
+      amount = `$${amountMatch[1]}`;
+    }
+
+    // Extract reference
+    let reference = '';
+    const refMatch = textToSearch.match(/(?:referencia|ref\.|nro|transacción|aprobación|autorización|código):\s*([0-9a-zA-Z]+)/i) ||
+                     textToSearch.match(/(?:ref\s+|referencia\s+|código\s+)([A-Za-z0-9]{6,15})/i);
+    if (refMatch) {
+      reference = refMatch[1];
+    }
+
+    // Extract sender/origin
+    let sender = '';
+    const senderMatch = textToSearch.match(/(?:de|desde|por)\s+([a-zA-ZáéíóúñÁÉÍÓÚÑ\s]{3,25})(?:\s+ha|\s+te|\s+envió)/i) ||
+                        textToSearch.match(/(?:celular|cuenta)\s+(\d{10})/i);
+    if (senderMatch) {
+      sender = senderMatch[1].trim();
+    }
+
+    return {
+      type: 'payment',
+      brand,
+      brandColor,
+      amount,
+      reference,
+      sender
+    };
+  }
+
+  return {
+    type: 'general',
+    brand: 'Correo',
+    brandColor: 'bg-gray-50 border-gray-200 dark:bg-gray-900/30 dark:border-gray-700'
+  };
+};
 
 export const ManagedEmailsView: React.FC = () => {
   const [emails, setEmails] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [newEmail, setNewEmail] = useState('');
@@ -30,6 +161,13 @@ export const ManagedEmailsView: React.FC = () => {
   const [emailsLoading, setEmailsLoading] = useState(false);
   const [emailsError, setEmailsError] = useState('');
   const [expandedEmailId, setExpandedEmailId] = useState<string | null>(null);
+
+  const handleCopy = (e: React.MouseEvent, text: string, id: string) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   const fetchEmails = () => {
     setLoading(true);
@@ -413,39 +551,190 @@ export const ManagedEmailsView: React.FC = () => {
             <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
               {inboxEmails.map((msg) => {
                 const isExpanded = expandedEmailId === msg.id;
+                const parsed = parseEmailData(msg);
+
                 return (
                   <div
                     key={msg.id}
                     onClick={() => setExpandedEmailId(isExpanded ? null : msg.id)}
-                    className={`p-4 border dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 rounded-xl hover:shadow-sm transition-all cursor-pointer ${
-                      isExpanded ? 'border-brand-primary bg-brand-primary/5 dark:bg-brand-primary/5' : ''
+                    className={`border rounded-xl transition-all cursor-pointer overflow-hidden ${
+                      isExpanded 
+                        ? 'shadow-md ring-1 ring-brand-primary border-brand-primary' 
+                        : 'border-gray-250 dark:border-gray-700 hover:shadow-sm'
                     }`}
                   >
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <User className="w-4 h-4 text-brand-primary flex-shrink-0" />
-                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate">
-                          {msg.from}
+                    {/* Card Header/Banner based on type */}
+                    {parsed.type === 'otp' && (
+                      <div className={`px-4 py-2 flex items-center justify-between border-b ${parsed.brandColor} dark:border-opacity-35`}>
+                        <div className="flex items-center gap-2">
+                          <ShieldAlert className="w-4 h-4" />
+                          <span className="text-xs font-black tracking-wide uppercase">
+                            Código de Verificación • {parsed.brand}
+                          </span>
+                        </div>
+                        <span className="text-[10px] opacity-75 font-medium">{msg.date}</span>
+                      </div>
+                    )}
+
+                    {parsed.type === 'payment' && (
+                      <div className={`px-4 py-2 flex items-center justify-between border-b ${parsed.brandColor} dark:border-opacity-35`}>
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="w-4 h-4" />
+                          <span className="text-xs font-black tracking-wide uppercase">
+                            Notificación de Pago • {parsed.brand}
+                          </span>
+                        </div>
+                        <span className="text-[10px] opacity-75 font-medium">{msg.date}</span>
+                      </div>
+                    )}
+
+                    {parsed.type === 'general' && (
+                      <div className="px-4 py-2 flex items-center justify-between border-b bg-gray-50/80 border-gray-150 dark:bg-gray-900/60 dark:border-gray-750 text-gray-500 dark:text-gray-400">
+                        <div className="flex items-center gap-2">
+                          <Mail className="w-4 h-4" />
+                          <span className="text-xs font-bold uppercase tracking-wider">Correo Recibido</span>
+                        </div>
+                        <span className="text-[10px] font-medium">{msg.date}</span>
+                      </div>
+                    )}
+
+                    {/* Card Body */}
+                    <div className="p-4 bg-white dark:bg-gray-800">
+                      {/* From / Sender details */}
+                      <div className="flex justify-between items-start mb-2 gap-4">
+                        <div className="min-w-0">
+                          <span className="text-[10px] uppercase font-bold text-gray-450 tracking-wider">De:</span>
+                          <p className="text-xs font-bold text-gray-800 dark:text-gray-250 truncate">{msg.from}</p>
+                        </div>
+                        <span className="text-[10px] text-gray-450 font-bold whitespace-nowrap bg-gray-100 dark:bg-gray-750 px-2 py-0.5 rounded-full">
+                          ID: {msg.id.substring(0, 8)}
                         </span>
                       </div>
-                      <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">
-                        {msg.date}
-                      </span>
-                    </div>
-                    <h4 className="text-sm font-bold text-gray-800 dark:text-white mb-1.5">{msg.subject}</h4>
-                    {isExpanded ? (
-                      <div className="mt-3 p-3 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono select-text break-words leading-relaxed">
-                        {msg.body}
+
+                      {/* Main Subject */}
+                      <h4 className="text-sm font-black text-gray-900 dark:text-white mb-3 line-clamp-1">
+                        {msg.subject}
+                      </h4>
+
+                      {/* Styled Visual Elements based on Parsed Content */}
+                      {parsed.type === 'otp' && (
+                        <div className="mb-3 bg-gray-50 dark:bg-gray-900/40 border border-dashed border-gray-300 dark:border-gray-700 p-4 rounded-xl text-center">
+                          {parsed.code ? (
+                            <div className="space-y-2">
+                              <span className="text-[10px] uppercase font-black tracking-widest text-brand-primary">CÓDIGO DE ACCESO</span>
+                              <div className="flex items-center justify-center gap-3">
+                                <span className="text-3xl font-black tracking-widest text-gray-900 dark:text-white font-mono bg-white dark:bg-gray-850 px-5 py-2 rounded-xl shadow-sm border border-gray-150 dark:border-gray-750">
+                                  {parsed.code.split('').join(' ')}
+                                </span>
+                                <button
+                                  onClick={(e) => handleCopy(e, parsed.code || '', `code-${msg.id}`)}
+                                  className="p-2.5 bg-brand-primary text-white rounded-xl hover:scale-105 active:scale-95 transition-all shadow-sm flex items-center justify-center"
+                                  title="Copiar Código"
+                                >
+                                  {copiedId === `code-${msg.id}` ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                                </button>
+                              </div>
+                              {copiedId === `code-${msg.id}` && (
+                                <p className="text-[10px] text-green-500 font-bold">¡Código copiado al portapapeles!</p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 italic">No se pudo extraer el código automáticamente. Abre el cuerpo para verlo.</p>
+                          )}
+
+                          {parsed.link && (
+                            <a
+                              href={parsed.link}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="mt-3.5 inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 hover:bg-gray-250 dark:bg-gray-750 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl text-xs font-black transition-all"
+                            >
+                              Confirmar Acceso / Enlace <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      )}
+
+                      {parsed.type === 'payment' && (
+                        <div className="mb-3 bg-gray-50 dark:bg-gray-900/40 p-4 border border-gray-150 dark:border-gray-750 rounded-xl space-y-3">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <span className="text-[10px] uppercase font-bold text-gray-450 tracking-wider">VALOR RECIBIDO</span>
+                              {parsed.amount ? (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                                    {parsed.amount}
+                                  </span>
+                                  <button
+                                    onClick={(e) => handleCopy(e, parsed.amount?.replace(/[^0-9]/g, '') || '', `amount-${msg.id}`)}
+                                    className="p-1 text-gray-450 hover:text-brand-primary transition-colors"
+                                    title="Copiar monto"
+                                  >
+                                    {copiedId === `amount-${msg.id}` ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                                  </button>
+                                </div>
+                              ) : (
+                                <p className="text-xs text-gray-500 italic">No detectado</p>
+                              )}
+                            </div>
+                            
+                            {parsed.reference && (
+                              <div className="text-right">
+                                <span className="text-[10px] uppercase font-bold text-gray-450 tracking-wider">REFERENCIA</span>
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <span className="text-xs font-mono font-black text-gray-700 dark:text-gray-300">
+                                    {parsed.reference}
+                                  </span>
+                                  <button
+                                    onClick={(e) => handleCopy(e, parsed.reference || '', `ref-${msg.id}`)}
+                                    className="p-1 text-gray-450 hover:text-brand-primary transition-colors"
+                                    title="Copiar referencia"
+                                  >
+                                    {copiedId === `ref-${msg.id}` ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {parsed.sender && (
+                            <div className="pt-2 border-t border-gray-150 dark:border-gray-750 flex justify-between items-center text-xs">
+                              <span className="text-gray-450 font-medium">Origen / Pagador:</span>
+                              <span className="font-bold text-gray-800 dark:text-gray-250 truncate max-w-[200px]">
+                                {parsed.sender}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Snippet preview */}
+                      {!isExpanded && (
+                        <p className="text-xs text-gray-500 dark:text-gray-450 font-light leading-relaxed line-clamp-2">
+                          {msg.snippet}
+                        </p>
+                      )}
+
+                      {/* Expanded body details */}
+                      {isExpanded && (
+                        <div className="mt-4 pt-4 border-t border-gray-150 dark:border-gray-750">
+                          <span className="text-[10px] uppercase font-bold text-gray-450 tracking-wider block mb-2">CUERPO DEL MENSAJE:</span>
+                          <div className="p-3.5 bg-gray-50 dark:bg-gray-900 border dark:border-gray-750 rounded-xl text-xs text-gray-700 dark:text-gray-350 whitespace-pre-wrap font-mono select-text break-words leading-relaxed max-h-[40vh] overflow-y-auto">
+                            {msg.body}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Bottom action trigger */}
+                      <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100 dark:border-gray-750/30">
+                        <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">
+                          {isExpanded ? 'Inspección abierta' : 'Inspección cerrada'}
+                        </span>
+                        <span className="text-[10px] text-brand-primary hover:underline font-bold">
+                          {isExpanded ? 'Ver menos ↑' : 'Ver cuerpo completo ↓'}
+                        </span>
                       </div>
-                    ) : (
-                      <p className="text-xs text-gray-600 dark:text-gray-450 leading-relaxed font-light line-clamp-2">
-                        {msg.snippet}
-                      </p>
-                    )}
-                    <div className="text-right mt-2">
-                      <span className="text-[10px] text-brand-primary hover:underline font-bold">
-                        {isExpanded ? 'Ver menos ↑' : 'Ver cuerpo completo ↓'}
-                      </span>
                     </div>
                   </div>
                 );
