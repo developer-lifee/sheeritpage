@@ -18,8 +18,8 @@ export const TicketsView: React.FC = () => {
   const [error, setError] = useState('');
   const [agentName, setAgentName] = useState(localStorage.getItem('ticket_agent_name') || '');
 
-  const fetchTickets = () => {
-    setLoading(true);
+  const fetchTickets = (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     setError('');
     const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
     fetch(`${apiUrl}/api/admin/tickets`)
@@ -39,8 +39,8 @@ export const TicketsView: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchTickets();
-    const interval = setInterval(fetchTickets, 30000); // Auto-refresh every 30s
+    fetchTickets(false);
+    const interval = setInterval(() => fetchTickets(true), 15000); // Auto-refresh every 15s silently
     return () => clearInterval(interval);
   }, []);
 
