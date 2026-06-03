@@ -29,6 +29,7 @@ export const ManagedEmailsView: React.FC = () => {
   const [inboxEmails, setInboxEmails] = useState<EmailMessage[]>([]);
   const [emailsLoading, setEmailsLoading] = useState(false);
   const [emailsError, setEmailsError] = useState('');
+  const [expandedEmailId, setExpandedEmailId] = useState<string | null>(null);
 
   const fetchEmails = () => {
     setLoading(true);
@@ -410,28 +411,45 @@ export const ManagedEmailsView: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-              {inboxEmails.map((msg) => (
-                <div
-                  key={msg.id}
-                  className="p-4 border dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 rounded-xl hover:shadow-sm transition-all"
-                >
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <User className="w-4 h-4 text-brand-primary flex-shrink-0" />
-                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate">
-                        {msg.from}
+              {inboxEmails.map((msg) => {
+                const isExpanded = expandedEmailId === msg.id;
+                return (
+                  <div
+                    key={msg.id}
+                    onClick={() => setExpandedEmailId(isExpanded ? null : msg.id)}
+                    className={`p-4 border dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 rounded-xl hover:shadow-sm transition-all cursor-pointer ${
+                      isExpanded ? 'border-brand-primary bg-brand-primary/5 dark:bg-brand-primary/5' : ''
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <User className="w-4 h-4 text-brand-primary flex-shrink-0" />
+                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate">
+                          {msg.from}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">
+                        {msg.date}
                       </span>
                     </div>
-                    <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">
-                      {msg.date}
-                    </span>
+                    <h4 className="text-sm font-bold text-gray-800 dark:text-white mb-1.5">{msg.subject}</h4>
+                    {isExpanded ? (
+                      <div className="mt-3 p-3 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono select-text break-words leading-relaxed">
+                        {msg.body}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-600 dark:text-gray-450 leading-relaxed font-light line-clamp-2">
+                        {msg.snippet}
+                      </p>
+                    )}
+                    <div className="text-right mt-2">
+                      <span className="text-[10px] text-brand-primary hover:underline font-bold">
+                        {isExpanded ? 'Ver menos ↑' : 'Ver cuerpo completo ↓'}
+                      </span>
+                    </div>
                   </div>
-                  <h4 className="text-sm font-bold text-gray-800 dark:text-white mb-1.5">{msg.subject}</h4>
-                  <p className="text-xs text-gray-600 dark:text-gray-450 leading-relaxed font-light line-clamp-2">
-                    {msg.snippet}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
