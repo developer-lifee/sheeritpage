@@ -246,16 +246,16 @@ function FloatingCartButton() {
   return (
     <button
       onClick={() => setIsComboOpen(true)}
-      className="fixed bottom-24 right-6 z-40 flex items-center gap-2 px-4 py-3 bg-brand-primary text-white rounded-full shadow-2xl hover:bg-brand-dark transition-all duration-300 transform hover:scale-105 active:scale-95 animate-bounce-slow"
-      title="Ver mi combo"
+      className="fixed bottom-24 right-6 z-40 flex items-center gap-2 px-5 py-3 bg-emerald-500 text-white rounded-full shadow-2xl hover:bg-emerald-600 transition-all duration-300 transform hover:scale-105 active:scale-95 animate-bounce-slow"
+      title="Ver mi combo y pagar"
     >
       <div className="relative">
-        <ShoppingCart className="h-6 w-6" />
-        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-extrabold rounded-full h-5 w-5 flex items-center justify-center border-2 border-brand-primary animate-pulse">
+        <ShoppingCart className="h-5 w-5" />
+        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-extrabold rounded-full h-4 w-4 flex items-center justify-center border border-emerald-500 animate-pulse">
           {count}
         </span>
       </div>
-      <span className="font-bold text-sm hidden sm:inline">Mi Combo</span>
+      <span className="font-bold text-xs sm:text-sm tracking-wide">Pagar Combo ({count})</span>
     </button>
   );
 }

@@ -214,14 +214,14 @@ export function ComboMenu() {
       )}
 
       {isComboOpen && (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0 md:inset-y-0 md:right-0 md:left-auto md:w-96 z-50">
           {/* Fondo semi-transparente */}
-          <div className="absolute inset-0 bg-black/50" onClick={() => setIsComboOpen(false)} />
+          <div className="absolute inset-0 bg-black/50 md:hidden" onClick={() => setIsComboOpen(false)} />
 
           {/* Contenedor del drawer */}
           <div className="absolute bg-white dark:bg-gray-800 flex flex-col shadow-2xl transition-all duration-300
             top-0 left-0 right-0 max-h-[80vh] rounded-b-2xl border-b border-gray-200 dark:border-gray-700
-            md:bottom-0 md:h-full md:w-96 md:max-h-full md:rounded-none md:border-r md:border-b-0 md:right-auto"
+            md:bottom-0 md:h-full md:w-full md:max-h-full md:rounded-none md:border-l md:border-b-0 md:right-0"
           >
             {/* Header fijo: título + equis inline, preview y ahorro debajo */}
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
