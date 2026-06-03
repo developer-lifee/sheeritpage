@@ -1,6 +1,5 @@
 import React from 'react';
-import { Play } from 'lucide-react';
-import { useComboCart } from '../hooks/useComboCart';
+import { Play, Sparkles } from 'lucide-react';
 
 export function Hero() {
   const scrollToPlatforms = () => {
@@ -12,8 +11,16 @@ export function Hero() {
       });
     }
   };
-  
-  const { setIsComboOpen } = useComboCart();
+
+  const scrollToCombos = () => {
+    const combosSection = document.getElementById('combos-section');
+    if (combosSection) {
+      combosSection.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }
+  };
   
   return (
     <div className="relative bg-brand-primary dark:bg-gray-800 text-white">
@@ -42,12 +49,13 @@ export function Hero() {
               Explorar plataformas
             </button>
             
-            {/* Trigger Custom Combo modal */}
+            {/* Scroll to pre-made combos section */}
             <button
-              onClick={() => setIsComboOpen(true)}
-              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-emerald-500 hover:bg-emerald-600 transition-colors shadow-lg"
+              onClick={scrollToCombos}
+              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-emerald-500 hover:bg-emerald-600 transition-colors shadow-lg gap-2"
             >
-              Crear Combo
+              <Sparkles className="h-5 w-5" />
+              Ver Combos Ahorro
             </button>
           </div>
         </div>
