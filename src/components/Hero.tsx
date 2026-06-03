@@ -1,21 +1,15 @@
 import React from 'react';
 import { Play, Sparkles } from 'lucide-react';
 
-export function Hero() {
+interface HeroProps {
+  onRandomCombo: () => void;
+}
+
+export function Hero({ onRandomCombo }: HeroProps) {
   const scrollToPlatforms = () => {
     const platformsSection = document.getElementById('platforms-section');
     if (platformsSection) {
       platformsSection.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'start' 
-      });
-    }
-  };
-
-  const scrollToCombos = () => {
-    const combosSection = document.getElementById('combos-section');
-    if (combosSection) {
-      combosSection.scrollIntoView({ 
         behavior: 'smooth', 
         block: 'start' 
       });
@@ -49,13 +43,13 @@ export function Hero() {
               Explorar plataformas
             </button>
             
-            {/* Scroll to pre-made combos section */}
+            {/* Generate random combo */}
             <button
-              onClick={scrollToCombos}
+              onClick={onRandomCombo}
               className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-emerald-500 hover:bg-emerald-600 transition-colors shadow-lg gap-2"
             >
               <Sparkles className="h-5 w-5" />
-              Ver Combos Ahorro
+              Ver Combos al Azar 🎲
             </button>
           </div>
         </div>
