@@ -215,23 +215,23 @@ export function AdminSupport() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-24">
-      <div className="flex justify-between items-center mb-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
         <div>
           <h1 className="text-3xl font-bold dark:text-white">Panel de Control Ayuda</h1>
           <p className="text-gray-600 dark:text-gray-400">Edita guías y pasos de soporte</p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-3 w-full sm:w-auto">
           <button 
             onClick={handleSave} 
             disabled={loading}
-            className="flex items-center bg-green-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-green-700 disabled:opacity-50"
+            className="flex-1 sm:flex-initial flex items-center justify-center bg-green-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-green-700 disabled:opacity-50 text-sm sm:text-base"
           >
             <Save className="w-5 h-5 mr-2" />
-            {loading ? 'Guardando...' : 'Guardar Cambios'}
+            {loading ? 'Guardando...' : 'Guardar'}
           </button>
           <button 
             onClick={() => setIsAuthenticated(false)}
-            className="flex items-center bg-gray-200 dark:bg-gray-700 dark:text-white px-4 py-2 rounded-xl"
+            className="flex items-center justify-center bg-gray-200 dark:bg-gray-700 dark:text-white px-4 py-2.5 rounded-xl text-sm"
           >
             <LogOut className="w-5 h-5 mr-2" />
             Salir
@@ -239,59 +239,59 @@ export function AdminSupport() {
         </div>
       </div>
 
-        {message && (
+      {message && (
         <div className={`p-4 rounded-xl mb-6 ${message.includes('éxito') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
           {message}
         </div>
       )}
 
       {/* Tabs Navigation */}
-      <div className="flex space-x-2 mb-8 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <div className="flex space-x-2 mb-8 border-b border-gray-200 dark:border-gray-700 pb-4 overflow-x-auto whitespace-nowrap scrollbar-none">
         <button 
           onClick={() => setActiveTab('tickets')}
-          className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'tickets' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'tickets' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
           <MessageSquare className="w-5 h-5 mr-2" /> Tickets
         </button>
         <button 
           onClick={() => setActiveTab('support')}
-          className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'support' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'support' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
           <LifeBuoy className="w-5 h-5 mr-2" /> Guías
         </button>
         <button 
           onClick={() => setActiveTab('db')}
-          className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'db' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'db' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
           <Database className="w-5 h-5 mr-2" /> Base de Datos
         </button>
         <button 
           onClick={() => setActiveTab('stats')}
-          className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'stats' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'stats' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
           <TrendingUp className="w-5 h-5 mr-2" /> Analítica
         </button>
         <button 
           onClick={() => setActiveTab('sales')}
-          className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'sales' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'sales' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
           <Calculator className="w-5 h-5 mr-2" /> Nueva Venta
         </button>
         <button 
           onClick={() => setActiveTab('netflix')}
-          className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'netflix' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-red-50 dark:text-gray-400 dark:hover:bg-red-900/30'}`}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'netflix' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-red-50 dark:text-gray-400 dark:hover:bg-red-900/30'}`}
         >
           <Tv className="w-5 h-5 mr-2" /> Predictor Netflix
         </button>
         <button 
           onClick={() => setActiveTab('gpt')}
-          className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'gpt' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'gpt' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
           <Key className="w-5 h-5 mr-2" /> Cuentas GPT
         </button>
         <button 
           onClick={() => setActiveTab('emails')}
-          className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'emails' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'emails' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
           <Mail className="w-5 h-5 mr-2" /> Correos
         </button>
