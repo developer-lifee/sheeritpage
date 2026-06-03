@@ -10,6 +10,7 @@ interface Stats {
   byPlatform: Record<string, number>;
   byStatus: { active: number, expired: number, warning: number };
   expirations: { next7Days: number, next15Days: number, next30Days: number };
+  historyTrend?: Array<{ name: string; ventas: number }>;
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
@@ -142,6 +143,24 @@ export const AnalyticsDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Sales Trend Chart */}
+      {stats.historyTrend && stats.historyTrend.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
+          <h3 className="text-lg font-bold mb-6 dark:text-white">Tendencia Histórica de Ventas / Renovaciones</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={stats.historyTrend}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ccc" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                <YAxis axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Line type="monotone" dataKey="ventas" name="Ventas / Renovaciones" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       {/* Health Indicator */}
       <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">

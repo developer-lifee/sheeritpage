@@ -218,20 +218,12 @@ export function AdminSupport() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
         <div>
           <h1 className="text-3xl font-bold dark:text-white">Panel de Control Ayuda</h1>
-          <p className="text-gray-600 dark:text-gray-400">Edita guías y pasos de soporte</p>
+          <p className="text-gray-600 dark:text-gray-400 font-light">Gestión administrativa integral</p>
         </div>
         <div className="flex gap-3 w-full sm:w-auto">
           <button 
-            onClick={handleSave} 
-            disabled={loading}
-            className="flex-1 sm:flex-initial flex items-center justify-center bg-green-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-green-700 disabled:opacity-50 text-sm sm:text-base"
-          >
-            <Save className="w-5 h-5 mr-2" />
-            {loading ? 'Guardando...' : 'Guardar'}
-          </button>
-          <button 
             onClick={() => setIsAuthenticated(false)}
-            className="flex items-center justify-center bg-gray-200 dark:bg-gray-700 dark:text-white px-4 py-2.5 rounded-xl text-sm"
+            className="flex-1 sm:flex-initial flex items-center justify-center bg-gray-250 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-650 dark:text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
           >
             <LogOut className="w-5 h-5 mr-2" />
             Salir
@@ -307,6 +299,17 @@ export function AdminSupport() {
 
       {activeTab === 'support' && (
         <>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold dark:text-white">Editar Guías de Soporte</h2>
+            <button 
+              onClick={handleSave} 
+              disabled={loading}
+              className="flex items-center bg-green-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-green-700 disabled:opacity-50 text-sm"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {loading ? 'Guardando...' : 'Guardar Guías'}
+            </button>
+          </div>
           <div className="space-y-8">
         {data.map((platform, pIndex) => (
           <div key={platform.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6">

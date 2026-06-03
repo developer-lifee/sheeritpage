@@ -1,6 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Search } from 'lucide-react';
 
+function formatExcelDate(excelDate: any): string {
+    if (!excelDate) return '-';
+    const str = excelDate.toString().trim();
+    if (isNaN(str)) {
+        return str;
+    }
+    try {
+        const serial = parseFloat(str);
+        const date = new Date((serial - 25569) * 86400 * 1000);
+        if (!isNaN(date.getTime())) {
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(date.getUTCDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+    } catch (e) {}
+    return str;
+}
+
 export const ClientsView: React.FC = () => {
     const [clients, setClients] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -48,7 +67,7 @@ export const ClientsView: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold flex items-center dark:text-white">
-                    <Users className="mr-2" /> Base de Datos (Graph)
+                    <Users className="mr-2" /> Base de Datos (Clientes)
                 </h2>
                 <div className="relative w-64">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
@@ -63,7 +82,7 @@ export const ClientsView: React.FC = () => {
             </div>
 
             {loading ? (
-                <p className="text-center py-10 dark:text-gray-400">Cargando datos desde Microsoft Graph...</p>
+                <p className="text-center py-10 dark:text-gray-400">Cargando base de datos de clientes...</p>
             ) : (
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -88,7 +107,7 @@ export const ClientsView: React.FC = () => {
                                         </span>
                                     </td>
                                     <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">{c.correo || '-'}</td>
-                                    <td className="py-3 px-4 text-sm font-mono dark:text-gray-300">{c.deben ? `${c.deben}` : c.vencimiento || '-'}</td>
+                                    <td className="py-3 px-4 text-sm font-mono dark:text-gray-300">{formatExcelDate(c.deben || c.vencimiento)}</td>
                                     <td className="py-3 px-4 text-sm">
                                         <div className="flex gap-2">
                                             <button 
