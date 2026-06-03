@@ -104,25 +104,48 @@ function AppContent() {
 
   const { addToCombo, setIsComboOpen, clearCombo } = useComboCart();
 
-  const loadRandomCombo = () => {
+  const loadRandomCombo = async () => {
     if (platforms.length === 0) return;
     
-    // Choose 2 or 3 random platforms
-    const count = Math.floor(Math.random() * 2) + 2; 
-    const shuffled = [...platforms].sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, count);
+    let selected: Platform[] = [];
+    
+    try {
+      const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+      const response = await fetch(`${apiUrl}/api/public/recommended-combo`);
+      const data = await response.json();
+      
+      if (data && data.success && Array.isArray(data.sortedPlatforms) && data.sortedPlatforms.length > 0) {
+        // Take up to 3 platforms with the most free quota
+        const topPlatforms = data.sortedPlatforms.slice(0, 3);
+        
+        // Map backend streaming names back to our local platform objects (case-insensitive substring match)
+        selected = topPlatforms.map(name => {
+          return platforms.find(p => p.name.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(p.name.toLowerCase()));
+        }).filter(Boolean) as Platform[];
+      }
+    } catch (e) {
+      console.warn("Failed to fetch recommended combos from backend, falling back to random:", e);
+    }
+    
+    // Fallback: If fetch failed or returned empty, pick 2 or 3 random platforms
+    if (selected.length === 0) {
+      const count = Math.floor(Math.random() * 2) + 2; 
+      const shuffled = [...platforms].sort(() => 0.5 - Math.random());
+      selected = shuffled.slice(0, count);
+    }
     
     clearCombo();
     selected.forEach(p => {
       if (p.plans && p.plans.length > 0) {
-        const randomPlan = p.plans[Math.floor(Math.random() * p.plans.length)];
-        addToCombo(randomPlan.id);
+        const standardPlan = p.plans.find(pl => pl.name.toLowerCase().includes('estándar') || pl.name.toLowerCase().includes('suscripción') || pl.name.toLowerCase().includes('compartida')) || p.plans[0];
+        addToCombo(standardPlan.id);
       } else {
         addToCombo(p.id * 1000);
       }
     });
     setIsComboOpen(true);
   };
+
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

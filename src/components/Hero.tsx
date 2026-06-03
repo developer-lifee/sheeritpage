@@ -43,13 +43,13 @@ export function Hero({ onRandomCombo }: HeroProps) {
               Explorar plataformas
             </button>
             
-            {/* Generate random combo */}
+            {/* Generate recommended combo based on high stock */}
             <button
               onClick={onRandomCombo}
               className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-emerald-500 hover:bg-emerald-600 transition-colors shadow-lg gap-2"
             >
               <Sparkles className="h-5 w-5" />
-              Ver Combos al Azar 🎲
+              Ver Combo Recomendado 🔥
             </button>
           </div>
         </div>
