@@ -102,7 +102,7 @@ function AppContent() {
     platform.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const { addToCombo, setIsComboOpen, clearCombo } = useComboCart();
+  const { addToCombo, setIsComboOpen, clearCombo, isComboOpen } = useComboCart();
 
   const loadRandomCombo = async () => {
     if (platforms.length === 0) return;
@@ -148,7 +148,7 @@ function AppContent() {
 
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 transition-all duration-300 ${isComboOpen ? 'md:pr-96' : ''}`}>
       <Navbar 
         isDark={isDark} 
         toggleDark={() => toggleDark(!isDark)} 

@@ -361,14 +361,23 @@ export function ComboMenu() {
               </div>
 
               {!showPaymentOptions ? (
-                <button
-                  type="button"
-                  onClick={() => setShowPaymentOptions(true)}
-                  disabled={getTotalItems() === 0}
-                  className="w-full py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Pasar al Pago
-                </button>
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowPaymentOptions(true)}
+                    disabled={getTotalItems() === 0}
+                    className="w-full py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    Pasar al Pago
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsComboOpen(false)}
+                    className="w-full py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-bold rounded-lg transition-colors text-sm text-center md:hidden"
+                  >
+                    Seguir Comprando
+                  </button>
+                </div>
               ) : (
                 <div className="space-y-2">
                   <button
