@@ -7,6 +7,7 @@ import { AddSaleForm } from './AddSaleForm';
 import { TicketsView } from './TicketsView';
 import { GptAccountsView } from './GptAccountsView';
 import { ManagedEmailsView } from './ManagedEmailsView';
+import { InventoryAccountsView } from './InventoryAccountsView';
 
 interface Step {
   text: string;
@@ -287,6 +288,12 @@ export function AdminSupport() {
         >
           <Mail className="w-5 h-5 mr-2" /> Correos
         </button>
+        <button 
+          onClick={() => setActiveTab('inventory')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'inventory' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <Database className="w-5 h-5 mr-2" /> Agregar Stock
+        </button>
       </div>
 
       {activeTab === 'tickets' && <TicketsView />}
@@ -296,6 +303,7 @@ export function AdminSupport() {
       {activeTab === 'sales' && <AddSaleForm />}
       {activeTab === 'gpt' && <GptAccountsView />}
       {activeTab === 'emails' && <ManagedEmailsView />}
+      {activeTab === 'inventory' && <InventoryAccountsView />}
 
       {activeTab === 'support' && (
         <>
