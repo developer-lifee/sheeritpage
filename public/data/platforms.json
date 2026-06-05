@@ -266,20 +266,22 @@
     "id": 9,
     "name": "Paramount+",
     "image": "https://th.bing.com/th/id/R.b80c8814890d78ad63b43c0bc2f4b401?rik=M95rQ%2fqeKRSHPQ&pid=ImgRaw&r=0",
-    "price": 8000,
+    "price": 10000,
     "characteristics": [
       "Video HDR 4K",
       "Sin publicidad",
+      "Transmisión de los 104 partidos en vivo",
       "Entrega en tiempo real"
     ],
     "plans": [
       {
         "id": 901,
         "name": "Suscripción",
-        "price": 8000,
+        "price": 10000,
         "characteristics": [
           "Video HDR 4K",
           "Sin publicidad",
+          "Transmisión de los 104 partidos en vivo",
           "Entrega en tiempo real"
         ]
       }
