@@ -8,6 +8,7 @@ import { TicketsView } from './TicketsView';
 import { GptAccountsView } from './GptAccountsView';
 import { ManagedEmailsView } from './ManagedEmailsView';
 import { InventoryAccountsView } from './InventoryAccountsView';
+import { AvailabilityView } from './AvailabilityView';
 
 interface Step {
   text: string;
@@ -34,7 +35,7 @@ export function AdminSupport() {
   const [data, setData] = useState<SupportPlatform[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails'>('tickets');
+  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability'>('tickets');
 
   // Platforms to recycle logos from
   const availableLogos = [
@@ -294,6 +295,12 @@ export function AdminSupport() {
         >
           <Database className="w-5 h-5 mr-2" /> Agregar Stock
         </button>
+        <button 
+          onClick={() => setActiveTab('availability')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'availability' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <Shield className="w-5 h-5 mr-2" /> Disponibilidad Stock
+        </button>
       </div>
 
       {activeTab === 'tickets' && <TicketsView />}
@@ -304,6 +311,7 @@ export function AdminSupport() {
       {activeTab === 'gpt' && <GptAccountsView />}
       {activeTab === 'emails' && <ManagedEmailsView />}
       {activeTab === 'inventory' && <InventoryAccountsView />}
+      {activeTab === 'availability' && <AvailabilityView />}
 
       {activeTab === 'support' && (
         <>
