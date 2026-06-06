@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle } from 'lucide-react';
+import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock } from 'lucide-react';
 import { ClientsView } from './ClientsView';
 import { NetflixMatchView } from './NetflixMatchView';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
@@ -10,6 +10,7 @@ import { ManagedEmailsView } from './ManagedEmailsView';
 import { InventoryAccountsView } from './InventoryAccountsView';
 import { AvailabilityView } from './AvailabilityView';
 import { AccountAlertsView } from './AccountAlertsView';
+import { SupportScheduleView } from './SupportScheduleView';
 
 interface Step {
   text: string;
@@ -36,7 +37,7 @@ export function AdminSupport() {
   const [data, setData] = useState<SupportPlatform[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts'>('tickets');
+  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule'>('tickets');
 
   // Platforms to recycle logos from
   const availableLogos = [
@@ -285,6 +286,12 @@ export function AdminSupport() {
           <AlertCircle className="w-5 h-5 mr-2" /> Alertas Cuentas
         </button>
         <button 
+          onClick={() => setActiveTab('schedule')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'schedule' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <Clock className="w-5 h-5 mr-2" /> Horarios & Turnos
+        </button>
+        <button 
           onClick={() => setActiveTab('inventory')}
           className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'inventory' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
@@ -331,6 +338,7 @@ export function AdminSupport() {
       <div className={activeTab === 'inventory' ? '' : 'hidden'}><InventoryAccountsView /></div>
       <div className={activeTab === 'availability' ? '' : 'hidden'}><AvailabilityView /></div>
       <div className={activeTab === 'alerts' ? '' : 'hidden'}><AccountAlertsView /></div>
+      <div className={activeTab === 'schedule' ? '' : 'hidden'}><SupportScheduleView /></div>
 
       <div className={activeTab === 'support' ? '' : 'hidden'}>
         <div className="flex justify-between items-center mb-6">
