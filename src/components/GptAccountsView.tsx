@@ -1,11 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Key, Shield, Trash2, Plus, RefreshCw, AlertTriangle, CheckCircle, Clock, Database } from 'lucide-react';
+import { Key, Shield, Trash2, Plus, RefreshCw, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 
 interface GptAccount {
   email: string;
   code: string;
   timeRemaining: number;
+  service?: string;
 }
+
+const getServiceBadgeStyles = (srv?: string) => {
+  const normalized = (srv || 'ChatGPT').toLowerCase();
+  if (normalized.includes('amazon') || normalized.includes('prime')) {
+    return 'bg-amber-100 text-amber-850 dark:bg-amber-950/45 dark:text-amber-300 border border-amber-200 dark:border-amber-900/40';
+  }
+  if (normalized.includes('netflix')) {
+    return 'bg-red-100 text-red-850 dark:bg-red-950/45 dark:text-red-300 border border-red-200 dark:border-red-900/40';
+  }
+  if (normalized.includes('disney')) {
+    return 'bg-blue-100 text-blue-850 dark:bg-blue-950/45 dark:text-blue-300 border border-blue-200 dark:border-blue-900/40';
+  }
+  if (normalized.includes('gpt') || normalized.includes('openai') || normalized.includes('chat')) {
+    return 'bg-emerald-100 text-emerald-850 dark:bg-emerald-950/45 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/40';
+  }
+  return 'bg-purple-100 text-purple-855 dark:bg-purple-950/45 dark:text-purple-300 border border-purple-200 dark:border-purple-900/40';
+};
 
 export const GptAccountsView: React.FC = () => {
   const [accounts, setAccounts] = useState<GptAccount[]>([]);
@@ -14,9 +32,9 @@ export const GptAccountsView: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [email, setEmail] = useState('');
   const [secret, setSecret] = useState('');
+  const [service, setService] = useState('ChatGPT');
   const [actionLoading, setActionLoading] = useState(false);
   const [seconds, setSeconds] = useState(30);
-
 
   const fetchAccounts = () => {
     setError('');
@@ -75,13 +93,14 @@ export const GptAccountsView: React.FC = () => {
       const res = await fetch(`${apiUrl}/api/admin/gpt-accounts/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, secret, password: 'admin123' })
+        body: JSON.stringify({ email, secret, service, password: 'admin123' })
       });
       const result = await res.json();
       if (result.success) {
         setSuccess('Cuenta 2FA guardada con éxito.');
         setEmail('');
         setSecret('');
+        setService('ChatGPT');
         fetchAccounts();
       } else {
         setError(`❌ Error: ${result.message}`);
@@ -188,9 +207,14 @@ export const GptAccountsView: React.FC = () => {
                   className="flex items-center justify-between p-4 border border-gray-150 dark:border-gray-750 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-750/30 transition-all"
                 >
                   <div className="flex-grow min-w-0 pr-4">
-                    <span className="text-sm font-semibold text-gray-800 dark:text-white block truncate">
-                      {acct.email}
-                    </span>
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="text-sm font-semibold text-gray-800 dark:text-white truncate">
+                        {acct.email}
+                      </span>
+                      <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${getServiceBadgeStyles(acct.service)}`}>
+                        {acct.service || 'ChatGPT'}
+                      </span>
+                    </div>
                     <span className="text-xs text-gray-400 dark:text-gray-500">2FA Activado</span>
                   </div>
                   <div className="flex items-center gap-4 flex-shrink-0">
@@ -224,10 +248,36 @@ export const GptAccountsView: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="ejemplo@gmail.com"
-                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-750 dark:border-gray-600 dark:text-white text-sm"
+                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-750 dark:border-gray-600 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-brand-primary"
                 required
               />
             </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Servicio / Plataforma</label>
+              <select
+                value={service}
+                onChange={(e) => setService(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-750 dark:border-gray-600 dark:text-white text-sm cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-primary"
+              >
+                <option value="ChatGPT">ChatGPT (OpenAI)</option>
+                <option value="Amazon">Amazon Prime / AWS</option>
+                <option value="Netflix">Netflix</option>
+                <option value="Disney+">Disney+</option>
+                <option value="Otro">Otro / Personalizado</option>
+              </select>
+            </div>
+            {service === 'Otro' && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Nombre del Servicio Personalizado</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Star+ o Crunchyroll"
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-750 dark:border-gray-600 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                  onChange={(e) => setService(e.target.value || 'Otro')}
+                  required
+                />
+              </div>
+            )}
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Clave Secreta / Semilla (Seed)</label>
               <input
@@ -235,7 +285,7 @@ export const GptAccountsView: React.FC = () => {
                 value={secret}
                 onChange={(e) => setSecret(e.target.value)}
                 placeholder="JBSWY3DPEHPK3PXP"
-                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-750 dark:border-gray-600 dark:text-white text-sm font-mono"
+                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-750 dark:border-gray-600 dark:text-white text-sm font-mono focus:outline-none focus:ring-1 focus:ring-brand-primary"
                 required
               />
               <p className="text-[10px] text-gray-400 mt-1">
