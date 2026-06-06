@@ -240,6 +240,4 @@ export const PaymentConfigView: React.FC = () => {
       )}
     </div>
   );
-};</div>
-  );
 };
