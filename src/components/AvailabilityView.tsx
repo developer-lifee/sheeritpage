@@ -195,7 +195,7 @@ export const AvailabilityView: React.FC = () => {
         </div>
 
         {loading ? (
-          <div className="text-center py-12 text-gray-500 dark:text-gray-400">Cargando catálogo y disponibilidad...</div>
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400 font-light">Cargando catálogo y disponibilidad...</div>
         ) : filteredPlatforms.length === 0 ? (
           <div className="text-center py-12 text-gray-500">No se encontraron plataformas.</div>
         ) : (
@@ -238,7 +238,7 @@ export const AvailabilityView: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Incident alert box (Always visible, so admin can set alerts even if platform is on sale) */}
+                  {/* Incident alert box */}
                   <div className="mb-4 bg-amber-50/20 dark:bg-amber-950/10 p-4 rounded-xl border border-amber-100 dark:border-amber-900/30">
                     <div className="flex items-center gap-1.5 mb-1.5">
                       <AlertCircle className="w-4 h-4 text-amber-500" />

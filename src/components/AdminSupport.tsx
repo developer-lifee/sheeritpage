@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield } from 'lucide-react';
+import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle } from 'lucide-react';
 import { ClientsView } from './ClientsView';
 import { NetflixMatchView } from './NetflixMatchView';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
@@ -9,6 +9,7 @@ import { GptAccountsView } from './GptAccountsView';
 import { ManagedEmailsView } from './ManagedEmailsView';
 import { InventoryAccountsView } from './InventoryAccountsView';
 import { AvailabilityView } from './AvailabilityView';
+import { AccountAlertsView } from './AccountAlertsView';
 
 interface Step {
   text: string;
@@ -35,7 +36,7 @@ export function AdminSupport() {
   const [data, setData] = useState<SupportPlatform[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability'>('tickets');
+  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts'>('tickets');
 
   // Platforms to recycle logos from
   const availableLogos = [
@@ -241,17 +242,12 @@ export function AdminSupport() {
 
       {/* Tabs Navigation */}
       <div className="flex space-x-2 mb-8 border-b border-gray-200 dark:border-gray-700 pb-4 overflow-x-auto whitespace-nowrap scrollbar-none">
+        {/* GRUPO 1: Operaciones Diarias */}
         <button 
           onClick={() => setActiveTab('tickets')}
           className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'tickets' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
           <MessageSquare className="w-5 h-5 mr-2" /> Tickets
-        </button>
-        <button 
-          onClick={() => setActiveTab('support')}
-          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'support' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
-        >
-          <LifeBuoy className="w-5 h-5 mr-2" /> Guías
         </button>
         <button 
           onClick={() => setActiveTab('db')}
@@ -260,16 +256,56 @@ export function AdminSupport() {
           <Database className="w-5 h-5 mr-2" /> Base de Datos
         </button>
         <button 
+          onClick={() => setActiveTab('sales')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'sales' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <Calculator className="w-5 h-5 mr-2" /> Nueva Venta
+        </button>
+        <button 
           onClick={() => setActiveTab('stats')}
           className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'stats' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
           <TrendingUp className="w-5 h-5 mr-2" /> Analítica
         </button>
+
+        {/* Separador visual */}
+        <div className="h-6 w-px bg-gray-250 dark:bg-gray-700 self-center mx-1"></div>
+
+        {/* GRUPO 2: Stock, Disponibilidad e Incidentes */}
         <button 
-          onClick={() => setActiveTab('sales')}
-          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'sales' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+          onClick={() => setActiveTab('availability')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'availability' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
-          <Calculator className="w-5 h-5 mr-2" /> Nueva Venta
+          <Shield className="w-5 h-5 mr-2" /> Disponibilidad Stock
+        </button>
+        <button 
+          onClick={() => setActiveTab('alerts')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'alerts' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <AlertCircle className="w-5 h-5 mr-2" /> Alertas Cuentas
+        </button>
+        <button 
+          onClick={() => setActiveTab('inventory')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'inventory' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <Plus className="w-5 h-5 mr-2" /> Agregar Stock
+        </button>
+        <button 
+          onClick={() => setActiveTab('gpt')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'gpt' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <Key className="w-5 h-5 mr-2" /> Cuentas 2FA
+        </button>
+
+        {/* Separador visual */}
+        <div className="h-6 w-px bg-gray-250 dark:bg-gray-700 self-center mx-1"></div>
+
+        {/* GRUPO 3: Herramientas del Sistema */}
+        <button 
+          onClick={() => setActiveTab('emails')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'emails' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <Mail className="w-5 h-5 mr-2" /> Correos
         </button>
         <button 
           onClick={() => setActiveTab('netflix')}
@@ -278,28 +314,10 @@ export function AdminSupport() {
           <Tv className="w-5 h-5 mr-2" /> Predictor Netflix
         </button>
         <button 
-          onClick={() => setActiveTab('gpt')}
-          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'gpt' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+          onClick={() => setActiveTab('support')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'support' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
-          <Key className="w-5 h-5 mr-2" /> Cuentas 2FA
-        </button>
-        <button 
-          onClick={() => setActiveTab('emails')}
-          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'emails' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
-        >
-          <Mail className="w-5 h-5 mr-2" /> Correos
-        </button>
-        <button 
-          onClick={() => setActiveTab('inventory')}
-          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'inventory' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
-        >
-          <Database className="w-5 h-5 mr-2" /> Agregar Stock
-        </button>
-        <button 
-          onClick={() => setActiveTab('availability')}
-          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'availability' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
-        >
-          <Shield className="w-5 h-5 mr-2" /> Disponibilidad Stock
+          <LifeBuoy className="w-5 h-5 mr-2" /> Guías
         </button>
       </div>
 
@@ -312,6 +330,7 @@ export function AdminSupport() {
       <div className={activeTab === 'emails' ? '' : 'hidden'}><ManagedEmailsView /></div>
       <div className={activeTab === 'inventory' ? '' : 'hidden'}><InventoryAccountsView /></div>
       <div className={activeTab === 'availability' ? '' : 'hidden'}><AvailabilityView /></div>
+      <div className={activeTab === 'alerts' ? '' : 'hidden'}><AccountAlertsView /></div>
 
       <div className={activeTab === 'support' ? '' : 'hidden'}>
         <div className="flex justify-between items-center mb-6">
