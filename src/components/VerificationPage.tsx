@@ -19,10 +19,10 @@ export const VerificationPage: React.FC = () => {
     // Call the bot express server (assuming localhost:3000 for local dev, 
     // but in prod it would be sheerit.com.co/api or whatever mapping they have. 
     // We will hardcode standard PM2 bot port 3000 for now.
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co'; // Default fallback endpoint
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
     
     // Petición al endpoint del Whatbot
-    fetch(`http://localhost:3000/api/netflix/verify`, {
+    fetch(`${apiUrl}/api/netflix/verify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -61,7 +61,7 @@ export const VerificationPage: React.FC = () => {
             <div className="flex flex-col items-center justify-center space-y-4 py-8">
               <Loader2 className="w-12 h-12 text-brand-primary animate-spin" />
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                Conectando con el servidor seguro...
+                Conectando con el servidor seguro y buscando correos de verificación...
               </p>
             </div>
           ) : result ? (
@@ -72,8 +72,33 @@ export const VerificationPage: React.FC = () => {
               <p className={`text-sm ${result.success ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
                 {result.message}
               </p>
+
+              {(result as any).link && (
+                <div className="mt-6">
+                  <a 
+                    href={(result as any).link} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center w-full px-5 py-3 text-sm font-bold text-white bg-red-650 hover:bg-red-700 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-[1.02]"
+                  >
+                    🚀 Actualizar Hogar en Netflix
+                  </a>
+                  <p className="text-[10px] text-gray-405 dark:text-gray-500 mt-2">Haz clic para autorizar el acceso de este dispositivo directamente en Netflix.</p>
+                </div>
+              )}
+
+              {(result as any).code && (
+                <div className="mt-6 p-4 bg-white dark:bg-gray-750 rounded-xl border border-green-200 dark:border-green-800">
+                  <p className="text-xs text-green-650 dark:text-green-400 uppercase tracking-wider mb-2 font-bold">Código de Confirmación</p>
+                  <p className="text-3xl font-mono font-extrabold tracking-widest text-gray-900 dark:text-white select-all">
+                    {(result as any).code}
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-2">Ingresa este código en tu pantalla de Netflix.</p>
+                </div>
+              )}
+
               {result.account && (
-                <div className="mt-4 p-3 bg-white/50 dark:bg-black/20 rounded-lg border border-green-100 dark:border-green-800">
+                <div className="mt-6 p-3 bg-white/50 dark:bg-black/20 rounded-lg border border-green-150 dark:border-green-900">
                   <p className="text-xs text-green-600 dark:text-green-500 uppercase tracking-wider mb-1">Cuenta Principal</p>
                   <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{result.account}</p>
                 </div>
@@ -84,7 +109,7 @@ export const VerificationPage: React.FC = () => {
           {!loading && result?.success && (
             <div className="mt-8 text-sm text-gray-500 dark:text-gray-400">
               <p>Tu solicitud ha sido procesada de forma segura.</p>
-              <p>Si solicitaste el código, ya deberías tenerlo en WhatsApp o en pantalla.</p>
+              {!(result as any).link && !(result as any).code && <p>Si solicitaste el código, ya deberías tenerlo en WhatsApp o en pantalla en unos momentos.</p>}
             </div>
           )}
         </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock } from 'lucide-react';
+import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard } from 'lucide-react';
 import { ClientsView } from './ClientsView';
 import { NetflixMatchView } from './NetflixMatchView';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
@@ -11,6 +11,8 @@ import { InventoryAccountsView } from './InventoryAccountsView';
 import { AvailabilityView } from './AvailabilityView';
 import { AccountAlertsView } from './AccountAlertsView';
 import { SupportScheduleView } from './SupportScheduleView';
+import { BulkSenderView } from './BulkSenderView';
+import { PaymentConfigView } from './PaymentConfigView';
 
 interface Step {
   text: string;
@@ -37,7 +39,7 @@ export function AdminSupport() {
   const [data, setData] = useState<SupportPlatform[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule'>('tickets');
+  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'bulk' | 'payments'>('tickets');
 
   // Platforms to recycle logos from
   const availableLogos = [
@@ -309,6 +311,18 @@ export function AdminSupport() {
 
         {/* GRUPO 3: Herramientas del Sistema */}
         <button 
+          onClick={() => setActiveTab('bulk')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'bulk' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <Send className="w-5 h-5 mr-2" /> Enviador Masivo
+        </button>
+        <button 
+          onClick={() => setActiveTab('payments')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'payments' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <CreditCard className="w-5 h-5 mr-2" /> Métodos de Pago
+        </button>
+        <button 
           onClick={() => setActiveTab('emails')}
           className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'emails' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
@@ -339,6 +353,8 @@ export function AdminSupport() {
       <div className={activeTab === 'availability' ? '' : 'hidden'}><AvailabilityView /></div>
       <div className={activeTab === 'alerts' ? '' : 'hidden'}><AccountAlertsView /></div>
       <div className={activeTab === 'schedule' ? '' : 'hidden'}><SupportScheduleView /></div>
+      <div className={activeTab === 'bulk' ? '' : 'hidden'}><BulkSenderView /></div>
+      <div className={activeTab === 'payments' ? '' : 'hidden'}><PaymentConfigView /></div>
 
       <div className={activeTab === 'support' ? '' : 'hidden'}>
         <div className="flex justify-between items-center mb-6">
