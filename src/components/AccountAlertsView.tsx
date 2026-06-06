@@ -19,6 +19,7 @@ export const AccountAlertsView: React.FC = () => {
   // Form states
   const [newEmailKey, setNewEmailKey] = useState('');
   const [newEmailIncident, setNewEmailIncident] = useState('');
+  const [disableAccount, setDisableAccount] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -44,19 +45,20 @@ export const AccountAlertsView: React.FC = () => {
 
   const handleAddEmailAlert = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEmailKey.trim() || !newEmailIncident.trim()) return;
+    if (!newEmailKey.trim()) return;
     
     const emailLower = newEmailKey.trim().toLowerCase();
     setOverrides(prev => ({
       ...prev,
       [emailLower]: {
-        immediate: true,
+        immediate: !disableAccount,
         incident: newEmailIncident.trim()
       }
     }));
     
     setNewEmailKey('');
     setNewEmailIncident('');
+    setDisableAccount(false);
   };
 
   const handleDeleteEmailAlert = (emailKey: string) => {
@@ -146,7 +148,7 @@ export const AccountAlertsView: React.FC = () => {
       ) : (
         <>
           {/* Add alert form */}
-          <form onSubmit={handleAddEmailAlert} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 bg-gray-50 dark:bg-gray-850 p-4 rounded-xl border dark:border-gray-750">
+          <form onSubmit={handleAddEmailAlert} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 bg-gray-50 dark:bg-gray-850 p-4 rounded-xl border dark:border-gray-750">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Correo Electrónico de la Cuenta</label>
               <input
@@ -159,15 +161,25 @@ export const AccountAlertsView: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Descripción de la Falla / Situación</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Descripción de la Falla (Opcional)</label>
               <input
                 type="text"
-                placeholder="Ej. Cuenta suspendida por violación de hogar. Estamos reasignando."
+                placeholder="Ej. Cuenta suspendida por violación de hogar."
                 value={newEmailIncident}
                 onChange={(e) => setNewEmailIncident(e.target.value)}
                 className="w-full px-3 py-2 text-sm rounded-lg border dark:border-gray-750 bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                required
               />
+            </div>
+            <div className="flex items-center md:pt-6">
+              <label className="flex items-center text-xs font-semibold text-gray-550 dark:text-gray-350 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={disableAccount}
+                  onChange={(e) => setDisableAccount(e.target.checked)}
+                  className="mr-2 h-4 w-4 rounded border-gray-300 dark:border-gray-700 text-brand-primary focus:ring-brand-primary bg-white dark:bg-gray-850"
+                />
+                Desactivar cuenta (bloquear cupos)
+              </label>
             </div>
             <div className="flex items-end">
               <button
@@ -189,10 +201,21 @@ export const AccountAlertsView: React.FC = () => {
           ) : (
             <div className="space-y-3">
               {emailAlerts.map(([email, value]) => (
-                <div key={email} className="flex justify-between items-center bg-amber-50/20 dark:bg-amber-950/10 p-3.5 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                <div key={email} className={`flex justify-between items-center p-3.5 rounded-xl border ${value.immediate === false ? 'bg-red-50/10 border-red-200/50 dark:border-red-900/20' : 'bg-amber-50/20 border-amber-100 dark:border-amber-900/30'}`}>
                   <div className="min-w-0 flex-grow pr-4">
-                    <span className="text-xs font-bold text-amber-800 dark:text-amber-300 font-mono block">{email}</span>
-                    <p className="text-sm text-gray-755 dark:text-gray-250 mt-1">{value.incident}</p>
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="text-xs font-bold text-gray-800 dark:text-gray-300 font-mono block">{email}</span>
+                      {value.immediate === false ? (
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">
+                          Cupos Bloqueados
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                          Solo Alerta
+                        </span>
+                      )}
+                    </div>
+                    {value.incident && <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{value.incident}</p>}
                   </div>
                   <button
                     type="button"
