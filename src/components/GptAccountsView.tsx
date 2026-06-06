@@ -79,7 +79,7 @@ export const GptAccountsView: React.FC = () => {
       });
       const result = await res.json();
       if (result.success) {
-        setSuccess('Cuenta GPT guardada con éxito.');
+        setSuccess('Cuenta 2FA guardada con éxito.');
         setEmail('');
         setSecret('');
         fetchAccounts();
@@ -127,7 +127,7 @@ export const GptAccountsView: React.FC = () => {
           <div className="flex justify-between items-center mb-6">
             <div>
               <h2 className="text-xl font-bold flex items-center dark:text-white">
-                <Shield className="mr-2 text-brand-primary" /> Cuentas GPT con 2FA (TOTP)
+                <Shield className="mr-2 text-brand-primary" /> Cuentas con 2FA (GPT/Amazon/etc.)
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Códigos de verificación en vivo para inicio de sesión seguro.
@@ -178,7 +178,7 @@ export const GptAccountsView: React.FC = () => {
             <div className="text-center py-16 bg-gray-50 dark:bg-gray-900/30 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-750">
               <Key className="w-12 h-12 text-gray-400 mx-auto mb-3" />
               <h3 className="font-bold text-gray-700 dark:text-gray-300">Sin cuentas configuradas</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Configura tu primera cuenta de Netflix/GPT con su semilla TOTP en el panel lateral.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Configura tu primera cuenta de GPT/Amazon/Netflix con su semilla TOTP en el panel lateral.</p>
             </div>
           ) : (
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
