@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Users, Search, Clock, ShieldAlert } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Users, Search, Clock, ShieldAlert, Filter, Check, X } from 'lucide-react';
 
 function formatExcelDate(excelDate: any): string {
     if (!excelDate) return '-';
@@ -20,24 +20,59 @@ function formatExcelDate(excelDate: any): string {
     return str;
 }
 
+const getDaysRemaining = (excelDate: any) => {
+    if (!excelDate) return 999;
+    const str = excelDate.toString().trim();
+    let date: Date | null = null;
+    if (!isNaN(str as any)) {
+        const serial = parseFloat(str);
+        date = new Date((serial - 25569) * 86400 * 1000);
+    } else {
+        if (str.includes('-')) {
+            date = new Date(str + 'T12:00:00');
+        } else if (str.includes('/')) {
+            const parts = str.split('/');
+            if (parts.length === 3) {
+                date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+            }
+        }
+    }
+    if (date && !isNaN(date.getTime())) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        date.setHours(0, 0, 0, 0);
+        const diff = date.getTime() - today.getTime();
+        return Math.ceil(diff / (1000 * 60 * 60 * 24));
+    }
+    return 999;
+};
+
 export const ClientsView: React.FC = () => {
     const [clients, setClients] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     
+    // General search State
+    const [generalSearch, setGeneralSearch] = useState('');
+
+    // Column Popover States
+    const [activePopover, setActivePopover] = useState<string | null>(null);
+
     // Column Filters States
-    const [showFilterName, setShowFilterName] = useState(false);
     const [filterName, setFilterName] = useState('');
-    const [showFilterPhone, setShowFilterPhone] = useState(false);
     const [filterPhone, setFilterPhone] = useState('');
-    const [showFilterService, setShowFilterService] = useState(false);
     const [filterService, setFilterService] = useState('');
-    const [showFilterEmail, setShowFilterEmail] = useState(false);
     const [filterEmail, setFilterEmail] = useState('');
+
+    // Expiration Status Filter (Excel selector style)
+    const [filterPaymentStatus, setFilterPaymentStatus] = useState('todos');
 
     // Customer History States
     const [expandedClient, setExpandedClient] = useState<number | null>(null);
     const [clientHistory, setClientHistory] = useState<any>(null);
     const [historyLoading, setHistoryLoading] = useState(false);
+
+    // Ref for closing popovers on click outside
+    const popoverRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
@@ -53,13 +88,50 @@ export const ClientsView: React.FC = () => {
             });
     }, []);
 
+    // Click outside handler
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+                setActivePopover(null);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
+    // Extract unique services dynamically for the Excel filter options
+    const uniqueServices = Array.from(
+        new Set(clients.map(c => c.Streaming).filter(Boolean))
+    ).sort() as string[];
+
     const filtered = clients.filter(c => {
-        const nameMatches = !filterName || (c.Nombre || '').toLowerCase().includes(filterName.toLowerCase());
+        const daysLeft = getDaysRemaining(c.deben || c.vencimiento);
+        
+        // Expiration payment filter matches
+        let statusMatches = true;
+        if (filterPaymentStatus === 'proximos') {
+            statusMatches = daysLeft <= 7 && daysLeft > 0;
+        } else if (filterPaymentStatus === 'vencidos') {
+            statusMatches = daysLeft <= 0;
+        }
+
+        // General search matches
         const phoneVal = (c.numero || c.Numero || '').toString();
+        const generalMatches = !generalSearch || 
+            (c.Nombre || '').toLowerCase().includes(generalSearch.toLowerCase()) || 
+            phoneVal.includes(generalSearch) || 
+            (c.Streaming || '').toLowerCase().includes(generalSearch.toLowerCase()) || 
+            (c.correo || '').toLowerCase().includes(generalSearch.toLowerCase());
+
+        // Column level filters matches
+        const nameMatches = !filterName || (c.Nombre || '').toLowerCase().includes(filterName.toLowerCase());
         const phoneMatches = !filterPhone || phoneVal.includes(filterPhone);
         const serviceMatches = !filterService || (c.Streaming || '').toLowerCase().includes(filterService.toLowerCase());
         const emailMatches = !filterEmail || (c.correo || '').toLowerCase().includes(filterEmail.toLowerCase());
-        return nameMatches && phoneMatches && serviceMatches && emailMatches;
+
+        return statusMatches && generalMatches && nameMatches && phoneMatches && serviceMatches && emailMatches;
     });
 
     const toggleExpandHistory = async (phone: string, idx: number) => {
@@ -105,127 +177,325 @@ export const ClientsView: React.FC = () => {
 
     return (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6 animate-fadeIn">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold flex items-center dark:text-white">
-                    <Users className="mr-2 text-brand-primary" /> Base de Datos (Clientes)
-                </h2>
-                <div className="text-xs text-gray-400">
-                    Usa las lupas 🔍 en las columnas para realizar búsquedas específicas.
+            {/* Custom styles for mobile responsiveness matching PHP project */}
+            <style dangerouslySetInnerHTML={{__html: `
+                @media only screen and (max-width: 768px) {
+                    .responsive-table table, 
+                    .responsive-table thead, 
+                    .responsive-table tbody, 
+                    .responsive-table th, 
+                    .responsive-table td, 
+                    .responsive-table tr {
+                        display: block !important;
+                    }
+
+                    .responsive-table thead tr {
+                        display: none !important;
+                    }
+
+                    .responsive-table tr {
+                        margin-bottom: 16px;
+                        border: 1px solid #e5e7eb;
+                        border-radius: 16px;
+                        padding: 12px;
+                        background: #ffffff;
+                    }
+
+                    .dark .responsive-table tr {
+                        border-color: #374151;
+                        background: #1f2937;
+                    }
+
+                    .responsive-table td {
+                        padding: 8px 10px !important;
+                        padding-left: 45% !important;
+                        position: relative;
+                        text-align: left !important;
+                        border-bottom: 1px solid #f3f4f6;
+                    }
+
+                    .dark .responsive-table td {
+                        border-bottom-color: #374151;
+                    }
+
+                    .responsive-table td::before {
+                        content: attr(data-label);
+                        position: absolute;
+                        left: 12px;
+                        top: 8px;
+                        width: 40%;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        font-weight: bold;
+                        color: #9ca3af;
+                    }
+
+                    .responsive-table td:last-child {
+                        border-bottom: none;
+                    }
+                }
+            `}} />
+
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <div>
+                    <h2 className="text-xl font-bold flex items-center dark:text-white">
+                        <Users className="mr-2 text-brand-primary" /> Base de Datos (Clientes)
+                    </h2>
+                    <p className="text-xs text-gray-400 mt-1">Filtra clientes de forma general, por vencimiento o usando las columnas tipo Excel.</p>
+                </div>
+                
+                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    {/* General search */}
+                    <div className="relative flex-grow md:flex-grow-0 md:w-64">
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                        <input 
+                            type="text" 
+                            placeholder="Buscar cliente..." 
+                            className="pl-9 pr-4 py-2 w-full border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                            value={generalSearch}
+                            onChange={(e) => setGeneralSearch(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Expiration Filter */}
+                    <select
+                        value={filterPaymentStatus}
+                        onChange={(e) => setFilterPaymentStatus(e.target.value)}
+                        className="px-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary cursor-pointer font-medium"
+                    >
+                        <option value="todos">Todos los Vencimientos</option>
+                        <option value="proximos">⚠️ Próximos a Vencer (7 días o menos)</option>
+                        <option value="vencidos">🚨 Vencidos</option>
+                    </select>
                 </div>
             </div>
 
             {loading ? (
                 <p className="text-center py-10 dark:text-gray-400">Cargando base de datos de clientes...</p>
             ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto responsive-table" ref={popoverRef}>
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/25">
-                                <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">
-                                    <div className="flex items-center gap-1.5">
+                                {/* NOMBRE COLUMN HEADER */}
+                                <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300 relative">
+                                    <div className="flex items-center justify-between gap-1.5">
                                         <span>Nombre</span>
-                                        <Search className="w-3.5 h-3.5 cursor-pointer text-gray-400 hover:text-brand-primary transition-colors" onClick={() => setShowFilterName(!showFilterName)} />
-                                    </div>
-                                    {showFilterName && (
-                                        <input
-                                            type="text"
-                                            value={filterName}
-                                            onChange={(e) => setFilterName(e.target.value)}
-                                            placeholder="Filtrar..."
-                                            className="mt-2 px-2 py-1 text-xs w-full font-normal border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                                        <Filter 
+                                            className={`w-3.5 h-3.5 cursor-pointer transition-colors ${filterName ? 'text-brand-primary fill-brand-primary/20' : 'text-gray-450 hover:text-brand-primary'}`} 
+                                            onClick={() => setActivePopover(activePopover === 'nombre' ? null : 'nombre')} 
                                         />
+                                    </div>
+                                    {activePopover === 'nombre' && (
+                                        <div className="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-xl shadow-xl p-3 z-50 animate-fadeIn">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="text-xs font-bold text-gray-500 dark:text-gray-450 uppercase">Filtro de Excel</span>
+                                                <X className="w-3.5 h-3.5 cursor-pointer text-gray-400 hover:text-gray-600" onClick={() => setActivePopover(null)} />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={filterName}
+                                                onChange={(e) => setFilterName(e.target.value)}
+                                                placeholder="Buscar por nombre..."
+                                                className="px-2.5 py-1.5 text-xs w-full border rounded-lg dark:bg-gray-750 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                                                autoFocus
+                                            />
+                                            {filterName && (
+                                                <button 
+                                                    onClick={() => setFilterName('')} 
+                                                    className="mt-2 text-[10px] text-red-500 hover:underline block text-right w-full"
+                                                >
+                                                    Limpiar filtro
+                                                </button>
+                                            )}
+                                        </div>
                                     )}
                                 </th>
-                                <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">
-                                    <div className="flex items-center gap-1.5">
+
+                                {/* NUMERO COLUMN HEADER */}
+                                <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300 relative">
+                                    <div className="flex items-center justify-between gap-1.5">
                                         <span>Número</span>
-                                        <Search className="w-3.5 h-3.5 cursor-pointer text-gray-400 hover:text-brand-primary transition-colors" onClick={() => setShowFilterPhone(!showFilterPhone)} />
-                                    </div>
-                                    {showFilterPhone && (
-                                        <input
-                                            type="text"
-                                            value={filterPhone}
-                                            onChange={(e) => setFilterPhone(e.target.value)}
-                                            placeholder="Filtrar..."
-                                            className="mt-2 px-2 py-1 text-xs w-full font-normal border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                                        <Filter 
+                                            className={`w-3.5 h-3.5 cursor-pointer transition-colors ${filterPhone ? 'text-brand-primary fill-brand-primary/20' : 'text-gray-450 hover:text-brand-primary'}`} 
+                                            onClick={() => setActivePopover(activePopover === 'numero' ? null : 'numero')} 
                                         />
+                                    </div>
+                                    {activePopover === 'numero' && (
+                                        <div className="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-xl shadow-xl p-3 z-50 animate-fadeIn">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="text-xs font-bold text-gray-500 dark:text-gray-450 uppercase">Filtro de Excel</span>
+                                                <X className="w-3.5 h-3.5 cursor-pointer text-gray-400 hover:text-gray-600" onClick={() => setActivePopover(null)} />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={filterPhone}
+                                                onChange={(e) => setFilterPhone(e.target.value)}
+                                                placeholder="Buscar por número..."
+                                                className="px-2.5 py-1.5 text-xs w-full border rounded-lg dark:bg-gray-750 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                                                autoFocus
+                                            />
+                                            {filterPhone && (
+                                                <button 
+                                                    onClick={() => setFilterPhone('')} 
+                                                    className="mt-2 text-[10px] text-red-500 hover:underline block text-right w-full"
+                                                >
+                                                    Limpiar filtro
+                                                </button>
+                                            )}
+                                        </div>
                                     )}
                                 </th>
-                                <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">
-                                    <div className="flex items-center gap-1.5">
+
+                                {/* SERVICIO COLUMN HEADER */}
+                                <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300 relative">
+                                    <div className="flex items-center justify-between gap-1.5">
                                         <span>Servicio</span>
-                                        <Search className="w-3.5 h-3.5 cursor-pointer text-gray-400 hover:text-brand-primary transition-colors" onClick={() => setShowFilterService(!showFilterService)} />
-                                    </div>
-                                    {showFilterService && (
-                                        <input
-                                            type="text"
-                                            value={filterService}
-                                            onChange={(e) => setFilterService(e.target.value)}
-                                            placeholder="Filtrar..."
-                                            className="mt-2 px-2 py-1 text-xs w-full font-normal border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                                        <Filter 
+                                            className={`w-3.5 h-3.5 cursor-pointer transition-colors ${filterService ? 'text-brand-primary fill-brand-primary/20' : 'text-gray-450 hover:text-brand-primary'}`} 
+                                            onClick={() => setActivePopover(activePopover === 'servicio' ? null : 'servicio')} 
                                         />
+                                    </div>
+                                    {activePopover === 'servicio' && (
+                                        <div className="absolute left-0 mt-2 w-64 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-xl shadow-xl p-3 z-50 animate-fadeIn">
+                                            <div className="flex justify-between items-center mb-2 pb-2 border-b dark:border-gray-750">
+                                                <span className="text-xs font-bold text-gray-500 dark:text-gray-450 uppercase">Servicio</span>
+                                                <X className="w-3.5 h-3.5 cursor-pointer text-gray-400 hover:text-gray-600" onClick={() => setActivePopover(null)} />
+                                            </div>
+                                            <div className="max-h-48 overflow-y-auto space-y-1 my-2">
+                                                <div 
+                                                    onClick={() => { setFilterService(''); setActivePopover(null); }}
+                                                    className={`flex items-center justify-between px-2 py-1.5 rounded-lg text-xs cursor-pointer ${!filterService ? 'bg-brand-primary/10 text-brand-primary font-semibold' : 'hover:bg-gray-50 dark:hover:bg-gray-750 dark:text-gray-300'}`}
+                                                >
+                                                    <span>(Todos)</span>
+                                                    {!filterService && <Check className="w-3.5 h-3.5" />}
+                                                </div>
+                                                {uniqueServices.map((service) => (
+                                                    <div 
+                                                        key={service}
+                                                        onClick={() => { setFilterService(service); setActivePopover(null); }}
+                                                        className={`flex items-center justify-between px-2 py-1.5 rounded-lg text-xs cursor-pointer ${filterService === service ? 'bg-brand-primary/10 text-brand-primary font-semibold' : 'hover:bg-gray-50 dark:hover:bg-gray-750 dark:text-gray-300'}`}
+                                                    >
+                                                        <span>{service}</span>
+                                                        {filterService === service && <Check className="w-3.5 h-3.5" />}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
                                     )}
                                 </th>
-                                <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">
-                                    <div className="flex items-center gap-1.5">
+
+                                {/* CORREO COLUMN HEADER */}
+                                <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300 relative">
+                                    <div className="flex items-center justify-between gap-1.5">
                                         <span>Cuenta / Correo</span>
-                                        <Search className="w-3.5 h-3.5 cursor-pointer text-gray-400 hover:text-brand-primary transition-colors" onClick={() => setShowFilterEmail(!showFilterEmail)} />
-                                    </div>
-                                    {showFilterEmail && (
-                                        <input
-                                            type="text"
-                                            value={filterEmail}
-                                            onChange={(e) => setFilterEmail(e.target.value)}
-                                            placeholder="Filtrar..."
-                                            className="mt-2 px-2 py-1 text-xs w-full font-normal border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                                        <Filter 
+                                            className={`w-3.5 h-3.5 cursor-pointer transition-colors ${filterEmail ? 'text-brand-primary fill-brand-primary/20' : 'text-gray-450 hover:text-brand-primary'}`} 
+                                            onClick={() => setActivePopover(activePopover === 'correo' ? null : 'correo')} 
                                         />
+                                    </div>
+                                    {activePopover === 'correo' && (
+                                        <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-xl shadow-xl p-3 z-50 animate-fadeIn">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="text-xs font-bold text-gray-500 dark:text-gray-450 uppercase">Filtro de Excel</span>
+                                                <X className="w-3.5 h-3.5 cursor-pointer text-gray-400 hover:text-gray-600" onClick={() => setActivePopover(null)} />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={filterEmail}
+                                                onChange={(e) => setFilterEmail(e.target.value)}
+                                                placeholder="Buscar por correo..."
+                                                className="px-2.5 py-1.5 text-xs w-full border rounded-lg dark:bg-gray-750 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                                                autoFocus
+                                            />
+                                            {filterEmail && (
+                                                <button 
+                                                    onClick={() => setFilterEmail('')} 
+                                                    className="mt-2 text-[10px] text-red-500 hover:underline block text-right w-full"
+                                                >
+                                                    Limpiar filtro
+                                                </button>
+                                            )}
+                                        </div>
                                     )}
                                 </th>
+
                                 <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">Vencimiento</th>
-                                <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">Acciones</th>
+                                <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300 text-center">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filtered.slice(0, 50).map((c, i) => {
                                 const phone = c.numero || c.Numero;
+                                const daysLeft = getDaysRemaining(c.deben || c.vencimiento);
+                                
+                                // Color badges setup based on expiration days
+                                let badgeColor = "text-gray-500 dark:text-gray-400";
+                                let badgeBg = "bg-gray-100 dark:bg-gray-700/50";
+                                let statusText = "";
+
+                                if (daysLeft <= 0) {
+                                    badgeColor = "text-red-700 dark:text-red-300";
+                                    badgeBg = "bg-red-50 dark:bg-red-950/45 border border-red-200 dark:border-red-900/50";
+                                    statusText = "🔴 Vencido";
+                                } else if (daysLeft <= 7) {
+                                    badgeColor = "text-amber-700 dark:text-amber-300";
+                                    badgeBg = "bg-amber-50 dark:bg-amber-950/45 border border-amber-200 dark:border-amber-900/50";
+                                    statusText = `⚠️ Vence en ${daysLeft} días`;
+                                } else if (daysLeft !== 999) {
+                                    badgeColor = "text-green-700 dark:text-green-300";
+                                    badgeBg = "bg-green-50 dark:bg-green-950/45 border border-green-200 dark:border-green-900/50";
+                                    statusText = `🟢 ${daysLeft} días vigentes`;
+                                }
+
                                 return (
                                     <React.Fragment key={i}>
-                                        <tr className="border-b dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-all">
-                                            <td className="py-3.5 px-4 text-sm dark:text-gray-200 font-medium">{c.Nombre || 'N/A'}</td>
-                                            <td className="py-3.5 px-4 text-sm dark:text-gray-200 font-mono">{phone}</td>
-                                            <td className="py-3.5 px-4 text-sm dark:text-gray-200">
+                                        <tr className="border-b dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-750/30 transition-all">
+                                            <td data-label="Nombre" className="py-3.5 px-4 text-sm dark:text-gray-200 font-medium">{c.Nombre || 'N/A'}</td>
+                                            <td data-label="Número" className="py-3.5 px-4 text-sm dark:text-gray-200 font-mono">{phone}</td>
+                                            <td data-label="Servicio" className="py-3.5 px-4 text-sm dark:text-gray-200">
                                                 <span className="bg-brand-primary/10 text-brand-primary dark:text-brand-light px-2.5 py-1 rounded-md text-xs font-bold">
                                                     {c.Streaming || 'N/A'}
                                                 </span>
                                             </td>
-                                            <td className="py-3.5 px-4 text-sm text-gray-500 dark:text-gray-450">{c.correo || '-'}</td>
-                                            <td className="py-3.5 px-4 text-sm font-mono dark:text-gray-300">{formatExcelDate(c.deben || c.vencimiento)}</td>
-                                            <td className="py-3.5 px-4 text-sm">
-                                                <div className="flex gap-1.5">
+                                            <td data-label="Cuenta / Correo" className="py-3.5 px-4 text-sm text-gray-500 dark:text-gray-400 break-all">{c.correo || '-'}</td>
+                                            <td data-label="Vencimiento" className="py-3.5 px-4 text-sm font-mono dark:text-gray-300">
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold">{formatExcelDate(c.deben || c.vencimiento)}</span>
+                                                    {statusText && (
+                                                        <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full mt-1.5 font-bold w-fit ${badgeBg} ${badgeColor}`}>
+                                                            {statusText}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td data-label="Acciones" className="py-3.5 px-4 text-sm text-center">
+                                                <div className="flex gap-2 justify-center">
                                                     <button 
                                                         onClick={() => handleSendAction(phone, 'credentials')}
-                                                        className="bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 text-blue-700 dark:text-blue-200 px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
+                                                        className="bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 text-blue-750 dark:text-blue-200 p-2 rounded-xl text-xs font-bold transition-all border border-blue-200/50 dark:border-blue-800/40"
                                                         title="Enviar Credenciales"
                                                     >
-                                                        🔑
+                                                        🔑 Enviar Datos
                                                     </button>
                                                     <button 
                                                         onClick={() => handleSendAction(phone, 'payment')}
-                                                        className="bg-green-50 dark:bg-green-900/30 hover:bg-green-100 text-green-700 dark:text-green-200 px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
+                                                        className="bg-green-50 dark:bg-green-900/30 hover:bg-green-100 text-green-750 dark:text-green-200 p-2 rounded-xl text-xs font-bold transition-all border border-green-200/50 dark:border-green-800/40"
                                                         title="Cobrar"
                                                     >
-                                                        💰
+                                                        💰 Cobrar
                                                     </button>
                                                     <button 
                                                         onClick={() => toggleExpandHistory(phone, i)}
-                                                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                                                        className={`p-2 rounded-xl text-xs font-bold transition-all border ${
                                                             expandedClient === i 
-                                                                ? 'bg-purple-600 text-white' 
-                                                                : 'bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 text-purple-700 dark:text-purple-200'
+                                                                ? 'bg-purple-600 text-white border-purple-600' 
+                                                                : 'bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 text-purple-750 dark:text-purple-200 border-purple-200/50 dark:border-purple-800/40'
                                                         }`}
                                                         title="Historial de compras"
                                                     >
-                                                        🕒
+                                                        🕒 Historial
                                                     </button>
                                                 </div>
                                             </td>
@@ -240,15 +510,15 @@ export const ClientsView: React.FC = () => {
                                                             <span>Analizando historial en la base de datos...</span>
                                                         </div>
                                                     ) : !clientHistory || !clientHistory.historial || clientHistory.historial.length === 0 ? (
-                                                        <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                                                        <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-450">
                                                             <ShieldAlert className="w-4 h-4" />
                                                             <span>No se encontraron registros anteriores para este cliente en el histórico.</span>
                                                         </div>
                                                     ) : (
                                                         <div className="space-y-4">
                                                             <div className="flex justify-between items-center">
-                                                                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                                                    Historial de compras: {clientHistory.nombre} {clientHistory.apellido}
+                                                                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-450">
+                                                                    Historial de compras de {clientHistory.nombre} {clientHistory.apellido}
                                                                 </h4>
                                                             </div>
                                                             <div className="relative border-l-2 border-brand-primary/25 ml-3 space-y-4 py-1">
@@ -267,7 +537,7 @@ export const ClientsView: React.FC = () => {
                                                                             <p className="text-gray-500 dark:text-gray-400 mb-1">
                                                                                 <b>Cuenta:</b> <span className="font-mono">{h.correo || 'N/A'}</span>
                                                                             </p>
-                                                                            <div className="flex gap-4 text-[11px] text-gray-400 dark:text-gray-550 border-t dark:border-gray-700 pt-2 mt-2">
+                                                                            <div className="flex gap-4 text-[11px] text-gray-400 dark:text-gray-500 border-t dark:border-gray-700 pt-2 mt-2">
                                                                                 <span><b>Método Pago:</b> {h.metodo_pago || 'N/A'}</span>
                                                                                 {h.deben && <span><b>Debía:</b> ${parseFloat(h.deben).toLocaleString()}</span>}
                                                                             </div>
