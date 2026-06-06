@@ -303,164 +303,162 @@ export function AdminSupport() {
         </button>
       </div>
 
-      {activeTab === 'tickets' && <TicketsView />}
-      {activeTab === 'db' && <ClientsView />}
-      {activeTab === 'netflix' && <NetflixMatchView />}
-      {activeTab === 'stats' && <AnalyticsDashboard />}
-      {activeTab === 'sales' && <AddSaleForm />}
-      {activeTab === 'gpt' && <GptAccountsView />}
-      {activeTab === 'emails' && <ManagedEmailsView />}
-      {activeTab === 'inventory' && <InventoryAccountsView />}
-      {activeTab === 'availability' && <AvailabilityView />}
+      <div className={activeTab === 'tickets' ? '' : 'hidden'}><TicketsView /></div>
+      <div className={activeTab === 'db' ? '' : 'hidden'}><ClientsView /></div>
+      <div className={activeTab === 'netflix' ? '' : 'hidden'}><NetflixMatchView /></div>
+      <div className={activeTab === 'stats' ? '' : 'hidden'}><AnalyticsDashboard /></div>
+      <div className={activeTab === 'sales' ? '' : 'hidden'}><AddSaleForm /></div>
+      <div className={activeTab === 'gpt' ? '' : 'hidden'}><GptAccountsView /></div>
+      <div className={activeTab === 'emails' ? '' : 'hidden'}><ManagedEmailsView /></div>
+      <div className={activeTab === 'inventory' ? '' : 'hidden'}><InventoryAccountsView /></div>
+      <div className={activeTab === 'availability' ? '' : 'hidden'}><AvailabilityView /></div>
 
-      {activeTab === 'support' && (
-        <>
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold dark:text-white">Editar Guías de Soporte</h2>
-            <button 
-              onClick={handleSave} 
-              disabled={loading}
-              className="flex items-center bg-green-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-green-700 disabled:opacity-50 text-sm"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {loading ? 'Guardando...' : 'Guardar Guías'}
-            </button>
-          </div>
-          <div className="space-y-8">
-        {data.map((platform, pIndex) => (
-          <div key={platform.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6">
-            <div className="flex justify-between items-start mb-6">
-              <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Nombre Plataforma</label>
-                  <input 
-                    value={platform.name}
-                    onChange={(e) => updatePlatform(pIndex, 'name', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Logo URL (o selecciona uno)</label>
-                  <div className="flex gap-2">
+      <div className={activeTab === 'support' ? '' : 'hidden'}>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold dark:text-white">Editar Guías de Soporte</h2>
+          <button 
+            onClick={handleSave} 
+            disabled={loading}
+            className="flex items-center bg-green-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-green-700 disabled:opacity-50 text-sm"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {loading ? 'Guardando...' : 'Guardar Guías'}
+          </button>
+        </div>
+        <div className="space-y-8">
+          {data.map((platform, pIndex) => (
+            <div key={platform.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6">
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Nombre Plataforma</label>
                     <input 
-                      value={platform.logo}
-                      onChange={(e) => updatePlatform(pIndex, 'logo', e.target.value)}
-                      className="flex-grow px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white"
+                      value={platform.name}
+                      onChange={(e) => updatePlatform(pIndex, 'name', e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white"
                     />
-                    <select 
-                      onChange={(e) => updatePlatform(pIndex, 'logo', e.target.value)}
-                      className="px-2 py-2 border rounded-lg dark:bg-gray-700 dark:text-white"
-                    >
-                      <option value="">Reciclar logo...</option>
-                      {availableLogos.map(l => <option key={l.url} value={l.url}>{l.name}</option>)}
-                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Logo URL (o selecciona uno)</label>
+                    <div className="flex gap-2">
+                      <input 
+                        value={platform.logo}
+                        onChange={(e) => updatePlatform(pIndex, 'logo', e.target.value)}
+                        className="flex-grow px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-white"
+                      />
+                      <select 
+                        onChange={(e) => updatePlatform(pIndex, 'logo', e.target.value)}
+                        className="px-2 py-2 border rounded-lg dark:bg-gray-700 dark:text-white"
+                      >
+                        <option value="">Reciclar logo...</option>
+                        {availableLogos.map(l => <option key={l.url} value={l.url}>{l.name}</option>)}
+                      </select>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <button 
-                onClick={() => removePlatform(pIndex)}
-                className="ml-4 p-2 text-red-500 hover:bg-red-50 rounded-lg"
-              >
-                <Trash2 className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="ml-6 space-y-4">
-              <h4 className="font-bold dark:text-white flex items-center">
-                Problemas Registrados
                 <button 
-                  onClick={() => addIssue(pIndex)}
-                  className="ml-4 text-xs bg-brand-primary text-white px-2 py-1 rounded"
+                  onClick={() => removePlatform(pIndex)}
+                  className="ml-4 p-2 text-red-500 hover:bg-red-50 rounded-lg"
                 >
-                  + Agregar Problema
+                  <Trash2 className="w-5 h-5" />
                 </button>
-              </h4>
-              
-              {platform.issues.map((issue, iIndex) => (
-                <div key={issue.id} className="border-l-4 border-brand-primary pl-4 py-2 bg-gray-50 dark:bg-gray-900/50 rounded-r-xl">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div className="col-span-1 md:col-span-2">
-                      <label className="block text-xs text-gray-500">Título del Inconveniente</label>
-                      <input 
-                        value={issue.title}
-                        onChange={(e) => updateIssue(pIndex, iIndex, 'title', e.target.value)}
-                        className="w-full px-2 py-1 border rounded dark:bg-gray-800 dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <button 
-                        onClick={() => removeIssue(pIndex, iIndex)}
-                        className="text-red-500 text-xs mt-6 flex items-center"
-                      >
-                        <Trash2 className="w-4 h-4 mr-1" /> Eliminar Problema
-                      </button>
-                    </div>
-                  </div>
+              </div>
 
-                  <div className="mb-4">
-                    <label className="block text-xs text-gray-500">Imagen de Referencia (Guía visual)</label>
-                    <div className="flex gap-2 items-center">
-                      <input 
-                        value={issue.image}
-                        onChange={(e) => updateIssue(pIndex, iIndex, 'image', e.target.value)}
-                        placeholder="/errores_img/archivo.png"
-                        className="flex-grow px-2 py-1 border rounded dark:bg-gray-800 dark:text-white"
-                      />
-                      <label className="bg-brand-primary text-white px-3 py-1 rounded cursor-pointer text-xs font-bold">
-                        Subir Imagen
+              <div className="ml-6 space-y-4">
+                <h4 className="font-bold dark:text-white flex items-center">
+                  Problemas Registrados
+                  <button 
+                    onClick={() => addIssue(pIndex)}
+                    className="ml-4 text-xs bg-brand-primary text-white px-2 py-1 rounded"
+                  >
+                    + Agregar Problema
+                  </button>
+                </h4>
+                
+                {platform.issues.map((issue, iIndex) => (
+                  <div key={issue.id} className="border-l-4 border-brand-primary pl-4 py-2 bg-gray-50 dark:bg-gray-900/50 rounded-r-xl">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="col-span-1 md:col-span-2">
+                        <label className="block text-xs text-gray-500">Título del Inconveniente</label>
                         <input 
-                          type="file" 
-                          className="hidden" 
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleUpload(pIndex, iIndex, file);
-                          }}
+                          value={issue.title}
+                          onChange={(e) => updateIssue(pIndex, iIndex, 'title', e.target.value)}
+                          className="w-full px-2 py-1 border rounded dark:bg-gray-800 dark:text-white"
                         />
-                      </label>
+                      </div>
+                      <div>
+                        <button 
+                          onClick={() => removeIssue(pIndex, iIndex)}
+                          className="text-red-500 text-xs mt-6 flex items-center"
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" /> Eliminar Problema
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="ml-4">
-                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">Pasos de Solución</label>
-                    <div className="space-y-2">
-                      {issue.steps.map((step, sIndex) => (
-                        <div key={sIndex} className="flex gap-2">
-                          <span className="text-gray-400 mt-2 font-mono">{sIndex + 1}.</span>
+                    <div className="mb-4">
+                      <label className="block text-xs text-gray-500">Imagen de Referencia (Guía visual)</label>
+                      <div className="flex gap-2 items-center">
+                        <input 
+                          value={issue.image}
+                          onChange={(e) => updateIssue(pIndex, iIndex, 'image', e.target.value)}
+                          placeholder="/errores_img/archivo.png"
+                          className="flex-grow px-2 py-1 border rounded dark:bg-gray-800 dark:text-white"
+                        />
+                        <label className="bg-brand-primary text-white px-3 py-1 rounded cursor-pointer text-xs font-bold">
+                          Subir Imagen
                           <input 
-                            value={step.text}
-                            onChange={(e) => updateStep(pIndex, iIndex, sIndex, e.target.value)}
-                            className="flex-grow px-2 py-1 border rounded dark:bg-gray-800 dark:text-white"
+                            type="file" 
+                            className="hidden" 
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleUpload(pIndex, iIndex, file);
+                            }}
                           />
-                          <button onClick={() => removeStep(pIndex, iIndex, sIndex)} className="text-red-400">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
-                      <button 
-                        onClick={() => addStep(pIndex, iIndex)}
-                        className="text-xs text-brand-primary flex items-center"
-                      >
-                        <Plus className="w-3 h-3 mr-1" /> Agregar Paso
-                      </button>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="ml-4">
+                      <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">Pasos de Solución</label>
+                      <div className="space-y-2">
+                        {issue.steps.map((step, sIndex) => (
+                          <div key={sIndex} className="flex gap-2">
+                            <span className="text-gray-400 mt-2 font-mono">{sIndex + 1}.</span>
+                            <input 
+                              value={step.text}
+                              onChange={(e) => updateStep(pIndex, iIndex, sIndex, e.target.value)}
+                              className="flex-grow px-2 py-1 border rounded dark:bg-gray-800 dark:text-white"
+                            />
+                            <button onClick={() => removeStep(pIndex, iIndex, sIndex)} className="text-red-400">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                        <button 
+                          onClick={() => addStep(pIndex, iIndex)}
+                          className="text-xs text-brand-primary flex items-center"
+                        >
+                          <Plus className="w-3 h-3 mr-1" /> Agregar Paso
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      <button 
-        onClick={addPlatform}
-        className="w-full mt-8 py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl text-gray-500 hover:border-brand-primary hover:text-brand-primary transition-colors flex items-center justify-center font-bold"
-      >
-        <Plus className="w-6 h-6 mr-2" />
-        Agregar Nueva Plataforma
-      </button>
-      </>
-      )}
+        <button 
+          onClick={addPlatform}
+          className="w-full mt-8 py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl text-gray-500 hover:border-brand-primary hover:text-brand-primary transition-colors flex items-center justify-center font-bold"
+        >
+          <Plus className="w-6 h-6 mr-2" />
+          Agregar Nueva Plataforma
+        </button>
+      </div>
     </div>
   );
 }
