@@ -75,6 +75,25 @@ export const PaymentConfigView: React.FC = () => {
     });
   };
 
+  const handleSubAutomaticToggle = (key: string, subId: string) => {
+    if (!config) return;
+    const subMethods = config[key].sub_methods;
+    if (!subMethods) return;
+    const updatedSubs = subMethods.map(sub => {
+      if (sub.id === subId) {
+        return { ...sub, automatic: !sub.automatic };
+      }
+      return sub;
+    });
+    setConfig({
+      ...config,
+      [key]: {
+        ...config[key],
+        sub_methods: updatedSubs
+      }
+    });
+  };
+
   const handleSubValueChange = (key: string, subId: string, value: string) => {
     if (!config) return;
     const subMethods = config[key].sub_methods;
@@ -219,15 +238,33 @@ export const PaymentConfigView: React.FC = () => {
                             />
                           </div>
                           
-                          <button
-                            type="button"
-                            onClick={() => handleSubToggle(key, sub.id)}
-                            className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${sub.enabled ? 'bg-brand-primary' : 'bg-gray-200 dark:bg-gray-700'}`}
-                          >
-                            <span
-                              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${sub.enabled ? 'translate-x-4' : 'translate-x-0'}`}
-                            />
-                          </button>
+                          <div className="flex items-center gap-4">
+                            <div className="flex flex-col items-center">
+                              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Auto ⚡</span>
+                              <button
+                                type="button"
+                                onClick={() => handleSubAutomaticToggle(key, sub.id)}
+                                className={`relative inline-flex h-4 w-7 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${sub.automatic ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-gray-750'}`}
+                              >
+                                <span
+                                  className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${sub.automatic ? 'translate-x-3' : 'translate-x-0'}`}
+                                />
+                              </button>
+                            </div>
+
+                            <div className="flex flex-col items-center">
+                              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Activo</span>
+                              <button
+                                type="button"
+                                onClick={() => handleSubToggle(key, sub.id)}
+                                className={`relative inline-flex h-4 w-7 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${sub.enabled ? 'bg-brand-primary' : 'bg-gray-200 dark:bg-gray-750'}`}
+                              >
+                                <span
+                                  className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${sub.enabled ? 'translate-x-3' : 'translate-x-0'}`}
+                                />
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
