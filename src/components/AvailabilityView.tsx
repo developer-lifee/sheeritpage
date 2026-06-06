@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, ToggleLeft, ToggleRight, Search, Save, AlertTriangle, CheckCircle, RefreshCw, HelpCircle } from 'lucide-react';
+import { Shield, ToggleLeft, ToggleRight, Search, Save, AlertTriangle, CheckCircle, RefreshCw, AlertCircle } from 'lucide-react';
 
 interface Plan {
   id: number;
@@ -20,6 +20,7 @@ interface Platform {
 interface AvailabilityOverride {
   immediate: boolean;
   reason?: string;
+  incident?: string;
 }
 
 type OverridesConfig = Record<string, AvailabilityOverride>;
@@ -66,10 +67,19 @@ export const AvailabilityView: React.FC = () => {
       const updated = { ...prev };
       if (currentVal) {
         // Toggle from Available (true) to Not Available (false)
-        updated[key] = { immediate: false, reason: prev[key]?.reason || 'Deshabilitado temporalmente.' };
+        updated[key] = { 
+          immediate: false, 
+          reason: prev[key]?.reason || 'Deshabilitado temporalmente.',
+          incident: prev[key]?.incident || ''
+        };
       } else {
         // Toggle from Not Available (false) to Available (true)
-        delete updated[key];
+        if (updated[key]?.incident) {
+          // Keep incident description if present, only clear the immediate delivery restriction
+          updated[key] = { immediate: true, incident: updated[key].incident };
+        } else {
+          delete updated[key];
+        }
       }
       return updated;
     });
@@ -77,13 +87,21 @@ export const AvailabilityView: React.FC = () => {
 
   const handleReasonChange = (key: string, reason: string) => {
     setOverrides(prev => {
-      if (prev[key]) {
-        return {
-          ...prev,
-          [key]: { ...prev[key], reason }
-        };
-      }
-      return prev;
+      const current = prev[key] || { immediate: true };
+      return {
+        ...prev,
+        [key]: { ...current, reason }
+      };
+    });
+  };
+
+  const handleIncidentChange = (key: string, incident: string) => {
+    setOverrides(prev => {
+      const current = prev[key] || { immediate: true };
+      return {
+        ...prev,
+        [key]: { ...current, incident }
+      };
     });
   };
 
@@ -101,7 +119,7 @@ export const AvailabilityView: React.FC = () => {
       });
       const result = await res.json();
       if (result.success) {
-        setSuccess('Configuración de disponibilidad guardada con éxito.');
+        setSuccess('Configuración de disponibilidad e incidentes guardada con éxito.');
         fetchData();
       } else {
         setError(`❌ Error: ${result.message}`);
@@ -123,10 +141,10 @@ export const AvailabilityView: React.FC = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
             <h2 className="text-xl font-bold flex items-center dark:text-white">
-              <Shield className="mr-2 text-brand-primary" /> Disponibilidad de Stock y Entrega Inmediata
+              <Shield className="mr-2 text-brand-primary" /> Disponibilidad de Stock y Alertas de Estado
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Desactiva temporalmente la venta automática de plataformas o planes específicos cuando no haya stock o haya fallas de red.
+              Desactiva la entrega automática de plataformas y configura alertas de incidentes activos para avisar automáticamente a los clientes.
             </p>
           </div>
           
@@ -187,6 +205,7 @@ export const AvailabilityView: React.FC = () => {
               const pKey = platform.name;
               const isPlatformAvailable = overrides[pKey]?.immediate !== false;
               const pReason = overrides[pKey]?.reason || '';
+              const pIncident = overrides[pKey]?.incident || '';
 
               return (
                 <div key={platform.id} className="border border-gray-150 dark:border-gray-700 rounded-2xl p-5 hover:bg-gray-50/50 dark:hover:bg-gray-800/20 transition-all">
@@ -197,7 +216,7 @@ export const AvailabilityView: React.FC = () => {
                       )}
                       <div>
                         <h3 className="font-bold text-lg text-gray-800 dark:text-white">{platform.name}</h3>
-                        <p className="text-xs text-gray-400">Restricción para todo el catálogo de esta plataforma</p>
+                        <p className="text-xs text-gray-400">Estado global e incidentes de esta plataforma</p>
                       </div>
                     </div>
 
@@ -219,8 +238,24 @@ export const AvailabilityView: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Incident alert box (Always visible, so admin can set alerts even if platform is on sale) */}
+                  <div className="mb-4 bg-amber-50/20 dark:bg-amber-950/10 p-4 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <AlertCircle className="w-4 h-4 text-amber-500" />
+                      <label className="text-xs font-bold text-amber-700 dark:text-amber-300">Alerta de Incidente Activo (Aviso al Cliente en WhatsApp):</label>
+                    </div>
+                    <input
+                      type="text"
+                      value={pIncident}
+                      onChange={(e) => handleIncidentChange(pKey, e.target.value)}
+                      placeholder="Ej. Caída general de pines en YouTube hoy. Estamos reasignando accesos."
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-amber-200 dark:border-amber-900/50 bg-white dark:bg-gray-850 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">Si dejas este campo escrito, el bot advertirá automáticamente sobre esta falla a cualquier cliente que pregunte por esta plataforma.</p>
+                  </div>
+
                   {!isPlatformAvailable && (
-                    <div className="mb-4 bg-red-50/30 dark:bg-red-950/10 p-3 rounded-xl border border-red-100 dark:border-red-900/30">
+                    <div className="mb-4 bg-red-50/30 dark:bg-red-950/10 p-3 rounded-xl border border-red-100 dark:border-red-900/30 animate-fadeIn">
                       <label className="block text-xs font-bold text-red-700 dark:text-red-300 mb-1">Motivo o Razón de la Indisponibilidad:</label>
                       <input
                         type="text"
