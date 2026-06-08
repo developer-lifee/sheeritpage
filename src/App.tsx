@@ -12,7 +12,7 @@ import { SupportSection } from './components/SupportSection';
 import { AdminSupport } from './components/AdminSupport';
 import { VerificationPage } from './components/VerificationPage';
 import { useDarkMode } from './hooks/useDarkMode';
-import { Search, ShoppingCart } from 'lucide-react';
+import { Search, ShoppingCart, Lock, AlertCircle } from 'lucide-react';
 import { ComboCartProvider, useComboCart } from './hooks/useComboCart';
 
 interface Plan {
@@ -33,9 +33,111 @@ interface Platform {
 
 export type ViewState = 'home' | 'support' | 'admin' | 'verificar';
 
+const AUTHORIZED_ADVISORS: { [email: string]: string } = {
+  'esclepiades@hotmail.com': 'Esclepiades',
+  'camco08@hotmail.com': 'Camilo',
+  'estebanavila182@outlook.com': 'Esteban'
+};
+
+function AdminLoginOnApp({ onSuccess }: { onSuccess: () => void }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPass = password.trim().toLowerCase();
+
+    if (!AUTHORIZED_ADVISORS[cleanEmail]) {
+      setError('El correo ingresado no corresponde a un asesor autorizado.');
+      return;
+    }
+
+    if (cleanPass !== 'admin123') {
+      setError('Contraseña incorrecta.');
+      return;
+    }
+
+    // Guardar credenciales
+    localStorage.setItem('ticket_agent_email', cleanEmail);
+    localStorage.setItem('ticket_agent_name', AUTHORIZED_ADVISORS[cleanEmail]);
+    localStorage.setItem('ticket_agent_password', password.trim());
+    onSuccess();
+  };
+
+  return (
+    <div className="min-h-[70vh] flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-8">
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-755 w-full max-w-md">
+        <div className="flex flex-col items-center mb-6">
+          <div className="p-3 bg-brand-primary/10 rounded-full mb-3 text-brand-primary">
+            <Lock className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold dark:text-white text-center">Panel de Control - Acceso</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
+            Ingresa tu correo autorizado y contraseña admin.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
+              Correo Electrónico
+            </label>
+            <input
+              type="email"
+              required
+              placeholder="ejemplo@outlook.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:ring-2 focus:ring-brand-primary transition-all text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
+              Contraseña
+            </label>
+            <input
+              type="password"
+              required
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:ring-2 focus:ring-brand-primary transition-all text-sm"
+            />
+          </div>
+
+          {error && (
+            <div className="flex items-start bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-300 p-3 rounded-xl border border-red-100 dark:border-red-900/30 gap-2">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <p className="text-xs font-medium">{error}</p>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="w-full bg-brand-primary hover:bg-brand-dark text-white font-bold py-3 rounded-xl transition-all shadow-md active:scale-98 text-sm"
+          >
+            Ingresar al Panel
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function AppContent() {
   const [currentView, setCurrentView] = useState<ViewState>('home');
-  const [isAdminAuth, setIsAdminAuth] = useState(false);
+  const [isAdminAuth, setIsAdminAuth] = useState(() => {
+    const email = localStorage.getItem('ticket_agent_email') || '';
+    const pass = localStorage.getItem('ticket_agent_password') || '';
+    const cleanEmail = email.trim().toLowerCase();
+    const hasValidEmail = !!AUTHORIZED_ADVISORS[cleanEmail];
+    const hasValidPass = pass.toLowerCase() === 'admin123';
+    return hasValidEmail && hasValidPass;
+  });
 
   useEffect(() => {
     // Handle initial route
@@ -225,20 +327,20 @@ function AppContent() {
       )}
 
       {currentView === 'admin' && (
-        isAdminAuth ? <AdminSupport /> : (
-          <div className="min-h-[60vh] flex items-center justify-center">
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow border border-gray-200 dark:border-gray-700 w-full max-w-sm">
-              <h2 className="text-xl font-bold mb-4 text-center dark:text-white">Acceso Restringido</h2>
-              <input 
-                type="password" 
-                placeholder="Contraseña"
-                className="w-full mb-4 px-4 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                onChange={(e) => {
-                  if (e.target.value === 'Admin123') setIsAdminAuth(true);
-                }}
-              />
-            </div>
-          </div>
+        isAdminAuth ? (
+          <AdminSupport 
+            agentEmail={localStorage.getItem('ticket_agent_email') || ''}
+            agentName={localStorage.getItem('ticket_agent_name') || ''}
+            adminPassword={localStorage.getItem('ticket_agent_password') || ''}
+            onLogout={() => {
+              localStorage.removeItem('ticket_agent_email');
+              localStorage.removeItem('ticket_agent_name');
+              localStorage.removeItem('ticket_agent_password');
+              setIsAdminAuth(false);
+            }}
+          />
+        ) : (
+          <AdminLoginOnApp onSuccess={() => setIsAdminAuth(true)} />
         )
       )}
 

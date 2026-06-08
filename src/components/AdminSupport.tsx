@@ -33,9 +33,14 @@ interface SupportPlatform {
   issues: Issue[];
 }
 
-export function AdminSupport() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState('');
+interface AdminSupportProps {
+  agentEmail: string;
+  agentName: string;
+  adminPassword?: string;
+  onLogout: () => void;
+}
+
+export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123', onLogout }: AdminSupportProps) {
   const [data, setData] = useState<SupportPlatform[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -64,20 +69,10 @@ export function AdminSupport() {
       .catch(err => console.error('Error loading data:', err));
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === 'admin123') {
-      setIsAuthenticated(true);
-      setMessage('');
-    } else {
-      setMessage('Contraseña incorrecta');
-    }
-  };
-
   const handleSave = async () => {
     setLoading(true);
     const formData = new FormData();
-    formData.append('password', password);
+    formData.append('password', adminPassword);
     formData.append('action', 'save');
     formData.append('data', JSON.stringify(data, null, 2));
 
@@ -103,7 +98,7 @@ export function AdminSupport() {
   const handleUpload = async (pIndex: number, iIndex: number, file: File) => {
     setLoading(true);
     const formData = new FormData();
-    formData.append('password', password);
+    formData.append('password', adminPassword);
     formData.append('action', 'upload');
     formData.append('image', file);
 
@@ -193,32 +188,6 @@ export function AdminSupport() {
     setData(newData);
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
-        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">Admin Ayuda</h2>
-          <form onSubmit={handleLogin}>
-            <div className="mb-4">
-              <label className="block text-gray-700 dark:text-gray-300 mb-2">Contraseña Admin</label>
-              <input 
-                type="password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                placeholder="Ingresa la contraseña"
-              />
-            </div>
-            {message && <p className="text-red-500 mb-4">{message}</p>}
-            <button className="w-full bg-brand-primary text-white py-3 rounded-xl font-bold">
-              Entrar
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-5xl mx-auto px-4 py-24">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
@@ -228,7 +197,7 @@ export function AdminSupport() {
         </div>
         <div className="flex gap-3 w-full sm:w-auto">
           <button 
-            onClick={() => setIsAuthenticated(false)}
+            onClick={onLogout}
             className="flex-1 sm:flex-initial flex items-center justify-center bg-gray-250 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-650 dark:text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
           >
             <LogOut className="w-5 h-5 mr-2" />
@@ -342,7 +311,7 @@ export function AdminSupport() {
         </button>
       </div>
 
-      <div className={activeTab === 'tickets' ? '' : 'hidden'}><TicketsView /></div>
+      <div className={activeTab === 'tickets' ? '' : 'hidden'}><TicketsView agentEmail={agentEmail} agentName={agentName} onLogout={onLogout} /></div>
       <div className={activeTab === 'db' ? '' : 'hidden'}><ClientsView /></div>
       <div className={activeTab === 'netflix' ? '' : 'hidden'}><NetflixMatchView /></div>
       <div className={activeTab === 'stats' ? '' : 'hidden'}><AnalyticsDashboard /></div>
