@@ -266,7 +266,7 @@
     "id": 9,
     "name": "Paramount+",
     "image": "https://th.bing.com/th/id/R.b80c8814890d78ad63b43c0bc2f4b401?rik=M95rQ%2fqeKRSHPQ&pid=ImgRaw&r=0",
-    "price": 10000,
+    "price": 12000,
     "characteristics": [
       "Video HDR 4K",
       "Sin publicidad",
@@ -277,7 +277,7 @@
       {
         "id": 901,
         "name": "Suscripción",
-        "price": 10000,
+        "price": 12000,
         "characteristics": [
           "Video HDR 4K",
           "Sin publicidad",
