@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock } from 'lucide-react';
+import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search } from 'lucide-react';
 
 interface AccountInfo {
   streaming: string;
@@ -18,6 +18,7 @@ interface Ticket {
   lastMessageTime: number | null;
   waitingHumanMode?: 'bot' | 'advisor';
   accounts?: AccountInfo[];
+  summary?: string;
 }
 
 interface TicketsViewProps {
@@ -30,6 +31,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchTickets = (isSilent = false) => {
     if (!agentEmail) return;
@@ -132,10 +134,24 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   // Safe names helper for null safety
   const safeAgentName = (agentName || '').toLowerCase().trim();
 
+  // Search filter
+  const filteredTickets = tickets.filter(t => {
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return true;
+    const nameMatches = t.nombre?.toLowerCase().includes(term);
+    const phoneMatches = t.phone?.includes(term);
+    const summaryMatches = t.summary?.toLowerCase().includes(term);
+    const accountMatches = t.accounts?.some(acc =>
+      acc.correo?.toLowerCase().includes(term) ||
+      acc.streaming?.toLowerCase().includes(term)
+    );
+    return nameMatches || phoneMatches || summaryMatches || accountMatches;
+  });
+
   // Filter columns
-  const unassignedTickets = tickets.filter(t => !t.agent);
-  const myTickets = tickets.filter(t => t.agent && t.agent.toLowerCase().trim() === safeAgentName);
-  const otherTickets = tickets.filter(t => t.agent && t.agent.toLowerCase().trim() !== safeAgentName);
+  const unassignedTickets = filteredTickets.filter(t => !t.agent);
+  const myTickets = filteredTickets.filter(t => t.agent && t.agent.toLowerCase().trim() === safeAgentName);
+  const otherTickets = filteredTickets.filter(t => t.agent && t.agent.toLowerCase().trim() !== safeAgentName);
 
   const renderTicketCard = (t: Ticket) => {
     const timeDiff = t.lastMessageTime ? Math.round((Date.now() - t.lastMessageTime) / 60000) : null;
@@ -191,6 +207,14 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             )}
           </div>
         </div>
+
+        {/* Resumen de Solicitud del Ticket */}
+        {t.summary && (
+          <div className="mb-2 bg-blue-50/70 dark:bg-blue-950/20 text-blue-900 dark:text-blue-200 p-2.5 rounded-lg border border-blue-100 dark:border-blue-900/30">
+            <p className="text-[9px] text-blue-500 dark:text-blue-400 font-bold uppercase tracking-wider mb-0.5">Resumen de Solicitud:</p>
+            <p className="text-xs font-semibold whitespace-pre-line leading-snug">{t.summary}</p>
+          </div>
+        )}
 
         {/* Cuentas vinculadas */}
         {t.accounts && t.accounts.length > 0 && (
@@ -328,6 +352,20 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         <div className="flex items-center bg-yellow-50 dark:bg-yellow-900/25 text-yellow-800 dark:text-yellow-200 p-4 rounded-xl mb-6 border border-yellow-100 dark:border-yellow-900/30">
           <AlertTriangle className="w-5 h-5 mr-3 flex-shrink-0" />
           <p className="text-sm font-medium">{error}</p>
+        </div>
+      )}
+
+      {/* Search Bar */}
+      {!loading && (tickets.length > 0 || searchTerm) && (
+        <div className="relative mb-6 max-w-md shadow-sm rounded-xl">
+          <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Buscar por nombre, teléfono, cuenta o servicio..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-750 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200"
+          />
         </div>
       )}
 
