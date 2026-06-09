@@ -83,6 +83,10 @@ export const ClientsView: React.FC = () => {
     const [sendingLogs, setSendingLogs] = useState<string[]>([]);
     const [showBulkSender, setShowBulkSender] = useState(false);
 
+    // Status states for inline feedback
+    const [actionStates, setActionStates] = useState<{[key: string]: 'idle' | 'loading' | 'success' | 'error'}>({});
+    const [actionErrorMessage, setActionErrorMessage] = useState<{[key: string]: string}>({});
+
     useEffect(() => {
         const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
         fetch(`${apiUrl}/api/admin/clients`)
@@ -288,10 +292,17 @@ export const ClientsView: React.FC = () => {
 
     const handleSendAction = async (phone: string, type: 'credentials' | 'payment') => {
         const cleanPhone = phone ? phone.toString().replace(/\D/g, '') : '';
+        const key = `${cleanPhone}_${type}`;
         if (!cleanPhone) {
-            alert("❌ Número de teléfono inválido.");
+            setActionStates(prev => ({ ...prev, [key]: 'error' }));
+            setActionErrorMessage(prev => ({ ...prev, [key]: 'Número inválido' }));
+            setTimeout(() => {
+                setActionStates(prev => ({ ...prev, [key]: 'idle' }));
+            }, 3000);
             return;
         }
+        
+        setActionStates(prev => ({ ...prev, [key]: 'loading' }));
         const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
         try {
             const res = await fetch(`${apiUrl}/api/admin/actions/send-info`, {
@@ -301,12 +312,23 @@ export const ClientsView: React.FC = () => {
             });
             const result = await res.json();
             if (result.success) {
-                alert(`✅ Mensaje de ${type} enviado con éxito a ${cleanPhone}`);
+                setActionStates(prev => ({ ...prev, [key]: 'success' }));
+                setTimeout(() => {
+                    setActionStates(prev => ({ ...prev, [key]: 'idle' }));
+                }, 3000);
             } else {
-                alert(`❌ Error: ${result.message || result.error || 'Error desconocido'}`);
+                setActionStates(prev => ({ ...prev, [key]: 'error' }));
+                setActionErrorMessage(prev => ({ ...prev, [key]: result.message || result.error || 'Error' }));
+                setTimeout(() => {
+                    setActionStates(prev => ({ ...prev, [key]: 'idle' }));
+                }, 3500);
             }
         } catch (err: any) {
-            alert("❌ Error de comunicación con el bot: " + (err.message || err));
+            setActionStates(prev => ({ ...prev, [key]: 'error' }));
+            setActionErrorMessage(prev => ({ ...prev, [key]: err.message || err }));
+            setTimeout(() => {
+                setActionStates(prev => ({ ...prev, [key]: 'idle' }));
+            }, 3500);
         }
     };
 
@@ -767,20 +789,84 @@ export const ClientsView: React.FC = () => {
                                                 </td>
                                                 <td data-label="Acciones" className="py-3.5 px-4 text-sm text-center">
                                                     <div className="flex gap-2 justify-center">
-                                                        <button 
-                                                            onClick={() => handleSendAction(phone, 'credentials')}
-                                                            className="bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 text-blue-750 dark:text-blue-200 p-2 rounded-xl text-xs font-bold transition-all border border-blue-200/50 dark:border-blue-800/40"
-                                                            title="Enviar Credenciales"
-                                                        >
-                                                            🔑 Enviar Datos
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => handleSendAction(phone, 'payment')}
-                                                            className="bg-green-50 dark:bg-green-900/30 hover:bg-green-100 text-green-750 dark:text-green-200 p-2 rounded-xl text-xs font-bold transition-all border border-green-200/50 dark:border-green-800/40"
-                                                            title="Cobrar"
-                                                        >
-                                                            💰 Cobrar
-                                                        </button>
+                                                        {(() => {
+                                                            const cleanPhone = phone ? phone.toString().replace(/\D/g, '') : '';
+                                                            const key = `${cleanPhone}_credentials`;
+                                                            const state = actionStates[key] || 'idle';
+                                                            
+                                                            if (state === 'loading') {
+                                                                return (
+                                                                    <button disabled className="bg-blue-50 dark:bg-blue-900/30 text-blue-750 dark:text-blue-200 p-2 rounded-xl text-xs font-bold border border-blue-200/50 dark:border-blue-800/40 flex items-center gap-1.5 w-[105px] justify-center">
+                                                                        <RefreshCw className="w-3 h-3 animate-spin" />
+                                                                        <span>Enviando</span>
+                                                                    </button>
+                                                                );
+                                                            }
+                                                            if (state === 'success') {
+                                                                return (
+                                                                    <button disabled className="bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 p-2 rounded-xl text-xs font-bold border border-emerald-200 dark:border-emerald-900/40 flex items-center gap-1.5 w-[105px] justify-center">
+                                                                        <Check className="w-3 h-3" />
+                                                                        <span>¡Enviado!</span>
+                                                                    </button>
+                                                                );
+                                                            }
+                                                            if (state === 'error') {
+                                                                return (
+                                                                    <button disabled className="bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 p-2 rounded-xl text-xs font-bold border border-rose-200 dark:border-rose-900/40 flex items-center gap-1.5 w-[105px] justify-center" title={actionErrorMessage[key] || 'Error'}>
+                                                                        <X className="w-3 h-3" />
+                                                                        <span>Fallo</span>
+                                                                    </button>
+                                                                );
+                                                            }
+                                                            return (
+                                                                <button 
+                                                                    onClick={() => handleSendAction(phone, 'credentials')}
+                                                                    className="bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 text-blue-750 dark:text-blue-200 p-2 rounded-xl text-xs font-bold transition-all border border-blue-200/50 dark:border-blue-800/40 w-[105px]"
+                                                                    title="Enviar Credenciales"
+                                                                >
+                                                                    🔑 Enviar Datos
+                                                                </button>
+                                                            );
+                                                        })()}
+                                                        {(() => {
+                                                            const cleanPhone = phone ? phone.toString().replace(/\D/g, '') : '';
+                                                            const key = `${cleanPhone}_payment`;
+                                                            const state = actionStates[key] || 'idle';
+                                                            
+                                                            if (state === 'loading') {
+                                                                return (
+                                                                    <button disabled className="bg-green-50 dark:bg-green-900/30 text-green-750 dark:text-green-200 p-2 rounded-xl text-xs font-bold border border-green-200/50 dark:border-green-800/40 flex items-center gap-1.5 w-[85px] justify-center">
+                                                                        <RefreshCw className="w-3 h-3 animate-spin" />
+                                                                        <span>Cobrando</span>
+                                                                    </button>
+                                                                );
+                                                            }
+                                                            if (state === 'success') {
+                                                                return (
+                                                                    <button disabled className="bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 p-2 rounded-xl text-xs font-bold border border-emerald-200 dark:border-emerald-900/40 flex items-center gap-1.5 w-[85px] justify-center">
+                                                                        <Check className="w-3 h-3" />
+                                                                        <span>¡Enviado!</span>
+                                                                    </button>
+                                                                );
+                                                            }
+                                                            if (state === 'error') {
+                                                                return (
+                                                                    <button disabled className="bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 p-2 rounded-xl text-xs font-bold border border-rose-200 dark:border-rose-900/40 flex items-center gap-1.5 w-[85px] justify-center" title={actionErrorMessage[key] || 'Error'}>
+                                                                        <X className="w-3 h-3" />
+                                                                        <span>Fallo</span>
+                                                                    </button>
+                                                                );
+                                                            }
+                                                            return (
+                                                                <button 
+                                                                    onClick={() => handleSendAction(phone, 'payment')}
+                                                                    className="bg-green-50 dark:bg-green-900/30 hover:bg-green-100 text-green-750 dark:text-green-200 p-2 rounded-xl text-xs font-bold transition-all border border-green-200/50 dark:border-green-800/40 w-[85px]"
+                                                                    title="Cobrar"
+                                                                >
+                                                                    💰 Cobrar
+                                                                </button>
+                                                            );
+                                                        })()}
                                                         <button 
                                                             onClick={() => toggleExpandHistory(phone, i)}
                                                             className={`p-2 rounded-xl text-xs font-bold transition-all border ${

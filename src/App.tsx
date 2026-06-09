@@ -63,7 +63,7 @@ function AdminLoginOnApp({ onSuccess }: { onSuccess: () => void }) {
     // Guardar credenciales
     localStorage.setItem('ticket_agent_email', cleanEmail);
     localStorage.setItem('ticket_agent_name', AUTHORIZED_ADVISORS[cleanEmail]);
-    localStorage.setItem('ticket_agent_password', password.trim());
+    localStorage.setItem('ticket_agent_password', cleanPass);
     onSuccess();
   };
 
