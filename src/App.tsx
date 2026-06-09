@@ -69,7 +69,7 @@ function AdminLoginOnApp({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-8">
-      <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-755 w-full max-w-md">
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-750 w-full max-w-md">
         <div className="flex flex-col items-center mb-6">
           <div className="p-3 bg-brand-primary/10 rounded-full mb-3 text-brand-primary">
             <Lock className="w-8 h-8" />

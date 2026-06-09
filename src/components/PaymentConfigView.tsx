@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Save, ShieldAlert, CheckCircle, RefreshCw } from 'lucide-react';
+import { CreditCard, Save, ShieldAlert, CheckCircle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface SubMethod {
   id: string;
@@ -25,6 +25,14 @@ export const PaymentConfigView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [expandedMethods, setExpandedMethods] = useState<{[key: string]: boolean}>({});
+
+  const toggleExpandMethod = (key: string) => {
+    setExpandedMethods(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
 
   useEffect(() => {
     fetchConfig();

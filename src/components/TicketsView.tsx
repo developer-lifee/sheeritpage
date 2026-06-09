@@ -233,7 +233,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         )}
 
         {/* Último Mensaje */}
-        <div className="bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-lg mb-3 border dark:border-gray-755">
+        <div className="bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-lg mb-3 border dark:border-gray-750">
           <p className="text-[9px] text-gray-450 font-bold uppercase tracking-wider mb-0.5">Último Mensaje:</p>
           <p className="text-xs text-gray-650 dark:text-gray-300 italic line-clamp-2">
             "{t.lastMessage || 'Mensaje de sistema / adjunto'}"
