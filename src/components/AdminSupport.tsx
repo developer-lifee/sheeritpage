@@ -189,21 +189,21 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-24">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
-        <div>
-          <h1 className="text-3xl font-bold dark:text-white">Panel de Control Ayuda</h1>
-          <p className="text-gray-600 dark:text-gray-400 font-light">Gestión administrativa integral</p>
+    <div className="max-w-[96%] mx-auto px-4 py-8 animate-fadeIn">
+      <div className="flex justify-between items-center border-b dark:border-gray-800 pb-4 mb-6">
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-extrabold dark:text-white">Panel de Control Ayuda</h1>
+          <span className="hidden sm:inline text-xs bg-brand-primary/10 text-brand-primary dark:text-brand-light px-2.5 py-1 rounded-md font-bold">
+            Asesor: {agentName} ({agentEmail})
+          </span>
         </div>
-        <div className="flex gap-3 w-full sm:w-auto">
-          <button 
-            onClick={onLogout}
-            className="flex-1 sm:flex-initial flex items-center justify-center bg-gray-250 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-650 dark:text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
-          >
-            <LogOut className="w-5 h-5 mr-2" />
-            Salir
-          </button>
-        </div>
+        <button 
+          onClick={onLogout}
+          className="flex items-center justify-center bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-950/20 dark:hover:bg-red-950/40 dark:text-red-350 px-4 py-2 rounded-xl text-xs font-bold transition-all border border-red-250/50 dark:border-red-900/40"
+        >
+          <LogOut className="w-4 h-4 mr-1.5" />
+          Salir
+        </button>
       </div>
 
       {message && (
@@ -257,12 +257,6 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           <AlertCircle className="w-5 h-5 mr-2" /> Alertas Cuentas
         </button>
         <button 
-          onClick={() => setActiveTab('schedule')}
-          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'schedule' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
-        >
-          <Clock className="w-5 h-5 mr-2" /> Horarios & Turnos
-        </button>
-        <button 
           onClick={() => setActiveTab('inventory')}
           className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'inventory' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
@@ -289,7 +283,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           onClick={() => setActiveTab('payments')}
           className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'payments' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
-          <CreditCard className="w-5 h-5 mr-2" /> Métodos de Pago
+          <CreditCard className="w-5 h-5 mr-2" /> Pagos y Horarios
         </button>
         <button 
           onClick={() => setActiveTab('emails')}
@@ -321,9 +315,11 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       <div className={activeTab === 'inventory' ? '' : 'hidden'}><InventoryAccountsView /></div>
       <div className={activeTab === 'availability' ? '' : 'hidden'}><AvailabilityView /></div>
       <div className={activeTab === 'alerts' ? '' : 'hidden'}><AccountAlertsView /></div>
-      <div className={activeTab === 'schedule' ? '' : 'hidden'}><SupportScheduleView /></div>
       <div className={activeTab === 'bulk' ? '' : 'hidden'}><BulkSenderView /></div>
-      <div className={activeTab === 'payments' ? '' : 'hidden'}><PaymentConfigView /></div>
+      <div className={activeTab === 'payments' ? 'space-y-8' : 'hidden'}>
+        <PaymentConfigView />
+        <SupportScheduleView />
+      </div>
 
       <div className={activeTab === 'support' ? '' : 'hidden'}>
         <div className="flex justify-between items-center mb-6">

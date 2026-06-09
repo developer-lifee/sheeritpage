@@ -218,8 +218,8 @@ export const PaymentConfigView: React.FC = () => {
                     <textarea
                       rows={4}
                       value={method.description}
-                      onChange={(e) => handleDescChange(key, e.target.value)}
-                      className="w-full text-xs font-mono p-3 bg-white dark:bg-gray-750 border dark:border-gray-600 rounded-xl dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      readOnly
+                      className="w-full text-xs font-mono p-3 bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-80 border dark:border-gray-700 rounded-xl dark:text-gray-300 focus:outline-none"
                     />
                   </div>
 
@@ -233,8 +233,8 @@ export const PaymentConfigView: React.FC = () => {
                             <input
                               type="text"
                               value={sub.value}
-                              onChange={(e) => handleSubValueChange(key, sub.id, e.target.value)}
-                              className="mt-1 text-[11px] font-mono px-2 py-1 border rounded bg-gray-50 dark:bg-gray-800 dark:border-gray-650 dark:text-white"
+                              readOnly
+                              className="mt-1 text-[11px] font-mono px-2 py-1 border rounded bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-350 cursor-not-allowed opacity-80"
                             />
                           </div>
                           

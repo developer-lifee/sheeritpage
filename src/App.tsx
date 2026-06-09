@@ -365,7 +365,7 @@ function AppContent() {
         </>
       )}
       <Footer />
-      <WhatsAppButton />
+      {currentView !== 'admin' && <WhatsAppButton />}
       
       {/* Floating Custom Combo Cart Button */}
       <FloatingCartButton />

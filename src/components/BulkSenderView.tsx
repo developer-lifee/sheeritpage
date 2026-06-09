@@ -29,6 +29,7 @@ export const BulkSenderView: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('todos');
   const [messageType, setMessageType] = useState<'custom' | 'credentials' | 'payment'>('custom');
   const [customMessage, setCustomMessage] = useState<string>('');
+  const [selectedClientPhones, setSelectedClientPhones] = useState<string[]>([]);
 
   // Selected WhatsApp Groups
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
@@ -129,6 +130,33 @@ export const BulkSenderView: React.FC = () => {
     return serviceMatches && statusMatches;
   });
 
+  // Auto-select filtered clients on filter change
+  useEffect(() => {
+    const phones = filteredClients
+      .map(c => (c.numero || c.Numero || '').toString().replace(/\D/g, ''))
+      .filter(Boolean);
+    setSelectedClientPhones(phones);
+  }, [selectedService, selectedStatus, clients]);
+
+  const handleToggleSelectClient = (phone: string) => {
+    if (selectedClientPhones.includes(phone)) {
+      setSelectedClientPhones(selectedClientPhones.filter(p => p !== phone));
+    } else {
+      setSelectedClientPhones([...selectedClientPhones, phone]);
+    }
+  };
+
+  const handleToggleSelectAllClients = () => {
+    const allFilteredPhones = filteredClients
+      .map(c => (c.numero || c.Numero || '').toString().replace(/\D/g, ''))
+      .filter(Boolean);
+    if (selectedClientPhones.length === allFilteredPhones.length) {
+      setSelectedClientPhones([]);
+    } else {
+      setSelectedClientPhones(allFilteredPhones);
+    }
+  };
+
   const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
   // Send single message to client/group
@@ -148,24 +176,33 @@ export const BulkSenderView: React.FC = () => {
 
   // Run bulk sending for Clientes
   const startBulkClients = async () => {
-    if (filteredClients.length === 0) return;
+    const clientsToSend = filteredClients.filter(c => {
+      const phone = (c.numero || c.Numero || '').toString().replace(/\D/g, '');
+      return selectedClientPhones.includes(phone);
+    });
+
+    if (clientsToSend.length === 0) {
+      alert("Por favor, selecciona al menos un cliente para el envío.");
+      return;
+    }
+
     if (messageType === 'custom' && !customMessage.trim()) {
       alert("Por favor, ingresa el mensaje personalizado a enviar.");
       return;
     }
 
-    const confirmSend = window.confirm(`¿Estás seguro de enviar esta difusión a ${filteredClients.length} clientes? Se enviará con un delay de seguridad de 2 segundos para evitar baneos.`);
+    const confirmSend = window.confirm(`¿Estás seguro de enviar esta difusión a ${clientsToSend.length} clientes seleccionados? Se enviará con un delay de seguridad de 2 segundos para evitar baneos.`);
     if (!confirmSend) return;
 
     setIsSending(true);
     setSendingLogs([]);
-    setSendProgress({ current: 0, total: filteredClients.length, success: 0, fail: 0 });
+    setSendProgress({ current: 0, total: clientsToSend.length, success: 0, fail: 0 });
 
     let successCount = 0;
     let failCount = 0;
 
-    for (let i = 0; i < filteredClients.length; i++) {
-      const client = filteredClients[i];
+    for (let i = 0; i < clientsToSend.length; i++) {
+      const client = clientsToSend[i];
       const phone = (client.numero || client.Numero || '').toString().replace(/\D/g, '');
       const clientName = client.Nombre || 'Cliente';
       
@@ -203,7 +240,7 @@ export const BulkSenderView: React.FC = () => {
       setSendProgress(prev => ({ ...prev, current: i + 1, success: successCount, fail: failCount }));
       
       // Safety delay
-      if (i < filteredClients.length - 1) {
+      if (i < clientsToSend.length - 1) {
         await sleep(2000);
       }
     }
@@ -352,11 +389,66 @@ export const BulkSenderView: React.FC = () => {
             </div>
           )}
 
+          {/* List of clients from Database */}
+          <div className="border dark:border-gray-750 rounded-2xl p-4 bg-gray-50/25 dark:bg-gray-900/10">
+            <div className="flex justify-between items-center mb-3">
+              <label className="block text-xs font-semibold text-gray-400 dark:text-gray-300 uppercase tracking-wider">
+                Clientes a enviar ({selectedClientPhones.length} de {filteredClients.length} filtrados)
+              </label>
+              {filteredClients.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleToggleSelectAllClients}
+                  className="text-xs text-brand-primary hover:underline font-bold"
+                >
+                  {selectedClientPhones.length === filteredClients.filter(c => c.numero || c.Numero).length ? 'Deseleccionar Todos' : 'Seleccionar Todos'}
+                </button>
+              )}
+            </div>
+
+            {loadingClients ? (
+              <div className="flex justify-center py-6 text-gray-400 text-xs">
+                <RefreshCw className="w-4 h-4 animate-spin text-brand-primary mr-2" />
+                Cargando listado...
+              </div>
+            ) : filteredClients.length === 0 ? (
+              <p className="text-xs text-gray-400 py-4 text-center">Ningún cliente coincide con los filtros elegidos.</p>
+            ) : (
+              <div className="max-h-60 overflow-y-auto border dark:border-gray-750 rounded-xl bg-white dark:bg-gray-850 divide-y dark:divide-gray-750">
+                {filteredClients.map((client, idx) => {
+                  const phone = (client.numero || client.Numero || '').toString().replace(/\D/g, '');
+                  const isChecked = selectedClientPhones.includes(phone);
+                  return (
+                    <div 
+                      key={idx}
+                      onClick={() => phone && handleToggleSelectClient(phone)}
+                      className={`flex items-center gap-3 p-3 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${isChecked ? 'bg-brand-primary/5' : ''}`}
+                    >
+                      <input 
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {}} // handled by container click
+                        className="rounded text-brand-primary focus:ring-brand-primary"
+                        disabled={!phone}
+                      />
+                      <div className="flex-grow grid grid-cols-2 sm:grid-cols-4 gap-2 text-gray-700 dark:text-gray-300">
+                        <span className="font-bold truncate">{client.Nombre || 'N/A'}</span>
+                        <span className="font-mono text-gray-500 dark:text-gray-450">{phone || 'Sin número'}</span>
+                        <span className="truncate text-brand-primary dark:text-brand-light font-medium bg-brand-primary/10 px-2 py-0.5 rounded w-fit">{client.Streaming || 'N/A'}</span>
+                        <span className="text-gray-400 text-right sm:text-left">Vence: {client.deben || client.vencimiento || '-'}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Action button & Preview summary */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-emerald-500/10 dark:bg-emerald-950/20 border border-emerald-500/20 rounded-2xl gap-4">
             <div>
               <p className="text-emerald-800 dark:text-emerald-300 font-bold text-base">
-                Destinatarios Seleccionados: {filteredClients.length} clientes
+                Destinatarios Seleccionados: {selectedClientPhones.length} clientes
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 Filtros actuales: Servicio ({selectedService}) y Vencimiento ({selectedStatus})
@@ -365,7 +457,7 @@ export const BulkSenderView: React.FC = () => {
             
             <button
               onClick={startBulkClients}
-              disabled={isSending || filteredClients.length === 0}
+              disabled={isSending || selectedClientPhones.length === 0}
               className="flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold transition-all disabled:opacity-50 w-full sm:w-auto"
             >
               <Play className="w-4 h-4 mr-2" />

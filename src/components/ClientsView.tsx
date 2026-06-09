@@ -268,6 +268,18 @@ export const ClientsView: React.FC = () => {
                         <option value="proximos">⚠️ Próximos a Vencer (7 días o menos)</option>
                         <option value="vencidos">🚨 Vencidos</option>
                     </select>
+
+                    {/* Streaming/Service Filter */}
+                    <select
+                        value={filterService}
+                        onChange={(e) => setFilterService(e.target.value)}
+                        className="px-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary cursor-pointer font-medium"
+                    >
+                        <option value="">Todos los Servicios</option>
+                        {uniqueServices.map((service) => (
+                            <option key={service} value={service}>{service}</option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
