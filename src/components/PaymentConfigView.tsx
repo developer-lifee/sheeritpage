@@ -197,14 +197,25 @@ export const PaymentConfigView: React.FC = () => {
           {Object.keys(config).map((key) => {
             const method = config[key];
             return (
-              <div key={key} className="p-5 rounded-2xl border border-gray-150 dark:border-gray-750 bg-gray-50/50 dark:bg-gray-900/10 flex flex-col justify-between">
+              <div key={key} className="p-5 rounded-2xl border border-gray-150 dark:border-gray-750 bg-gray-50/50 dark:bg-gray-900/10 flex flex-col justify-between transition-all duration-300">
                 <div>
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center justify-between mb-2">
                     <div className="flex flex-col">
-                      <span className="font-bold text-gray-900 dark:text-white text-base">
-                        {method.label}
-                      </span>
-                      <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mt-1.5 w-fit ${method.automatic ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300' : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300'}`}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-gray-900 dark:text-white text-base">
+                          {method.label}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => toggleExpandMethod(key)}
+                          className="text-gray-400 hover:text-gray-600 dark:hover:text-white p-1 hover:bg-gray-200/50 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-1"
+                          title={expandedMethods[key] ? "Colapsar configuración" : "Expandir configuración"}
+                        >
+                          {expandedMethods[key] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{expandedMethods[key] ? 'Ocultar' : 'Configurar'}</span>
+                        </button>
+                      </div>
+                      <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 w-fit ${method.automatic ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300' : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300'}`}>
                         {method.automatic ? '⚡ Automatización Activa' : '⚠️ Validación Manual'}
                       </span>
                     </div>
@@ -221,60 +232,64 @@ export const PaymentConfigView: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="mt-2">
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Mensaje e Instrucciones de Pago</label>
-                    <textarea
-                      rows={4}
-                      value={method.description}
-                      readOnly
-                      className="w-full text-xs font-mono p-3 bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-80 border dark:border-gray-700 rounded-xl dark:text-gray-300 focus:outline-none"
-                    />
-                  </div>
+                  {expandedMethods[key] && (
+                    <div className="mt-4 space-y-4 animate-fadeIn">
+                      <div className="mt-2">
+                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Mensaje e Instrucciones de Pago</label>
+                        <textarea
+                          rows={4}
+                          value={method.description}
+                          readOnly
+                          className="w-full text-xs font-mono p-3 bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-80 border dark:border-gray-700 rounded-xl dark:text-gray-300 focus:outline-none"
+                        />
+                      </div>
 
-                  {method.sub_methods && (
-                    <div className="mt-4 p-4 bg-white dark:bg-gray-750 border dark:border-gray-700 rounded-xl space-y-3">
-                      <span className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider">Sub-métodos / Llaves individuales</span>
-                      {method.sub_methods.map((sub) => (
-                        <div key={sub.id} className="flex items-center justify-between border-b dark:border-gray-700 pb-2 last:border-0 last:pb-0">
-                          <div className="flex flex-col flex-grow pr-4">
-                            <span className="text-xs font-bold text-gray-800 dark:text-white">{sub.label}</span>
-                            <input
-                              type="text"
-                              value={sub.value}
-                              readOnly
-                              className="mt-1 text-[11px] font-mono px-2 py-1 border rounded bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-350 cursor-not-allowed opacity-80"
-                            />
-                          </div>
-                          
-                          <div className="flex items-center gap-4">
-                            <div className="flex flex-col items-center">
-                              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Auto ⚡</span>
-                              <button
-                                type="button"
-                                onClick={() => handleSubAutomaticToggle(key, sub.id)}
-                                className={`relative inline-flex h-4 w-7 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${sub.automatic ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-gray-750'}`}
-                              >
-                                <span
-                                  className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${sub.automatic ? 'translate-x-3' : 'translate-x-0'}`}
+                      {method.sub_methods && (
+                        <div className="p-4 bg-white dark:bg-gray-750 border dark:border-gray-700 rounded-xl space-y-3">
+                          <span className="block text-[10px] font-bold text-gray-450 uppercase tracking-wider">Sub-métodos / Llaves individuales</span>
+                          {method.sub_methods.map((sub) => (
+                            <div key={sub.id} className="flex items-center justify-between border-b dark:border-gray-700 pb-2 last:border-0 last:pb-0">
+                              <div className="flex flex-col flex-grow pr-4">
+                                <span className="text-xs font-bold text-gray-800 dark:text-white">{sub.label}</span>
+                                <input
+                                  type="text"
+                                  value={sub.value}
+                                  readOnly
+                                  className="mt-1 text-[11px] font-mono px-2 py-1 border rounded bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-355 cursor-not-allowed opacity-80"
                                 />
-                              </button>
-                            </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-4">
+                                <div className="flex flex-col items-center">
+                                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Auto ⚡</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSubAutomaticToggle(key, sub.id)}
+                                    className={`relative inline-flex h-4 w-7 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${sub.automatic ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-gray-750'}`}
+                                  >
+                                    <span
+                                      className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${sub.automatic ? 'translate-x-3' : 'translate-x-0'}`}
+                                    />
+                                  </button>
+                                </div>
 
-                            <div className="flex flex-col items-center">
-                              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Activo</span>
-                              <button
-                                type="button"
-                                onClick={() => handleSubToggle(key, sub.id)}
-                                className={`relative inline-flex h-4 w-7 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${sub.enabled ? 'bg-brand-primary' : 'bg-gray-200 dark:bg-gray-750'}`}
-                              >
-                                <span
-                                  className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${sub.enabled ? 'translate-x-3' : 'translate-x-0'}`}
-                                />
-                              </button>
+                                <div className="flex flex-col items-center">
+                                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Activo</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSubToggle(key, sub.id)}
+                                    className={`relative inline-flex h-4 w-7 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${sub.enabled ? 'bg-brand-primary' : 'bg-gray-200 dark:bg-gray-750'}`}
+                                  >
+                                    <span
+                                      className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${sub.enabled ? 'translate-x-3' : 'translate-x-0'}`}
+                                    />
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                          </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
                   )}
                 </div>
