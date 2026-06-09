@@ -83,8 +83,8 @@ export function ReviewsSection() {
             }}
             className="py-8 px-12"
           >
-            {reviews.map((review) => (
-              <SwiperSlide key={review.id} className="px-2">
+            {reviews.map((review, index) => (
+              <SwiperSlide key={`${review.id}-${index}`} className="px-2">
                 <ReviewCard {...review} />
               </SwiperSlide>
             ))}

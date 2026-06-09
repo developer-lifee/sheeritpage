@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, ShieldAlert, LogOut, Lock } from 'lucide-react';
+import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock } from 'lucide-react';
 
 interface AccountInfo {
   streaming: string;
@@ -129,12 +129,13 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     });
   };
 
-
+  // Safe names helper for null safety
+  const safeAgentName = (agentName || '').toLowerCase().trim();
 
   // Filter columns
   const unassignedTickets = tickets.filter(t => !t.agent);
-  const myTickets = tickets.filter(t => t.agent && t.agent.toLowerCase().trim() === agentName.toLowerCase().trim());
-  const otherTickets = tickets.filter(t => t.agent && t.agent.toLowerCase().trim() !== agentName.toLowerCase().trim());
+  const myTickets = tickets.filter(t => t.agent && t.agent.toLowerCase().trim() === safeAgentName);
+  const otherTickets = tickets.filter(t => t.agent && t.agent.toLowerCase().trim() !== safeAgentName);
 
   const renderTicketCard = (t: Ticket) => {
     const timeDiff = t.lastMessageTime ? Math.round((Date.now() - t.lastMessageTime) / 60000) : null;
@@ -142,13 +143,14 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     const shared = findSharedTickets(t);
     const hasShared = shared.length > 0;
     const isBotMode = t.waitingHumanMode === 'bot';
+    const cleanTicketAgent = (t.agent || '').toLowerCase().trim();
 
     return (
       <div
         key={t.userId}
         className={`bg-white dark:bg-gray-800 rounded-xl p-4 border transition-all duration-200 hover:shadow-md ${
           t.agent
-            ? t.agent.toLowerCase().trim() === agentName.toLowerCase().trim()
+            ? cleanTicketAgent === safeAgentName
               ? 'border-emerald-250 dark:border-emerald-900/50 shadow-emerald-50/10'
               : 'border-blue-200 dark:border-blue-900/40 shadow-blue-50/10'
             : 'border-amber-250 dark:border-amber-900/30 hover:border-amber-300'
@@ -156,7 +158,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       >
         <div className="flex justify-between items-start mb-2.5">
           <div>
-            <h4 className="font-bold text-sm text-gray-850 dark:text-white flex items-center gap-1.5">
+            <h4 className="font-bold text-sm text-gray-855 dark:text-white flex items-center gap-1.5">
               {t.nombre || 'Cliente WhatsApp'}
             </h4>
             <span className="text-xs font-mono text-gray-400 dark:text-gray-500">+{t.phone}</span>
@@ -176,7 +178,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
             {t.agent ? (
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                t.agent.toLowerCase().trim() === agentName.toLowerCase().trim()
+                cleanTicketAgent === safeAgentName
                   ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300'
                   : 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300'
               }`}>
@@ -231,7 +233,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         )}
 
         {/* Último Mensaje */}
-        <div className="bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-lg mb-3 border dark:border-gray-750">
+        <div className="bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-lg mb-3 border dark:border-gray-755">
           <p className="text-[9px] text-gray-450 font-bold uppercase tracking-wider mb-0.5">Último Mensaje:</p>
           <p className="text-xs text-gray-650 dark:text-gray-300 italic line-clamp-2">
             "{t.lastMessage || 'Mensaje de sistema / adjunto'}"
@@ -263,7 +265,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 Reclamar
               </button>
             )}
-            {t.agent && t.agent.toLowerCase().trim() !== agentName.toLowerCase().trim() && (
+            {t.agent && cleanTicketAgent !== safeAgentName && (
               <button
                 onClick={() => handleClaim(t.phone, agentName)}
                 className="bg-gray-150 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-200 font-bold text-[10px] px-2.5 py-1.5 rounded-md transition-colors"
@@ -271,7 +273,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 Re-asignar
               </button>
             )}
-            {t.agent && t.agent.toLowerCase().trim() === agentName.toLowerCase().trim() && (
+            {t.agent && cleanTicketAgent === safeAgentName && (
               <button
                 onClick={() => handleClaim(t.phone, '')}
                 className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-650 text-gray-600 dark:text-gray-300 font-bold text-[10px] px-2.5 py-1.5 rounded-md transition-colors"
@@ -313,7 +315,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             <RefreshCw className="w-4 h-4" />
           </button>
           <button
-            onClick={handleLogout}
+            onClick={onLogout}
             className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-colors border border-red-100 dark:border-red-900/30 flex items-center gap-1 text-xs font-bold"
             title="Cerrar Sesión"
           >

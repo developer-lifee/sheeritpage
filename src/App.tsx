@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { ComboMenu } from './components/ComboMenu';
@@ -129,14 +129,28 @@ function AdminLoginOnApp({ onSuccess }: { onSuccess: () => void }) {
 }
 
 function AppContent() {
-  const [currentView, setCurrentView] = useState<ViewState>('home');
+  const [currentView, setCurrentView] = useState<ViewState>(() => {
+    const rawPath = window.location.pathname;
+    const path = rawPath === '/' ? '/' : rawPath.replace(/\/$/, '');
+    if (path === '/aiuda') return 'support';
+    if (path === '/aiuda/admin') return 'admin';
+    if (path === '/verificar') return 'verificar';
+    return 'home';
+  });
   const [isAdminAuth, setIsAdminAuth] = useState(() => {
     const email = localStorage.getItem('ticket_agent_email') || '';
     const pass = localStorage.getItem('ticket_agent_password') || '';
     const cleanEmail = email.trim().toLowerCase();
     const hasValidEmail = !!AUTHORIZED_ADVISORS[cleanEmail];
     const hasValidPass = pass.toLowerCase() === 'admin123';
-    return hasValidEmail && hasValidPass;
+    
+    if (hasValidEmail && hasValidPass) {
+      if (!localStorage.getItem('ticket_agent_name')) {
+        localStorage.setItem('ticket_agent_name', AUTHORIZED_ADVISORS[cleanEmail]);
+      }
+      return true;
+    }
+    return false;
   });
 
   useEffect(() => {
