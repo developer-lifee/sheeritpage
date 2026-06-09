@@ -266,23 +266,23 @@
     "id": 9,
     "name": "Paramount+",
     "image": "https://th.bing.com/th/id/R.b80c8814890d78ad63b43c0bc2f4b401?rik=M95rQ%2fqeKRSHPQ&pid=ImgRaw&r=0",
-    "price": 12000,
+    "price": 18000,
     "characteristics": [
-      "Video HDR 4K",
-      "Sin publicidad",
-      "Transmisión de los 104 partidos en vivo",
-      "Entrega en tiempo real"
+      "Video HDR 4K y sin publicidad",
+      "Transmisión en vivo (Mundial incluido 🏆)",
+      "Hasta 2 perfiles creados",
+      "1 dispositivo en reproducción simultánea"
     ],
     "plans": [
       {
         "id": 901,
         "name": "Suscripción",
-        "price": 12000,
+        "price": 18000,
         "characteristics": [
-          "Video HDR 4K",
-          "Sin publicidad",
-          "Transmisión de los 104 partidos en vivo",
-          "Entrega en tiempo real"
+          "Video HDR 4K y sin publicidad",
+          "Transmisión en vivo (Mundial incluido 🏆)",
+          "Hasta 2 perfiles creados",
+          "1 dispositivo en reproducción simultánea"
         ]
       }
     ]
