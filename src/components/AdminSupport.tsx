@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard } from 'lucide-react';
+import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard, Radio } from 'lucide-react';
 import { ClientsView } from './ClientsView';
 import { NetflixMatchView } from './NetflixMatchView';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
@@ -12,6 +12,7 @@ import { AvailabilityView } from './AvailabilityView';
 import { AccountAlertsView } from './AccountAlertsView';
 import { SupportScheduleView } from './SupportScheduleView';
 import { PaymentConfigView } from './PaymentConfigView';
+import { StreamingView } from './StreamingView';
 
 interface Step {
   text: string;
@@ -43,7 +44,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
   const [data, setData] = useState<SupportPlatform[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'payments'>('tickets');
+  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'payments' | 'streaming'>('tickets');
 
   // Platforms to recycle logos from
   const availableLogos = [
@@ -264,6 +265,12 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           <CreditCard className="w-5 h-5 mr-2" /> Pagos y Horarios
         </button>
         <button 
+          onClick={() => setActiveTab('streaming')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'streaming' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <Radio className="w-5 h-5 mr-2" /> Transmisión TV
+        </button>
+        <button 
           onClick={() => setActiveTab('netflix')}
           className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'netflix' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-red-50 dark:text-gray-400 dark:hover:bg-red-900/30'}`}
         >
@@ -292,6 +299,9 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       <div className={activeTab === 'payments' ? 'space-y-8' : 'hidden'}>
         <PaymentConfigView />
         <SupportScheduleView />
+      </div>
+      <div className={activeTab === 'streaming' ? '' : 'hidden'}>
+        <StreamingView adminPassword={adminPassword} />
       </div>
 
       <div className={activeTab === 'support' ? '' : 'hidden'}>
