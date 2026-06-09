@@ -33,6 +33,23 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Drag and drop state
+  const [draggedPhone, setDraggedPhone] = useState<string | null>(null);
+  const [draggedOverColumn, setDraggedOverColumn] = useState<'unassigned' | 'me' | 'other' | null>(null);
+
+  // Custom resolve dialog state
+  const [resolveDialog, setResolveDialog] = useState<{
+    phone: string;
+    nombre: string;
+    sharedTickets: { ticket: Ticket; matchingAccounts: AccountInfo[] }[];
+  } | null>(null);
+
+
+  // Custom assign dialog state
+  const [assignDialog, setAssignDialog] = useState<{
+    phone: string;
+  } | null>(null);
+
   const fetchTickets = (isSilent = false) => {
     if (!agentEmail) return;
     if (!isSilent) setLoading(true);
@@ -64,7 +81,37 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     }
   }, [agentEmail]);
 
-  const handleClaim = async (phone: string, targetAgent: string) => {
+  const handleDragStart = (e: React.DragEvent, phone: string) => {
+    e.dataTransfer.setData('text/plain', phone);
+    setDraggedPhone(phone);
+  };
+
+  const handleDragOver = (e: React.DragEvent, column: 'unassigned' | 'me' | 'other') => {
+    e.preventDefault();
+    setDraggedOverColumn(column);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetColumn: 'unassigned' | 'me' | 'other') => {
+    e.preventDefault();
+    setDraggedOverColumn(null);
+    const phone = e.dataTransfer.getData('text/plain') || draggedPhone;
+    setDraggedPhone(null);
+    if (!phone) return;
+
+    if (targetColumn === 'unassigned') {
+      // Optimistic update
+      setTickets(prev => prev.map(t => t.phone === phone ? { ...t, agent: null } : t));
+      await executeClaim(phone, '');
+    } else if (targetColumn === 'me') {
+      // Optimistic update
+      setTickets(prev => prev.map(t => t.phone === phone ? { ...t, agent: agentName } : t));
+      await executeClaim(phone, agentName);
+    } else if (targetColumn === 'other') {
+      setAssignDialog({ phone });
+    }
+  };
+
+  const executeClaim = async (phone: string, targetAgent: string) => {
     const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
       ? 'http://localhost:3000' 
       : 'https://bot.sheerit.com.co';
@@ -75,23 +122,50 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         body: JSON.stringify({ phone, agent: targetAgent, password: 'admin123' })
       });
       const result = await res.json();
-      if (result.success) {
-        fetchTickets();
-      } else {
+      if (!result.success) {
         alert(`❌ Error: ${result.message}`);
       }
+      fetchTickets(true); // Silent reload to sync with backend
     } catch (err) {
       alert('❌ Error al conectar con el backend.');
+      fetchTickets(true);
     }
   };
 
-  const handleResolve = async (phone: string, sharedCount = 0) => {
-    let confirmMsg = '¿Estás seguro de resolver este ticket? El bot volverá a responder automáticamente a este cliente.';
-    if (sharedCount > 0) {
-      confirmMsg = `⚠️ ¡ATENCIÓN! Este usuario comparte cuenta con otros ${sharedCount} cliente(s) que tienen tickets abiertos. ¿Estás seguro de resolver este ticket? Se cerrarán en conjunto automáticamente.`;
+  const handleClaim = (phone: string, targetAgent: string) => {
+    setTickets(prev => prev.map(t => t.phone === phone ? { ...t, agent: targetAgent || null } : t));
+    executeClaim(phone, targetAgent);
+  };
+
+  const handleResolveClick = (t: Ticket) => {
+    const sharedWithDetails = findSharedTicketsWithDetails(t);
+    if (sharedWithDetails.length > 0) {
+      setResolveDialog({
+        phone: t.phone,
+        nombre: t.nombre || 'Cliente WhatsApp',
+        sharedTickets: sharedWithDetails
+      });
+    } else {
+      if (window.confirm(`¿Estás seguro de resolver el ticket de ${t.nombre || t.phone}?`)) {
+        executeResolve(t.phone, false);
+      }
     }
-    const confirmRelease = window.confirm(confirmMsg);
-    if (!confirmRelease) return;
+  };
+
+  const executeResolve = async (phone: string, resolveAll: boolean) => {
+    setResolveDialog(null);
+    
+    // Optimistic update
+    if (resolveAll) {
+      const targetTicket = tickets.find(t => t.phone === phone);
+      if (targetTicket) {
+        const sharedWithDetails = findSharedTicketsWithDetails(targetTicket);
+        const phonesToRemove = [phone, ...sharedWithDetails.map(s => s.ticket.phone)];
+        setTickets(prev => prev.filter(t => !phonesToRemove.includes(t.phone)));
+      }
+    } else {
+      setTickets(prev => prev.filter(t => t.phone !== phone));
+    }
 
     const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
       ? 'http://localhost:3000' 
@@ -100,36 +174,41 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       const res = await fetch(`${apiUrl}/api/admin/tickets/resolve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, password: 'admin123' })
+        body: JSON.stringify({ phone, password: 'admin123', resolveAll })
       });
       const result = await res.json();
-      if (result.success) {
-        fetchTickets();
-        if (sharedCount > 0) {
-          alert(`✅ Exito: ${result.message}`);
-        }
-      } else {
+      if (!result.success) {
         alert(`❌ Error: ${result.message}`);
       }
+      fetchTickets(true); // Silent sync
     } catch (err) {
       alert('❌ Error al conectar con el backend.');
+      fetchTickets(true);
     }
   };
 
-  const findSharedTickets = (ticket: Ticket) => {
+  const findSharedTicketsWithDetails = (ticket: Ticket) => {
     if (!ticket.accounts || ticket.accounts.length === 0) return [];
     const ticketEmails = ticket.accounts.map(a => a.correo.toLowerCase().trim()).filter(Boolean);
     if (ticketEmails.length === 0) return [];
 
-    return tickets.filter(t => {
-      if (t.userId === ticket.userId) return false;
-      if (!t.accounts) return false;
-      return t.accounts.some(a => {
-        const email = a.correo.toLowerCase().trim();
-        return email && ticketEmails.includes(email);
-      });
-    });
+    return tickets
+      .filter(t => t.userId !== ticket.userId)
+      .map(t => {
+        if (!t.accounts) return null;
+        const matchingAccounts = t.accounts.filter(a => {
+          const email = a.correo.toLowerCase().trim();
+          return email && ticketEmails.includes(email);
+        });
+        if (matchingAccounts.length === 0) return null;
+        return {
+          ticket: t,
+          matchingAccounts
+        };
+      })
+      .filter(Boolean) as { ticket: Ticket; matchingAccounts: AccountInfo[] }[];
   };
+
 
   // Safe names helper for null safety
   const safeAgentName = (agentName || '').toLowerCase().trim();
@@ -156,15 +235,17 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const renderTicketCard = (t: Ticket) => {
     const timeDiff = t.lastMessageTime ? Math.round((Date.now() - t.lastMessageTime) / 60000) : null;
     const waLink = `https://web.whatsapp.com/send?phone=${t.phone}`;
-    const shared = findSharedTickets(t);
-    const hasShared = shared.length > 0;
+    const sharedWithDetails = findSharedTicketsWithDetails(t);
+    const hasShared = sharedWithDetails.length > 0;
     const isBotMode = t.waitingHumanMode === 'bot';
     const cleanTicketAgent = (t.agent || '').toLowerCase().trim();
 
     return (
       <div
         key={t.userId}
-        className={`bg-white dark:bg-gray-800 rounded-xl p-4 border transition-all duration-200 hover:shadow-md ${
+        draggable
+        onDragStart={(e) => handleDragStart(e, t.phone)}
+        className={`bg-white dark:bg-gray-800 rounded-xl p-4 border transition-all duration-200 hover:shadow-md cursor-grab active:cursor-grabbing ${
           t.agent
             ? cleanTicketAgent === safeAgentName
               ? 'border-emerald-250 dark:border-emerald-900/50 shadow-emerald-50/10'
@@ -243,15 +324,27 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             <p className="text-[11px] leading-tight">
               Comparte cuenta con:
             </p>
-            <div className="flex flex-col gap-0.5 pl-1.5 border-l-2 border-red-300 dark:border-red-800">
-              {shared.map(s => (
-                <span key={s.userId} className="text-[10px] font-mono">
-                  • {s.nombre} (+{s.phone})
-                </span>
+            <div className="flex flex-col gap-1.5 pl-1.5 border-l-2 border-red-300 dark:border-red-800">
+              {sharedWithDetails.map(({ ticket: s, matchingAccounts }) => (
+                <div key={s.userId} className="text-[10px]">
+                  <span className="font-bold">• {s.nombre} (+{s.phone})</span>
+                  <div className="flex flex-wrap gap-1 mt-0.5 pl-2">
+                    {matchingAccounts.map((acc, idx) => (
+                      <span key={idx} className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-200 text-[8px] font-mono px-1.5 py-0.2 rounded border border-red-200 dark:border-red-800/40">
+                        📺 {acc.streaming}: {acc.correo}
+                      </span>
+                    ))}
+                  </div>
+                  {s.summary && (
+                    <p className="text-[9px] text-gray-500 dark:text-gray-400 italic pl-2 mt-0.5">
+                      Motivo: {s.summary}
+                    </p>
+                  )}
+                </div>
               ))}
             </div>
             <span className="text-[9px] text-red-500 dark:text-red-400 font-semibold italic mt-1">
-              * Resolver este ticket resolverá los demás en lote.
+              * Puedes elegir resolverlos en lote o por separado.
             </span>
           </div>
         )}
@@ -283,6 +376,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
           <div className="flex gap-1">
             {!t.agent && (
               <button
+                type="button"
                 onClick={() => handleClaim(t.phone, agentName)}
                 className="bg-brand-primary hover:bg-brand-dark text-white font-bold text-[10px] px-2.5 py-1.5 rounded-md transition-colors"
               >
@@ -291,6 +385,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             )}
             {t.agent && cleanTicketAgent !== safeAgentName && (
               <button
+                type="button"
                 onClick={() => handleClaim(t.phone, agentName)}
                 className="bg-gray-150 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-200 font-bold text-[10px] px-2.5 py-1.5 rounded-md transition-colors"
               >
@@ -299,6 +394,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             )}
             {t.agent && cleanTicketAgent === safeAgentName && (
               <button
+                type="button"
                 onClick={() => handleClaim(t.phone, '')}
                 className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-650 text-gray-600 dark:text-gray-300 font-bold text-[10px] px-2.5 py-1.5 rounded-md transition-colors"
               >
@@ -306,7 +402,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
               </button>
             )}
             <button
-              onClick={() => handleResolve(t.phone, shared.length)}
+              type="button"
+              onClick={() => handleResolveClick(t)}
               className="bg-green-600 hover:bg-green-700 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-md transition-colors flex items-center gap-0.5"
             >
               <CheckCircle className="w-3 h-3" /> Resolver
@@ -316,6 +413,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       </div>
     );
   };
+
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-md border dark:border-gray-800 p-6">
@@ -384,7 +482,14 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
           {/* Column 1: Unassigned */}
-          <div className="bg-amber-50/30 dark:bg-amber-950/5 rounded-xl p-4 border border-amber-100/50 dark:border-amber-950/20 flex flex-col min-h-[500px]">
+          <div 
+            onDragOver={(e) => handleDragOver(e, 'unassigned')}
+            onDragLeave={() => setDraggedOverColumn(null)}
+            onDrop={(e) => handleDrop(e, 'unassigned')}
+            className={`bg-amber-50/30 dark:bg-amber-950/5 rounded-xl p-4 border border-amber-100/50 dark:border-amber-950/20 flex flex-col min-h-[500px] transition-all duration-200 ${
+              draggedOverColumn === 'unassigned' ? 'ring-2 ring-amber-500/50 bg-amber-100/10 dark:bg-amber-950/15 scale-[1.01]' : ''
+            }`}
+          >
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-amber-100 dark:border-amber-900/20">
               <h3 className="font-bold text-gray-700 dark:text-gray-250 flex items-center gap-2 text-sm">
                 <span className="w-2.5 h-2.5 bg-amber-500 rounded-full"></span> Sin Asignar
@@ -397,7 +502,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             <div className="flex flex-col gap-4 overflow-y-auto max-h-[600px] pr-1">
               {unassignedTickets.length === 0 ? (
                 <div className="text-center py-8 text-xs text-gray-400 dark:text-gray-500 font-medium">
-                  No hay tickets sin asignar
+                  No hay tickets sin asignar o suelta uno aquí
                 </div>
               ) : (
                 unassignedTickets.map(renderTicketCard)
@@ -406,7 +511,14 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
           </div>
 
           {/* Column 2: Assigned to Me */}
-          <div className="bg-emerald-50/20 dark:bg-emerald-950/5 rounded-xl p-4 border border-emerald-100/50 dark:border-emerald-950/20 flex flex-col min-h-[500px]">
+          <div 
+            onDragOver={(e) => handleDragOver(e, 'me')}
+            onDragLeave={() => setDraggedOverColumn(null)}
+            onDrop={(e) => handleDrop(e, 'me')}
+            className={`bg-emerald-50/20 dark:bg-emerald-950/5 rounded-xl p-4 border border-emerald-100/50 dark:border-emerald-950/20 flex flex-col min-h-[500px] transition-all duration-200 ${
+              draggedOverColumn === 'me' ? 'ring-2 ring-emerald-500/50 bg-emerald-100/10 dark:bg-emerald-950/15 scale-[1.01]' : ''
+            }`}
+          >
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-emerald-100 dark:border-emerald-900/20">
               <h3 className="font-bold text-gray-700 dark:text-gray-250 flex items-center gap-2 text-sm">
                 <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full"></span> Mis Asignaciones
@@ -419,7 +531,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             <div className="flex flex-col gap-4 overflow-y-auto max-h-[600px] pr-1">
               {myTickets.length === 0 ? (
                 <div className="text-center py-8 text-xs text-gray-400 dark:text-gray-500 font-medium">
-                  No tienes tickets asignados
+                  No tienes tickets asignados o arrastra uno aquí
                 </div>
               ) : (
                 myTickets.map(renderTicketCard)
@@ -428,7 +540,14 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
           </div>
 
           {/* Column 3: Assigned to Others */}
-          <div className="bg-blue-50/20 dark:bg-blue-950/5 rounded-xl p-4 border border-blue-100/50 dark:border-blue-950/20 flex flex-col min-h-[500px]">
+          <div 
+            onDragOver={(e) => handleDragOver(e, 'other')}
+            onDragLeave={() => setDraggedOverColumn(null)}
+            onDrop={(e) => handleDrop(e, 'other')}
+            className={`bg-blue-50/20 dark:bg-blue-950/5 rounded-xl p-4 border border-blue-100/50 dark:border-blue-950/20 flex flex-col min-h-[500px] transition-all duration-200 ${
+              draggedOverColumn === 'other' ? 'ring-2 ring-blue-500/50 bg-blue-100/10 dark:bg-blue-950/15 scale-[1.01]' : ''
+            }`}
+          >
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-blue-100 dark:border-blue-900/20">
               <h3 className="font-bold text-gray-700 dark:text-gray-250 flex items-center gap-2 text-sm">
                 <span className="w-2.5 h-2.5 bg-blue-500 rounded-full"></span> Otros Asesores
@@ -451,6 +570,121 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
         </div>
       )}
+
+      {/* Custom Resolve Dialog Modal */}
+      {resolveDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fadeIn">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border dark:border-gray-750">
+            <h3 className="text-lg font-bold text-gray-950 dark:text-white mb-2 flex items-center gap-1.5">
+              ⚠️ Resolver Ticket en Lote
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              El cliente <strong>{resolveDialog.nombre}</strong> comparte cuenta con los siguientes clientes que también tienen tickets de soporte abiertos:
+            </p>
+            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 mb-4 max-h-60 overflow-y-auto border dark:border-gray-750 flex flex-col gap-3">
+              {resolveDialog.sharedTickets.map(({ ticket: s, matchingAccounts }) => (
+                <div key={s.userId} className="text-xs pb-3 border-b last:border-0 last:pb-0 border-gray-150 dark:border-gray-800 flex flex-col gap-1 dark:text-gray-305">
+                  <div className="flex justify-between items-center font-bold">
+                    <span>👤 {s.nombre || 'Cliente WhatsApp'}</span>
+                    <span className="font-mono text-gray-400">+{s.phone}</span>
+                  </div>
+                  
+                  {/* Shared account details */}
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    <span className="text-[10px] text-gray-400 uppercase font-bold mr-1">Cuentas compartidas:</span>
+                    {matchingAccounts.map((acc, idx) => (
+                      <span key={idx} className="bg-red-55 dark:bg-red-950 text-red-700 dark:text-red-300 text-[10px] px-1.5 py-0.5 rounded border border-red-100 dark:border-red-900/30">
+                        📺 {acc.streaming} ({acc.correo})
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Summary/Reason of ticket */}
+                  {s.summary && (
+                    <div className="mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded text-[11px] text-gray-600 dark:text-gray-400 italic">
+                      <strong>Motivo:</strong> {s.summary}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <p className="text-xs text-amber-600 dark:text-amber-400 mb-6 font-medium bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded-lg border border-amber-100 dark:border-amber-900/20">
+              💡 <strong>Nota:</strong> A veces la falla es individual (solo le falla a una persona la cuenta). Compara los motivos/resúmenes de arriba antes de decidir si los resuelves en lote o de forma individual.
+            </p>
+            
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => executeResolve(resolveDialog.phone, false)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
+              >
+                Resolver SOLO el de {resolveDialog.nombre}
+              </button>
+              <button
+                type="button"
+                onClick={() => executeResolve(resolveDialog.phone, true)}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
+              >
+                Resolver TODOS en Lote
+              </button>
+              <button
+                type="button"
+                onClick={() => setResolveDialog(null)}
+                className="w-full bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-650 hover:bg-gray-200 text-gray-750 dark:text-gray-200 font-bold py-2.5 rounded-xl text-sm transition-all"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Assign Dialog Modal */}
+      {assignDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fadeIn">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl border dark:border-gray-750">
+            <h3 className="text-lg font-bold text-gray-950 dark:text-white mb-4 flex items-center gap-1.5">
+              👤 Asignar Ticket a Asesor
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-5">
+              Selecciona el asesor al que deseas asignar este ticket:
+            </p>
+            
+            <div className="space-y-2 mb-6">
+              {['Camilo', 'Esclepiades', 'Esteban'].map(advisor => {
+                const isCurrent = advisor.toLowerCase() === agentName.toLowerCase();
+                return (
+                  <button
+                    type="button"
+                    key={advisor}
+                    onClick={async () => {
+                      const phone = assignDialog.phone;
+                      setAssignDialog(null);
+                      setTickets(prev => prev.map(t => t.phone === phone ? { ...t, agent: advisor } : t));
+                      await executeClaim(phone, advisor);
+                    }}
+                    className="w-full text-left bg-gray-50 dark:bg-gray-900/40 hover:bg-brand-primary/10 dark:hover:bg-brand-primary/20 hover:text-brand-primary p-3 rounded-xl border dark:border-gray-750 flex justify-between items-center text-sm font-semibold transition-all dark:text-white"
+                  >
+                    <span>{advisor} {isCurrent && '(Tú)'}</span>
+                    <span className="text-[10px] bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-350 px-2 py-0.5 rounded-full font-bold">Asesor</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setAssignDialog(null)}
+              className="w-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-650 text-gray-750 dark:text-gray-200 font-bold py-2.5 rounded-xl text-sm transition-all"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+
