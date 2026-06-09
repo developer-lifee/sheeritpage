@@ -19,7 +19,9 @@ interface Ticket {
   waitingHumanMode?: 'bot' | 'advisor';
   accounts?: AccountInfo[];
   summary?: string;
+  queuePosition?: number | null;
 }
+
 
 interface TicketsViewProps {
   agentEmail: string;
@@ -232,8 +234,26 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const myTickets = filteredTickets.filter(t => t.agent && t.agent.toLowerCase().trim() === safeAgentName);
   const otherTickets = filteredTickets.filter(t => t.agent && t.agent.toLowerCase().trim() !== safeAgentName);
 
+  const formatTimeDiff = (timestamp: number | null) => {
+    if (!timestamp) return null;
+    const diffMs = Date.now() - timestamp;
+    const diffMins = Math.round(diffMs / 60000);
+    if (diffMins < 1) return 'Hace un momento';
+    if (diffMins < 60) return `Hace ${diffMins} min${diffMins > 1 ? 's' : ''}`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    const remainingMins = diffMins % 60;
+    if (diffHours < 24) {
+      return `Hace ${diffHours} hr${diffHours > 1 ? 's' : ''}${remainingMins > 0 ? ` y ${remainingMins} min${remainingMins > 1 ? 's' : ''}` : ''}`;
+    }
+    
+    const diffDays = Math.floor(diffHours / 24);
+    const remainingHours = diffHours % 24;
+    return `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}${remainingHours > 0 ? ` y ${remainingHours} hr${remainingHours > 1 ? 's' : ''}` : ''}`;
+  };
+
   const renderTicketCard = (t: Ticket) => {
-    const timeDiff = t.lastMessageTime ? Math.round((Date.now() - t.lastMessageTime) / 60000) : null;
+    const timeFormatted = formatTimeDiff(t.lastMessageTime);
     const waLink = `https://web.whatsapp.com/send?phone=${t.phone}`;
     const sharedWithDetails = findSharedTicketsWithDetails(t);
     const hasShared = sharedWithDetails.length > 0;
@@ -258,7 +278,14 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             <h4 className="font-bold text-sm text-gray-855 dark:text-white flex items-center gap-1.5">
               {t.nombre || 'Cliente WhatsApp'}
             </h4>
-            <span className="text-xs font-mono text-gray-400 dark:text-gray-500">+{t.phone}</span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-xs font-mono text-gray-400 dark:text-gray-500">+{t.phone}</span>
+              {t.queuePosition !== undefined && t.queuePosition !== null && (
+                <span className="bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[10px] font-extrabold px-1.5 py-0.2 rounded border border-amber-200/50 dark:border-amber-900/40 shadow-sm">
+                  Turno #{t.queuePosition}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-col items-end gap-1.5">
@@ -355,12 +382,13 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
           <p className="text-xs text-gray-650 dark:text-gray-300 italic line-clamp-2">
             "{t.lastMessage || 'Mensaje de sistema / adjunto'}"
           </p>
-          {timeDiff !== null && (
+          {timeFormatted && (
             <p className="text-right text-[9px] text-gray-400 dark:text-gray-500 mt-1">
-              Hace {timeDiff} min{timeDiff > 1 ? 's' : ''}
+              {timeFormatted}
             </p>
           )}
         </div>
+
 
         {/* Botones de acción */}
         <div className="flex items-center justify-between gap-2 border-t dark:border-gray-750 pt-2.5 mt-2">
