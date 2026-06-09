@@ -266,7 +266,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           onClick={() => setActiveTab('gpt')}
           className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'gpt' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
-          <Key className="w-5 h-5 mr-2" /> Cuentas 2FA
+          <Key className="w-5 h-5 mr-2" /> 2FA y Correos
         </button>
 
         {/* Separador visual */}
@@ -284,12 +284,6 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'payments' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
           <CreditCard className="w-5 h-5 mr-2" /> Pagos y Horarios
-        </button>
-        <button 
-          onClick={() => setActiveTab('emails')}
-          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'emails' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
-        >
-          <Mail className="w-5 h-5 mr-2" /> Correos
         </button>
         <button 
           onClick={() => setActiveTab('netflix')}
@@ -310,8 +304,10 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       <div className={activeTab === 'netflix' ? '' : 'hidden'}><NetflixMatchView /></div>
       <div className={activeTab === 'stats' ? '' : 'hidden'}><AnalyticsDashboard /></div>
       <div className={activeTab === 'sales' ? '' : 'hidden'}><AddSaleForm /></div>
-      <div className={activeTab === 'gpt' ? '' : 'hidden'}><GptAccountsView /></div>
-      <div className={activeTab === 'emails' ? '' : 'hidden'}><ManagedEmailsView /></div>
+      <div className={activeTab === 'gpt' ? 'space-y-8' : 'hidden'}>
+        <GptAccountsView />
+        <ManagedEmailsView />
+      </div>
       <div className={activeTab === 'inventory' ? '' : 'hidden'}><InventoryAccountsView /></div>
       <div className={activeTab === 'availability' ? '' : 'hidden'}><AvailabilityView /></div>
       <div className={activeTab === 'alerts' ? '' : 'hidden'}><AccountAlertsView /></div>
