@@ -148,7 +148,8 @@ export const ClientsView: React.FC = () => {
         const phones = filtered
             .map(c => (c.numero || c.Numero || '').toString().replace(/\D/g, ''))
             .filter(Boolean);
-        setSelectedClientPhones(phones);
+        const uniquePhones = Array.from(new Set(phones));
+        setSelectedClientPhones(uniquePhones);
     }, [generalSearch, filterName, filterPhone, filterService, filterEmail, filterPaymentStatus, clients]);
 
     const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
@@ -168,10 +169,14 @@ export const ClientsView: React.FC = () => {
     };
 
     const startBulkClients = async () => {
-        const clientsToSend = filtered.filter(c => {
+        const uniqueClientsMap = new Map<string, any>();
+        filtered.forEach(c => {
             const phone = (c.numero || c.Numero || '').toString().replace(/\D/g, '');
-            return selectedClientPhones.includes(phone);
+            if (phone && selectedClientPhones.includes(phone) && !uniqueClientsMap.has(phone)) {
+                uniqueClientsMap.set(phone, c);
+            }
         });
+        const clientsToSend = Array.from(uniqueClientsMap.values());
 
         if (clientsToSend.length === 0) {
             alert("Por favor, selecciona al menos un cliente para el envío.");
@@ -250,11 +255,12 @@ export const ClientsView: React.FC = () => {
         const allFilteredPhones = filtered
             .map(c => (c.numero || c.Numero || '').toString().replace(/\D/g, ''))
             .filter(Boolean);
+        const uniqueFilteredPhones = Array.from(new Set(allFilteredPhones));
             
-        if (selectedClientPhones.length === allFilteredPhones.length) {
+        if (selectedClientPhones.length === uniqueFilteredPhones.length) {
             setSelectedClientPhones([]);
         } else {
-            setSelectedClientPhones(allFilteredPhones);
+            setSelectedClientPhones(uniqueFilteredPhones);
         }
     };
 
@@ -281,21 +287,26 @@ export const ClientsView: React.FC = () => {
     };
 
     const handleSendAction = async (phone: string, type: 'credentials' | 'payment') => {
+        const cleanPhone = phone ? phone.toString().replace(/\D/g, '') : '';
+        if (!cleanPhone) {
+            alert("❌ Número de teléfono inválido.");
+            return;
+        }
         const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
         try {
             const res = await fetch(`${apiUrl}/api/admin/actions/send-info`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone, type, password: 'admin123' })
+                body: JSON.stringify({ phone: cleanPhone, type, password: 'admin123' })
             });
             const result = await res.json();
             if (result.success) {
-                alert(`✅ Mensaje de ${type} enviado con éxito a ${phone}`);
+                alert(`✅ Mensaje de ${type} enviado con éxito a ${cleanPhone}`);
             } else {
-                alert(`❌ Error: ${result.message}`);
+                alert(`❌ Error: ${result.message || result.error || 'Error desconocido'}`);
             }
-        } catch (err) {
-            alert("❌ Error de comunicación con el bot.");
+        } catch (err: any) {
+            alert("❌ Error de comunicación con el bot: " + (err.message || err));
         }
     };
 
