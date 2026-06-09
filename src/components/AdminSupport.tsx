@@ -11,7 +11,6 @@ import { InventoryAccountsView } from './InventoryAccountsView';
 import { AvailabilityView } from './AvailabilityView';
 import { AccountAlertsView } from './AccountAlertsView';
 import { SupportScheduleView } from './SupportScheduleView';
-import { BulkSenderView } from './BulkSenderView';
 import { PaymentConfigView } from './PaymentConfigView';
 
 interface Step {
@@ -44,7 +43,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
   const [data, setData] = useState<SupportPlatform[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'bulk' | 'payments'>('tickets');
+  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'payments'>('tickets');
 
   // Platforms to recycle logos from
   const availableLogos = [
@@ -259,12 +258,6 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
 
         {/* GRUPO 3: Herramientas del Sistema */}
         <button 
-          onClick={() => setActiveTab('bulk')}
-          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'bulk' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
-        >
-          <Send className="w-5 h-5 mr-2" /> Enviador Masivo
-        </button>
-        <button 
           onClick={() => setActiveTab('payments')}
           className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'payments' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
@@ -296,7 +289,6 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       <div className={activeTab === 'inventory' ? '' : 'hidden'}><InventoryAccountsView /></div>
       <div className={activeTab === 'availability' ? '' : 'hidden'}><AvailabilityView /></div>
       <div className={activeTab === 'alerts' ? '' : 'hidden'}><AccountAlertsView /></div>
-      <div className={activeTab === 'bulk' ? '' : 'hidden'}><BulkSenderView /></div>
       <div className={activeTab === 'payments' ? 'space-y-8' : 'hidden'}>
         <PaymentConfigView />
         <SupportScheduleView />

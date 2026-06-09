@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, Search, Clock, ShieldAlert, Filter, Check, X } from 'lucide-react';
+import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle } from 'lucide-react';
 
 function formatExcelDate(excelDate: any): string {
     if (!excelDate) return '-';
@@ -74,6 +74,15 @@ export const ClientsView: React.FC = () => {
     // Ref for closing popovers on click outside
     const popoverRef = useRef<HTMLDivElement>(null);
 
+    // Bulk Sender States
+    const [selectedClientPhones, setSelectedClientPhones] = useState<string[]>([]);
+    const [messageType, setMessageType] = useState<'custom' | 'credentials' | 'payment'>('custom');
+    const [customMessage, setCustomMessage] = useState<string>('');
+    const [isSending, setIsSending] = useState(false);
+    const [sendProgress, setSendProgress] = useState({ current: 0, total: 0, success: 0, fail: 0 });
+    const [sendingLogs, setSendingLogs] = useState<string[]>([]);
+    const [showBulkSender, setShowBulkSender] = useState(false);
+
     useEffect(() => {
         const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
         fetch(`${apiUrl}/api/admin/clients`)
@@ -133,6 +142,121 @@ export const ClientsView: React.FC = () => {
 
         return statusMatches && generalMatches && nameMatches && phoneMatches && serviceMatches && emailMatches;
     });
+
+    // Auto-select filtered clients on filter change
+    useEffect(() => {
+        const phones = filtered
+            .map(c => (c.numero || c.Numero || '').toString().replace(/\D/g, ''))
+            .filter(Boolean);
+        setSelectedClientPhones(phones);
+    }, [generalSearch, filterName, filterPhone, filterService, filterEmail, filterPaymentStatus, clients]);
+
+    const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+    const sendSingle = async (phone: string, type: 'custom' | 'credentials' | 'payment', messageText?: string) => {
+        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+        const body: any = { phone, type, password: 'admin123' };
+        if (type === 'custom') {
+            body.message = messageText;
+        }
+        const res = await fetch(`${apiUrl}/api/admin/actions/send-info`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        return res.json();
+    };
+
+    const startBulkClients = async () => {
+        const clientsToSend = filtered.filter(c => {
+            const phone = (c.numero || c.Numero || '').toString().replace(/\D/g, '');
+            return selectedClientPhones.includes(phone);
+        });
+
+        if (clientsToSend.length === 0) {
+            alert("Por favor, selecciona al menos un cliente para el envío.");
+            return;
+        }
+
+        if (messageType === 'custom' && !customMessage.trim()) {
+            alert("Por favor, ingresa el mensaje personalizado a enviar.");
+            return;
+        }
+
+        const confirmSend = window.confirm(`¿Estás seguro de enviar esta difusión a ${clientsToSend.length} clientes seleccionados? Se enviará con un delay de seguridad de 2 segundos para evitar bans.`);
+        if (!confirmSend) return;
+
+        setIsSending(true);
+        setSendingLogs([]);
+        setSendProgress({ current: 0, total: clientsToSend.length, success: 0, fail: 0 });
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (let i = 0; i < clientsToSend.length; i++) {
+            const client = clientsToSend[i];
+            const phone = (client.numero || client.Numero || '').toString().replace(/\D/g, '');
+            const clientName = client.Nombre || 'Cliente';
+            
+            if (!phone) {
+                failCount++;
+                setSendProgress(prev => ({ ...prev, current: i + 1, fail: failCount }));
+                setSendingLogs(prev => [...prev, `❌ Saltado: ${clientName} (Sin número válido)`]);
+                continue;
+            }
+
+            try {
+                let finalMessage = customMessage;
+                if (messageType === 'custom') {
+                    finalMessage = finalMessage
+                        .replace(/{Nombre}/g, clientName)
+                        .replace(/{Servicio}/g, client.Streaming || '')
+                        .replace(/{Vencimiento}/g, formatExcelDate(client.deben || client.vencimiento));
+                }
+
+                const res = await sendSingle(phone, messageType, finalMessage);
+                
+                if (res.success) {
+                    successCount++;
+                    setSendingLogs(prev => [...prev, `✅ Enviado a: ${clientName} (${phone})`]);
+                } else {
+                    failCount++;
+                    setSendingLogs(prev => [...prev, `❌ Error enviando a: ${clientName} (${phone}) - ${res.message}`]);
+                }
+            } catch (err: any) {
+                failCount++;
+                setSendingLogs(prev => [...prev, `❌ Falla de red enviando a: ${clientName} (${phone}) - ${err.message}`]);
+            }
+
+            setSendProgress(prev => ({ ...prev, current: i + 1, success: successCount, fail: failCount }));
+            
+            if (i < clientsToSend.length - 1) {
+                await sleep(2000);
+            }
+        }
+
+        setIsSending(false);
+    };
+
+    const handleToggleSelectClient = (phone: string) => {
+        if (selectedClientPhones.includes(phone)) {
+            setSelectedClientPhones(selectedClientPhones.filter(p => p !== phone));
+        } else {
+            setSelectedClientPhones([...selectedClientPhones, phone]);
+        }
+    };
+
+    const handleToggleSelectAllClients = () => {
+        const allFilteredPhones = filtered
+            .map(c => (c.numero || c.Numero || '').toString().replace(/\D/g, ''))
+            .filter(Boolean);
+            
+        if (selectedClientPhones.length === allFilteredPhones.length) {
+            setSelectedClientPhones([]);
+        } else {
+            setSelectedClientPhones(allFilteredPhones);
+        }
+    };
 
     const toggleExpandHistory = async (phone: string, idx: number) => {
         if (expandedClient === idx) {
@@ -280,8 +404,139 @@ export const ClientsView: React.FC = () => {
                             <option key={service} value={service}>{service}</option>
                         ))}
                     </select>
+
+                    <button
+                        onClick={() => setShowBulkSender(!showBulkSender)}
+                        className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${
+                            showBulkSender 
+                                ? 'bg-brand-primary text-white shadow-md' 
+                                : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-750 dark:text-gray-200'
+                        }`}
+                    >
+                        <Send className="w-4 h-4" />
+                        <span>Difusión Masiva</span>
+                        {selectedClientPhones.length > 0 && (
+                            <span className="bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                                {selectedClientPhones.length}
+                            </span>
+                        )}
+                    </button>
                 </div>
             </div>
+
+            {/* BULK SENDER SECTION */}
+            {showBulkSender && (
+                <div className="bg-gray-50 dark:bg-gray-900/50 p-5 rounded-2xl border dark:border-gray-700 mb-6 space-y-4 animate-fadeIn">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h3 className="font-bold text-sm text-gray-800 dark:text-white flex items-center gap-1.5">
+                                📢 Herramienta de Envío Masivo a Clientes Filtrados
+                            </h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Enviarás un mensaje de WhatsApp a los clientes seleccionados en la tabla de abajo.
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleToggleSelectAllClients}
+                                className="px-3 py-1.5 bg-white dark:bg-gray-800 border dark:border-gray-700 text-xs font-bold rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50"
+                            >
+                                {selectedClientPhones.length === filtered.length ? 'Deseleccionar Todos' : 'Seleccionar Todos'}
+                            </button>
+                            <span className="text-xs font-semibold px-3 py-1.5 bg-brand-primary/10 text-brand-primary rounded-lg">
+                                {selectedClientPhones.length} de {filtered.length} seleccionados
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">
+                                Tipo de Mensaje
+                            </label>
+                            <select
+                                value={messageType}
+                                onChange={(e) => setMessageType(e.target.value as any)}
+                                className="w-full px-3 py-2 border rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary cursor-pointer"
+                                disabled={isSending}
+                            >
+                                <option value="custom">💬 Mensaje Personalizado</option>
+                                <option value="credentials">🔑 Enviar Datos de Cuenta (Credenciales)</option>
+                                <option value="payment">💰 Recordatorio de Cobro (Método de Pago)</option>
+                            </select>
+                        </div>
+
+                        {messageType === 'custom' && (
+                            <div className="md:col-span-2 space-y-2">
+                                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase flex justify-between">
+                                    <span>Mensaje Personalizado</span>
+                                    <span className="text-[10px] text-brand-primary lowercase font-normal">
+                                        Variables: {"{Nombre}"}, {"{Servicio}"}, {"{Vencimiento}"}
+                                    </span>
+                                </label>
+                                <textarea
+                                    value={customMessage}
+                                    onChange={(e) => setCustomMessage(e.target.value)}
+                                    placeholder="Hola {Nombre}, tu servicio de {Servicio} vence el {Vencimiento}..."
+                                    rows={3}
+                                    className="w-full px-3 py-2 border rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary resize-none animate-fadeIn"
+                                    disabled={isSending}
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* SENDING ACTION */}
+                    <div className="flex justify-between items-center pt-2 border-t dark:border-gray-800">
+                        <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                            <HelpCircle className="w-3.5 h-3.5" />
+                            <span>Intervalo de seguridad de 2 segundos automático entre envíos.</span>
+                        </div>
+                        
+                        <button
+                            onClick={startBulkClients}
+                            disabled={isSending || selectedClientPhones.length === 0}
+                            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition-all disabled:opacity-50"
+                        >
+                            {isSending ? (
+                                <>
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                    <span>Enviando... ({sendProgress.current}/{sendProgress.total})</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Play className="w-4 h-4 fill-white" />
+                                    <span>Iniciar Envío Masivo</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
+
+                    {/* PROGRESS & LOGS */}
+                    {isSending && (
+                        <div className="space-y-2 border-t dark:border-gray-800 pt-3">
+                            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                                <span>Progreso de transmisión</span>
+                                <span>{sendProgress.current} / {sendProgress.total} (Éxitos: {sendProgress.success} | Fallidos: {sendProgress.fail})</span>
+                            </div>
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
+                                <div 
+                                    className="bg-brand-primary h-full transition-all duration-300"
+                                    style={{ width: `${(sendProgress.current / sendProgress.total) * 100}%` }}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {sendingLogs.length > 0 && (
+                        <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-xl max-h-40 overflow-y-auto font-mono text-[10px] text-gray-600 dark:text-gray-400 space-y-1">
+                            {sendingLogs.map((log, lIdx) => (
+                                <div key={lIdx}>{log}</div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {loading ? (
                 <p className="text-center py-10 dark:text-gray-400">Cargando base de datos de clientes...</p>
@@ -290,6 +545,16 @@ export const ClientsView: React.FC = () => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/25">
+                                {showBulkSender && (
+                                    <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300 text-center w-12">
+                                        <input 
+                                            type="checkbox"
+                                            checked={selectedClientPhones.length === filtered.length && filtered.length > 0}
+                                            onChange={handleToggleSelectAllClients}
+                                            className="rounded border-gray-300 text-brand-primary focus:ring-brand-primary cursor-pointer w-4 h-4"
+                                        />
+                                    </th>
+                                )}
                                 {/* NOMBRE COLUMN HEADER */}
                                 <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300 relative">
                                     <div className="flex items-center justify-between gap-1.5">
@@ -463,6 +728,16 @@ export const ClientsView: React.FC = () => {
                                     return (
                                         <React.Fragment key={i}>
                                             <tr className={`border-b dark:border-gray-700 hover:bg-gray-150/40 dark:hover:bg-gray-750/50 transition-all ${rowBgClass}`}>
+                                                {showBulkSender && (
+                                                    <td className="py-3.5 px-4 text-center">
+                                                        <input 
+                                                            type="checkbox"
+                                                            checked={selectedClientPhones.includes(phone ? phone.toString().replace(/\D/g, '') : '')}
+                                                            onChange={() => handleToggleSelectClient(phone ? phone.toString().replace(/\D/g, '') : '')}
+                                                            className="rounded border-gray-300 text-brand-primary focus:ring-brand-primary cursor-pointer w-4 h-4"
+                                                        />
+                                                    </td>
+                                                )}
                                                 <td data-label="Nombre" className="py-3.5 px-4 text-sm dark:text-gray-200 font-medium">{c.Nombre || 'N/A'}</td>
                                                 <td data-label="Número" className="py-3.5 px-4 text-sm dark:text-gray-200 font-mono">{phone}</td>
                                                 <td data-label="Contraseña" className="py-3.5 px-4 text-sm dark:text-gray-200 font-mono">
@@ -512,7 +787,7 @@ export const ClientsView: React.FC = () => {
                                             {/* Purchase History Expanded Drawer */}
                                             {expandedClient === i && (
                                                 <tr className={rowBgClass}>
-                                                    <td colSpan={6} className="bg-gray-50/20 dark:bg-gray-900/10 px-6 py-4 border-b dark:border-gray-700">
+                                                    <td colSpan={showBulkSender ? 7 : 6} className="bg-gray-50/20 dark:bg-gray-900/10 px-6 py-4 border-b dark:border-gray-700">
                                                     {historyLoading ? (
                                                         <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                                                             <Clock className="w-4 h-4 animate-spin text-brand-primary" />
