@@ -190,21 +190,6 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
 
   return (
     <div className="max-w-[96%] mx-auto px-4 py-8 animate-fadeIn">
-      <div className="flex justify-between items-center border-b dark:border-gray-800 pb-4 mb-6">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-extrabold dark:text-white">Panel de Control Ayuda</h1>
-          <span className="hidden sm:inline text-xs bg-brand-primary/10 text-brand-primary dark:text-brand-light px-2.5 py-1 rounded-md font-bold">
-            Asesor: {agentName} ({agentEmail})
-          </span>
-        </div>
-        <button 
-          onClick={onLogout}
-          className="flex items-center justify-center bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-950/20 dark:hover:bg-red-950/40 dark:text-red-350 px-4 py-2 rounded-xl text-xs font-bold transition-all border border-red-250/50 dark:border-red-900/40"
-        >
-          <LogOut className="w-4 h-4 mr-1.5" />
-          Salir
-        </button>
-      </div>
 
       {message && (
         <div className={`p-4 rounded-xl mb-6 ${message.includes('éxito') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>

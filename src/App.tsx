@@ -269,6 +269,15 @@ function AppContent() {
         isDark={isDark} 
         toggleDark={() => toggleDark(!isDark)} 
         onNavigate={navigateTo}
+        currentView={currentView}
+        agentEmail={isAdminAuth ? (localStorage.getItem('ticket_agent_email') || '') : undefined}
+        agentName={isAdminAuth ? (localStorage.getItem('ticket_agent_name') || '') : undefined}
+        onLogout={isAdminAuth ? () => {
+          localStorage.removeItem('ticket_agent_email');
+          localStorage.removeItem('ticket_agent_name');
+          localStorage.removeItem('ticket_agent_password');
+          setIsAdminAuth(false);
+        } : undefined}
       />
       
       {currentView === 'home' && (

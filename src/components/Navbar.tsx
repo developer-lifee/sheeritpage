@@ -10,9 +10,13 @@ interface NavbarProps {
   isDark: boolean;
   toggleDark: () => void;
   onNavigate: (view: ViewState) => void;
+  currentView?: ViewState;
+  agentName?: string;
+  agentEmail?: string;
+  onLogout?: () => void;
 }
 
-export function Navbar({ isDark, toggleDark, onNavigate }: NavbarProps) {
+export function Navbar({ isDark, toggleDark, onNavigate, currentView, agentName, agentEmail, onLogout }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -32,6 +36,49 @@ export function Navbar({ isDark, toggleDark, onNavigate }: NavbarProps) {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  if (currentView === 'admin' && agentEmail) {
+    return (
+      <nav className="bg-brand-primary dark:bg-gray-800 text-white shadow-lg animate-fadeIn">
+        <div className="max-w-[96%] mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            {/* Title / Logo */}
+            <div className="flex items-center gap-3">
+              <img 
+                src="/faviconsheerit.png" 
+                alt="Sheerit Logo" 
+                className="h-8 w-auto cursor-pointer"
+                onClick={() => onNavigate('home')} 
+              />
+              <span className="text-lg font-extrabold tracking-wide uppercase hidden sm:inline cursor-pointer" onClick={() => onNavigate('home')}>Sheerit</span>
+              <span className="h-4 w-px bg-white/20 hidden sm:inline"></span>
+              <span className="text-sm font-semibold text-white/95">Panel de Control Ayuda</span>
+            </div>
+
+            {/* Asesor info */}
+            <div className="hidden md:flex items-center">
+              <span className="text-xs bg-white/10 px-3.5 py-1.5 rounded-xl font-bold border border-white/5 tracking-wide text-white/90">
+                👤 Asesor: {agentName} ({agentEmail})
+              </span>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-3">
+              <ThemeToggle isDark={isDark} toggle={toggleDark} />
+              {onLogout && (
+                <button
+                  onClick={onLogout}
+                  className="flex items-center bg-red-650 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all border border-red-500/20 active:scale-95 shadow-md"
+                >
+                  Salir
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav className="bg-brand-primary dark:bg-gray-800 text-white shadow-lg">
