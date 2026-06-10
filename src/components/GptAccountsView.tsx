@@ -33,6 +33,7 @@ export const GptAccountsView: React.FC = () => {
   const [email, setEmail] = useState('');
   const [secret, setSecret] = useState('');
   const [service, setService] = useState('ChatGPT');
+  const [customService, setCustomService] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [seconds, setSeconds] = useState(30);
 
@@ -89,11 +90,12 @@ export const GptAccountsView: React.FC = () => {
     setSuccess('');
 
     const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const serviceValue = service === 'Otro' ? customService : service;
     try {
       const res = await fetch(`${apiUrl}/api/admin/gpt-accounts/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, secret, service, password: 'admin123' })
+        body: JSON.stringify({ email, secret, service: serviceValue, password: 'admin123' })
       });
       const result = await res.json();
       if (result.success) {
@@ -101,6 +103,7 @@ export const GptAccountsView: React.FC = () => {
         setEmail('');
         setSecret('');
         setService('ChatGPT');
+        setCustomService('');
         fetchAccounts();
       } else {
         setError(`❌ Error: ${result.message}`);
@@ -272,8 +275,9 @@ export const GptAccountsView: React.FC = () => {
                 <input
                   type="text"
                   placeholder="Ej: Star+ o Crunchyroll"
+                  value={customService}
                   className="w-full px-3 py-2 border rounded-lg dark:bg-gray-750 dark:border-gray-600 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                  onChange={(e) => setService(e.target.value || 'Otro')}
+                  onChange={(e) => setCustomService(e.target.value)}
                   required
                 />
               </div>
