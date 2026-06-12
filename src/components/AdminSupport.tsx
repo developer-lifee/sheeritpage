@@ -7,6 +7,7 @@ import { AddSaleForm } from './AddSaleForm';
 import { TicketsView } from './TicketsView';
 import { GptAccountsView } from './GptAccountsView';
 import { ManagedEmailsView } from './ManagedEmailsView';
+import { ProviderEmailsView } from './ProviderEmailsView';
 import { InventoryAccountsView } from './InventoryAccountsView';
 import { AvailabilityView } from './AvailabilityView';
 import { AccountAlertsView } from './AccountAlertsView';
@@ -292,6 +293,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       <div className={activeTab === 'gpt' ? 'space-y-8' : 'hidden'}>
         <GptAccountsView />
         <ManagedEmailsView />
+        <ProviderEmailsView />
       </div>
       <div className={activeTab === 'inventory' ? '' : 'hidden'}><InventoryAccountsView /></div>
       <div className={activeTab === 'availability' ? '' : 'hidden'}><AvailabilityView /></div>
