@@ -167,11 +167,11 @@ export const AddSaleForm: React.FC = () => {
     if (isRenewal && selectedServiceToRenew) {
       requestItems = [{
         platformName: selectedServiceToRenew.Streaming,
-        _rowNumber: selectedServiceToRenew.rowNumber,
+        _rowNumber: selectedServiceToRenew._rowNumber || selectedServiceToRenew.rowNumber,
         correo: selectedServiceToRenew.correo,
         contraseña: selectedServiceToRenew.contraseña,
         pin: selectedServiceToRenew['pin perfil'] || selectedServiceToRenew.pin || null,
-        deben: selectedServiceToRenew.deben || null
+        deben: selectedServiceToRenew.deben || selectedServiceToRenew.vencimiento || null
       }];
     } else {
       requestItems = selectedItems.map(item => {
@@ -269,7 +269,8 @@ export const AddSaleForm: React.FC = () => {
             <h3 className="text-sm font-black text-blue-900 dark:text-blue-200">Servicios Activos Encontrados (Selecciona uno para Renovar)</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {customerServices.map((service, index) => {
-                const isSelected = selectedServiceToRenew?.rowNumber === service.rowNumber && isRenewal;
+                const serviceRow = service._rowNumber || service.rowNumber;
+                const isSelected = (selectedServiceToRenew?._rowNumber || selectedServiceToRenew?.rowNumber) === serviceRow && isRenewal;
                 return (
                   <div key={index} className={`flex justify-between items-center p-3 rounded-xl border transition-all ${
                     isSelected 
@@ -279,7 +280,7 @@ export const AddSaleForm: React.FC = () => {
                     <div className="min-w-0 pr-2">
                       <span className="text-[10px] font-black text-brand-primary uppercase tracking-wider block">{service.Streaming}</span>
                       <p className="text-xs font-bold text-gray-800 dark:text-gray-250 truncate">{service.correo}</p>
-                      <span className="text-[10px] text-gray-400 block mt-0.5">Vence: {service.vencimiento}</span>
+                      <span className="text-[10px] text-gray-400 block mt-0.5">Vence: {service.deben || service.vencimiento}</span>
                     </div>
                     <button
                       type="button"
