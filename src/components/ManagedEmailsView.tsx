@@ -48,6 +48,9 @@ const parseEmailData = (msg: EmailMessage): ParsedEmail => {
     } else if (textToSearch.includes('prime') || textToSearch.includes('amazon')) {
       platform = 'Prime Video';
       brandColor = 'bg-cyan-50 border-cyan-200 text-cyan-800 dark:bg-cyan-950/20 dark:border-cyan-900/50';
+    } else if (textToSearch.includes('claude') || textToSearch.includes('anthropic')) {
+      platform = 'Claude';
+      brandColor = 'bg-orange-55 border-orange-300 text-orange-850 dark:bg-orange-950/30 dark:border-orange-900/50';
     }
 
     // Try to extract 4 to 8 digit code
@@ -61,8 +64,8 @@ const parseEmailData = (msg: EmailMessage): ParsedEmail => {
       code = codeMatch[1].toUpperCase();
     }
 
-    // Extract link
-    const linkMatch = (msg.body || '').match(/https?:\/\/(?:www\.)?(?:netflix\.com|disneyplus\.com|starplus\.com|max\.com|hbomax\.com|primevideo\.com|amazon\.com|auth\.max\.com)[^\s<>"']+/i);
+    // Extract link (including Claude and Anthropic magic link URLs)
+    const linkMatch = (msg.body || '').match(/https?:\/\/(?:www\.)?(?:netflix\.com|disneyplus\.com|starplus\.com|max\.com|hbomax\.com|primevideo\.com|amazon\.com|auth\.max\.com|claude\.ai|anthropic\.com|mail\.anthropic\.com)[^\s<>"']+/i);
     const link = linkMatch ? linkMatch[0] : undefined;
 
     return {

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert } from 'lucide-react';
 
 interface AccountInfo {
   streaming: string;
@@ -22,12 +22,22 @@ interface Ticket {
   queuePosition?: number | null;
 }
 
-
 interface TicketsViewProps {
   agentEmail: string;
   agentName: string;
   onLogout: () => void;
 }
+
+interface ChatMessage {
+  id: string | null;
+  body: string;
+  fromMe: boolean;
+  timestamp: number;
+  type: string;
+  hasMedia: boolean;
+}
+
+const COMMON_EMOJIS = ['💬', '👑', '⚡', '🌸', '🛡️', '👨‍💻', '🙋‍♂️', '💼', '🔥', '🚀'];
 
 export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName, onLogout }) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -46,11 +56,20 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     sharedTickets: { ticket: Ticket; matchingAccounts: AccountInfo[] }[];
   } | null>(null);
 
-
   // Custom assign dialog state
   const [assignDialog, setAssignDialog] = useState<{
     phone: string;
   } | null>(null);
+
+  // LIVE CHAT STATE
+  const [activeChatTicket, setActiveChatTicket] = useState<Ticket | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [loadingChat, setLoadingChat] = useState(false);
+  const [newMsgText, setNewMsgText] = useState('');
+  const [advisorEmoji, setAdvisorEmoji] = useState(() => localStorage.getItem('advisor_emoji') || '💬');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const fetchTickets = (isSilent = false) => {
     if (!agentEmail) return;
@@ -75,13 +94,101 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       });
   };
 
+  // Poll for tickets
   useEffect(() => {
     if (agentEmail) {
       fetchTickets(false);
-      const interval = setInterval(() => fetchTickets(true), 10000); // Silent refresh
+      const interval = setInterval(() => fetchTickets(true), 10000);
       return () => clearInterval(interval);
     }
   }, [agentEmail]);
+
+  // Poll chat messages if a chat is active
+  useEffect(() => {
+    if (!activeChatTicket) return;
+    
+    fetchChatMessages(true);
+    const interval = setInterval(() => fetchChatMessages(true), 4000);
+    return () => clearInterval(interval);
+  }, [activeChatTicket?.phone]);
+
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
+  const fetchChatMessages = async (isSilent = false) => {
+    if (!activeChatTicket) return;
+    if (!isSilent) setLoadingChat(true);
+    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+      ? 'http://localhost:3000' 
+      : 'https://bot.sheerit.com.co';
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/chat-messages?phone=${activeChatTicket.phone}`);
+      if (res.ok) {
+        const data = await res.json();
+        setChatMessages(data);
+      }
+    } catch (e) {
+      console.error("Error fetching chat messages:", e);
+    } finally {
+      if (!isSilent) setLoadingChat(false);
+    }
+  };
+
+  const handleSendChatMessage = async (textToSend = newMsgText) => {
+    if (!activeChatTicket || !textToSend.trim()) return;
+    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+      ? 'http://localhost:3000' 
+      : 'https://bot.sheerit.com.co';
+    
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/chat-messages/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: activeChatTicket.phone,
+          message: textToSend,
+          emoji: advisorEmoji,
+          agentName: agentName,
+          password: 'admin123'
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNewMsgText('');
+        fetchChatMessages(true);
+        // auto-assign to me if unassigned
+        if (!activeChatTicket.agent) {
+          setActiveChatTicket(prev => prev ? { ...prev, agent: agentName } : null);
+        }
+        fetchTickets(true);
+      } else {
+        alert("Error: " + data.message);
+      }
+    } catch (err) {
+      alert("Error de conexión al enviar mensaje");
+    }
+  };
+
+  const sendHogarNetflixTemplate = () => {
+    if (!activeChatTicket) return;
+    const text = `🤖 Para actualizar tu hogar de Netflix, abre este enlace desde tu celular o TV:\n👉 https://sheerit.com.co/verificar?tel=${activeChatTicket.phone}`;
+    handleSendChatMessage(text);
+  };
+
+  const sendCredentialsTemplate = () => {
+    if (!activeChatTicket || !activeChatTicket.accounts || activeChatTicket.accounts.length === 0) {
+      alert("No hay cuentas vinculadas a este ticket.");
+      return;
+    }
+    let text = `🤖 *Tus credenciales de ingreso de Sheerit Store* 🔑:\n\n`;
+    activeChatTicket.accounts.forEach(acc => {
+      text += `📺 Plataforma: *${acc.streaming}*\n📧 Correo: \`${acc.correo}\`\n👤 Perfil: *${acc.nombrePerfil}*\n\n`;
+    });
+    text += `_Por favor, ingresa con estos datos. Si te pide un código de verificación, escríbeme aquí la palabra *codigo*._`;
+    handleSendChatMessage(text);
+  };
 
   const handleDragStart = (e: React.DragEvent, phone: string) => {
     e.dataTransfer.setData('text/plain', phone);
@@ -101,11 +208,9 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     if (!phone) return;
 
     if (targetColumn === 'unassigned') {
-      // Optimistic update
       setTickets(prev => prev.map(t => t.phone === phone ? { ...t, agent: null } : t));
       await executeClaim(phone, '');
     } else if (targetColumn === 'me') {
-      // Optimistic update
       setTickets(prev => prev.map(t => t.phone === phone ? { ...t, agent: agentName } : t));
       await executeClaim(phone, agentName);
     } else if (targetColumn === 'other') {
@@ -127,7 +232,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       if (!result.success) {
         alert(`❌ Error: ${result.message}`);
       }
-      fetchTickets(true); // Silent reload to sync with backend
+      fetchTickets(true);
     } catch (err) {
       alert('❌ Error al conectar con el backend.');
       fetchTickets(true);
@@ -157,7 +262,6 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const executeResolve = async (phone: string, resolveAll: boolean) => {
     setResolveDialog(null);
     
-    // Optimistic update
     if (resolveAll) {
       const targetTicket = tickets.find(t => t.phone === phone);
       if (targetTicket) {
@@ -182,7 +286,10 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       if (!result.success) {
         alert(`❌ Error: ${result.message}`);
       }
-      fetchTickets(true); // Silent sync
+      fetchTickets(true);
+      if (activeChatTicket && activeChatTicket.phone === phone) {
+        setActiveChatTicket(null);
+      }
     } catch (err) {
       alert('❌ Error al conectar con el backend.');
       fetchTickets(true);
@@ -211,8 +318,12 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       .filter(Boolean) as { ticket: Ticket; matchingAccounts: AccountInfo[] }[];
   };
 
+  const changeEmoji = (em: string) => {
+    setAdvisorEmoji(em);
+    localStorage.setItem('advisor_emoji', em);
+    setShowEmojiPicker(false);
+  };
 
-  // Safe names helper for null safety
   const safeAgentName = (agentName || '').toLowerCase().trim();
 
   // Search filter
@@ -254,7 +365,6 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
   const renderTicketCard = (t: Ticket) => {
     const timeFormatted = formatTimeDiff(t.lastMessageTime);
-    const waLink = `https://web.whatsapp.com/send?phone=${t.phone}`;
     const sharedWithDetails = findSharedTicketsWithDetails(t);
     const hasShared = sharedWithDetails.length > 0;
     const isBotMode = t.waitingHumanMode === 'bot';
@@ -265,7 +375,10 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         key={t.userId}
         draggable
         onDragStart={(e) => handleDragStart(e, t.phone)}
-        className={`bg-white dark:bg-gray-800 rounded-xl p-4 border transition-all duration-200 hover:shadow-md cursor-grab active:cursor-grabbing ${
+        onClick={() => {
+          setActiveChatTicket(t);
+        }}
+        className={`bg-white dark:bg-gray-800 rounded-xl p-4 border transition-all duration-200 hover:shadow-md cursor-pointer ${
           t.agent
             ? cleanTicketAgent === safeAgentName
               ? 'border-emerald-250 dark:border-emerald-900/50 shadow-emerald-50/10'
@@ -288,8 +401,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             </div>
           </div>
 
-          <div className="flex flex-col items-end gap-1.5">
-            {/* Bot vs Advisor Mode Badge */}
+          <div className="flex flex-col items-end gap-1.5" onClick={(e) => e.stopPropagation()}>
             {isBotMode ? (
               <span className="bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 text-[9px] font-extrabold px-1.5 py-0.5 rounded tracking-wider uppercase border border-purple-200/50 dark:border-purple-900/40">
                 🤖 Auto (Bot)
@@ -316,7 +428,6 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
           </div>
         </div>
 
-        {/* Resumen de Solicitud del Ticket */}
         {t.summary && (
           <div className="mb-2 bg-blue-50/70 dark:bg-blue-950/20 text-blue-900 dark:text-blue-200 p-2.5 rounded-lg border border-blue-100 dark:border-blue-900/30">
             <p className="text-[9px] text-blue-500 dark:text-blue-400 font-bold uppercase tracking-wider mb-0.5">Resumen de Solicitud:</p>
@@ -324,7 +435,6 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
           </div>
         )}
 
-        {/* Cuentas vinculadas */}
         {t.accounts && t.accounts.length > 0 && (
           <div className="mb-2 bg-gray-50 dark:bg-gray-900/30 p-2 rounded-lg border border-gray-100 dark:border-gray-750">
             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Cuentas vinculadas:</p>
@@ -342,41 +452,21 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
           </div>
         )}
 
-        {/* Cuenta compartida */}
         {hasShared && (
           <div className="mb-3 bg-red-50 dark:bg-red-950/20 text-red-800 dark:text-red-300 p-2.5 rounded-lg border border-red-100 dark:border-red-900/30 flex flex-col gap-1">
             <span className="text-[10px] font-extrabold uppercase flex items-center gap-1">
               <Users className="w-3.5 h-3.5 text-red-500" /> ¡Misma Cuenta Detectada!
             </span>
-            <p className="text-[11px] leading-tight">
-              Comparte cuenta con:
-            </p>
             <div className="flex flex-col gap-1.5 pl-1.5 border-l-2 border-red-300 dark:border-red-800">
-              {sharedWithDetails.map(({ ticket: s, matchingAccounts }) => (
+              {sharedWithDetails.map(({ ticket: s }) => (
                 <div key={s.userId} className="text-[10px]">
                   <span className="font-bold">• {s.nombre} (+{s.phone})</span>
-                  <div className="flex flex-wrap gap-1 mt-0.5 pl-2">
-                    {matchingAccounts.map((acc, idx) => (
-                      <span key={idx} className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-200 text-[8px] font-mono px-1.5 py-0.2 rounded border border-red-200 dark:border-red-800/40">
-                        📺 {acc.streaming}: {acc.correo}
-                      </span>
-                    ))}
-                  </div>
-                  {s.summary && (
-                    <p className="text-[9px] text-gray-500 dark:text-gray-400 italic pl-2 mt-0.5">
-                      Motivo: {s.summary}
-                    </p>
-                  )}
                 </div>
               ))}
             </div>
-            <span className="text-[9px] text-red-500 dark:text-red-400 font-semibold italic mt-1">
-              * Puedes elegir resolverlos en lote o por separado.
-            </span>
           </div>
         )}
 
-        {/* Último Mensaje */}
         <div className="bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-lg mb-3 border dark:border-gray-750">
           <p className="text-[9px] text-gray-450 font-bold uppercase tracking-wider mb-0.5">Último Mensaje:</p>
           <p className="text-xs text-gray-650 dark:text-gray-300 italic line-clamp-2">
@@ -389,17 +479,13 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
           )}
         </div>
 
-
-        {/* Botones de acción */}
-        <div className="flex items-center justify-between gap-2 border-t dark:border-gray-750 pt-2.5 mt-2">
-          <a
-            href={waLink}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-0.5 text-[11px] font-semibold text-brand-primary hover:underline"
+        <div className="flex items-center justify-between gap-2 border-t dark:border-gray-750 pt-2.5 mt-2" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => setActiveChatTicket(t)}
+            className="flex items-center gap-0.5 text-[11px] font-bold text-brand-primary hover:underline"
           >
-            Chat WA <ExternalLink className="w-3 h-3" />
-          </a>
+            Abrir Chat 💬
+          </button>
 
           <div className="flex gap-1">
             {!t.agent && (
@@ -442,9 +528,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     );
   };
 
-
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-md border dark:border-gray-800 p-6">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-md border dark:border-gray-800 p-6 relative">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b dark:border-gray-800 pb-5">
         <div>
@@ -508,7 +593,6 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       ) : (
         /* Columns Grid */
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
           {/* Column 1: Unassigned */}
           <div 
             onDragOver={(e) => handleDragOver(e, 'unassigned')}
@@ -595,7 +679,155 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
               )}
             </div>
           </div>
+        </div>
+      )}
 
+      {/* LIVE CHAT OVERLAY SIDE PANEL */}
+      {activeChatTicket && (
+        <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[500px] bg-white dark:bg-gray-800 shadow-2xl border-l dark:border-gray-750 flex flex-col animate-slideInRight">
+          {/* Chat Header */}
+          <div className="p-4 bg-gray-50 dark:bg-gray-900 border-b dark:border-gray-750 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setActiveChatTicket(null)}
+                className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg text-gray-500 dark:text-gray-450"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div>
+                <h3 className="font-bold text-sm text-gray-900 dark:text-white">{activeChatTicket.nombre}</h3>
+                <span className="text-xs text-gray-450 font-mono">+{activeChatTicket.phone}</span>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => fetchChatMessages()}
+                className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg text-gray-500 dark:text-gray-450"
+                title="Actualizar chat"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Actions Panel */}
+          <div className="bg-brand-primary/5 dark:bg-brand-primary/10 border-b dark:border-brand-primary/10 p-3 flex flex-wrap gap-2 justify-center items-center">
+            <span className="text-[10px] font-bold text-gray-450 uppercase tracking-wider w-full text-center">Acciones Rápidas</span>
+            <button
+              onClick={sendHogarNetflixTemplate}
+              className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-750 dark:hover:bg-gray-700 text-gray-800 dark:text-white text-[11px] font-bold py-1.5 px-3 rounded-lg border dark:border-gray-650 transition-all active:scale-95"
+            >
+              <Home className="w-3.5 h-3.5 text-amber-500" /> Hogar Netflix 📺
+            </button>
+            <button
+              onClick={sendCredentialsTemplate}
+              className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-750 dark:hover:bg-gray-700 text-gray-800 dark:text-white text-[11px] font-bold py-1.5 px-3 rounded-lg border dark:border-gray-650 transition-all active:scale-95"
+            >
+              <Key className="w-3.5 h-3.5 text-blue-500" /> Enviar Credenciales 🔑
+            </button>
+            <button
+              onClick={() => handleResolveClick(activeChatTicket)}
+              className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-[11px] font-bold py-1.5 px-3 rounded-lg transition-all active:scale-95"
+            >
+              <CheckCircle className="w-3.5 h-3.5" /> Resolver
+            </button>
+          </div>
+
+          {/* Chat Body (Messages List) */}
+          <div className="flex-grow overflow-y-auto p-4 bg-gray-50/50 dark:bg-gray-900/20 space-y-3 flex flex-col">
+            {loadingChat ? (
+              <div className="flex flex-col items-center justify-center my-auto text-gray-400">
+                <RefreshCw className="w-6 h-6 animate-spin text-brand-primary mb-2" />
+                <span className="text-xs">Cargando conversación...</span>
+              </div>
+            ) : chatMessages.length === 0 ? (
+              <div className="text-center my-auto text-xs text-gray-400 italic">
+                No hay mensajes recientes. Escribe uno abajo para iniciar.
+              </div>
+            ) : (
+              chatMessages.map((msg, idx) => {
+                const isMe = msg.fromMe;
+                return (
+                  <div
+                    key={msg.id || idx}
+                    className={`max-w-[75%] p-3 rounded-2xl text-xs flex flex-col gap-1 shadow-sm leading-relaxed ${
+                      isMe
+                        ? 'bg-brand-primary text-white ml-auto rounded-tr-none'
+                        : 'bg-white dark:bg-gray-750 dark:text-white rounded-tl-none border dark:border-gray-700'
+                    }`}
+                  >
+                    <p className="whitespace-pre-wrap font-medium">{msg.body}</p>
+                    <span className={`text-[9px] text-right block ${isMe ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'}`}>
+                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Chat Input & Signature */}
+          <div className="p-4 bg-white dark:bg-gray-900 border-t dark:border-gray-750 flex flex-col gap-3">
+            {/* Signature configuration */}
+            <div className="flex items-center justify-between border-b dark:border-gray-800 pb-2">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Firma de Asesor:</span>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className="text-base px-2 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded border dark:border-gray-700 flex items-center gap-1"
+                  >
+                    <span>{advisorEmoji}</span>
+                    <Smile className="w-3.5 h-3.5 text-gray-400" />
+                  </button>
+                  
+                  {showEmojiPicker && (
+                    <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-gray-850 p-2.5 rounded-xl border dark:border-gray-750 shadow-2xl flex gap-1.5 flex-wrap w-[180px] z-50">
+                      {COMMON_EMOJIS.map(em => (
+                        <button
+                          key={em}
+                          type="button"
+                          onClick={() => changeEmoji(em)}
+                          className="hover:scale-125 transition-transform text-lg p-1"
+                        >
+                          {em}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500">
+                Se enviará como: <strong className="dark:text-white">{advisorEmoji} [tu mensaje]</strong>
+              </span>
+            </div>
+
+            {/* Input field */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendChatMessage();
+              }}
+              className="flex gap-2 items-center"
+            >
+              <input
+                type="text"
+                value={newMsgText}
+                onChange={(e) => setNewMsgText(e.target.value)}
+                placeholder="Escribe un mensaje de respuesta..."
+                className="flex-grow px-4 py-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-850 border dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:ring-1 focus:ring-brand-primary"
+              />
+              <button
+                type="submit"
+                disabled={!newMsgText.trim()}
+                className="p-2.5 bg-brand-primary hover:bg-brand-dark text-white rounded-xl transition-all disabled:opacity-50 flex items-center justify-center"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </form>
+          </div>
         </div>
       )}
 
@@ -611,25 +843,23 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             </p>
             <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 mb-4 max-h-60 overflow-y-auto border dark:border-gray-750 flex flex-col gap-3">
               {resolveDialog.sharedTickets.map(({ ticket: s, matchingAccounts }) => (
-                <div key={s.userId} className="text-xs pb-3 border-b last:border-0 last:pb-0 border-gray-150 dark:border-gray-800 flex flex-col gap-1 dark:text-gray-305">
+                <div key={s.userId} className="text-xs pb-3 border-b last:border-0 last:pb-0 border-gray-150 dark:border-gray-800 flex flex-col gap-1 dark:text-gray-300">
                   <div className="flex justify-between items-center font-bold">
                     <span>👤 {s.nombre || 'Cliente WhatsApp'}</span>
                     <span className="font-mono text-gray-400">+{s.phone}</span>
                   </div>
                   
-                  {/* Shared account details */}
                   <div className="flex flex-wrap gap-1 mt-1">
                     <span className="text-[10px] text-gray-400 uppercase font-bold mr-1">Cuentas compartidas:</span>
                     {matchingAccounts.map((acc, idx) => (
-                      <span key={idx} className="bg-red-55 dark:bg-red-950 text-red-700 dark:text-red-300 text-[10px] px-1.5 py-0.5 rounded border border-red-100 dark:border-red-900/30">
+                      <span key={idx} className="bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 text-[10px] px-1.5 py-0.5 rounded border border-red-100 dark:border-red-900/30">
                         📺 {acc.streaming} ({acc.correo})
                       </span>
                     ))}
                   </div>
 
-                  {/* Summary/Reason of ticket */}
                   {s.summary && (
-                    <div className="mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded text-[11px] text-gray-600 dark:text-gray-400 italic">
+                    <div className="mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded text-[11px] text-gray-655 dark:text-gray-400 italic">
                       <strong>Motivo:</strong> {s.summary}
                     </div>
                   )}
@@ -714,5 +944,3 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     </div>
   );
 };
-
-
