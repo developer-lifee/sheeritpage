@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert } from 'lucide-react';
+import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock } from 'lucide-react';
 
 interface AccountInfo {
   streaming: string;
@@ -250,6 +250,59 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       fetchTickets(true);
     } catch (err) {
       alert('❌ Error al conectar con el backend.');
+      fetchTickets(true);
+    }
+  };
+
+  const handleToggleMode = async (phone: string, currentMode: 'bot' | 'advisor') => {
+    const nextMode = currentMode === 'bot' ? 'advisor' : 'bot';
+    setTickets(prev => prev.map(t => t.phone === phone ? { ...t, waitingHumanMode: nextMode } : t));
+    if (activeChatTicket && activeChatTicket.phone === phone) {
+      setActiveChatTicket(prev => prev ? { ...prev, waitingHumanMode: nextMode } : null);
+    }
+    
+    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+      ? 'http://localhost:3000' 
+      : 'https://bot.sheerit.com.co';
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/tickets/update-mode`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, mode: nextMode, password: 'admin123' })
+      });
+      const result = await res.json();
+      if (!result.success) {
+        alert(`❌ Error: ${result.message}`);
+      }
+      fetchTickets(true);
+    } catch (err) {
+      alert('❌ Error al cambiar el modo.');
+      fetchTickets(true);
+    }
+  };
+
+  const handleReleaseBot = async (phone: string) => {
+    if (activeChatTicket && activeChatTicket.phone === phone) {
+      setActiveChatTicket(null);
+    }
+    setTickets(prev => prev.filter(t => t.phone !== phone));
+    
+    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+      ? 'http://localhost:3000' 
+      : 'https://bot.sheerit.com.co';
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/tickets/release`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, password: 'admin123' })
+      });
+      const result = await res.json();
+      if (!result.success) {
+        alert(`❌ Error: ${result.message}`);
+      }
+      fetchTickets(true);
+    } catch (err) {
+      alert('❌ Error al liberar el bot.');
       fetchTickets(true);
     }
   };
@@ -787,8 +840,29 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
               return null;
             })()}
             <button
+              onClick={() => handleToggleMode(activeChatTicket.phone, activeChatTicket.waitingHumanMode || 'bot')}
+              className={`flex items-center gap-1.5 text-white text-[11px] font-bold py-1.5 px-3 rounded-lg transition-all active:scale-95 ${
+                (activeChatTicket.waitingHumanMode || 'bot') === 'bot'
+                  ? 'bg-purple-600 hover:bg-purple-700'
+                  : 'bg-indigo-600 hover:bg-indigo-700'
+              }`}
+              title="Alternar entre modo Automático (el bot responderá si detecta intenciones conocidas) y Manual (el bot se mantendrá totalmente callado)"
+            >
+              <Bot className="w-3.5 h-3.5" />
+              {(activeChatTicket.waitingHumanMode || 'bot') === 'bot' ? 'Modo: Auto (Bot)' : 'Modo: Manual (Asesor)'}
+            </button>
+
+            <button
+              onClick={() => handleReleaseBot(activeChatTicket.phone)}
+              className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold py-1.5 px-3 rounded-lg transition-all active:scale-95"
+              title="Libera la conversación del estado de soporte técnico para que el bot vuelva a responder y procesar menús desde cero"
+            >
+              <Unlock className="w-3.5 h-3.5" /> Liberar Bot
+            </button>
+
+            <button
               onClick={() => handleResolveClick(activeChatTicket)}
-              className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-[11px] font-bold py-1.5 px-3 rounded-lg transition-all active:scale-95"
+              className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white text-[11px] font-bold py-1.5 px-3 rounded-lg transition-all active:scale-95"
             >
               <CheckCircle className="w-3.5 h-3.5" /> Resolver
             </button>
