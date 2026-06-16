@@ -177,23 +177,32 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     }
   };
 
+
+
   const sendHogarNetflixTemplate = () => {
     if (!activeChatTicket) return;
     const text = `🤖 Para actualizar tu hogar de Netflix, abre este enlace desde tu celular o TV:\n👉 https://sheerit.com.co/verificar?tel=${activeChatTicket.phone}`;
-    handleSendChatMessage(text);
+    setNewMsgText(prev => (prev ? prev + "\n" + text : text));
   };
 
-  const sendCredentialsTemplate = () => {
-    if (!activeChatTicket || !activeChatTicket.accounts || activeChatTicket.accounts.length === 0) {
-      alert("No hay cuentas vinculadas a este ticket.");
-      return;
-    }
+  const insertCredentials = (acc: AccountInfo | null) => {
+    if (!activeChatTicket) return;
     let text = `🤖 *Tus credenciales de ingreso de Sheerit Store* 🔑:\n\n`;
-    activeChatTicket.accounts.forEach(acc => {
+    if (acc) {
       text += `📺 Plataforma: *${acc.streaming}*\n📧 Correo: \`${acc.correo}\`\n👤 Perfil: *${acc.nombrePerfil}*\n\n`;
-    });
+    } else if (activeChatTicket.accounts) {
+      activeChatTicket.accounts.forEach(a => {
+        text += `📺 Plataforma: *${a.streaming}*\n📧 Correo: \`${a.correo}\`\n👤 Perfil: *${a.nombrePerfil}*\n\n`;
+      });
+    }
     text += `_Por favor, ingresa con estos datos. Si te pide un código de verificación, escríbeme aquí la palabra *codigo*._`;
-    handleSendChatMessage(text);
+    setNewMsgText(prev => (prev ? prev + "\n" + text : text));
+  };
+
+  const insertCobroTemplate = () => {
+    if (!activeChatTicket) return;
+    const text = `🤖 *Recordatorio de Pago / Renovación Sheerit Store* 💰\n\nPor favor realiza tu transferencia usando nuestra *Llave Bre-V:* \`0087387259\` (RECOMENDADO: entrega inmediata ⚡)\n\nValor: $`;
+    setNewMsgText(prev => (prev ? prev + "\n" + text : text));
   };
 
   const handleDragStart = (e: React.DragEvent, phone: string) => {
@@ -722,15 +731,43 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             <button
               onClick={sendHogarNetflixTemplate}
               className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-750 dark:hover:bg-gray-700 text-gray-800 dark:text-white text-[11px] font-bold py-1.5 px-3 rounded-lg border dark:border-gray-650 transition-all active:scale-95"
+              title="Copiar plantilla de Hogar Netflix al mensaje"
             >
               <Home className="w-3.5 h-3.5 text-amber-500" /> Hogar Netflix 📺
             </button>
+            
             <button
-              onClick={sendCredentialsTemplate}
+              onClick={insertCobroTemplate}
               className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-750 dark:hover:bg-gray-700 text-gray-800 dark:text-white text-[11px] font-bold py-1.5 px-3 rounded-lg border dark:border-gray-650 transition-all active:scale-95"
+              title="Copiar plantilla de Cobrar al mensaje"
             >
-              <Key className="w-3.5 h-3.5 text-blue-500" /> Enviar Credenciales 🔑
+              <Smile className="w-3.5 h-3.5 text-emerald-500" /> Cobrar 💰
             </button>
+
+            {activeChatTicket.accounts && activeChatTicket.accounts.length > 0 ? (
+              <>
+                {activeChatTicket.accounts.map((acc, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => insertCredentials(acc)}
+                    className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-750 dark:hover:bg-gray-700 text-gray-800 dark:text-white text-[11px] font-bold py-1.5 px-3 rounded-lg border dark:border-gray-650 transition-all active:scale-95"
+                    title={`Copiar credenciales de ${acc.streaming} al mensaje`}
+                  >
+                    <Key className="w-3.5 h-3.5 text-blue-500" /> Credenciales {acc.streaming} 🔑
+                  </button>
+                ))}
+                {activeChatTicket.accounts.length > 1 && (
+                  <button
+                    onClick={() => insertCredentials(null)}
+                    className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-750 dark:hover:bg-gray-700 text-gray-800 dark:text-white text-[11px] font-bold py-1.5 px-3 rounded-lg border dark:border-gray-650 transition-all active:scale-95"
+                    title="Copiar todas las credenciales al mensaje"
+                  >
+                    <Key className="w-3.5 h-3.5 text-indigo-500" /> Credenciales (Todas) 🔑
+                  </button>
+                )}
+              </>
+            ) : null}
+
             {(() => {
               const activeClaudeLink = chatMessages
                 .map(m => detectClaudeLink(m.body))
@@ -839,6 +876,60 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 Se enviará como: <strong className="dark:text-white">{advisorEmoji} [tu mensaje]</strong>
               </span>
             </div>
+
+            {/* Quick Insertion Tags (Agregadores) */}
+            {activeChatTicket && (
+              <div className="flex flex-wrap gap-1.5 pb-1 border-b dark:border-gray-800 items-center">
+                <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Agregadores:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const firstName = activeChatTicket.nombre ? activeChatTicket.nombre.split(' ')[0] : 'Cliente';
+                    setNewMsgText(prev => prev + (prev ? ' ' : '') + firstName);
+                  }}
+                  className="text-[10px] bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 px-2 py-1 rounded-lg font-bold text-gray-700 dark:text-gray-300 transition-all active:scale-95"
+                  title="Insertar nombre del cliente"
+                >
+                  👤 {activeChatTicket.nombre ? activeChatTicket.nombre.split(' ')[0] : 'Cliente'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewMsgText(prev => prev + (prev ? ' ' : '') + `https://sheerit.com.co/verificar?tel=${activeChatTicket.phone}`)}
+                  className="text-[10px] bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 px-2 py-1 rounded-lg font-bold text-gray-700 dark:text-gray-300 transition-all active:scale-95"
+                  title="Insertar link de verificación de hogar"
+                >
+                  📺 Link Hogar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewMsgText(prev => prev + (prev ? ' ' : '') + `0087387259`)}
+                  className="text-[10px] bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 px-2 py-1 rounded-lg font-bold text-gray-700 dark:text-gray-300 transition-all active:scale-95"
+                  title="Insertar número de Llave Bre-V"
+                >
+                  🔑 Llave Bre-V
+                </button>
+                {activeChatTicket.accounts && activeChatTicket.accounts.map((acc, idx) => (
+                  <React.Fragment key={idx}>
+                    <button
+                      type="button"
+                      onClick={() => setNewMsgText(prev => prev + (prev ? ' ' : '') + acc.correo)}
+                      className="text-[10px] bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/40 px-2 py-1 rounded-lg font-bold text-blue-700 dark:text-blue-305 transition-all active:scale-95"
+                      title={`Insertar correo de ${acc.streaming}`}
+                    >
+                      📧 {acc.correo.split('@')[0]}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewMsgText(prev => prev + (prev ? ' ' : '') + acc.streaming)}
+                      className="text-[10px] bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/40 px-2 py-1 rounded-lg font-bold text-purple-700 dark:text-purple-305 transition-all active:scale-95"
+                      title={`Insertar plataforma: ${acc.streaming}`}
+                    >
+                      🎬 {acc.streaming}
+                    </button>
+                  </React.Fragment>
+                ))}
+              </div>
+            )}
 
             {/* Input field */}
             <form
