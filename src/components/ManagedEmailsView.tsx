@@ -602,7 +602,7 @@ export const ManagedEmailsView: React.FC = () => {
                     )}
 
                     {/* Card Body */}
-                    <div className="p-4 bg-white dark:bg-gray-800">
+                    <div className="p-4 bg-white dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
                       {/* From / Sender details */}
                       <div className="flex justify-between items-start mb-2 gap-4">
                         <div className="min-w-0">
