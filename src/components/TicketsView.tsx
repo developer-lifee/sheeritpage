@@ -39,6 +39,12 @@ interface ChatMessage {
 
 const COMMON_EMOJIS = ['💬', '👑', '⚡', '🌸', '🛡️', '👨‍💻', '🙋‍♂️', '💼', '🔥', '🚀'];
 
+const detectClaudeLink = (text: string | null) => {
+  if (!text) return null;
+  const match = text.match(/https?:\/\/(?:www\.)?(?:claude\.ai|anthropic\.com|mail\.anthropic\.com)[^\s<>"']+/i);
+  return match ? match[0] : null;
+};
+
 export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName, onLogout }) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -725,6 +731,24 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             >
               <Key className="w-3.5 h-3.5 text-blue-500" /> Enviar Credenciales 🔑
             </button>
+            {(() => {
+              const activeClaudeLink = chatMessages
+                .map(m => detectClaudeLink(m.body))
+                .find(Boolean);
+              if (activeClaudeLink) {
+                return (
+                  <a
+                    href={activeClaudeLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 bg-orange-600 hover:bg-orange-700 text-white text-[11px] font-bold py-1.5 px-3 rounded-lg shadow-sm transition-all active:scale-95 animate-pulse"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" /> Acceso Claude 🔗
+                  </a>
+                );
+              }
+              return null;
+            })()}
             <button
               onClick={() => handleResolveClick(activeChatTicket)}
               className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-[11px] font-bold py-1.5 px-3 rounded-lg transition-all active:scale-95"
@@ -747,6 +771,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             ) : (
               chatMessages.map((msg, idx) => {
                 const isMe = msg.fromMe;
+                const claudeLink = detectClaudeLink(msg.body);
                 return (
                   <div
                     key={msg.id || idx}
@@ -757,6 +782,17 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     }`}
                   >
                     <p className="whitespace-pre-wrap font-medium">{msg.body}</p>
+                    {claudeLink && (
+                      <a
+                        href={claudeLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-black transition-all w-fit uppercase"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Iniciar Sesión Claude <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
                     <span className={`text-[9px] text-right block ${isMe ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'}`}>
                       {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
