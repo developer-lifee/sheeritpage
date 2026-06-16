@@ -17,6 +17,25 @@ interface GroupChat {
   unreadCount: number;
 }
 
+const CREDENTIALS_TEMPLATE = `*Tus Credenciales de Sheer IT* 🔑
+
+🍿 *Servicio:* {Servicio}
+📧 *Usuario:* {Correo}
+🔑 *Contraseña:* {Contraseña}
+👤 *Perfil:* {Perfil}
+📅 *Vence:* {Vencimiento}
+
+¡Disfruta tu servicio! 🤖`;
+
+const PAYMENT_TEMPLATE = `¡Hola {Nombre}! 👋
+
+Te recordamos que tu servicio de *{Servicio}* está próximo a vencer:
+📅 *Fecha de Vencimiento:* {Vencimiento}
+
+Puedes renovar realizando tu transferencia usando nuestra *Llave Bre-V:* \`0087387259\` ⚡ (RECOMENDADO: entrega inmediata)
+
+Una vez realizado, envíanos el comprobante por este medio. ¡Gracias!`;
+
 export const BulkSenderView: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'clients' | 'groups'>('clients');
   const [clients, setClients] = useState<Client[]>([]);
@@ -29,7 +48,7 @@ export const BulkSenderView: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('todos');
   const [messageType, setMessageType] = useState<'custom' | 'credentials' | 'payment'>('custom');
   const [customMessage, setCustomMessage] = useState<string>('');
-  const [selectedClientPhones, setSelectedClientPhones] = useState<string[]>([]);
+  const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
 
   // Selected WhatsApp Groups
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
@@ -44,11 +63,24 @@ export const BulkSenderView: React.FC = () => {
     fetchClients();
   }, []);
 
-  const fetchClients = async () => {
+  // Whenever messageType changes, update the template block in customMessage
+  useEffect(() => {
+    if (messageType === 'credentials') {
+      setCustomMessage(CREDENTIALS_TEMPLATE);
+    } else if (messageType === 'payment') {
+      setCustomMessage(PAYMENT_TEMPLATE);
+    } else {
+      setCustomMessage('');
+    }
+  }, [messageType]);
+
+  const fetchClients = async (force = false) => {
     setLoadingClients(true);
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:3000'
+      : 'https://bot.sheerit.com.co';
     try {
-      const res = await fetch(`${apiUrl}/api/admin/clients`);
+      const res = await fetch(`${apiUrl}/api/admin/clients${force ? '?force=true' : ''}`);
       const data = await res.json();
       setClients(Array.isArray(data) ? data : []);
     } catch (e) {
@@ -60,7 +92,9 @@ export const BulkSenderView: React.FC = () => {
 
   const fetchGroups = async () => {
     setLoadingGroups(true);
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:3000'
+      : 'https://bot.sheerit.com.co';
     try {
       const res = await fetch(`${apiUrl}/api/admin/groups`);
       const data = await res.json();
@@ -77,6 +111,25 @@ export const BulkSenderView: React.FC = () => {
     if (tab === 'groups' && groups.length === 0) {
       fetchGroups();
     }
+  };
+
+  const formatExcelDate = (excelDate: any) => {
+    if (!excelDate) return '-';
+    const str = excelDate.toString().trim();
+    if (isNaN(str as any)) {
+      return str;
+    }
+    try {
+      const serial = parseFloat(str);
+      const date = new Date((serial - 25569) * 86400 * 1000);
+      if (!isNaN(date.getTime())) {
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+    } catch (e) {}
+    return str;
   };
 
   // Days remaining calculator
@@ -132,28 +185,28 @@ export const BulkSenderView: React.FC = () => {
 
   // Auto-select filtered clients on filter change
   useEffect(() => {
-    const phones = filteredClients
-      .map(c => (c.numero || c.Numero || '').toString().replace(/\D/g, ''))
-      .filter(Boolean);
-    setSelectedClientPhones(phones);
+    const rowIds = filteredClients
+      .map(c => c._rowNumber)
+      .filter((id): id is number => typeof id === 'number');
+    setSelectedRowIds(rowIds);
   }, [selectedService, selectedStatus, clients]);
 
-  const handleToggleSelectClient = (phone: string) => {
-    if (selectedClientPhones.includes(phone)) {
-      setSelectedClientPhones(selectedClientPhones.filter(p => p !== phone));
+  const handleToggleSelectClient = (rowNumber: number) => {
+    if (selectedRowIds.includes(rowNumber)) {
+      setSelectedRowIds(selectedRowIds.filter(id => id !== rowNumber));
     } else {
-      setSelectedClientPhones([...selectedClientPhones, phone]);
+      setSelectedRowIds([...selectedRowIds, rowNumber]);
     }
   };
 
   const handleToggleSelectAllClients = () => {
-    const allFilteredPhones = filteredClients
-      .map(c => (c.numero || c.Numero || '').toString().replace(/\D/g, ''))
-      .filter(Boolean);
-    if (selectedClientPhones.length === allFilteredPhones.length) {
-      setSelectedClientPhones([]);
+    const allFilteredRowIds = filteredClients
+      .map(c => c._rowNumber)
+      .filter((id): id is number => typeof id === 'number');
+    if (selectedRowIds.length === allFilteredRowIds.length) {
+      setSelectedRowIds([]);
     } else {
-      setSelectedClientPhones(allFilteredPhones);
+      setSelectedRowIds(allFilteredRowIds);
     }
   };
 
@@ -161,7 +214,9 @@ export const BulkSenderView: React.FC = () => {
 
   // Send single message to client/group
   const sendSingle = async (phone: string, type: 'custom' | 'credentials' | 'payment', messageText?: string) => {
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:3000'
+      : 'https://bot.sheerit.com.co';
     const body: any = { phone, type, password: 'admin123' };
     if (type === 'custom') {
       body.message = messageText;
@@ -176,22 +231,19 @@ export const BulkSenderView: React.FC = () => {
 
   // Run bulk sending for Clientes
   const startBulkClients = async () => {
-    const clientsToSend = filteredClients.filter(c => {
-      const phone = (c.numero || c.Numero || '').toString().replace(/\D/g, '');
-      return selectedClientPhones.includes(phone);
-    });
+    const clientsToSend = filteredClients.filter(c => c._rowNumber && selectedRowIds.includes(c._rowNumber));
 
     if (clientsToSend.length === 0) {
       alert("Por favor, selecciona al menos un cliente para el envío.");
       return;
     }
 
-    if (messageType === 'custom' && !customMessage.trim()) {
-      alert("Por favor, ingresa el mensaje personalizado a enviar.");
+    if (!customMessage.trim()) {
+      alert("Por favor, ingresa el mensaje o plantilla de difusión.");
       return;
     }
 
-    const confirmSend = window.confirm(`¿Estás seguro de enviar esta difusión a ${clientsToSend.length} clientes seleccionados? Se enviará con un delay de seguridad de 2 segundos para evitar baneos.`);
+    const confirmSend = window.confirm(`¿Estás seguro de enviar esta difusión a ${clientsToSend.length} registros seleccionados? Se enviará con un delay de seguridad de 2 segundos para evitar baneos.`);
     if (!confirmSend) return;
 
     setIsSending(true);
@@ -214,16 +266,20 @@ export const BulkSenderView: React.FC = () => {
       }
 
       try {
-        // Replace dynamic tags in custom message
-        let finalMessage = customMessage;
-        if (messageType === 'custom') {
-          finalMessage = finalMessage
-            .replace(/{Nombre}/g, clientName)
-            .replace(/{Servicio}/g, client.Streaming || '')
-            .replace(/{Vencimiento}/g, client.deben || client.vencimiento || '');
-        }
+        // Render current row data into templates
+        const pass = client['pin perfil'] || client.contraseña || client.Clave || client.clave || client.password || 'N/A';
+        const venc = formatExcelDate(client['Fecha Vencimiento'] || client.deben || client.vencimiento);
 
-        const res = await sendSingle(phone, messageType, finalMessage);
+        const finalMessage = customMessage
+          .replace(/{Nombre}/g, clientName)
+          .replace(/{Servicio}/g, client.Streaming || 'N/A')
+          .replace(/{Correo}/g, client.correo || 'N/A')
+          .replace(/{Contraseña}/g, pass)
+          .replace(/{Perfil}/g, client.Nombre || 'N/A')
+          .replace(/{Vencimiento}/g, venc);
+
+        // Always send as type 'custom' to respect the rendered frontend template.
+        const res = await sendSingle(phone, 'custom', finalMessage);
         
         if (res.success) {
           successCount++;
@@ -331,16 +387,26 @@ export const BulkSenderView: React.FC = () => {
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Service selector */}
-            <div>
+            <div className="flex flex-col">
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Filtrar por Servicio</label>
-              <select
-                value={selectedService}
-                onChange={(e) => setSelectedService(e.target.value)}
-                className="w-full px-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
-              >
-                <option value="todos">Todos los servicios</option>
-                {uniqueServices.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <div className="flex gap-2">
+                <select
+                  value={selectedService}
+                  onChange={(e) => setSelectedService(e.target.value)}
+                  className="flex-grow px-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                >
+                  <option value="todos">Todos los servicios</option>
+                  {uniqueServices.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => fetchClients(true)}
+                  className="px-3 bg-brand-primary hover:bg-brand-dark text-white rounded-xl flex items-center justify-center transition-colors active:scale-95"
+                  title="Forzar actualización y refrescar datos desde Excel"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loadingClients ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
             </div>
 
             {/* Status selector */}
@@ -367,33 +433,31 @@ export const BulkSenderView: React.FC = () => {
                 className="w-full px-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
               >
                 <option value="custom">Mensaje Personalizado</option>
-                <option value="credentials">🔑 Enviar Credenciales Automáticas</option>
-                <option value="payment">💰 Enviar Recordatorio de Cobro</option>
+                <option value="credentials">🔑 Enviar Credenciales Automáticas (Editable)</option>
+                <option value="payment">💰 Enviar Recordatorio de Cobro (Editable)</option>
               </select>
             </div>
           </div>
 
-          {messageType === 'custom' && (
-            <div className="bg-gray-50/50 dark:bg-gray-900/10 border dark:border-gray-700 p-4 rounded-2xl">
-              <div className="flex justify-between items-center mb-2">
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Escribe tu Mensaje de Difusión</label>
-                <span className="text-[10px] text-gray-400">Puedes usar: <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded text-red-500 font-mono">{`{Nombre}`}</code>, <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded text-red-500 font-mono">{`{Servicio}`}</code>, <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded text-red-500 font-mono">{`{Vencimiento}`}</code></span>
-              </div>
-              <textarea
-                rows={5}
-                value={customMessage}
-                onChange={(e) => setCustomMessage(e.target.value)}
-                placeholder="Escribe tu mensaje aquí..."
-                className="w-full p-4 border dark:border-gray-600 rounded-xl dark:bg-gray-750 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
-              />
+          <div className="bg-gray-50/50 dark:bg-gray-900/10 border dark:border-gray-700 p-4 rounded-2xl">
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Escribe tu Mensaje o Plantilla de Difusión</label>
+              <span className="text-[10px] text-gray-400">Puedes usar: <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded text-red-500 font-mono">{`{Nombre}`}</code>, <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded text-red-500 font-mono">{`{Servicio}`}</code>, <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded text-red-500 font-mono">{`{Correo}`}</code>, <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded text-red-500 font-mono">{`{Contraseña}`}</code>, <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded text-red-500 font-mono">{`{Perfil}`}</code>, <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded text-red-500 font-mono">{`{Vencimiento}`}</code></span>
             </div>
-          )}
+            <textarea
+              rows={5}
+              value={customMessage}
+              onChange={(e) => setCustomMessage(e.target.value)}
+              placeholder="Escribe tu mensaje o plantilla aquí..."
+              className="w-full p-4 border dark:border-gray-600 rounded-xl dark:bg-gray-750 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            />
+          </div>
 
           {/* List of clients from Database */}
           <div className="border dark:border-gray-750 rounded-2xl p-4 bg-gray-50/25 dark:bg-gray-900/10">
             <div className="flex justify-between items-center mb-3">
               <label className="block text-xs font-semibold text-gray-400 dark:text-gray-300 uppercase tracking-wider">
-                Clientes a enviar ({selectedClientPhones.length} de {filteredClients.length} filtrados)
+                Registros a enviar ({selectedRowIds.length} de {filteredClients.length} filtrados)
               </label>
               {filteredClients.length > 0 && (
                 <button
@@ -401,7 +465,7 @@ export const BulkSenderView: React.FC = () => {
                   onClick={handleToggleSelectAllClients}
                   className="text-xs text-brand-primary hover:underline font-bold"
                 >
-                  {selectedClientPhones.length === filteredClients.filter(c => c.numero || c.Numero).length ? 'Deseleccionar Todos' : 'Seleccionar Todos'}
+                  {selectedRowIds.length === filteredClients.filter(c => c._rowNumber).length ? 'Deseleccionar Todos' : 'Seleccionar Todos'}
                 </button>
               )}
             </div>
@@ -417,11 +481,11 @@ export const BulkSenderView: React.FC = () => {
               <div className="max-h-60 overflow-y-auto border dark:border-gray-750 rounded-xl bg-white dark:bg-gray-850 divide-y dark:divide-gray-750">
                 {filteredClients.map((client, idx) => {
                   const phone = (client.numero || client.Numero || '').toString().replace(/\D/g, '');
-                  const isChecked = selectedClientPhones.includes(phone);
+                  const isChecked = client._rowNumber ? selectedRowIds.includes(client._rowNumber) : false;
                   return (
                     <div 
                       key={idx}
-                      onClick={() => phone && handleToggleSelectClient(phone)}
+                      onClick={() => client._rowNumber && handleToggleSelectClient(client._rowNumber)}
                       className={`flex items-center gap-3 p-3 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${isChecked ? 'bg-brand-primary/5' : ''}`}
                     >
                       <input 
@@ -429,13 +493,13 @@ export const BulkSenderView: React.FC = () => {
                         checked={isChecked}
                         onChange={() => {}} // handled by container click
                         className="rounded text-brand-primary focus:ring-brand-primary"
-                        disabled={!phone}
+                        disabled={!client._rowNumber}
                       />
                       <div className="flex-grow grid grid-cols-2 sm:grid-cols-4 gap-2 text-gray-700 dark:text-gray-300">
                         <span className="font-bold truncate">{client.Nombre || 'N/A'}</span>
                         <span className="font-mono text-gray-500 dark:text-gray-450">{phone || 'Sin número'}</span>
                         <span className="truncate text-brand-primary dark:text-brand-light font-medium bg-brand-primary/10 px-2 py-0.5 rounded w-fit">{client.Streaming || 'N/A'}</span>
-                        <span className="text-gray-400 text-right sm:text-left">Vence: {client.deben || client.vencimiento || '-'}</span>
+                        <span className="text-gray-400 text-right sm:text-left">Vence: {formatExcelDate(client.deben || client.vencimiento || '-')}</span>
                       </div>
                     </div>
                   );
@@ -448,7 +512,7 @@ export const BulkSenderView: React.FC = () => {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-emerald-500/10 dark:bg-emerald-950/20 border border-emerald-500/20 rounded-2xl gap-4">
             <div>
               <p className="text-emerald-800 dark:text-emerald-300 font-bold text-base">
-                Destinatarios Seleccionados: {selectedClientPhones.length} clientes
+                Destinatarios Seleccionados: {selectedRowIds.length} registros
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 Filtros actuales: Servicio ({selectedService}) y Vencimiento ({selectedStatus})
@@ -457,7 +521,7 @@ export const BulkSenderView: React.FC = () => {
             
             <button
               onClick={startBulkClients}
-              disabled={isSending || selectedClientPhones.length === 0}
+              disabled={isSending || selectedRowIds.length === 0}
               className="flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold transition-all disabled:opacity-50 w-full sm:w-auto"
             >
               <Play className="w-4 h-4 mr-2" />
