@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard, Radio } from 'lucide-react';
+import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard, Radio, FileText } from 'lucide-react';
 import { ClientsView } from './ClientsView';
 import { NetflixMatchView } from './NetflixMatchView';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
@@ -14,6 +14,7 @@ import { AccountAlertsView } from './AccountAlertsView';
 import { SupportScheduleView } from './SupportScheduleView';
 import { PaymentConfigView } from './PaymentConfigView';
 import { StreamingView } from './StreamingView';
+import { PoliciesView } from './PoliciesView';
 
 interface Step {
   text: string;
@@ -45,7 +46,8 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
   const [data, setData] = useState<SupportPlatform[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'payments' | 'streaming'>('tickets');
+  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'payments' | 'streaming' | 'policies'>('tickets');
+
 
   // Platforms to recycle logos from
   const availableLogos = [
@@ -272,6 +274,12 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           <Radio className="w-5 h-5 mr-2" /> Transmisión TV
         </button>
         <button 
+          onClick={() => setActiveTab('policies')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'policies' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <FileText className="w-5 h-5 mr-2" /> Políticas y PDFs
+        </button>
+        <button 
           onClick={() => setActiveTab('netflix')}
           className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'netflix' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-red-50 dark:text-gray-400 dark:hover:bg-red-900/30'}`}
         >
@@ -305,8 +313,12 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       <div className={activeTab === 'streaming' ? '' : 'hidden'}>
         <StreamingView adminPassword={adminPassword} />
       </div>
+      <div className={activeTab === 'policies' ? '' : 'hidden'}>
+        <PoliciesView />
+      </div>
 
       <div className={activeTab === 'support' ? '' : 'hidden'}>
+
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold dark:text-white">Editar Guías de Soporte</h2>
           <button 
