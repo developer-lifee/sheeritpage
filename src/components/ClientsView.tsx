@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle } from 'lucide-react';
 
 function formatExcelDate(excelDate: any): string {
@@ -82,6 +82,25 @@ export const ClientsView: React.FC = () => {
     const [sendProgress, setSendProgress] = useState({ current: 0, total: 0, success: 0, fail: 0 });
     const [sendingLogs, setSendingLogs] = useState<string[]>([]);
     const [showBulkSender, setShowBulkSender] = useState(false);
+    const messageTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+    // Insert variable at cursor position in the custom message textarea
+    const insertVariable = useCallback((variable: string) => {
+        const ta = messageTextareaRef.current;
+        if (!ta) {
+            setCustomMessage(prev => prev + variable);
+            return;
+        }
+        const start = ta.selectionStart;
+        const end = ta.selectionEnd;
+        const newValue = customMessage.substring(0, start) + variable + customMessage.substring(end);
+        setCustomMessage(newValue);
+        // Restore focus and cursor position after state update
+        requestAnimationFrame(() => {
+            ta.focus();
+            ta.setSelectionRange(start + variable.length, start + variable.length);
+        });
+    }, [customMessage]);
 
     // Status states for inline feedback
     const [actionStates, setActionStates] = useState<{[key: string]: 'idle' | 'loading' | 'success' | 'error'}>({});
@@ -500,21 +519,74 @@ export const ClientsView: React.FC = () => {
                         </div>
 
                         {messageType === 'custom' && (
-                            <div className="md:col-span-2 space-y-2">
-                                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase flex justify-between">
-                                    <span>Mensaje Personalizado</span>
-                                    <span className="text-[10px] text-brand-primary lowercase font-normal">
-                                        Variables: {"{Nombre}"}, {"{Servicio}"}, {"{Vencimiento}"}
-                                    </span>
+                            <div className="md:col-span-2 space-y-3">
+                                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">
+                                    Constructor de Mensaje
                                 </label>
-                                <textarea
-                                    value={customMessage}
-                                    onChange={(e) => setCustomMessage(e.target.value)}
-                                    placeholder="Hola {Nombre}, tu servicio de {Servicio} vence el {Vencimiento}..."
-                                    rows={3}
-                                    className="w-full px-3 py-2 border rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary resize-none animate-fadeIn"
-                                    disabled={isSending}
-                                />
+
+                                {/* Variable chip buttons */}
+                                <div className="flex flex-wrap gap-2 p-3 bg-white dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-xl">
+                                    <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide self-center mr-1">Insertar:</span>
+                                    {[
+                                        { label: '👤 Nombre', value: '{Nombre}', color: 'from-violet-500 to-purple-600' },
+                                        { label: '📺 Servicio', value: '{Servicio}', color: 'from-blue-500 to-cyan-600' },
+                                        { label: '📅 Vencimiento', value: '{Vencimiento}', color: 'from-orange-500 to-amber-600' },
+                                    ].map(chip => (
+                                        <button
+                                            key={chip.value}
+                                            type="button"
+                                            disabled={isSending}
+                                            onClick={() => insertVariable(chip.value)}
+                                            draggable
+                                            onDragStart={(e) => e.dataTransfer.setData('text/plain', chip.value)}
+                                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r ${chip.color} shadow-sm hover:scale-105 hover:shadow-md active:scale-95 transition-all duration-150 cursor-pointer select-none disabled:opacity-40`}
+                                        >
+                                            {chip.label}
+                                        </button>
+                                    ))}
+                                    <span className="text-[10px] text-gray-400 ml-auto self-center">click o arrastra al mensaje</span>
+                                </div>
+
+                                {/* Message textarea with drop zone */}
+                                <div className="relative">
+                                    <textarea
+                                        ref={messageTextareaRef}
+                                        value={customMessage}
+                                        onChange={(e) => setCustomMessage(e.target.value)}
+                                        onDragOver={(e) => e.preventDefault()}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            const variable = e.dataTransfer.getData('text/plain');
+                                            if (variable) insertVariable(variable);
+                                        }}
+                                        placeholder="Escribe tu mensaje aquí o arrastra las variables de arriba...&#10;&#10;Ej: Hola {Nombre}, tu servicio de {Servicio} vence el {Vencimiento}. ¡Renueva ya! 🚀"
+                                        rows={4}
+                                        className="w-full px-4 py-3 border-2 rounded-xl dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary resize-none transition-all font-mono"
+                                        disabled={isSending}
+                                    />
+                                </div>
+
+                                {/* Live preview */}
+                                {customMessage.trim() && (
+                                    <div className="animate-fadeIn">
+                                        <p className="text-[10px] font-bold uppercase text-gray-400 mb-1.5">Vista previa del mensaje:</p>
+                                        <div className="bg-[#DCF8C6] dark:bg-green-900/30 rounded-2xl rounded-tl-none px-4 py-3 text-sm text-gray-800 dark:text-green-100 max-w-sm shadow-sm font-sans whitespace-pre-wrap leading-relaxed">
+                                            {customMessage
+                                                .split(/({Nombre}|{Servicio}|{Vencimiento})/g)
+                                                .map((part, idx) => {
+                                                    const chipStyles: Record<string, string> = {
+                                                        '{Nombre}': 'bg-violet-500 text-white',
+                                                        '{Servicio}': 'bg-blue-500 text-white',
+                                                        '{Vencimiento}': 'bg-orange-500 text-white',
+                                                    };
+                                                    return chipStyles[part]
+                                                        ? <span key={idx} className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold mx-0.5 ${chipStyles[part]}`}>{part}</span>
+                                                        : <span key={idx}>{part}</span>;
+                                                })
+                                            }
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
