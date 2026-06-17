@@ -9,6 +9,7 @@ interface EmailMessage {
   internalDate: string;
   snippet: string;
   body?: string;
+  rawHtml?: string;
 }
 
 interface ParsedEmail {
@@ -164,6 +165,7 @@ export const ManagedEmailsView: React.FC = () => {
   const [emailsLoading, setEmailsLoading] = useState(false);
   const [emailsError, setEmailsError] = useState('');
   const [expandedEmailId, setExpandedEmailId] = useState<string | null>(null);
+  const [htmlViewMode, setHtmlViewMode] = useState<Record<string, boolean>>({});
 
   const handleCopy = (e: React.MouseEvent, text: string, id: string) => {
     e.stopPropagation();
@@ -722,10 +724,59 @@ export const ManagedEmailsView: React.FC = () => {
                       {/* Expanded body details */}
                       {isExpanded && (
                         <div className="mt-4 pt-4 border-t border-gray-150 dark:border-gray-750">
-                          <span className="text-[10px] uppercase font-bold text-gray-450 tracking-wider block mb-2">CUERPO DEL MENSAJE:</span>
-                          <div className="p-3.5 bg-gray-50 dark:bg-gray-900 border dark:border-gray-750 rounded-xl text-xs text-gray-700 dark:text-gray-350 whitespace-pre-wrap font-mono select-text break-words leading-relaxed max-h-[40vh] overflow-y-auto">
-                            {msg.body}
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] uppercase font-bold text-gray-450 tracking-wider">Cuerpo del Mensaje:</span>
+                            {msg.rawHtml && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setHtmlViewMode(prev => ({ ...prev, [msg.id]: !prev[msg.id] }));
+                                }}
+                                className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg font-bold transition-all border
+                                  bg-gradient-to-r from-red-500 to-orange-500 text-white border-transparent hover:opacity-90 shadow-sm"
+                              >
+                                {htmlViewMode[msg.id] ? '📄 Ver texto' : '🌐 Ver como Gmail'}
+                              </button>
+                            )}
                           </div>
+
+                          {msg.rawHtml && htmlViewMode[msg.id] ? (
+                            /* Gmail-like HTML iframe view */
+                            <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white shadow-inner">
+                              {/* Gmail-style email header bar */}
+                              <div className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center gap-2">
+                                <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                                <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                                <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
+                                <span className="text-[10px] text-gray-400 ml-2 font-mono truncate flex-1">{msg.subject}</span>
+                              </div>
+                              <iframe
+                                srcDoc={msg.rawHtml}
+                                sandbox="allow-same-origin"
+                                className="w-full bg-white"
+                                style={{ height: '520px', border: 'none' }}
+                                onLoad={(e) => {
+                                  // Auto-resize to content height (up to 600px)
+                                  try {
+                                    const frame = e.currentTarget;
+                                    const doc = frame.contentDocument;
+                                    if (doc) {
+                                      const h = Math.min(doc.documentElement.scrollHeight + 32, 600);
+                                      frame.style.height = h + 'px';
+                                    }
+                                  } catch (_) {}
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            /* Plain text fallback */
+                            <div
+                              className="p-3.5 bg-gray-50 dark:bg-gray-900 border dark:border-gray-750 rounded-xl text-xs text-gray-700 dark:text-gray-350 whitespace-pre-wrap font-mono select-text break-words leading-relaxed max-h-[40vh] overflow-y-auto"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {msg.body}
+                            </div>
+                          )}
                         </div>
                       )}
 
