@@ -56,11 +56,12 @@ const parseEmailData = (msg: EmailMessage): ParsedEmail => {
 
     // Try to extract 4 to 8 digit code
     let code = '';
-    const codeMatch = textToSearch.match(/\b([0-9]{6})\b/) || 
-                      textToSearch.match(/\b([0-9]{4})\b/) || 
-                      textToSearch.match(/\b([0-9]{5})\b/) ||
-                      textToSearch.match(/\b([0-9]{8})\b/) ||
-                      textToSearch.match(/\b([A-Z0-9]{6,8})\b/i);
+    const textWithoutUrls = textToSearch.replace(/https?:\/\/[^\s<>"`']+/gi, ' ');
+    const codeMatch = textWithoutUrls.match(/\b([0-9]{6})\b/) || 
+                      textWithoutUrls.match(/\b([0-9]{4})\b/) || 
+                      textWithoutUrls.match(/\b([0-9]{5})\b/) ||
+                      textWithoutUrls.match(/\b([0-9]{8})\b/) ||
+                      textWithoutUrls.match(/\b([A-Z0-9]{6,8})\b/i);
     if (codeMatch) {
       code = codeMatch[1].toUpperCase();
     }
