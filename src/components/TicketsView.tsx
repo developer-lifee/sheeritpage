@@ -83,7 +83,30 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     return '🦈'; // default fallback
   });
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [viewMode, setViewMode] = useState<'kanban' | 'grouped_accounts' | 'grouped_subjects'>('kanban');
+  const [viewMode, setViewMode] = useState<'chat_layout' | 'kanban' | 'grouped_accounts' | 'grouped_subjects'>('chat_layout');
+  const [sidebarFilter, setSidebarFilter] = useState<'me' | 'unassigned' | 'other' | 'all'>('all');
+  const [bulkSharedMessage, setBulkSharedMessage] = useState('');
+  const [showBulkSharedInput, setShowBulkSharedInput] = useState(false);
+  const [bulkSending, setBulkSending] = useState(false);
+  const [syncingChat, setSyncingChat] = useState(false);
+
+  const fetchSingleSend = async (phone: string, messageText: string) => {
+    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+      ? 'http://localhost:3000' 
+      : 'https://bot.sheerit.com.co';
+    const res = await fetch(`${apiUrl}/api/admin/chat-messages/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phone: phone,
+        message: messageText,
+        emoji: advisorEmoji,
+        agentName: agentName,
+        password: 'admin123'
+      })
+    });
+    return res.json();
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -149,6 +172,31 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       console.error("Error fetching chat messages:", e);
     } finally {
       if (!isSilent) setLoadingChat(false);
+    }
+  };
+
+  const handleSyncChatMessages = async () => {
+    if (!activeChatTicket) return;
+    setSyncingChat(true);
+    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+      ? 'http://localhost:3000' 
+      : 'https://bot.sheerit.com.co';
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/chat-messages/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: activeChatTicket.phone })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.messages) {
+          setChatMessages(data.messages);
+        }
+      }
+    } catch (e) {
+      console.error("Error syncing chat messages:", e);
+    } finally {
+      setSyncingChat(false);
     }
   };
 
@@ -422,6 +470,20 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const unassignedTickets = filteredTickets.filter(t => !t.agent);
   const myTickets = filteredTickets.filter(t => t.agent && t.agent.toLowerCase().trim() === safeAgentName);
   const otherTickets = filteredTickets.filter(t => t.agent && t.agent.toLowerCase().trim() !== safeAgentName);
+
+  const getSidebarTickets = () => {
+    switch (sidebarFilter) {
+      case 'me':
+        return myTickets;
+      case 'unassigned':
+        return unassignedTickets;
+      case 'other':
+        return otherTickets;
+      case 'all':
+      default:
+        return filteredTickets;
+    }
+  };
 
   // Grouping by accounts (Streaming - Correo)
   const getGroupedByAccounts = () => {
@@ -756,6 +818,16 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
           <div className="flex gap-2 border-b dark:border-gray-800 pb-2 overflow-x-auto scrollbar-none whitespace-nowrap">
             <button
+              onClick={() => setViewMode('chat_layout')}
+              className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+                viewMode === 'chat_layout'
+                  ? 'bg-brand-primary text-white shadow-sm'
+                  : 'bg-gray-50 dark:bg-gray-800 text-gray-650 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-750'
+              }`}
+            >
+              💬 Centro de Mensajería (Chat)
+            </button>
+            <button
               onClick={() => setViewMode('kanban')}
               className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
                 viewMode === 'kanban'
@@ -798,6 +870,418 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-md mx-auto">
             Todos los clientes han sido atendidos y no hay tickets pendientes en este momento.
           </p>
+        </div>
+      ) : viewMode === 'chat_layout' ? (
+        /* Split Chat Screen Layout */
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 min-h-[600px] h-[calc(100vh-280px)] border dark:border-gray-850 rounded-2xl overflow-hidden bg-gray-50/20 dark:bg-gray-900/10">
+          
+          {/* LEFT SIDEBAR: Ticket inbox list (col-span-4) */}
+          <div className="md:col-span-4 border-r dark:border-gray-850 flex flex-col h-full bg-white dark:bg-gray-900">
+            {/* Filter buttons inside sidebar */}
+            <div className="p-3 border-b dark:border-gray-850 bg-gray-50/50 dark:bg-gray-900/50 flex flex-wrap gap-1.5 justify-center">
+              <button
+                onClick={() => setSidebarFilter('all')}
+                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all ${
+                  sidebarFilter === 'all'
+                    ? 'bg-brand-primary text-white'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-650 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
+                Todos ({filteredTickets.length})
+              </button>
+              <button
+                onClick={() => setSidebarFilter('me')}
+                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 ${
+                  sidebarFilter === 'me'
+                    ? 'bg-brand-primary text-white'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-650 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
+                👤 Míos ({myTickets.length})
+              </button>
+              <button
+                onClick={() => setSidebarFilter('unassigned')}
+                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 ${
+                  sidebarFilter === 'unassigned'
+                    ? 'bg-brand-primary text-white'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-650 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
+                ⏳ Libres ({unassignedTickets.length})
+              </button>
+            </div>
+
+            {/* List of inbox tickets */}
+            <div className="flex-grow overflow-y-auto divide-y dark:divide-gray-850">
+              {getSidebarTickets().length === 0 ? (
+                <div className="text-center py-12 text-xs text-gray-400 dark:text-gray-500 font-medium">
+                  No hay chats en esta sección.
+                </div>
+              ) : (
+                getSidebarTickets().map(t => {
+                  const isActive = activeChatTicket?.userId === t.userId;
+                  const isBotMode = t.waitingHumanMode === 'bot';
+                  const timeFormatted = formatTimeDiff(t.lastMessageTime);
+                  
+                  return (
+                    <div
+                      key={t.userId}
+                      onClick={() => setActiveChatTicket(t)}
+                      className={`p-3.5 flex flex-col gap-1 cursor-pointer transition-colors relative ${
+                        isActive
+                          ? 'bg-brand-primary/5 border-l-4 border-l-brand-primary'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-800/40'
+                      }`}
+                    >
+                      {/* Name & Badge & Time */}
+                      <div className="flex justify-between items-start gap-1">
+                        <span className="font-bold text-xs text-gray-800 dark:text-white truncate max-w-[140px]" title={t.nombre}>
+                          {t.nombre || 'Cliente WhatsApp'}
+                        </span>
+                        <span className="text-[9px] text-gray-405 font-mono shrink-0">
+                          {timeFormatted ? timeFormatted.replace('Hace ', '') : ''}
+                        </span>
+                      </div>
+
+                      {/* Phone & mode */}
+                      <div className="flex justify-between items-center text-[10px] text-gray-400 dark:text-gray-500">
+                        <span className="font-mono">+{t.phone}</span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {isBotMode ? (
+                            <span className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-[8px] font-extrabold px-1 rounded">
+                              🤖 Bot
+                            </span>
+                          ) : (
+                            <span className="bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 text-[8px] font-extrabold px-1 rounded">
+                              👤 Asesor
+                            </span>
+                          )}
+                          {t.agent && (
+                            <span className="bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-[8px] font-extrabold px-1 rounded max-w-[50px] truncate" title={t.agent}>
+                              👤 {t.agent}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Snippet */}
+                      <p className="text-[11px] text-gray-500 dark:text-gray-450 truncate line-clamp-1 italic">
+                        "{t.lastMessage || 'Mensaje de sistema / adjunto'}"
+                      </p>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT VIEW: Chat Conversation & Details (col-span-8) */}
+          <div className="md:col-span-8 flex flex-col h-full bg-white dark:bg-gray-900 border-l dark:border-gray-850 overflow-hidden">
+            {activeChatTicket ? (
+              <div className="flex flex-col h-full relative overflow-hidden">
+                {/* Chat Panel top bar */}
+                <div className="p-4 bg-gray-50 dark:bg-gray-950 border-b dark:border-gray-850 flex flex-wrap justify-between items-center gap-3">
+                  <div>
+                    <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-1.5">
+                      {activeChatTicket.nombre} 
+                      {activeChatTicket.queuePosition !== undefined && activeChatTicket.queuePosition !== null && (
+                        <span className="bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded border">
+                          Turno #{activeChatTicket.queuePosition}
+                        </span>
+                      )}
+                    </h3>
+                    <span className="text-xs text-gray-450 font-mono">+{activeChatTicket.phone}</span>
+                  </div>
+
+                  {/* Top Bar actions */}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleSyncChatMessages()}
+                      disabled={syncingChat}
+                      className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-650 dark:text-gray-300 font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 shrink-0"
+                      title="Sincronizar mensajes desde el celular"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${syncingChat ? 'animate-spin text-brand-primary' : ''}`} />
+                      <span>{syncingChat ? 'Sincronizando...' : 'Sincronizar Celular'}</span>
+                    </button>
+                    {!activeChatTicket.agent ? (
+                      <button
+                        onClick={() => handleClaim(activeChatTicket.phone, agentName)}
+                        className="bg-brand-primary hover:bg-brand-dark text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition-all"
+                      >
+                        Reclamar Ticket
+                      </button>
+                    ) : activeChatTicket.agent.toLowerCase().trim() === safeAgentName ? (
+                      <button
+                        onClick={() => handleClaim(activeChatTicket.phone, '')}
+                        className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition-all"
+                      >
+                        Liberar Ticket
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleClaim(activeChatTicket.phone, agentName)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition-all"
+                      >
+                        Asignarme a mí
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => handleResolveClick(activeChatTicket)}
+                      className="bg-green-600 hover:bg-green-700 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1"
+                    >
+                      <CheckCircle className="w-3 h-3" /> Resolver
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sub-Header: Accounts list & Shared alert */}
+                <div className="bg-gray-50/50 dark:bg-gray-950 border-b dark:border-gray-850 p-3 flex flex-col gap-2">
+                  {/* Cuentas vinculadas */}
+                  {activeChatTicket.accounts && activeChatTicket.accounts.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                      <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px] mr-1">Vínculos:</span>
+                      {activeChatTicket.accounts.map((acc, idx) => (
+                        <span
+                          key={idx}
+                          title={`${acc.correo} - Perfil: ${acc.nombrePerfil}`}
+                          className="bg-brand-primary/10 dark:bg-brand-primary/20 text-brand-primary text-[10px] font-medium px-2 py-0.5 rounded border border-brand-primary/20"
+                        >
+                          📺 {acc.streaming} ({acc.correo.split('@')[0]})
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* INTEGRACIÓN DE ENVÍO MASIVO / BOTÓN DE CUENTA COMPARTIDA */}
+                  {(() => {
+                    const sharedWith = findSharedTicketsWithDetails(activeChatTicket);
+                    const hasShared = sharedWith.length > 0;
+                    if (!hasShared) return null;
+
+                    return (
+                      <div className="flex flex-col gap-2 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl p-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-extrabold uppercase text-red-700 dark:text-red-300 flex items-center gap-1.5">
+                            <Users className="w-3.5 h-3.5 text-red-500" /> Misma cuenta en otros tickets ({sharedWith.length})
+                          </span>
+                          <button
+                            onClick={() => {
+                              setShowBulkSharedInput(!showBulkSharedInput);
+                              setBulkSharedMessage('');
+                            }}
+                            className="bg-red-600 hover:bg-red-700 text-white font-bold text-[9px] px-2.5 py-1 rounded-md transition-all active:scale-95"
+                          >
+                            📢 Mensaje Masivo a Todos
+                          </button>
+                        </div>
+
+                        {showBulkSharedInput && (
+                          <div className="mt-2 flex flex-col gap-2 bg-white dark:bg-gray-850 p-2.5 rounded-lg border dark:border-gray-700 animate-fadeIn">
+                            <label className="text-[10px] font-bold text-gray-500 dark:text-gray-450 uppercase">
+                              Mensaje Masivo a Cuenta Compartida:
+                            </label>
+                            <textarea
+                              rows={3}
+                              value={bulkSharedMessage}
+                              onChange={(e) => setBulkSharedMessage(e.target.value)}
+                              placeholder="Escribe el mensaje que se enviará a todos los clientes vinculados a esta cuenta..."
+                              className="w-full p-2 border dark:border-gray-700 dark:bg-gray-800 rounded-lg text-xs outline-none focus:ring-1 focus:ring-brand-primary dark:text-white"
+                            />
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => setShowBulkSharedInput(false)}
+                                className="px-2.5 py-1 text-[10px] text-gray-500 hover:underline"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (!bulkSharedMessage.trim()) return;
+                                  setBulkSending(true);
+                                  const targetPhones = [activeChatTicket.phone, ...sharedWith.map(s => s.ticket.phone)];
+                                  let success = 0;
+                                  
+                                  for (const phone of targetPhones) {
+                                    try {
+                                      const res = await fetchSingleSend(phone, bulkSharedMessage);
+                                      if (res.success) success++;
+                                    } catch (e) {
+                                      console.error("Error sending bulk shared:", e);
+                                    }
+                                  }
+                                  
+                                  alert(`✅ Difusión enviada con éxito a ${success} de ${targetPhones.length} clientes vinculados.`);
+                                  setBulkSharedMessage('');
+                                  setShowBulkSharedInput(false);
+                                  setBulkSending(false);
+                                  fetchChatMessages(true);
+                                }}
+                                disabled={bulkSending || !bulkSharedMessage.trim()}
+                                className="bg-red-600 hover:bg-red-750 text-white font-bold text-[10px] px-3 py-1 rounded-md transition-all active:scale-95 disabled:opacity-50"
+                              >
+                                {bulkSending ? 'Enviando...' : 'Enviar Masivo 🚀'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Quick actions row */}
+                <div className="bg-brand-primary/5 dark:bg-brand-primary/10 border-b dark:border-brand-primary/10 p-2.5 flex flex-wrap gap-2 justify-center items-center">
+                  <button
+                    onClick={sendHogarNetflixTemplate}
+                    className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-800 dark:text-white text-[10px] font-bold py-1.2 px-2.5 rounded-lg border dark:border-gray-700 transition-all"
+                  >
+                    <Home className="w-3 h-3 text-amber-500" /> Hogar Netflix 📺
+                  </button>
+                  <button
+                    onClick={insertCobroTemplate}
+                    className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-800 dark:text-white text-[10px] font-bold py-1.2 px-2.5 rounded-lg border dark:border-gray-700 transition-all"
+                  >
+                    <Smile className="w-3 h-3 text-emerald-500" /> Cobrar 💰
+                  </button>
+                  {activeChatTicket.accounts && activeChatTicket.accounts.map((acc, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => insertCredentials(acc)}
+                      className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-800 dark:text-white text-[10px] font-bold py-1.2 px-2.5 rounded-lg border dark:border-gray-700 transition-all"
+                    >
+                      <Key className="w-3 h-3 text-blue-500" /> Credenciales {acc.streaming} 🔑
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => handleToggleMode(activeChatTicket.phone, activeChatTicket.waitingHumanMode || 'bot')}
+                    className={`flex items-center gap-1 text-white text-[10px] font-bold py-1.2 px-2.5 rounded-lg transition-all ${
+                      (activeChatTicket.waitingHumanMode || 'bot') === 'bot'
+                        ? 'bg-purple-600 hover:bg-purple-700'
+                        : 'bg-indigo-600 hover:bg-indigo-700'
+                    }`}
+                  >
+                    <Bot className="w-3.5 h-3.5" />
+                    {(activeChatTicket.waitingHumanMode || 'bot') === 'bot' ? 'Modo: Auto (Bot)' : 'Modo: Manual (Asesor)'}
+                  </button>
+                </div>
+
+                {/* Conversation message list */}
+                <div className="flex-grow overflow-y-auto p-4 bg-gray-50/50 dark:bg-gray-900/20 space-y-3 flex flex-col min-h-[300px]">
+                  {loadingChat ? (
+                    <div className="flex flex-col items-center justify-center my-auto text-gray-400">
+                      <RefreshCw className="w-6 h-6 animate-spin text-brand-primary mb-2" />
+                      <span className="text-xs">Cargando conversación...</span>
+                    </div>
+                  ) : chatMessages.length === 0 ? (
+                    <div className="text-center my-auto text-xs text-gray-400 italic">
+                      No hay mensajes recientes. Escribe uno abajo para iniciar.
+                    </div>
+                  ) : (
+                    chatMessages.map((msg, idx) => {
+                      const isMe = msg.fromMe;
+                      const claudeLink = detectClaudeLink(msg.body);
+                      return (
+                        <div
+                          key={msg.id || idx}
+                          className={`max-w-[75%] p-3 rounded-2xl text-xs flex flex-col gap-1 shadow-sm leading-relaxed ${
+                            isMe
+                              ? 'bg-brand-primary text-white ml-auto rounded-tr-none'
+                              : 'bg-white dark:bg-gray-800 dark:text-white rounded-tl-none border dark:border-gray-700'
+                          }`}
+                        >
+                          <p className="whitespace-pre-wrap font-medium">{msg.body}</p>
+                          {claudeLink && (
+                            <a
+                              href={claudeLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-black transition-all w-fit uppercase"
+                            >
+                              Iniciar Sesión Claude <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+                          <span className={`text-[9px] text-right block ${isMe ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'}`}>
+                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Input area */}
+                <div className="p-4 bg-white dark:bg-gray-900 border-t dark:border-gray-850 flex flex-col gap-3">
+                  <div className="flex items-center justify-between border-b dark:border-gray-800 pb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Firma:</span>
+                      <div className="relative">
+                        <button
+                          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                          className="text-base px-2 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-850 rounded border dark:border-gray-700 flex items-center gap-1"
+                        >
+                          <span>{advisorEmoji}</span>
+                          <Smile className="w-3.5 h-3.5 text-gray-400" />
+                        </button>
+                        
+                        {showEmojiPicker && (
+                          <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-gray-850 p-2 rounded-xl border dark:border-gray-750 shadow-2xl flex gap-1.5 flex-wrap z-50">
+                            {COMMON_EMOJIS.map(em => (
+                              <button
+                                key={em}
+                                type="button"
+                                onClick={() => changeEmoji(em)}
+                                className="hover:scale-125 transition-transform text-lg p-1"
+                              >
+                                {em}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500">
+                      Se enviará como: <strong className="dark:text-white">{advisorEmoji} [tu mensaje]</strong>
+                    </span>
+                  </div>
+
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleSendChatMessage();
+                    }}
+                    className="flex gap-2 items-center"
+                  >
+                    <input
+                      type="text"
+                      value={newMsgText}
+                      onChange={(e) => setNewMsgText(e.target.value)}
+                      placeholder="Escribe un mensaje de respuesta..."
+                      className="flex-grow px-4 py-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-850 border dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:ring-1 focus:ring-brand-primary"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newMsgText.trim()}
+                      className="p-2.5 bg-brand-primary hover:bg-brand-dark text-white rounded-xl transition-all disabled:opacity-50 flex items-center justify-center"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </form>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-center p-8 text-gray-400 dark:text-gray-500">
+                <MessageSquare className="w-16 h-16 text-gray-300 dark:text-gray-700 mb-4 animate-bounce" />
+                <h3 className="font-bold text-lg dark:text-gray-300">Bandeja de Conversaciones</h3>
+                <p className="text-sm max-w-sm mt-1">
+                  Selecciona una conversación de la izquierda para responder. Puedes reclamar tickets y gestionar la atención del bot.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       ) : viewMode === 'kanban' ? (
         /* Columns Grid */
@@ -952,7 +1436,16 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 <span className="text-xs text-gray-450 font-mono">+{activeChatTicket.phone}</span>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
+              <button
+                onClick={() => handleSyncChatMessages()}
+                disabled={syncingChat}
+                className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg text-gray-500 dark:text-gray-450 flex items-center gap-1"
+                title="Sincronizar mensajes desde el celular"
+              >
+                <RefreshCw className={`w-4 h-4 ${syncingChat ? 'animate-spin' : ''}`} />
+                <span className="text-[10px] font-bold hidden sm:inline">{syncingChat ? 'Sincronizando...' : 'Sincronizar Celular'}</span>
+              </button>
               <button
                 onClick={() => fetchChatMessages()}
                 className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg text-gray-500 dark:text-gray-450"
