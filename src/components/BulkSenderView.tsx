@@ -58,6 +58,8 @@ export const BulkSenderView: React.FC = () => {
   const [isSending, setIsSending] = useState(false);
   const [sendProgress, setSendProgress] = useState({ current: 0, total: 0, success: 0, fail: 0 });
   const [sendingLogs, setSendingLogs] = useState<string[]>([]);
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduledTime, setScheduledTime] = useState('');
 
   useEffect(() => {
     fetchClients();
@@ -213,13 +215,16 @@ export const BulkSenderView: React.FC = () => {
   const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
   // Send single message to client/group
-  const sendSingle = async (phone: string, type: 'custom' | 'credentials' | 'payment', messageText?: string) => {
+  const sendSingle = async (phone: string, type: 'custom' | 'credentials' | 'payment', messageText?: string, scheduledTime?: string) => {
     const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
       ? 'http://localhost:3000'
       : 'https://bot.sheerit.com.co';
     const body: any = { phone, type, password: 'admin123' };
     if (type === 'custom') {
       body.message = messageText;
+    }
+    if (scheduledTime) {
+      body.scheduledTime = scheduledTime;
     }
     const res = await fetch(`${apiUrl}/api/admin/actions/send-info`, {
       method: 'POST',
@@ -243,7 +248,16 @@ export const BulkSenderView: React.FC = () => {
       return;
     }
 
-    const confirmSend = window.confirm(`¿Estás seguro de enviar esta difusión a ${clientsToSend.length} registros seleccionados? Se enviará con un delay de seguridad de 2 segundos para evitar baneos.`);
+    if (scheduleEnabled && !scheduledTime.trim()) {
+      alert("Por favor, ingresa una hora o tiempo para programar el envío.");
+      return;
+    }
+
+    const confirmMsg = scheduleEnabled
+      ? `¿Estás seguro de PROGRAMAR esta difusión para "${scheduledTime}" a ${clientsToSend.length} registros seleccionados?`
+      : `¿Estás seguro de enviar esta difusión a ${clientsToSend.length} registros seleccionados? Se enviará con un delay de seguridad de 2 segundos para evitar baneos.`;
+
+    const confirmSend = window.confirm(confirmMsg);
     if (!confirmSend) return;
 
     setIsSending(true);
@@ -279,11 +293,15 @@ export const BulkSenderView: React.FC = () => {
           .replace(/{Vencimiento}/g, venc);
 
         // Always send as type 'custom' to respect the rendered frontend template.
-        const res = await sendSingle(phone, 'custom', finalMessage);
+        const res = await sendSingle(phone, 'custom', finalMessage, scheduleEnabled ? scheduledTime : undefined);
         
         if (res.success) {
           successCount++;
-          setSendingLogs(prev => [...prev, `✅ Enviado a: ${clientName} (${phone})`]);
+          if (res.isScheduled) {
+            setSendingLogs(prev => [...prev, `📅 Programado para ${res.formattedTime} a: ${clientName} (${phone})`]);
+          } else {
+            setSendingLogs(prev => [...prev, `✅ Enviado a: ${clientName} (${phone})`]);
+          }
         } else {
           failCount++;
           setSendingLogs(prev => [...prev, `❌ Error enviando a: ${clientName} (${phone}) - ${res.message}`]);
@@ -315,7 +333,16 @@ export const BulkSenderView: React.FC = () => {
       return;
     }
 
-    const confirmSend = window.confirm(`¿Estás seguro de enviar este mensaje a los ${selectedGroups.length} grupos seleccionados?`);
+    if (scheduleEnabled && !scheduledTime.trim()) {
+      alert("Por favor, ingresa una hora o tiempo para programar el envío.");
+      return;
+    }
+
+    const confirmMsg = scheduleEnabled
+      ? `¿Estás seguro de PROGRAMAR este mensaje para "${scheduledTime}" a los ${selectedGroups.length} grupos seleccionados?`
+      : `¿Estás seguro de enviar este mensaje a los ${selectedGroups.length} grupos seleccionados?`;
+
+    const confirmSend = window.confirm(confirmMsg);
     if (!confirmSend) return;
 
     setIsSending(true);
@@ -331,11 +358,15 @@ export const BulkSenderView: React.FC = () => {
       const groupName = groupObj ? groupObj.name : 'Grupo';
 
       try {
-        const res = await sendSingle(groupId, 'custom', groupMessage);
+        const res = await sendSingle(groupId, 'custom', groupMessage, scheduleEnabled ? scheduledTime : undefined);
         
         if (res.success) {
           successCount++;
-          setSendingLogs(prev => [...prev, `✅ Enviado al grupo: ${groupName}`]);
+          if (res.isScheduled) {
+            setSendingLogs(prev => [...prev, `📅 Programado para ${res.formattedTime} al grupo: ${groupName}`]);
+          } else {
+            setSendingLogs(prev => [...prev, `✅ Enviado al grupo: ${groupName}`]);
+          }
         } else {
           failCount++;
           setSendingLogs(prev => [...prev, `❌ Error en grupo: ${groupName} - ${res.message}`]);
@@ -451,6 +482,39 @@ export const BulkSenderView: React.FC = () => {
               placeholder="Escribe tu mensaje o plantilla aquí..."
               className="w-full p-4 border dark:border-gray-600 rounded-xl dark:bg-gray-750 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
             />
+          </div>
+
+          {/* Programar Envío (Reloj) */}
+          <div className="bg-gray-50/50 dark:bg-gray-900/10 border dark:border-gray-750 p-4 rounded-2xl flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="schedule-toggle"
+                checked={scheduleEnabled}
+                onChange={(e) => setScheduleEnabled(e.target.checked)}
+                className="rounded text-brand-primary focus:ring-brand-primary h-4.5 w-4.5 cursor-pointer"
+              />
+              <div>
+                <label htmlFor="schedule-toggle" className="text-xs font-bold text-gray-750 dark:text-gray-300 cursor-pointer flex items-center gap-1.5">
+                  ⏰ Programar Envío (Reloj)
+                </label>
+                <p className="text-[10px] text-gray-450 mt-0.5">Programa la difusión para que se envíe automáticamente en el futuro.</p>
+              </div>
+            </div>
+            {scheduleEnabled && (
+              <div className="w-full sm:w-80 flex flex-col gap-1.5 animate-fadeIn">
+                <input
+                  type="text"
+                  value={scheduledTime}
+                  onChange={(e) => setScheduledTime(e.target.value)}
+                  placeholder="Ej: '8:30 pm', 'mañana a las 10 am', 'en 15 minutos'"
+                  className="w-full px-3 py-2 text-xs rounded-xl border dark:border-gray-650 dark:bg-gray-750 dark:text-white focus:ring-1 focus:ring-brand-primary outline-none"
+                />
+                <span className="text-[9px] text-gray-400">
+                  Formatos: horas exactas ("8 am", "3 pm") o tiempos relativos ("en 10 minutos").
+                </span>
+              </div>
+            )}
           </div>
 
           {/* List of clients from Database */}
