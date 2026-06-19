@@ -37,7 +37,7 @@ interface ChatMessage {
   hasMedia: boolean;
 }
 
-const COMMON_EMOJIS = ['💬', '👑', '⚡', '🌸', '🛡️', '👨‍💻', '🙋‍♂️', '💼', '🔥', '🚀'];
+const COMMON_EMOJIS = ['🦈', '🟦', '🍃'];
 
 const detectClaudeLink = (text: string | null) => {
   if (!text) return null;
@@ -72,8 +72,18 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [loadingChat, setLoadingChat] = useState(false);
   const [newMsgText, setNewMsgText] = useState('');
-  const [advisorEmoji, setAdvisorEmoji] = useState(() => localStorage.getItem('advisor_emoji') || '💬');
+  const [advisorEmoji, setAdvisorEmoji] = useState(() => {
+    const stored = localStorage.getItem('advisor_emoji');
+    if (stored && ['🦈', '🟦', '🍃'].includes(stored)) return stored;
+    
+    const lower = (agentEmail || '').toLowerCase();
+    if (lower.includes('camilo')) return '🦈';
+    if (lower.includes('estebanavila182')) return '🟦';
+    if (lower.includes('esclepiades') || lower.includes('esclapiades') || lower.includes('escle') || lower.includes('escla')) return '🍃';
+    return '🦈'; // default fallback
+  });
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [viewMode, setViewMode] = useState<'kanban' | 'grouped_accounts' | 'grouped_subjects'>('kanban');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -413,6 +423,102 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const myTickets = filteredTickets.filter(t => t.agent && t.agent.toLowerCase().trim() === safeAgentName);
   const otherTickets = filteredTickets.filter(t => t.agent && t.agent.toLowerCase().trim() !== safeAgentName);
 
+  // Grouping by accounts (Streaming - Correo)
+  const getGroupedByAccounts = () => {
+    const groups: { [key: string]: Ticket[] } = {};
+    
+    filteredTickets.forEach(t => {
+      if (t.accounts && t.accounts.length > 0) {
+        t.accounts.forEach(acc => {
+          const key = `${acc.streaming} - ${acc.correo}`;
+          if (!groups[key]) groups[key] = [];
+          if (!groups[key].some(existing => existing.userId === t.userId)) {
+            groups[key].push(t);
+          }
+        });
+      } else {
+        const key = 'Sin Cuenta Vinculada';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(t);
+      }
+    });
+    
+    return groups;
+  };
+
+  // Grouping by subjects
+  const getGroupedBySubjects = () => {
+    const groups: { [key: string]: Ticket[] } = {
+      'Validar Renovaciones / Pagos': [],
+      'Solicitud de Código (2FA / Hogar)': [],
+      'Soporte Técnico / Fallas': [],
+      'Interés en Compra / Ventas': [],
+      'Otros': []
+    };
+
+    filteredTickets.forEach(t => {
+      const summaryText = (t.summary || '').toLowerCase();
+      const lastMsgText = (t.lastMessage || '').toLowerCase();
+      const stateStr = t.state;
+
+      const isRenewalPayment = stateStr === 'awaiting_payment_confirmation' || 
+                               summaryText.includes('pago') || 
+                               summaryText.includes('renov') || 
+                               lastMsgText.includes('pago') || 
+                               lastMsgText.includes('comprobante') || 
+                               lastMsgText.includes('transf');
+
+      const isCodeRequest = summaryText.includes('codigo') || 
+                            summaryText.includes('código') || 
+                            summaryText.includes('hogar') || 
+                            summaryText.includes('token') || 
+                            summaryText.includes('2fa') ||
+                            lastMsgText.includes('codigo') || 
+                            lastMsgText.includes('código') || 
+                            lastMsgText.includes('hogar') || 
+                            lastMsgText.includes('token');
+
+      const isSupport = summaryText.includes('soporte') || 
+                        summaryText.includes('falla') || 
+                        summaryText.includes('error') || 
+                        summaryText.includes('caido') || 
+                        summaryText.includes('caída') || 
+                        summaryText.includes('problema') ||
+                        lastMsgText.includes('falla') || 
+                        lastMsgText.includes('error') || 
+                        lastMsgText.includes('no funciona') || 
+                        lastMsgText.includes('pantalla');
+
+      const isPurchase = summaryText.includes('interés') || 
+                         summaryText.includes('compra') || 
+                         summaryText.includes('ventas') || 
+                         summaryText.includes('adquirir') ||
+                         lastMsgText.includes('precio') || 
+                         lastMsgText.includes('comprar') || 
+                         lastMsgText.includes('vender');
+
+      if (isRenewalPayment) {
+        groups['Validar Renovaciones / Pagos'].push(t);
+      } else if (isCodeRequest) {
+        groups['Solicitud de Código (2FA / Hogar)'].push(t);
+      } else if (isSupport) {
+        groups['Soporte Técnico / Fallas'].push(t);
+      } else if (isPurchase) {
+        groups['Interés en Compra / Ventas'].push(t);
+      } else {
+        groups['Otros'].push(t);
+      }
+    });
+
+    const activeGroups: { [key: string]: Ticket[] } = {};
+    for (const [key, val] of Object.entries(groups)) {
+      if (val.length > 0) {
+        activeGroups[key] = val;
+      }
+    }
+    return activeGroups;
+  };
+
   const formatTimeDiff = (timestamp: number | null) => {
     if (!timestamp) return null;
     const diffMs = Date.now() - timestamp;
@@ -634,17 +740,52 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         </div>
       )}
 
-      {/* Search Bar */}
+      {/* Search Bar & View Mode Switcher */}
       {!loading && (tickets.length > 0 || searchTerm) && (
-        <div className="relative mb-6 max-w-md shadow-sm rounded-xl">
-          <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Buscar por nombre, teléfono, cuenta o servicio..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-750 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200"
-          />
+        <div className="flex flex-col gap-4 mb-6">
+          <div className="relative max-w-md shadow-sm rounded-xl">
+            <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre, teléfono, cuenta o servicio..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-750 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200"
+            />
+          </div>
+
+          <div className="flex gap-2 border-b dark:border-gray-800 pb-2 overflow-x-auto scrollbar-none whitespace-nowrap">
+            <button
+              onClick={() => setViewMode('kanban')}
+              className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+                viewMode === 'kanban'
+                  ? 'bg-brand-primary text-white shadow-sm'
+                  : 'bg-gray-50 dark:bg-gray-800 text-gray-650 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-750'
+              }`}
+            >
+              📋 Tablero Kanban
+            </button>
+            <button
+              onClick={() => setViewMode('grouped_accounts')}
+              className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+                viewMode === 'grouped_accounts'
+                  ? 'bg-brand-primary text-white shadow-sm'
+                  : 'bg-gray-50 dark:bg-gray-800 text-gray-650 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-750'
+              }`}
+            >
+              🔍 Agrupado por Cuenta (Correo)
+            </button>
+            <button
+              onClick={() => setViewMode('grouped_subjects')}
+              className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+                viewMode === 'grouped_subjects'
+                  ? 'bg-brand-primary text-white shadow-sm'
+                  : 'bg-gray-50 dark:bg-gray-800 text-gray-650 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-750'
+              }`}
+            >
+              🏷️ Agrupado por Asunto
+            </button>
+          </div>
         </div>
       )}
 
@@ -658,7 +799,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             Todos los clientes han sido atendidos y no hay tickets pendientes en este momento.
           </p>
         </div>
-      ) : (
+      ) : viewMode === 'kanban' ? (
         /* Columns Grid */
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Column 1: Unassigned */}
@@ -747,6 +888,50 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
               )}
             </div>
           </div>
+        </div>
+      ) : viewMode === 'grouped_accounts' ? (
+        <div className="space-y-6 animate-fadeIn">
+          {Object.keys(getGroupedByAccounts()).length === 0 ? (
+            <div className="text-center py-20 text-gray-500 dark:text-gray-400 font-medium">No hay tickets para agrupar por cuenta.</div>
+          ) : (
+            Object.entries(getGroupedByAccounts()).map(([groupName, groupTickets]) => (
+              <div key={groupName} className="bg-gray-50/30 dark:bg-gray-950/5 border border-gray-150 dark:border-gray-800 rounded-2xl p-5">
+                <h3 className="font-bold text-gray-850 dark:text-white text-sm mb-4 flex items-center justify-between border-b dark:border-gray-800 pb-2">
+                  <span className="flex items-center gap-2">
+                    📺 {groupName}
+                  </span>
+                  <span className="bg-brand-primary/10 text-brand-primary text-xs px-2.5 py-0.5 rounded-full font-extrabold">
+                    {groupTickets.length} {groupTickets.length === 1 ? 'ticket' : 'tickets'}
+                  </span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {groupTickets.map(renderTicketCard)}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      ) : (
+        <div className="space-y-6 animate-fadeIn">
+          {Object.keys(getGroupedBySubjects()).length === 0 ? (
+            <div className="text-center py-20 text-gray-500 dark:text-gray-400 font-medium">No hay tickets para agrupar por asunto.</div>
+          ) : (
+            Object.entries(getGroupedBySubjects()).map(([groupName, groupTickets]) => (
+              <div key={groupName} className="bg-gray-50/30 dark:bg-gray-950/5 border border-gray-150 dark:border-gray-800 rounded-2xl p-5">
+                <h3 className="font-bold text-gray-850 dark:text-white text-sm mb-4 flex items-center justify-between border-b dark:border-gray-800 pb-2">
+                  <span className="flex items-center gap-2">
+                    🏷️ {groupName}
+                  </span>
+                  <span className="bg-brand-primary/10 text-brand-primary text-xs px-2.5 py-0.5 rounded-full font-extrabold">
+                    {groupTickets.length} {groupTickets.length === 1 ? 'ticket' : 'tickets'}
+                  </span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {groupTickets.map(renderTicketCard)}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       )}
 
