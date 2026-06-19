@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock } from 'lucide-react';
+import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface AccountInfo {
   streaming: string;
@@ -83,12 +83,23 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     return '🦈'; // default fallback
   });
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [viewMode, setViewMode] = useState<'chat_layout' | 'kanban' | 'grouped_accounts' | 'grouped_subjects'>('chat_layout');
-  const [sidebarFilter, setSidebarFilter] = useState<'me' | 'unassigned' | 'other' | 'all'>('all');
   const [bulkSharedMessage, setBulkSharedMessage] = useState('');
   const [showBulkSharedInput, setShowBulkSharedInput] = useState(false);
   const [bulkSending, setBulkSending] = useState(false);
   const [syncingChat, setSyncingChat] = useState(false);
+  const [showShortcutsMenu, setShowShortcutsMenu] = useState(false);
+  const [shortcutsFilter, setShortcutsFilter] = useState('');
+  const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
+    me: true,
+    unassigned: true,
+    other: false,
+    accounts: false,
+    subjects: false
+  });
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   const fetchSingleSend = async (phone: string, messageText: string) => {
     const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
@@ -450,6 +461,62 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     setShowEmojiPicker(false);
   };
 
+  const getShortcuts = (t: Ticket) => {
+    const list = [
+      { key: 'nombre', label: '👤 Nombre del Cliente', description: 'Inserta el primer nombre del cliente', text: t.nombre ? t.nombre.split(' ')[0] : 'Cliente' },
+      { key: 'hogar', label: '📺 Link Hogar Netflix', description: 'Inserta la plantilla de Hogar Netflix', text: `🤖 Para actualizar tu hogar de Netflix, abre este enlace desde tu celular o TV:\n👉 https://sheerit.com.co/verificar?tel=${t.phone}` },
+      { key: 'cobro', label: '💰 Cobro / Renovación', description: 'Inserta la plantilla de cobro/renovación', text: `🤖 *Recordatorio de Pago / Renovación Sheerit Store* 💰\n\nPor favor realiza tu transferencia usando nuestra *Llave Bre-V:* \`0087387259\` (RECOMENDADO: entrega inmediata ⚡)\n\nValor: $` },
+      { key: 'credenciales', label: '🔑 Credenciales de Cuenta (Todas)', description: 'Inserta credenciales de todas las cuentas', text: (() => {
+          let text = `🤖 *Tus credenciales de ingreso de Sheerit Store* 🔑:\n\n`;
+          if (t.accounts && t.accounts.length > 0) {
+            t.accounts.forEach(a => {
+              text += `📺 Plataforma: *${a.streaming}*\n📧 Correo: \`${a.correo}\`\n👤 Perfil: *${a.nombrePerfil}*\n\n`;
+            });
+          } else {
+            text += `(No hay cuentas vinculadas en este ticket)\n\n`;
+          }
+          text += `_Por favor, ingresa con estos datos. Si te pide un código de verificación, escríbeme aquí la palabra *codigo*._`;
+          return text;
+        })()
+      }
+    ];
+
+    if (t.accounts && t.accounts.length > 0) {
+      t.accounts.forEach(acc => {
+        list.push({
+          key: `credenciales-${acc.streaming.toLowerCase()}`,
+          label: `🔑 Credenciales ${acc.streaming}`,
+          description: `Inserta credenciales de ${acc.streaming}`,
+          text: `🤖 *Tus credenciales de ingreso de Sheerit Store* 🔑:\n\n📺 Plataforma: *${acc.streaming}*\n📧 Correo: \`${acc.correo}\`\n👤 Perfil: *${acc.nombrePerfil}*\n\n_Por favor, ingresa con estos datos. Si te pide un código de verificación, escríbeme aquí la palabra *codigo*._`
+        });
+      });
+    }
+
+    return list;
+  };
+
+  const handleInputChange = (val: string) => {
+    setNewMsgText(val);
+    const match = val.match(/\/(\w*)$/);
+    if (match) {
+      setShowShortcutsMenu(true);
+      setShortcutsFilter(match[1].toLowerCase());
+    } else {
+      setShowShortcutsMenu(false);
+    }
+  };
+
+  const selectShortcut = (shortcutText: string) => {
+    const match = newMsgText.match(/\/(\w*)$/);
+    if (match) {
+      const prefix = newMsgText.slice(0, match.index);
+      setNewMsgText(prefix + shortcutText);
+    } else {
+      setNewMsgText(prev => prev + shortcutText);
+    }
+    setShowShortcutsMenu(false);
+  };
+
   const safeAgentName = (agentName || '').toLowerCase().trim();
 
   // Search filter
@@ -599,167 +666,108 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     return `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}${remainingHours > 0 ? ` y ${remainingHours} hr${remainingHours > 1 ? 's' : ''}` : ''}`;
   };
 
-  const renderTicketCard = (t: Ticket) => {
+  const renderCompactTicketItem = (t: Ticket) => {
+    const isActive = activeChatTicket?.userId === t.userId;
+    const isBotMode = t.waitingHumanMode === 'bot';
     const timeFormatted = formatTimeDiff(t.lastMessageTime);
     const sharedWithDetails = findSharedTicketsWithDetails(t);
     const hasShared = sharedWithDetails.length > 0;
-    const isBotMode = t.waitingHumanMode === 'bot';
     const cleanTicketAgent = (t.agent || '').toLowerCase().trim();
 
     return (
       <div
         key={t.userId}
-        draggable
-        onDragStart={(e) => handleDragStart(e, t.phone)}
-        onClick={() => {
-          setActiveChatTicket(t);
-        }}
-        className={`bg-white dark:bg-gray-800 rounded-xl p-4 border transition-all duration-200 hover:shadow-md cursor-pointer ${
-          t.agent
-            ? cleanTicketAgent === safeAgentName
-              ? 'border-emerald-250 dark:border-emerald-900/50 shadow-emerald-50/10'
-              : 'border-blue-200 dark:border-blue-900/40 shadow-blue-50/10'
-            : 'border-amber-250 dark:border-amber-900/30 hover:border-amber-300'
+        onClick={() => setActiveChatTicket(t)}
+        className={`p-3 rounded-xl flex flex-col gap-1.5 cursor-pointer transition-all border ${
+          isActive
+            ? 'bg-brand-primary/10 border-brand-primary shadow-sm'
+            : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-750 hover:bg-gray-50 dark:hover:bg-gray-750'
         }`}
       >
-        <div className="flex justify-between items-start mb-2.5">
-          <div>
-            <h4 className="font-bold text-sm text-gray-855 dark:text-white flex items-center gap-1.5">
+        <div className="flex justify-between items-start gap-1">
+          <div className="min-w-0 flex-1">
+            <span className="font-bold text-xs text-gray-800 dark:text-white block truncate" title={t.nombre}>
               {t.nombre || 'Cliente WhatsApp'}
-            </h4>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="text-xs font-mono text-gray-400 dark:text-gray-500">+{t.phone}</span>
-              {t.queuePosition !== undefined && t.queuePosition !== null && (
-                <span className="bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[10px] font-extrabold px-1.5 py-0.2 rounded border border-amber-200/50 dark:border-amber-900/40 shadow-sm">
-                  Turno #{t.queuePosition}
-                </span>
-              )}
-            </div>
+            </span>
+            <span className="text-[10px] text-gray-450 font-mono">+{t.phone}</span>
           </div>
-
-          <div className="flex flex-col items-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-            {isBotMode ? (
-              <span className="bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 text-[9px] font-extrabold px-1.5 py-0.5 rounded tracking-wider uppercase border border-purple-200/50 dark:border-purple-900/40">
-                🤖 Auto (Bot)
-              </span>
-            ) : (
-              <span className="bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-300 text-[9px] font-extrabold px-1.5 py-0.5 rounded tracking-wider uppercase border border-blue-200/50 dark:border-blue-900/40">
-                👤 Manual (Asesor)
-              </span>
-            )}
-
-            {t.agent ? (
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                cleanTicketAgent === safeAgentName
-                  ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300'
-                  : 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300'
-              }`}>
-                <User className="w-2.5 h-2.5" /> {t.agent}
-              </span>
-            ) : (
-              <span className="bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">
-                ⏳ Sin Asignar
-              </span>
-            )}
-          </div>
+          <span className="text-[9px] text-gray-400 shrink-0 font-mono">
+            {timeFormatted ? timeFormatted.replace('Hace ', '') : ''}
+          </span>
         </div>
 
-        {t.summary && (
-          <div className="mb-2 bg-blue-50/70 dark:bg-blue-950/20 text-blue-900 dark:text-blue-200 p-2.5 rounded-lg border border-blue-100 dark:border-blue-900/30">
-            <p className="text-[9px] text-blue-500 dark:text-blue-400 font-bold uppercase tracking-wider mb-0.5">Resumen de Solicitud:</p>
-            <p className="text-xs font-semibold whitespace-pre-line leading-snug">{t.summary}</p>
-          </div>
-        )}
-
-        {t.accounts && t.accounts.length > 0 && (
-          <div className="mb-2 bg-gray-50 dark:bg-gray-900/30 p-2 rounded-lg border border-gray-100 dark:border-gray-750">
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Cuentas vinculadas:</p>
-            <div className="flex flex-wrap gap-1.5">
-              {t.accounts.map((acc, idx) => (
-                <span
-                  key={idx}
-                  title={`${acc.correo} - Perfil: ${acc.nombrePerfil}`}
-                  className="bg-brand-primary/10 dark:bg-brand-primary/20 text-brand-primary text-[10px] font-medium px-2 py-0.5 rounded border border-brand-primary/20"
-                >
-                  📺 {acc.streaming} ({acc.correo.split('@')[0]})
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {hasShared && (
-          <div className="mb-3 bg-red-50 dark:bg-red-950/20 text-red-800 dark:text-red-300 p-2.5 rounded-lg border border-red-100 dark:border-red-900/30 flex flex-col gap-1">
-            <span className="text-[10px] font-extrabold uppercase flex items-center gap-1">
-              <Users className="w-3.5 h-3.5 text-red-500" /> ¡Misma Cuenta Detectada!
+        <div className="flex flex-wrap items-center gap-1.5">
+          {t.queuePosition !== undefined && t.queuePosition !== null && (
+            <span className="bg-amber-100 dark:bg-amber-950 text-amber-850 dark:text-amber-300 text-[8px] font-extrabold px-1 py-0.2 rounded border border-amber-200/50">
+              #{t.queuePosition}
             </span>
-            <div className="flex flex-col gap-1.5 pl-1.5 border-l-2 border-red-300 dark:border-red-800">
-              {sharedWithDetails.map(({ ticket: s }) => (
-                <div key={s.userId} className="text-[10px]">
-                  <span className="font-bold">• {s.nombre} (+{s.phone})</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-lg mb-3 border dark:border-gray-750">
-          <p className="text-[9px] text-gray-450 font-bold uppercase tracking-wider mb-0.5">Último Mensaje:</p>
-          <p className="text-xs text-gray-650 dark:text-gray-300 italic line-clamp-2">
-            "{t.lastMessage || 'Mensaje de sistema / adjunto'}"
-          </p>
-          {timeFormatted && (
-            <p className="text-right text-[9px] text-gray-400 dark:text-gray-500 mt-1">
-              {timeFormatted}
-            </p>
+          )}
+          {isBotMode ? (
+            <span className="bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 text-[8px] font-semibold px-1 py-0.2 rounded">
+              🤖 Bot
+            </span>
+          ) : (
+            <span className="bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-305 text-[8px] font-semibold px-1 py-0.2 rounded">
+              👤 Asesor
+            </span>
+          )}
+          {t.agent ? (
+            <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded-full ${
+              cleanTicketAgent === safeAgentName
+                ? 'bg-emerald-55 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                : 'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
+            }`}>
+              👤 {t.agent}
+            </span>
+          ) : (
+            <span className="bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[8px] font-bold px-1.5 py-0.2 rounded-full">
+              ⏳ Libre
+            </span>
+          )}
+          {hasShared && (
+            <span className="bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 text-[8px] font-bold px-1 py-0.2 rounded border border-red-100 dark:border-red-900/30 flex items-center gap-0.5">
+              ⚠️ Compartido ({sharedWithDetails.length})
+            </span>
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t dark:border-gray-750 pt-2.5 mt-2" onClick={(e) => e.stopPropagation()}>
-          <button
-            onClick={() => setActiveChatTicket(t)}
-            className="flex items-center gap-0.5 text-[11px] font-bold text-brand-primary hover:underline"
-          >
-            Abrir Chat 💬
-          </button>
+        {t.lastMessage && (
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate italic">
+            "{t.lastMessage}"
+          </p>
+        )}
+      </div>
+    );
+  };
 
-          <div className="flex gap-1">
-            {!t.agent && (
-              <button
-                type="button"
-                onClick={() => handleClaim(t.phone, agentName)}
-                className="bg-brand-primary hover:bg-brand-dark text-white font-bold text-[10px] px-2.5 py-1.5 rounded-md transition-colors"
-              >
-                Reclamar
-              </button>
-            )}
-            {t.agent && cleanTicketAgent !== safeAgentName && (
-              <button
-                type="button"
-                onClick={() => handleClaim(t.phone, agentName)}
-                className="bg-gray-150 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-200 font-bold text-[10px] px-2.5 py-1.5 rounded-md transition-colors"
-              >
-                Re-asignar
-              </button>
-            )}
-            {t.agent && cleanTicketAgent === safeAgentName && (
-              <button
-                type="button"
-                onClick={() => handleClaim(t.phone, '')}
-                className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-650 text-gray-600 dark:text-gray-300 font-bold text-[10px] px-2.5 py-1.5 rounded-md transition-colors"
-              >
-                Liberar
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => handleResolveClick(t)}
-              className="bg-green-600 hover:bg-green-700 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-md transition-colors flex items-center gap-0.5"
-            >
-              <CheckCircle className="w-3 h-3" /> Resolver
-            </button>
+  const renderAccordionSection = (
+    key: string,
+    title: string,
+    icon: React.ReactNode,
+    count: number,
+    content: React.ReactNode
+  ) => {
+    const isExpanded = !!expandedSections[key];
+    return (
+      <div className="border dark:border-gray-800 rounded-xl overflow-hidden shadow-sm bg-gray-50/30 dark:bg-gray-900/20">
+        <button
+          onClick={() => toggleSection(key)}
+          className="w-full flex items-center justify-between p-3 text-xs font-bold text-gray-700 dark:text-gray-250 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            {icon}
+            <span>{title}</span>
+            <span className="bg-gray-200 dark:bg-gray-800 text-gray-650 dark:text-gray-400 px-2 py-0.5 rounded-full text-[10px] font-extrabold">
+              {count}
+            </span>
           </div>
-        </div>
+          {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+        </button>
+        {isExpanded && (
+          <div className="p-3 border-t dark:border-gray-800 bg-white dark:bg-gray-900/40 space-y-2 max-h-[350px] overflow-y-auto">
+            {content}
+          </div>
+        )}
       </div>
     );
   };
@@ -770,7 +778,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b dark:border-gray-800 pb-5">
         <div>
           <h2 className="text-xl font-bold flex items-center dark:text-white gap-2">
-            <Columns className="text-brand-primary" /> Tablero Kanban de Soporte
+            <MessageSquare className="text-brand-primary" /> Centro de Soporte y Mensajería
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Conectado como: <span className="font-bold text-gray-700 dark:text-gray-200">{agentName} ({agentEmail})</span>
@@ -802,65 +810,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         </div>
       )}
 
-      {/* Search Bar & View Mode Switcher */}
-      {!loading && (tickets.length > 0 || searchTerm) && (
-        <div className="flex flex-col gap-4 mb-6">
-          <div className="relative max-w-md shadow-sm rounded-xl">
-            <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar por nombre, teléfono, cuenta o servicio..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-750 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200"
-            />
-          </div>
-
-          <div className="flex gap-2 border-b dark:border-gray-800 pb-2 overflow-x-auto scrollbar-none whitespace-nowrap">
-            <button
-              onClick={() => setViewMode('chat_layout')}
-              className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
-                viewMode === 'chat_layout'
-                  ? 'bg-brand-primary text-white shadow-sm'
-                  : 'bg-gray-50 dark:bg-gray-800 text-gray-650 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-750'
-              }`}
-            >
-              💬 Centro de Mensajería (Chat)
-            </button>
-            <button
-              onClick={() => setViewMode('kanban')}
-              className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
-                viewMode === 'kanban'
-                  ? 'bg-brand-primary text-white shadow-sm'
-                  : 'bg-gray-50 dark:bg-gray-800 text-gray-650 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-750'
-              }`}
-            >
-              📋 Tablero Kanban
-            </button>
-            <button
-              onClick={() => setViewMode('grouped_accounts')}
-              className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
-                viewMode === 'grouped_accounts'
-                  ? 'bg-brand-primary text-white shadow-sm'
-                  : 'bg-gray-50 dark:bg-gray-800 text-gray-650 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-750'
-              }`}
-            >
-              🔍 Agrupado por Cuenta (Correo)
-            </button>
-            <button
-              onClick={() => setViewMode('grouped_subjects')}
-              className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
-                viewMode === 'grouped_subjects'
-                  ? 'bg-brand-primary text-white shadow-sm'
-                  : 'bg-gray-50 dark:bg-gray-800 text-gray-650 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-750'
-              }`}
-            >
-              🏷️ Agrupado por Asunto
-            </button>
-          </div>
-        </div>
-      )}
-
+      {/* Unified Split-Screen Layout */}
       {loading ? (
         <div className="text-center py-20 text-gray-500 dark:text-gray-400 font-medium">Cargando tickets de soporte...</div>
       ) : tickets.length === 0 ? (
@@ -871,112 +821,119 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             Todos los clientes han sido atendidos y no hay tickets pendientes en este momento.
           </p>
         </div>
-      ) : viewMode === 'chat_layout' ? (
-        /* Split Chat Screen Layout */
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 min-h-[600px] h-[calc(100vh-280px)] border dark:border-gray-850 rounded-2xl overflow-hidden bg-gray-50/20 dark:bg-gray-900/10">
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[600px] h-[calc(100vh-250px)] border dark:border-gray-850 rounded-2xl overflow-hidden bg-gray-50/20 dark:bg-gray-900/10">
           
-          {/* LEFT SIDEBAR: Ticket inbox list (col-span-4) */}
-          <div className="md:col-span-4 border-r dark:border-gray-850 flex flex-col h-full bg-white dark:bg-gray-900">
-            {/* Filter buttons inside sidebar */}
-            <div className="p-3 border-b dark:border-gray-850 bg-gray-50/50 dark:bg-gray-900/50 flex flex-wrap gap-1.5 justify-center">
-              <button
-                onClick={() => setSidebarFilter('all')}
-                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all ${
-                  sidebarFilter === 'all'
-                    ? 'bg-brand-primary text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-650 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
-              >
-                Todos ({filteredTickets.length})
-              </button>
-              <button
-                onClick={() => setSidebarFilter('me')}
-                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 ${
-                  sidebarFilter === 'me'
-                    ? 'bg-brand-primary text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-650 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
-              >
-                👤 Míos ({myTickets.length})
-              </button>
-              <button
-                onClick={() => setSidebarFilter('unassigned')}
-                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 ${
-                  sidebarFilter === 'unassigned'
-                    ? 'bg-brand-primary text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-650 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
-              >
-                ⏳ Libres ({unassignedTickets.length})
-              </button>
+          {/* LEFT COLUMN: Collapsible Categories (col-span-5) */}
+          <div className="lg:col-span-5 border-r dark:border-gray-850 flex flex-col h-full bg-white dark:bg-gray-900 overflow-hidden">
+            {/* Search Box */}
+            <div className="p-4 border-b dark:border-gray-850 bg-gray-50/50 dark:bg-gray-900/50">
+              <div className="relative shadow-sm rounded-xl">
+                <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre, teléfono, cuenta o servicio..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 text-xs rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-750 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200"
+                />
+              </div>
             </div>
 
-            {/* List of inbox tickets */}
-            <div className="flex-grow overflow-y-auto divide-y dark:divide-gray-850">
-              {getSidebarTickets().length === 0 ? (
-                <div className="text-center py-12 text-xs text-gray-400 dark:text-gray-500 font-medium">
-                  No hay chats en esta sección.
-                </div>
-              ) : (
-                getSidebarTickets().map(t => {
-                  const isActive = activeChatTicket?.userId === t.userId;
-                  const isBotMode = t.waitingHumanMode === 'bot';
-                  const timeFormatted = formatTimeDiff(t.lastMessageTime);
-                  
-                  return (
-                    <div
-                      key={t.userId}
-                      onClick={() => setActiveChatTicket(t)}
-                      className={`p-3.5 flex flex-col gap-1 cursor-pointer transition-colors relative ${
-                        isActive
-                          ? 'bg-brand-primary/5 border-l-4 border-l-brand-primary'
-                          : 'hover:bg-gray-50 dark:hover:bg-gray-800/40'
-                      }`}
-                    >
-                      {/* Name & Badge & Time */}
-                      <div className="flex justify-between items-start gap-1">
-                        <span className="font-bold text-xs text-gray-800 dark:text-white truncate max-w-[140px]" title={t.nombre}>
-                          {t.nombre || 'Cliente WhatsApp'}
-                        </span>
-                        <span className="text-[9px] text-gray-405 font-mono shrink-0">
-                          {timeFormatted ? timeFormatted.replace('Hace ', '') : ''}
-                        </span>
-                      </div>
+            {/* Accordion List */}
+            <div className="flex-grow overflow-y-auto p-4 space-y-4">
+              {renderAccordionSection(
+                'me',
+                'Mis Tickets',
+                <User className="w-4 h-4 text-emerald-500" />,
+                myTickets.length,
+                myTickets.length === 0 ? (
+                  <p className="text-center py-4 text-xs text-gray-450 italic">No tienes tickets asignados.</p>
+                ) : (
+                  myTickets.map(renderCompactTicketItem)
+                )
+              )}
 
-                      {/* Phone & mode */}
-                      <div className="flex justify-between items-center text-[10px] text-gray-400 dark:text-gray-500">
-                        <span className="font-mono">+{t.phone}</span>
-                        <div className="flex items-center gap-1 shrink-0">
-                          {isBotMode ? (
-                            <span className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-[8px] font-extrabold px-1 rounded">
-                              🤖 Bot
-                            </span>
-                          ) : (
-                            <span className="bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 text-[8px] font-extrabold px-1 rounded">
-                              👤 Asesor
-                            </span>
-                          )}
-                          {t.agent && (
-                            <span className="bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-[8px] font-extrabold px-1 rounded max-w-[50px] truncate" title={t.agent}>
-                              👤 {t.agent}
-                            </span>
-                          )}
+              {renderAccordionSection(
+                'unassigned',
+                'Tickets Libres',
+                <RefreshCw className="w-4 h-4 text-amber-500" />,
+                unassignedTickets.length,
+                unassignedTickets.length === 0 ? (
+                  <p className="text-center py-4 text-xs text-gray-450 italic">No hay tickets libres.</p>
+                ) : (
+                  unassignedTickets.map(renderCompactTicketItem)
+                )
+              )}
+
+              {renderAccordionSection(
+                'other',
+                'Otros Asesores',
+                <Users className="w-4 h-4 text-blue-500" />,
+                otherTickets.length,
+                otherTickets.length === 0 ? (
+                  <p className="text-center py-4 text-xs text-gray-455 italic">No hay tickets de otros asesores.</p>
+                ) : (
+                  otherTickets.map(renderCompactTicketItem)
+                )
+              )}
+
+              {(() => {
+                const groupedAccounts = getGroupedByAccounts();
+                const totalAccountTickets = Object.values(groupedAccounts).reduce((sum, list) => sum + list.length, 0);
+                return renderAccordionSection(
+                  'accounts',
+                  'Agrupados por Cuenta',
+                  <Columns className="w-4 h-4 text-brand-primary" />,
+                  totalAccountTickets,
+                  Object.keys(groupedAccounts).length === 0 ? (
+                    <p className="text-center py-4 text-xs text-gray-450 italic">No hay tickets vinculados a cuentas.</p>
+                  ) : (
+                    Object.entries(groupedAccounts).map(([groupName, groupTickets]) => (
+                      <div key={groupName} className="space-y-1.5 border-b last:border-b-0 pb-3 last:pb-0 border-gray-150 dark:border-gray-800">
+                        <div className="text-[10px] font-bold text-brand-primary bg-brand-primary/5 px-2.5 py-1 rounded-lg flex justify-between items-center mb-1">
+                          <span className="truncate max-w-[200px]" title={groupName}>📺 {groupName}</span>
+                          <span className="shrink-0 text-[9px] bg-brand-primary/10 px-1.5 rounded">{groupTickets.length}</span>
+                        </div>
+                        <div className="space-y-2 pl-1.5 border-l-2 border-brand-primary/20">
+                          {groupTickets.map(renderCompactTicketItem)}
                         </div>
                       </div>
+                    ))
+                  )
+                );
+              })()}
 
-                      {/* Snippet */}
-                      <p className="text-[11px] text-gray-500 dark:text-gray-450 truncate line-clamp-1 italic">
-                        "{t.lastMessage || 'Mensaje de sistema / adjunto'}"
-                      </p>
-                    </div>
-                  );
-                })
-              )}
+              {(() => {
+                const groupedSubjects = getGroupedBySubjects();
+                const totalSubjectTickets = Object.values(groupedSubjects).reduce((sum, list) => sum + list.length, 0);
+                return renderAccordionSection(
+                  'subjects',
+                  'Agrupados por Asunto',
+                  <MessageSquare className="w-4 h-4 text-purple-500" />,
+                  totalSubjectTickets,
+                  Object.keys(groupedSubjects).length === 0 ? (
+                    <p className="text-center py-4 text-xs text-gray-450 italic">No hay tickets por asunto.</p>
+                  ) : (
+                    Object.entries(groupedSubjects).map(([groupName, groupTickets]) => (
+                      <div key={groupName} className="space-y-1.5 border-b last:border-b-0 pb-3 last:pb-0 border-gray-150 dark:border-gray-800">
+                        <div className="text-[10px] font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-lg flex justify-between items-center mb-1">
+                          <span>🏷️ {groupName}</span>
+                          <span className="text-[9px] bg-gray-200 dark:bg-gray-700 px-1.5 rounded">{groupTickets.length}</span>
+                        </div>
+                        <div className="space-y-2 pl-1.5 border-l-2 border-gray-200 dark:border-gray-700">
+                          {groupTickets.map(renderCompactTicketItem)}
+                        </div>
+                      </div>
+                    ))
+                  )
+                );
+              })()}
             </div>
           </div>
 
-          {/* RIGHT VIEW: Chat Conversation & Details (col-span-8) */}
-          <div className="md:col-span-8 flex flex-col h-full bg-white dark:bg-gray-900 border-l dark:border-gray-850 overflow-hidden">
+          {/* RIGHT COLUMN: Chat Conversation & Details (col-span-7) */}
+          <div className="lg:col-span-7 flex flex-col h-full bg-white dark:bg-gray-900 overflow-hidden">
             {activeChatTicket ? (
               <div className="flex flex-col h-full relative overflow-hidden">
                 {/* Chat Panel top bar */}
@@ -985,7 +942,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-1.5">
                       {activeChatTicket.nombre} 
                       {activeChatTicket.queuePosition !== undefined && activeChatTicket.queuePosition !== null && (
-                        <span className="bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[9px] font-extrabold px-1.5 py-0.2 rounded border">
+                        <span className="bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-305 text-[9px] font-extrabold px-1.5 py-0.2 rounded border">
                           Turno #{activeChatTicket.queuePosition}
                         </span>
                       )}
@@ -1071,7 +1028,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                               setShowBulkSharedInput(!showBulkSharedInput);
                               setBulkSharedMessage('');
                             }}
-                            className="bg-red-600 hover:bg-red-700 text-white font-bold text-[9px] px-2.5 py-1 rounded-md transition-all active:scale-95"
+                            className="bg-red-600 hover:bg-red-705 text-white font-bold text-[9px] px-2.5 py-1 rounded-md transition-all active:scale-95"
                           >
                             📢 Mensaje Masivo a Todos
                           </button>
@@ -1149,7 +1106,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     <button
                       key={idx}
                       onClick={() => insertCredentials(acc)}
-                      className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-800 dark:text-white text-[10px] font-bold py-1.2 px-2.5 rounded-lg border dark:border-gray-700 transition-all"
+                      className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-805 dark:text-white text-[10px] font-bold py-1.2 px-2.5 rounded-lg border dark:border-gray-700 transition-all"
                     >
                       <Key className="w-3 h-3 text-blue-500" /> Credenciales {acc.streaming} 🔑
                     </button>
@@ -1227,7 +1184,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                         </button>
                         
                         {showEmojiPicker && (
-                          <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-gray-850 p-2 rounded-xl border dark:border-gray-750 shadow-2xl flex gap-1.5 flex-wrap z-50">
+                          <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-gray-850 p-2.5 rounded-xl border dark:border-gray-750 shadow-2xl flex gap-1.5 flex-wrap z-50">
                             {COMMON_EMOJIS.map(em => (
                               <button
                                 key={em}
@@ -1248,6 +1205,58 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     </span>
                   </div>
 
+                  {/* Atajos Clickables */}
+                  <div className="flex flex-wrap gap-1.5 pb-1 border-b dark:border-gray-800 items-center">
+                    <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Atajos:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const firstName = activeChatTicket.nombre ? activeChatTicket.nombre.split(' ')[0] : 'Cliente';
+                        setNewMsgText(prev => prev + (prev ? ' ' : '') + firstName);
+                      }}
+                      className="text-[10px] bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 px-2 py-1 rounded-lg font-bold text-gray-700 dark:text-gray-300 transition-all active:scale-95"
+                      title="Insertar nombre del cliente"
+                    >
+                      👤 {activeChatTicket.nombre ? activeChatTicket.nombre.split(' ')[0] : 'Cliente'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewMsgText(prev => prev + (prev ? ' ' : '') + `https://sheerit.com.co/verificar?tel=${activeChatTicket.phone}`)}
+                      className="text-[10px] bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 px-2 py-1 rounded-lg font-bold text-gray-700 dark:text-gray-300 transition-all active:scale-95"
+                      title="Insertar link de verificación de hogar"
+                    >
+                      📺 Link Hogar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewMsgText(prev => prev + (prev ? ' ' : '') + `0087387259`)}
+                      className="text-[10px] bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 px-2 py-1 rounded-lg font-bold text-gray-700 dark:text-gray-300 transition-all active:scale-95"
+                      title="Insertar número de Llave Bre-V"
+                    >
+                      🔑 Llave Bre-V
+                    </button>
+                    {activeChatTicket.accounts && activeChatTicket.accounts.map((acc, idx) => (
+                      <React.Fragment key={idx}>
+                        <button
+                          type="button"
+                          onClick={() => setNewMsgText(prev => prev + (prev ? ' ' : '') + acc.correo)}
+                          className="text-[10px] bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/40 px-2 py-1 rounded-lg font-bold text-blue-700 dark:text-blue-300 transition-all active:scale-95"
+                          title={`Insertar correo de ${acc.streaming}`}
+                        >
+                          📧 {acc.correo.split('@')[0]}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewMsgText(prev => prev + (prev ? ' ' : '') + acc.streaming)}
+                          className="text-[10px] bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/40 px-2 py-1 rounded-lg font-bold text-purple-700 dark:text-purple-300 transition-all active:scale-95"
+                          title={`Insertar plataforma: ${acc.streaming}`}
+                        >
+                          🎬 {acc.streaming}
+                        </button>
+                      </React.Fragment>
+                    ))}
+                  </div>
+
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
@@ -1255,17 +1264,49 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     }}
                     className="flex gap-2 items-center"
                   >
-                    <input
-                      type="text"
-                      value={newMsgText}
-                      onChange={(e) => setNewMsgText(e.target.value)}
-                      placeholder="Escribe un mensaje de respuesta..."
-                      className="flex-grow px-4 py-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-850 border dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:ring-1 focus:ring-brand-primary"
-                    />
+                    <div className="relative flex-grow">
+                      {showShortcutsMenu && (
+                        <div className="absolute bottom-full left-0 mb-2 w-full bg-white dark:bg-gray-850 rounded-xl border dark:border-gray-750 shadow-2xl z-50 overflow-hidden max-h-60 overflow-y-auto">
+                          <div className="bg-gray-50 dark:bg-gray-800 px-3 py-1.5 border-b dark:border-gray-700 text-[10px] font-bold text-gray-500 uppercase">
+                            Atajos disponibles (Filtrado: /{shortcutsFilter})
+                          </div>
+                          <div className="divide-y dark:divide-gray-800 animate-fadeIn">
+                            {getShortcuts(activeChatTicket)
+                              .filter(s => s.key.includes(shortcutsFilter) || s.label.toLowerCase().includes(shortcutsFilter))
+                              .map(s => (
+                                <button
+                                  key={s.key}
+                                  type="button"
+                                  onClick={() => selectShortcut(s.text)}
+                                  className="w-full text-left px-3 py-2 hover:bg-brand-primary/10 dark:hover:bg-brand-primary/20 flex flex-col gap-0.5 transition-colors"
+                                >
+                                  <span className="text-xs font-bold text-gray-800 dark:text-white flex justify-between">
+                                    <span>{s.label}</span>
+                                    <span className="text-[10px] text-brand-primary font-mono font-black">/{s.key}</span>
+                                  </span>
+                                  <span className="text-[10px] text-gray-400 dark:text-gray-500">{s.description}</span>
+                                </button>
+                              ))}
+                            {getShortcuts(activeChatTicket).filter(s => s.key.includes(shortcutsFilter) || s.label.toLowerCase().includes(shortcutsFilter)).length === 0 && (
+                              <div className="p-3 text-xs text-gray-400 italic text-center">
+                                No se encontraron atajos para "/{shortcutsFilter}"
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      <input
+                        type="text"
+                        value={newMsgText}
+                        onChange={(e) => handleInputChange(e.target.value)}
+                        placeholder="Escribe un mensaje de respuesta (Usa / para atajos)..."
+                        className="w-full px-4 py-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-855 border dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:ring-1 focus:ring-brand-primary"
+                      />
+                    </div>
                     <button
                       type="submit"
                       disabled={!newMsgText.trim()}
-                      className="p-2.5 bg-brand-primary hover:bg-brand-dark text-white rounded-xl transition-all disabled:opacity-50 flex items-center justify-center"
+                      className="p-2.5 bg-brand-primary hover:bg-brand-dark text-white rounded-xl transition-all disabled:opacity-50 flex items-center justify-center shrink-0"
                     >
                       <Send className="w-4 h-4" />
                     </button>
@@ -1273,440 +1314,16 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center p-8 text-gray-400 dark:text-gray-500">
+              <div className="flex flex-col items-center justify-center h-full text-center p-8 text-gray-400 dark:text-gray-500 bg-gray-50/30 dark:bg-gray-900/10">
                 <MessageSquare className="w-16 h-16 text-gray-300 dark:text-gray-700 mb-4 animate-bounce" />
-                <h3 className="font-bold text-lg dark:text-gray-300">Bandeja de Conversaciones</h3>
-                <p className="text-sm max-w-sm mt-1">
-                  Selecciona una conversación de la izquierda para responder. Puedes reclamar tickets y gestionar la atención del bot.
+                <h3 className="font-bold text-lg dark:text-gray-300 font-sans">Bandeja de Conversaciones</h3>
+                <p className="text-xs max-w-sm mt-2 text-gray-500 leading-relaxed">
+                  Selecciona una conversación de las categorías expandibles de la izquierda para responder. Puedes reclamar tickets, enviar respuestas automáticas y ver detalles de la cuenta.
                 </p>
               </div>
             )}
           </div>
         </div>
-      ) : viewMode === 'kanban' ? (
-        /* Columns Grid */
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Column 1: Unassigned */}
-          <div 
-            onDragOver={(e) => handleDragOver(e, 'unassigned')}
-            onDragLeave={() => setDraggedOverColumn(null)}
-            onDrop={(e) => handleDrop(e, 'unassigned')}
-            className={`bg-amber-50/30 dark:bg-amber-950/5 rounded-xl p-4 border border-amber-100/50 dark:border-amber-950/20 flex flex-col min-h-[500px] transition-all duration-200 ${
-              draggedOverColumn === 'unassigned' ? 'ring-2 ring-amber-500/50 bg-amber-100/10 dark:bg-amber-950/15 scale-[1.01]' : ''
-            }`}
-          >
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-amber-100 dark:border-amber-900/20">
-              <h3 className="font-bold text-gray-700 dark:text-gray-250 flex items-center gap-2 text-sm">
-                <span className="w-2.5 h-2.5 bg-amber-500 rounded-full"></span> Sin Asignar
-              </h3>
-              <span className="bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-xs font-extrabold px-2.5 py-0.5 rounded-full">
-                {unassignedTickets.length}
-              </span>
-            </div>
-            
-            <div className="flex flex-col gap-4 overflow-y-auto max-h-[600px] pr-1">
-              {unassignedTickets.length === 0 ? (
-                <div className="text-center py-8 text-xs text-gray-400 dark:text-gray-500 font-medium">
-                  No hay tickets sin asignar o suelta uno aquí
-                </div>
-              ) : (
-                unassignedTickets.map(renderTicketCard)
-              )}
-            </div>
-          </div>
-
-          {/* Column 2: Assigned to Me */}
-          <div 
-            onDragOver={(e) => handleDragOver(e, 'me')}
-            onDragLeave={() => setDraggedOverColumn(null)}
-            onDrop={(e) => handleDrop(e, 'me')}
-            className={`bg-emerald-50/20 dark:bg-emerald-950/5 rounded-xl p-4 border border-emerald-100/50 dark:border-emerald-950/20 flex flex-col min-h-[500px] transition-all duration-200 ${
-              draggedOverColumn === 'me' ? 'ring-2 ring-emerald-500/50 bg-emerald-100/10 dark:bg-emerald-950/15 scale-[1.01]' : ''
-            }`}
-          >
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-emerald-100 dark:border-emerald-900/20">
-              <h3 className="font-bold text-gray-700 dark:text-gray-250 flex items-center gap-2 text-sm">
-                <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full"></span> Mis Asignaciones
-              </h3>
-              <span className="bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-extrabold px-2.5 py-0.5 rounded-full">
-                {myTickets.length}
-              </span>
-            </div>
-            
-            <div className="flex flex-col gap-4 overflow-y-auto max-h-[600px] pr-1">
-              {myTickets.length === 0 ? (
-                <div className="text-center py-8 text-xs text-gray-400 dark:text-gray-500 font-medium">
-                  No tienes tickets asignados o arrastra uno aquí
-                </div>
-              ) : (
-                myTickets.map(renderTicketCard)
-              )}
-            </div>
-          </div>
-
-          {/* Column 3: Assigned to Others */}
-          <div 
-            onDragOver={(e) => handleDragOver(e, 'other')}
-            onDragLeave={() => setDraggedOverColumn(null)}
-            onDrop={(e) => handleDrop(e, 'other')}
-            className={`bg-blue-50/20 dark:bg-blue-950/5 rounded-xl p-4 border border-blue-100/50 dark:border-blue-950/20 flex flex-col min-h-[500px] transition-all duration-200 ${
-              draggedOverColumn === 'other' ? 'ring-2 ring-blue-500/50 bg-blue-100/10 dark:bg-blue-950/15 scale-[1.01]' : ''
-            }`}
-          >
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-blue-100 dark:border-blue-900/20">
-              <h3 className="font-bold text-gray-700 dark:text-gray-250 flex items-center gap-2 text-sm">
-                <span className="w-2.5 h-2.5 bg-blue-500 rounded-full"></span> Otros Asesores
-              </h3>
-              <span className="bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 text-xs font-extrabold px-2.5 py-0.5 rounded-full">
-                {otherTickets.length}
-              </span>
-            </div>
-            
-            <div className="flex flex-col gap-4 overflow-y-auto max-h-[600px] pr-1">
-              {otherTickets.length === 0 ? (
-                <div className="text-center py-8 text-xs text-gray-400 dark:text-gray-500 font-medium">
-                  No hay tickets asignados a otros
-                </div>
-              ) : (
-                otherTickets.map(renderTicketCard)
-              )}
-            </div>
-          </div>
-        </div>
-      ) : viewMode === 'grouped_accounts' ? (
-        <div className="space-y-6 animate-fadeIn">
-          {Object.keys(getGroupedByAccounts()).length === 0 ? (
-            <div className="text-center py-20 text-gray-500 dark:text-gray-400 font-medium">No hay tickets para agrupar por cuenta.</div>
-          ) : (
-            Object.entries(getGroupedByAccounts()).map(([groupName, groupTickets]) => (
-              <div key={groupName} className="bg-gray-50/30 dark:bg-gray-950/5 border border-gray-150 dark:border-gray-800 rounded-2xl p-5">
-                <h3 className="font-bold text-gray-850 dark:text-white text-sm mb-4 flex items-center justify-between border-b dark:border-gray-800 pb-2">
-                  <span className="flex items-center gap-2">
-                    📺 {groupName}
-                  </span>
-                  <span className="bg-brand-primary/10 text-brand-primary text-xs px-2.5 py-0.5 rounded-full font-extrabold">
-                    {groupTickets.length} {groupTickets.length === 1 ? 'ticket' : 'tickets'}
-                  </span>
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {groupTickets.map(renderTicketCard)}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      ) : (
-        <div className="space-y-6 animate-fadeIn">
-          {Object.keys(getGroupedBySubjects()).length === 0 ? (
-            <div className="text-center py-20 text-gray-500 dark:text-gray-400 font-medium">No hay tickets para agrupar por asunto.</div>
-          ) : (
-            Object.entries(getGroupedBySubjects()).map(([groupName, groupTickets]) => (
-              <div key={groupName} className="bg-gray-50/30 dark:bg-gray-950/5 border border-gray-150 dark:border-gray-800 rounded-2xl p-5">
-                <h3 className="font-bold text-gray-850 dark:text-white text-sm mb-4 flex items-center justify-between border-b dark:border-gray-800 pb-2">
-                  <span className="flex items-center gap-2">
-                    🏷️ {groupName}
-                  </span>
-                  <span className="bg-brand-primary/10 text-brand-primary text-xs px-2.5 py-0.5 rounded-full font-extrabold">
-                    {groupTickets.length} {groupTickets.length === 1 ? 'ticket' : 'tickets'}
-                  </span>
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {groupTickets.map(renderTicketCard)}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-
-      {/* LIVE CHAT OVERLAY SIDE PANEL */}
-      {activeChatTicket && (
-        <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[500px] bg-white dark:bg-gray-800 shadow-2xl border-l dark:border-gray-750 flex flex-col animate-slideInRight">
-          {/* Chat Header */}
-          <div className="p-4 bg-gray-50 dark:bg-gray-900 border-b dark:border-gray-750 flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={() => setActiveChatTicket(null)}
-                className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg text-gray-500 dark:text-gray-450"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div>
-                <h3 className="font-bold text-sm text-gray-900 dark:text-white">{activeChatTicket.nombre}</h3>
-                <span className="text-xs text-gray-450 font-mono">+{activeChatTicket.phone}</span>
-              </div>
-            </div>
-            <div className="flex gap-2 items-center">
-              <button
-                onClick={() => handleSyncChatMessages()}
-                disabled={syncingChat}
-                className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg text-gray-500 dark:text-gray-450 flex items-center gap-1"
-                title="Sincronizar mensajes desde el celular"
-              >
-                <RefreshCw className={`w-4 h-4 ${syncingChat ? 'animate-spin' : ''}`} />
-                <span className="text-[10px] font-bold hidden sm:inline">{syncingChat ? 'Sincronizando...' : 'Sincronizar Celular'}</span>
-              </button>
-              <button
-                onClick={() => fetchChatMessages()}
-                className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg text-gray-500 dark:text-gray-450"
-                title="Actualizar chat"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Quick Actions Panel */}
-          <div className="bg-brand-primary/5 dark:bg-brand-primary/10 border-b dark:border-brand-primary/10 p-3 flex flex-wrap gap-2 justify-center items-center">
-            <span className="text-[10px] font-bold text-gray-450 uppercase tracking-wider w-full text-center">Acciones Rápidas</span>
-            <button
-              onClick={sendHogarNetflixTemplate}
-              className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-750 dark:hover:bg-gray-700 text-gray-800 dark:text-white text-[11px] font-bold py-1.5 px-3 rounded-lg border dark:border-gray-650 transition-all active:scale-95"
-              title="Copiar plantilla de Hogar Netflix al mensaje"
-            >
-              <Home className="w-3.5 h-3.5 text-amber-500" /> Hogar Netflix 📺
-            </button>
-            
-            <button
-              onClick={insertCobroTemplate}
-              className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-750 dark:hover:bg-gray-700 text-gray-800 dark:text-white text-[11px] font-bold py-1.5 px-3 rounded-lg border dark:border-gray-650 transition-all active:scale-95"
-              title="Copiar plantilla de Cobrar al mensaje"
-            >
-              <Smile className="w-3.5 h-3.5 text-emerald-500" /> Cobrar 💰
-            </button>
-
-            {activeChatTicket.accounts && activeChatTicket.accounts.length > 0 ? (
-              <>
-                {activeChatTicket.accounts.map((acc, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => insertCredentials(acc)}
-                    className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-750 dark:hover:bg-gray-700 text-gray-800 dark:text-white text-[11px] font-bold py-1.5 px-3 rounded-lg border dark:border-gray-650 transition-all active:scale-95"
-                    title={`Copiar credenciales de ${acc.streaming} al mensaje`}
-                  >
-                    <Key className="w-3.5 h-3.5 text-blue-500" /> Credenciales {acc.streaming} 🔑
-                  </button>
-                ))}
-                {activeChatTicket.accounts.length > 1 && (
-                  <button
-                    onClick={() => insertCredentials(null)}
-                    className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-750 dark:hover:bg-gray-700 text-gray-800 dark:text-white text-[11px] font-bold py-1.5 px-3 rounded-lg border dark:border-gray-650 transition-all active:scale-95"
-                    title="Copiar todas las credenciales al mensaje"
-                  >
-                    <Key className="w-3.5 h-3.5 text-indigo-500" /> Credenciales (Todas) 🔑
-                  </button>
-                )}
-              </>
-            ) : null}
-
-            {(() => {
-              const activeClaudeLink = chatMessages
-                .map(m => detectClaudeLink(m.body))
-                .find(Boolean);
-              if (activeClaudeLink) {
-                return (
-                  <a
-                    href={activeClaudeLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 bg-orange-600 hover:bg-orange-700 text-white text-[11px] font-bold py-1.5 px-3 rounded-lg shadow-sm transition-all active:scale-95 animate-pulse"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" /> Acceso Claude 🔗
-                  </a>
-                );
-              }
-              return null;
-            })()}
-            <button
-              onClick={() => handleToggleMode(activeChatTicket.phone, activeChatTicket.waitingHumanMode || 'bot')}
-              className={`flex items-center gap-1.5 text-white text-[11px] font-bold py-1.5 px-3 rounded-lg transition-all active:scale-95 ${
-                (activeChatTicket.waitingHumanMode || 'bot') === 'bot'
-                  ? 'bg-purple-600 hover:bg-purple-700'
-                  : 'bg-indigo-600 hover:bg-indigo-700'
-              }`}
-              title="Alternar entre modo Automático (el bot responderá si detecta intenciones conocidas) y Manual (el bot se mantendrá totalmente callado)"
-            >
-              <Bot className="w-3.5 h-3.5" />
-              {(activeChatTicket.waitingHumanMode || 'bot') === 'bot' ? 'Modo: Auto (Bot)' : 'Modo: Manual (Asesor)'}
-            </button>
-
-            <button
-              onClick={() => handleReleaseBot(activeChatTicket.phone)}
-              className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold py-1.5 px-3 rounded-lg transition-all active:scale-95"
-              title="Libera la conversación del estado de soporte técnico para que el bot vuelva a responder y procesar menús desde cero"
-            >
-              <Unlock className="w-3.5 h-3.5" /> Liberar Bot
-            </button>
-
-            <button
-              onClick={() => handleResolveClick(activeChatTicket)}
-              className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white text-[11px] font-bold py-1.5 px-3 rounded-lg transition-all active:scale-95"
-            >
-              <CheckCircle className="w-3.5 h-3.5" /> Resolver
-            </button>
-          </div>
-
-          {/* Chat Body (Messages List) */}
-          <div className="flex-grow overflow-y-auto p-4 bg-gray-50/50 dark:bg-gray-900/20 space-y-3 flex flex-col">
-            {loadingChat ? (
-              <div className="flex flex-col items-center justify-center my-auto text-gray-400">
-                <RefreshCw className="w-6 h-6 animate-spin text-brand-primary mb-2" />
-                <span className="text-xs">Cargando conversación...</span>
-              </div>
-            ) : chatMessages.length === 0 ? (
-              <div className="text-center my-auto text-xs text-gray-400 italic">
-                No hay mensajes recientes. Escribe uno abajo para iniciar.
-              </div>
-            ) : (
-              chatMessages.map((msg, idx) => {
-                const isMe = msg.fromMe;
-                const claudeLink = detectClaudeLink(msg.body);
-                return (
-                  <div
-                    key={msg.id || idx}
-                    className={`max-w-[75%] p-3 rounded-2xl text-xs flex flex-col gap-1 shadow-sm leading-relaxed ${
-                      isMe
-                        ? 'bg-brand-primary text-white ml-auto rounded-tr-none'
-                        : 'bg-white dark:bg-gray-750 dark:text-white rounded-tl-none border dark:border-gray-700'
-                    }`}
-                  >
-                    <p className="whitespace-pre-wrap font-medium">{msg.body}</p>
-                    {claudeLink && (
-                      <a
-                        href={claudeLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-black transition-all w-fit uppercase"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Iniciar Sesión Claude <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-                    <span className={`text-[9px] text-right block ${isMe ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'}`}>
-                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                );
-              })
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Chat Input & Signature */}
-          <div className="p-4 bg-white dark:bg-gray-900 border-t dark:border-gray-750 flex flex-col gap-3">
-            {/* Signature configuration */}
-            <div className="flex items-center justify-between border-b dark:border-gray-800 pb-2">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Firma de Asesor:</span>
-                <div className="relative">
-                  <button
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="text-base px-2 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded border dark:border-gray-700 flex items-center gap-1"
-                  >
-                    <span>{advisorEmoji}</span>
-                    <Smile className="w-3.5 h-3.5 text-gray-400" />
-                  </button>
-                  
-                  {showEmojiPicker && (
-                    <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-gray-850 p-2.5 rounded-xl border dark:border-gray-750 shadow-2xl flex gap-1.5 flex-wrap w-[180px] z-50">
-                      {COMMON_EMOJIS.map(em => (
-                        <button
-                          key={em}
-                          type="button"
-                          onClick={() => changeEmoji(em)}
-                          className="hover:scale-125 transition-transform text-lg p-1"
-                        >
-                          {em}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500">
-                Se enviará como: <strong className="dark:text-white">{advisorEmoji} [tu mensaje]</strong>
-              </span>
-            </div>
-
-            {/* Quick Insertion Tags (Agregadores) */}
-            {activeChatTicket && (
-              <div className="flex flex-wrap gap-1.5 pb-1 border-b dark:border-gray-800 items-center">
-                <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Agregadores:</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const firstName = activeChatTicket.nombre ? activeChatTicket.nombre.split(' ')[0] : 'Cliente';
-                    setNewMsgText(prev => prev + (prev ? ' ' : '') + firstName);
-                  }}
-                  className="text-[10px] bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 px-2 py-1 rounded-lg font-bold text-gray-700 dark:text-gray-300 transition-all active:scale-95"
-                  title="Insertar nombre del cliente"
-                >
-                  👤 {activeChatTicket.nombre ? activeChatTicket.nombre.split(' ')[0] : 'Cliente'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNewMsgText(prev => prev + (prev ? ' ' : '') + `https://sheerit.com.co/verificar?tel=${activeChatTicket.phone}`)}
-                  className="text-[10px] bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 px-2 py-1 rounded-lg font-bold text-gray-700 dark:text-gray-300 transition-all active:scale-95"
-                  title="Insertar link de verificación de hogar"
-                >
-                  📺 Link Hogar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNewMsgText(prev => prev + (prev ? ' ' : '') + `0087387259`)}
-                  className="text-[10px] bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 px-2 py-1 rounded-lg font-bold text-gray-700 dark:text-gray-300 transition-all active:scale-95"
-                  title="Insertar número de Llave Bre-V"
-                >
-                  🔑 Llave Bre-V
-                </button>
-                {activeChatTicket.accounts && activeChatTicket.accounts.map((acc, idx) => (
-                  <React.Fragment key={idx}>
-                    <button
-                      type="button"
-                      onClick={() => setNewMsgText(prev => prev + (prev ? ' ' : '') + acc.correo)}
-                      className="text-[10px] bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/40 px-2 py-1 rounded-lg font-bold text-blue-700 dark:text-blue-305 transition-all active:scale-95"
-                      title={`Insertar correo de ${acc.streaming}`}
-                    >
-                      📧 {acc.correo.split('@')[0]}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setNewMsgText(prev => prev + (prev ? ' ' : '') + acc.streaming)}
-                      className="text-[10px] bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/40 px-2 py-1 rounded-lg font-bold text-purple-700 dark:text-purple-305 transition-all active:scale-95"
-                      title={`Insertar plataforma: ${acc.streaming}`}
-                    >
-                      🎬 {acc.streaming}
-                    </button>
-                  </React.Fragment>
-                ))}
-              </div>
-            )}
-
-            {/* Input field */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSendChatMessage();
-              }}
-              className="flex gap-2 items-center"
-            >
-              <input
-                type="text"
-                value={newMsgText}
-                onChange={(e) => setNewMsgText(e.target.value)}
-                placeholder="Escribe un mensaje de respuesta..."
-                className="flex-grow px-4 py-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-850 border dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:ring-1 focus:ring-brand-primary"
-              />
-              <button
-                type="submit"
-                disabled={!newMsgText.trim()}
-                className="p-2.5 bg-brand-primary hover:bg-brand-dark text-white rounded-xl transition-all disabled:opacity-50 flex items-center justify-center"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </form>
-          </div>
         </div>
       )}
 
