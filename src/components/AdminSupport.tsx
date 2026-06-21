@@ -52,6 +52,21 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       ? 'https://bot.sheerit.com.co'
       : `http://${window.location.hostname}:3000`;
   };
+
+  const logAuditAction = async (action: string, details: any) => {
+    try {
+      const email = localStorage.getItem('ticket_agent_email') || agentEmail || 'unknown';
+      const name = localStorage.getItem('ticket_agent_name') || agentName || 'unknown';
+      const apiUrl = getApiUrl();
+      await fetch(`${apiUrl}/api/admin/audit-log`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentEmail: email, agentName: name, action, details })
+      });
+    } catch (e) {
+      console.error("Failed to write frontend audit log:", e);
+    }
+  };
   const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'payments' | 'streaming' | 'policies'>('tickets');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -96,6 +111,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       const result = await response.json();
       if (result.success) {
         setMessage('Guardado con éxito');
+        logAuditAction('SAVE_SUPPORT_GUIDES', { platformsCount: data.length });
       } else {
         setMessage('Error: ' + result.message);
       }
@@ -141,12 +157,15 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       issues: []
     };
     setData([newPlatform, ...data]);
+    logAuditAction('ADD_PLATFORM', { id: newPlatform.id });
   };
 
   const removePlatform = (index: number) => {
+    const platformName = data[index]?.name || 'Unknown';
     const newData = [...data];
     newData.splice(index, 1);
     setData(newData);
+    logAuditAction('REMOVE_PLATFORM', { platformName });
   };
 
   const updatePlatform = (index: number, field: keyof SupportPlatform, value: any) => {
@@ -166,12 +185,16 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
     const newData = [...data];
     newData[pIndex].issues.unshift(newIssue);
     setData(newData);
+    logAuditAction('ADD_ISSUE', { platformName: data[pIndex]?.name || 'Unknown' });
   };
 
   const removeIssue = (pIndex: number, iIndex: number) => {
+    const platformName = data[pIndex]?.name || 'Unknown';
+    const issueTitle = data[pIndex]?.issues[iIndex]?.title || 'Unknown';
     const newData = [...data];
     newData[pIndex].issues.splice(iIndex, 1);
     setData(newData);
+    logAuditAction('REMOVE_ISSUE', { platformName, issueTitle });
   };
 
   const updateIssue = (pIndex: number, iIndex: number, field: keyof Issue, value: any) => {

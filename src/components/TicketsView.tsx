@@ -51,6 +51,21 @@ const getApiUrl = () => {
     : `http://${window.location.hostname}:3000`;
 };
 
+const logAuditAction = async (action: string, details: any) => {
+  try {
+    const email = localStorage.getItem('ticket_agent_email') || 'unknown';
+    const name = localStorage.getItem('ticket_agent_name') || 'unknown';
+    const apiUrl = getApiUrl();
+    await fetch(`${apiUrl}/api/admin/audit-log`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agentEmail: email, agentName: name, action, details })
+    });
+  } catch (e) {
+    console.error("Failed to write frontend audit log:", e);
+  }
+};
+
 export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName, onLogout }) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -229,6 +244,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       if (data.success) {
         setNewMsgText('');
         fetchChatMessages(true);
+        logAuditAction('SEND_MESSAGE', { ticketPhone: activeChatTicket.phone, textLength: textToSend.length });
         // auto-assign to me if unassigned
         if (!activeChatTicket.agent) {
           setActiveChatTicket(prev => prev ? { ...prev, agent: agentName } : null);
@@ -309,6 +325,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       const result = await res.json();
       if (!result.success) {
         alert(`❌ Error: ${result.message}`);
+      } else {
+        logAuditAction('CLAIM_TICKET', { ticketPhone: phone, claimedBy: targetAgent || 'UNASSIGNED' });
       }
       fetchTickets(true);
     } catch (err) {
@@ -334,6 +352,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       const result = await res.json();
       if (!result.success) {
         alert(`❌ Error: ${result.message}`);
+      } else {
+        logAuditAction('TOGGLE_BOT_MODE', { ticketPhone: phone, nextMode });
       }
       fetchTickets(true);
     } catch (err) {
@@ -410,6 +430,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       const result = await res.json();
       if (!result.success) {
         alert(`❌ Error: ${result.message}`);
+      } else {
+        logAuditAction('RESOLVE_TICKET', { ticketPhone: phone, resolveAllShared: resolveAll });
       }
       fetchTickets(true);
       if (activeChatTicket && activeChatTicket.phone === phone) {
