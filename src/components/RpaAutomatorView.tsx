@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Upload, Code, HelpCircle, Save, CheckCircle, AlertTriangle, FileText, Settings2, Trash2 } from 'lucide-react';
+import { Play, Upload, Code, HelpCircle, Save, CheckCircle, AlertTriangle, FileText, Settings2, Trash2, RefreshCw, Key, Plus } from 'lucide-react';
 
 interface RpaStep {
   action: string;
@@ -24,6 +24,7 @@ interface RpaRecipe {
 
 export default function RpaAutomatorView() {
   const [recipes, setRecipes] = useState<RpaRecipe[]>([]);
+  const [providers, setProviders] = useState<any[]>([]);
   const [currentRecipe, setCurrentRecipe] = useState<Partial<RpaRecipe> | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [password, setPassword] = useState('admin123');
@@ -34,6 +35,11 @@ export default function RpaAutomatorView() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   
+  // Provider credentials form state
+  const [providerForm, setProviderForm] = useState({ id: null as number | null, platform: '', providerName: '', username: '', password: '' });
+  const [showProviderForm, setShowProviderForm] = useState(false);
+  const [savingProvider, setSavingProvider] = useState(false);
+
   // Dynamic inputs for running the recipe
   const [testEmail, setTestEmail] = useState('cliente_prueba@gmail.com');
   const [runResult, setRunResult] = useState<any>(null);
@@ -44,6 +50,7 @@ export default function RpaAutomatorView() {
 
   useEffect(() => {
     fetchRecipes();
+    fetchProviders();
   }, []);
 
   const fetchRecipes = async () => {
@@ -58,6 +65,18 @@ export default function RpaAutomatorView() {
       setError(err.message || 'Fallo de conexión al cargar recetas');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchProviders = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/rpa/providers`);
+      if (response.ok) {
+        const data = await response.json();
+        setProviders(data);
+      }
+    } catch (e) {
+      console.error('Error fetching providers:', e.message);
     }
   };
 
@@ -85,10 +104,21 @@ export default function RpaAutomatorView() {
         throw new Error(data.error || 'Error al procesar el PDF de Scribe');
       }
 
+      let recipeData = data.recipe;
+      if (typeof recipeData === 'string') {
+        try {
+          recipeData = JSON.parse(recipeData);
+        } catch (err) {}
+      }
+
+      if (!recipeData) {
+        throw new Error('El análisis de Gemini no devolvió datos estructurados legibles.');
+      }
+
       setCurrentRecipe({
-        name: data.recipe.name || 'Nueva Receta Importada',
-        platform: data.recipe.platform || 'desconocida',
-        recipeJson: data.recipe,
+        name: recipeData.name || 'Nueva Receta Importada',
+        platform: recipeData.platform || 'desconocida',
+        recipeJson: recipeData,
       });
 
       setSuccess('PDF de Scribe importado y analizado con éxito por Gemini. Revisa los pasos generados abajo.');
@@ -132,6 +162,60 @@ export default function RpaAutomatorView() {
     }
   };
 
+  const handleSaveProvider = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingProvider(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/rpa/providers/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...providerForm,
+          adminPassword: password
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Error al guardar credenciales de proveedor');
+      }
+
+      setSuccess('Credenciales de proveedor guardadas con éxito.');
+      setProviderForm({ id: null, platform: '', providerName: '', username: '', password: '' });
+      setShowProviderForm(false);
+      fetchProviders();
+    } catch (err: any) {
+      setError(err.message || 'Error de red al guardar proveedor');
+    } finally {
+      setSavingProvider(false);
+    }
+  };
+
+  const handleDeleteProvider = async (id: number) => {
+    if (!window.confirm('¿Seguro que deseas eliminar estas credenciales de proveedor?')) return;
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/rpa/providers/${id}?password=${password}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Error al eliminar credenciales');
+      }
+
+      setSuccess('Credenciales de proveedor eliminadas.');
+      fetchProviders();
+    } catch (err: any) {
+      setError(err.message || 'Error al conectar con el servidor');
+    }
+  };
+
   const handleRunTest = async (recipeId: number) => {
     setRunning(true);
     setError(null);
@@ -169,6 +253,27 @@ export default function RpaAutomatorView() {
     }
   };
 
+  const getRecipeSteps = (): RpaStep[] => {
+    if (!currentRecipe || !currentRecipe.recipeJson) return [];
+    let json = currentRecipe.recipeJson;
+    if (typeof json === 'string') {
+      try {
+        json = JSON.parse(json);
+      } catch (e) {
+        return [];
+      }
+    }
+    if (json && typeof json === 'object') {
+      if (Array.isArray((json as any).steps)) {
+        return (json as any).steps;
+      }
+      if (Array.isArray(json)) {
+        return json;
+      }
+    }
+    return [];
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6 text-white">
       
@@ -186,7 +291,7 @@ export default function RpaAutomatorView() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Left sidebar: Import & Configurations (1 col) */}
+        {/* Left sidebar: Import, Recipes, Providers (1 col) */}
         <div className="space-y-6">
           {/* Uploader Card */}
           <div className="bg-slate-900/40 backdrop-blur-md p-6 rounded-2xl border border-slate-800 space-y-4">
@@ -246,7 +351,7 @@ export default function RpaAutomatorView() {
           {recipes.length > 0 && (
             <div className="bg-slate-900/40 backdrop-blur-md p-6 rounded-2xl border border-slate-800 space-y-4">
               <h3 className="text-sm font-semibold text-white uppercase tracking-wider border-b border-slate-850 pb-2 flex items-center gap-1.5">
-                <Settings2 size={16} className="text-indigo-400" /> Probar Receta Activa
+                <Settings2 size={16} className="text-indigo-400" /> Recetas de Automatización
               </h3>
 
               <div className="space-y-3">
@@ -264,19 +369,31 @@ export default function RpaAutomatorView() {
 
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                    Seleccionar Receta para Ejecutar
+                    Selecciona una Receta para Editar / Probar
                   </label>
-                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                     {recipes.map((rec) => (
                       <div
                         key={rec.id}
-                        className="flex items-center justify-between p-2 rounded-lg bg-slate-950/60 border border-slate-800/80 text-xs"
+                        onClick={() => {
+                          setCurrentRecipe(rec);
+                          setSuccess(null);
+                          setError(null);
+                        }}
+                        className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer ${
+                          currentRecipe?.id === rec.id
+                            ? 'bg-indigo-950/40 border-indigo-500/50'
+                            : 'bg-slate-950/60 border-slate-850 hover:border-slate-700'
+                        }`}
                       >
                         <span className="truncate font-medium text-slate-300 max-w-[130px]" title={rec.name}>
                           {rec.name}
                         </span>
                         <button
-                          onClick={() => rec.id && handleRunTest(rec.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            rec.id && handleRunTest(rec.id);
+                          }}
                           disabled={running}
                           className="flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-[10px] font-semibold transition-colors disabled:opacity-40"
                         >
@@ -289,6 +406,132 @@ export default function RpaAutomatorView() {
               </div>
             </div>
           )}
+
+          {/* Provider Credentials Management Card */}
+          <div className="bg-slate-900/40 backdrop-blur-md p-6 rounded-2xl border border-slate-800 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-850 pb-2">
+              <h3 className="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <Key size={16} className="text-indigo-400" /> Credenciales Proveedores
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setProviderForm({ id: null, platform: '', providerName: '', username: '', password: '' });
+                  setShowProviderForm(!showProviderForm);
+                }}
+                className="p-1 hover:bg-indigo-550/10 rounded-lg text-indigo-400 hover:text-indigo-300 transition-colors"
+                title="Agregar proveedor"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+
+            {showProviderForm ? (
+              <form onSubmit={handleSaveProvider} className="space-y-3 bg-slate-950/45 p-4 rounded-xl border border-slate-850 animate-fadeIn">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                  {providerForm.id ? 'Editar Proveedor' : 'Nuevo Proveedor'}
+                </p>
+                <div className="space-y-2 text-xs">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Plataforma (ej: netflix, disney)"
+                    value={providerForm.platform}
+                    onChange={(e) => setProviderForm(prev => ({ ...prev, platform: e.target.value.toLowerCase().trim() }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg py-1.5 px-3 text-white focus:outline-none focus:border-indigo-500/50"
+                  />
+                  <input
+                    type="text"
+                    required
+                    placeholder="Nombre Proveedor (ej: NetPremium)"
+                    value={providerForm.providerName}
+                    onChange={(e) => setProviderForm(prev => ({ ...prev, providerName: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg py-1.5 px-3 text-white focus:outline-none focus:border-indigo-500/50"
+                  />
+                  <input
+                    type="text"
+                    required
+                    placeholder="Usuario / Correo de Acceso"
+                    value={providerForm.username}
+                    onChange={(e) => setProviderForm(prev => ({ ...prev, username: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg py-1.5 px-3 text-white focus:outline-none focus:border-indigo-500/50"
+                  />
+                  <input
+                    type="password"
+                    required
+                    placeholder="Contraseña"
+                    value={providerForm.password}
+                    onChange={(e) => setProviderForm(prev => ({ ...prev, password: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg py-1.5 px-3 text-white focus:outline-none focus:border-indigo-500/50"
+                  />
+                </div>
+                <div className="flex gap-2 justify-end text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => setShowProviderForm(false)}
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg font-bold"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingProvider}
+                    className="px-3 py-1.5 bg-indigo-650 hover:bg-indigo-600 disabled:opacity-40 rounded-lg font-bold flex items-center gap-1"
+                  >
+                    {savingProvider ? 'Guardando...' : 'Guardar'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {providers.length === 0 ? (
+                  <p className="text-[10px] text-slate-500 text-center py-2">No hay proveedores guardados.</p>
+                ) : (
+                  providers.map((p) => (
+                    <div
+                      key={p.id}
+                      className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-850/80 text-[11px] space-y-1.5 relative group/prov"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-200 capitalize">{p.providerName}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-bold uppercase tracking-wider">
+                          {p.platform}
+                        </span>
+                      </div>
+                      <div className="text-slate-400 font-mono text-[10px] truncate">
+                        Usr: {p.username}
+                      </div>
+                      <div className="flex gap-2 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProviderForm({
+                              id: p.id,
+                              platform: p.platform,
+                              providerName: p.providerName,
+                              username: p.username,
+                              password: p.password
+                            });
+                            setShowProviderForm(true);
+                          }}
+                          className="text-[10px] text-indigo-400 hover:underline font-semibold"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProvider(p.id)}
+                          className="text-[10px] text-rose-450 hover:underline font-semibold"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right side: Editor & Results (2 cols) */}
@@ -338,7 +581,11 @@ export default function RpaAutomatorView() {
                   <input
                     type="text"
                     value={currentRecipe.name || ''}
-                    onChange={(e) => setCurrentRecipe(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) => setCurrentRecipe(prev => {
+                      if (!prev) return null;
+                      const newJson = prev.recipeJson ? { ...prev.recipeJson, name: e.target.value } : { name: e.target.value, platform: prev.platform || '', steps: [] };
+                      return { ...prev, name: e.target.value, recipeJson: newJson as any };
+                    })}
                     className="bg-transparent border-b border-slate-800 hover:border-slate-700 focus:border-indigo-500 focus:outline-none font-bold text-lg text-white pb-0.5 px-1 max-w-sm"
                   />
                   <div className="flex items-center gap-2 mt-1">
@@ -346,7 +593,11 @@ export default function RpaAutomatorView() {
                     <input
                       type="text"
                       value={currentRecipe.platform || ''}
-                      onChange={(e) => setCurrentRecipe(prev => ({ ...prev, platform: e.target.value }))}
+                      onChange={(e) => setCurrentRecipe(prev => {
+                        if (!prev) return null;
+                        const newJson = prev.recipeJson ? { ...prev.recipeJson, platform: e.target.value } : { name: prev.name || '', platform: e.target.value, steps: [] };
+                        return { ...prev, platform: e.target.value, recipeJson: newJson as any };
+                      })}
                       className="bg-transparent border-b border-slate-800 focus:outline-none text-xs text-indigo-400 font-semibold px-1 w-24"
                     />
                   </div>
@@ -368,7 +619,7 @@ export default function RpaAutomatorView() {
                 </h4>
 
                 <div className="space-y-3">
-                  {currentRecipe.recipeJson?.steps?.map((step, idx) => (
+                  {getRecipeSteps().map((step, idx) => (
                     <div
                       key={idx}
                       className="p-4 rounded-xl bg-slate-950/60 border border-slate-850 hover:border-slate-800 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs"
@@ -409,6 +660,43 @@ export default function RpaAutomatorView() {
                             </div>
                           )}
                         </div>
+
+                        {/* Suggested Variables badges for 'type' steps */}
+                        {step.action === 'type' && (
+                          <div className="pt-2 flex flex-wrap gap-1.5 items-center">
+                            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mr-1">Variables de inyección:</span>
+                            <span 
+                              className="px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-mono text-[10px] cursor-pointer hover:bg-indigo-550/20 transition-all"
+                              title="Copiar variable"
+                              onClick={() => {
+                                navigator.clipboard.writeText('{{CUSTOMER_EMAIL}}');
+                                alert('Copiado: {{CUSTOMER_EMAIL}}');
+                              }}
+                            >
+                              {"{{CUSTOMER_EMAIL}}"}
+                            </span>
+                            <span 
+                              className="px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 font-mono text-[10px] cursor-pointer hover:bg-purple-550/20 transition-all"
+                              title="Copiar variable"
+                              onClick={() => {
+                                navigator.clipboard.writeText('{{PROVIDER_USER}}');
+                                alert('Copiado: {{PROVIDER_USER}}');
+                              }}
+                            >
+                              {"{{PROVIDER_USER}}"}
+                            </span>
+                            <span 
+                              className="px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 font-mono text-[10px] cursor-pointer hover:bg-purple-550/20 transition-all"
+                              title="Copiar variable"
+                              onClick={() => {
+                                navigator.clipboard.writeText('{{PROVIDER_PASSWORD}}');
+                                alert('Copiado: {{PROVIDER_PASSWORD}}');
+                              }}
+                            >
+                              {"{{PROVIDER_PASSWORD}}"}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -423,7 +711,7 @@ export default function RpaAutomatorView() {
               <div className="space-y-2">
                 <h3 className="text-lg font-medium text-slate-300">Ninguna Receta Cargada</h3>
                 <p className="text-slate-500 text-sm max-w-sm mx-auto">
-                  Sube un archivo PDF exportado desde Scribe para que Gemini lo analice y genere los pasos de automatización automáticamente.
+                  Sube un archivo PDF exportado desde Scribe para que Gemini lo analice y genere los pasos de automatización automáticamente, o selecciona una receta existente a la izquierda.
                 </p>
               </div>
             </div>
