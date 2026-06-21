@@ -1324,7 +1324,6 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             )}
           </div>
         </div>
-        </div>
       )}
 
       {/* Custom Resolve Dialog Modal */}

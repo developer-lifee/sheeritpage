@@ -47,6 +47,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'payments' | 'streaming' | 'policies'>('tickets');
+  const [searchQuery, setSearchQuery] = useState('');
 
 
   // Platforms to recycle logos from
@@ -132,7 +133,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       logo: '/img/Netflix_Logo.png',
       issues: []
     };
-    setData([...data, newPlatform]);
+    setData([newPlatform, ...data]);
   };
 
   const removePlatform = (index: number) => {
@@ -330,9 +331,22 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
             {loading ? 'Guardando...' : 'Guardar Guías'}
           </button>
         </div>
+        <div className="mb-6">
+          <input
+            type="text"
+            placeholder="Filtrar por nombre de plataforma..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full md:max-w-md px-4 py-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:ring-1 focus:ring-brand-primary"
+          />
+        </div>
         <div className="space-y-8">
-          {data.map((platform, pIndex) => (
-            <div key={platform.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6">
+          {data
+            .filter(platform => platform.name.toLowerCase().includes(searchQuery.toLowerCase()))
+            .map((platform) => {
+              const pIndex = data.findIndex(p => p.id === platform.id);
+              return (
+                <div key={platform.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6">
               <div className="flex justify-between items-start mb-6">
                 <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -453,7 +467,8 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
                 ))}
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
 
         <button 
