@@ -46,6 +46,12 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
   const [data, setData] = useState<SupportPlatform[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+
+  const getApiUrl = () => {
+    return window.location.hostname.includes('sheerit.com.co')
+      ? 'https://bot.sheerit.com.co'
+      : `http://${window.location.hostname}:3000`;
+  };
   const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'payments' | 'streaming' | 'policies'>('tickets');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -67,7 +73,8 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
   ];
 
   useEffect(() => {
-    fetch('/data/support.json')
+    const apiUrl = getApiUrl();
+    fetch(`${apiUrl}/api/support`)
       .then(res => res.json())
       .then(json => setData(json))
       .catch(err => console.error('Error loading data:', err));
@@ -81,7 +88,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
     formData.append('data', JSON.stringify(data, null, 2));
 
     try {
-      const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+      const apiUrl = getApiUrl();
       const response = await fetch(`${apiUrl}/api/support/save`, {
         method: 'POST',
         body: formData
@@ -107,7 +114,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
     formData.append('image', file);
 
     try {
-      const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+      const apiUrl = getApiUrl();
       const response = await fetch(`${apiUrl}/api/support/upload`, {
         method: 'POST',
         body: formData
@@ -157,7 +164,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       steps: [{ text: 'Paso 1...' }]
     };
     const newData = [...data];
-    newData[pIndex].issues.push(newIssue);
+    newData[pIndex].issues.unshift(newIssue);
     setData(newData);
   };
 

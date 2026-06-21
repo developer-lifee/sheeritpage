@@ -45,6 +45,12 @@ const detectClaudeLink = (text: string | null) => {
   return match ? match[0] : null;
 };
 
+const getApiUrl = () => {
+  return window.location.hostname.includes('sheerit.com.co')
+    ? 'https://bot.sheerit.com.co'
+    : `http://${window.location.hostname}:3000`;
+};
+
 export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName, onLogout }) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,9 +108,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   };
 
   const fetchSingleSend = async (phone: string, messageText: string) => {
-    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-      ? 'http://localhost:3000' 
-      : 'https://bot.sheerit.com.co';
+    const apiUrl = getApiUrl();
     const res = await fetch(`${apiUrl}/api/admin/chat-messages/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -125,9 +129,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     if (!agentEmail) return;
     if (!isSilent) setLoading(true);
     setError('');
-    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-      ? 'http://localhost:3000' 
-      : 'https://bot.sheerit.com.co';
+    const apiUrl = getApiUrl();
     fetch(`${apiUrl}/api/admin/tickets`)
       .then((res) => {
         if (!res.ok) throw new Error('Error al obtener los tickets');
@@ -170,9 +172,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const fetchChatMessages = async (isSilent = false) => {
     if (!activeChatTicket) return;
     if (!isSilent) setLoadingChat(true);
-    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-      ? 'http://localhost:3000' 
-      : 'https://bot.sheerit.com.co';
+    const apiUrl = getApiUrl();
     try {
       const res = await fetch(`${apiUrl}/api/admin/chat-messages?phone=${activeChatTicket.phone}`);
       if (res.ok) {
@@ -189,9 +189,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const handleSyncChatMessages = async () => {
     if (!activeChatTicket) return;
     setSyncingChat(true);
-    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-      ? 'http://localhost:3000' 
-      : 'https://bot.sheerit.com.co';
+    const apiUrl = getApiUrl();
     try {
       const res = await fetch(`${apiUrl}/api/admin/chat-messages/sync`, {
         method: 'POST',
@@ -213,9 +211,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
   const handleSendChatMessage = async (textToSend = newMsgText) => {
     if (!activeChatTicket || !textToSend.trim()) return;
-    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-      ? 'http://localhost:3000' 
-      : 'https://bot.sheerit.com.co';
+    const apiUrl = getApiUrl();
     
     try {
       const res = await fetch(`${apiUrl}/api/admin/chat-messages/send`, {
@@ -303,9 +299,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   };
 
   const executeClaim = async (phone: string, targetAgent: string) => {
-    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-      ? 'http://localhost:3000' 
-      : 'https://bot.sheerit.com.co';
+    const apiUrl = getApiUrl();
     try {
       const res = await fetch(`${apiUrl}/api/admin/tickets/claim`, {
         method: 'POST',
@@ -330,9 +324,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       setActiveChatTicket(prev => prev ? { ...prev, waitingHumanMode: nextMode } : null);
     }
     
-    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-      ? 'http://localhost:3000' 
-      : 'https://bot.sheerit.com.co';
+    const apiUrl = getApiUrl();
     try {
       const res = await fetch(`${apiUrl}/api/admin/tickets/update-mode`, {
         method: 'POST',
@@ -356,9 +348,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     }
     setTickets(prev => prev.filter(t => t.phone !== phone));
     
-    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-      ? 'http://localhost:3000' 
-      : 'https://bot.sheerit.com.co';
+    const apiUrl = getApiUrl();
     try {
       const res = await fetch(`${apiUrl}/api/admin/tickets/release`, {
         method: 'POST',
@@ -410,9 +400,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       setTickets(prev => prev.filter(t => t.phone !== phone));
     }
 
-    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-      ? 'http://localhost:3000' 
-      : 'https://bot.sheerit.com.co';
+    const apiUrl = getApiUrl();
     try {
       const res = await fetch(`${apiUrl}/api/admin/tickets/resolve`, {
         method: 'POST',
@@ -1125,7 +1113,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 </div>
 
                 {/* Conversation message list */}
-                <div className="flex-grow overflow-y-auto p-4 bg-gray-50/50 dark:bg-gray-900/20 space-y-3 flex flex-col min-h-[300px]">
+                <div className="flex-grow overflow-y-auto p-4 bg-gray-50/50 dark:bg-gray-900/20 space-y-3 flex flex-col min-h-0">
                   {loadingChat ? (
                     <div className="flex flex-col items-center justify-center my-auto text-gray-400">
                       <RefreshCw className="w-6 h-6 animate-spin text-brand-primary mb-2" />

@@ -20,13 +20,20 @@ interface SupportPlatform {
 
 import { ArrowLeft, MessageCircle, CheckCircle2 } from 'lucide-react';
 
+const getApiUrl = () => {
+  return window.location.hostname.includes('sheerit.com.co')
+    ? 'https://bot.sheerit.com.co'
+    : `http://${window.location.hostname}:3000`;
+};
+
 export function SupportSection() {
   const [data, setData] = useState<SupportPlatform[]>([]);
   const [selectedPlatform, setSelectedPlatform] = useState<SupportPlatform | null>(null);
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
 
   useEffect(() => {
-    fetch('/data/support.json')
+    const apiUrl = getApiUrl();
+    fetch(`${apiUrl}/api/support`)
       .then(res => res.json())
       .then(json => setData(json))
       .catch(err => console.error('Error loading support data:', err));
