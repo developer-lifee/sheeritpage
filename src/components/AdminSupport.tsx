@@ -90,6 +90,26 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
     { name: 'GPT', url: '/img/GPT_logo.png' }
   ];
 
+  const [role, setRole] = useState<'admin' | 'agent' | 'supervisor'>(() => {
+    return agentEmail.trim().toLowerCase() === 'estebanavila182@outlook.com' ? 'admin' : 'agent';
+  });
+
+  useEffect(() => {
+    const fetchRole = async () => {
+      try {
+        const apiUrl = getApiUrl();
+        const res = await fetch(`${apiUrl}/api/admin/agent-role?email=${encodeURIComponent(agentEmail)}`);
+        const json = await res.json();
+        if (json.success) {
+          setRole(json.role);
+        }
+      } catch (err) {
+        console.error('Error fetching agent role:', err);
+      }
+    };
+    fetchRole();
+  }, [agentEmail]);
+
   useEffect(() => {
     const apiUrl = getApiUrl();
     fetch(`${apiUrl}/api/support`)
@@ -326,28 +346,32 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           <LifeBuoy className="w-5 h-5 mr-2" /> Guías
         </button>
 
-        {/* Separador visual */}
-        <div className="h-6 w-px bg-gray-250 dark:bg-gray-700 self-center mx-1"></div>
+        {role === 'admin' && (
+          <>
+            {/* Separador visual */}
+            <div className="h-6 w-px bg-gray-250 dark:bg-gray-700 self-center mx-1"></div>
 
-        {/* GRUPO 4: SaaS y Automatización */}
-        <button 
-          onClick={() => setActiveTab('whatsapp')}
-          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'whatsapp' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
-        >
-          <Smartphone className="w-5 h-5 mr-2" /> Conexión WhatsApp
-        </button>
-        <button 
-          onClick={() => setActiveTab('prompts')}
-          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'prompts' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
-        >
-          <Settings className="w-5 h-5 mr-2" /> Prompts IA
-        </button>
-        <button 
-          onClick={() => setActiveTab('rpa')}
-          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'rpa' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
-        >
-          <Cpu className="w-5 h-5 mr-2" /> RPA Automator
-        </button>
+            {/* GRUPO 4: SaaS y Automatización */}
+            <button 
+              onClick={() => setActiveTab('whatsapp')}
+              className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'whatsapp' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+            >
+              <Smartphone className="w-5 h-5 mr-2" /> Conexión WhatsApp
+            </button>
+            <button 
+              onClick={() => setActiveTab('prompts')}
+              className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'prompts' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+            >
+              <Settings className="w-5 h-5 mr-2" /> Prompts IA
+            </button>
+            <button 
+              onClick={() => setActiveTab('rpa')}
+              className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'rpa' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+            >
+              <Cpu className="w-5 h-5 mr-2" /> RPA Automator
+            </button>
+          </>
+        )}
       </div>
 
       <div className={activeTab === 'tickets' ? '' : 'hidden'}><TicketsView agentEmail={agentEmail} agentName={agentName} onLogout={onLogout} /></div>
@@ -373,15 +397,19 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       <div className={activeTab === 'policies' ? '' : 'hidden'}>
         <PoliciesView />
       </div>
-      <div className={activeTab === 'whatsapp' ? '' : 'hidden'}>
-        <ConnectionView />
-      </div>
-      <div className={activeTab === 'prompts' ? '' : 'hidden'}>
-        <PromptsConfigView />
-      </div>
-      <div className={activeTab === 'rpa' ? '' : 'hidden'}>
-        <RpaAutomatorView />
-      </div>
+      {role === 'admin' && (
+        <>
+          <div className={activeTab === 'whatsapp' ? '' : 'hidden'}>
+            <ConnectionView />
+          </div>
+          <div className={activeTab === 'prompts' ? '' : 'hidden'}>
+            <PromptsConfigView />
+          </div>
+          <div className={activeTab === 'rpa' ? '' : 'hidden'}>
+            <RpaAutomatorView />
+          </div>
+        </>
+      )}
 
       <div className={activeTab === 'support' ? '' : 'hidden'}>
 
