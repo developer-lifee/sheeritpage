@@ -120,10 +120,13 @@ export function Navbar({ isDark, toggleDark, onNavigate, currentView, agentName,
                   <HelpCircle className="h-5 w-5 mr-3" />
                   <span>Ayuda con mi cuenta</span>
                 </button>
-                <a href="#" className="flex items-center px-4 py-3 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                <button 
+                  onClick={() => { onNavigate('servicios'); setIsMenuOpen(false); }}
+                  className="w-full flex items-center px-4 py-3 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
                   <User className="h-5 w-5 mr-3" />
-                  <span>Registro / Inicio de sesión</span>
-                </a>
+                  <span>Mis Servicios (Inicio de Sesión)</span>
+                </button>
               </div>
             )}
           </div>
@@ -217,10 +220,13 @@ export function Navbar({ isDark, toggleDark, onNavigate, currentView, agentName,
                 <HelpCircle className="h-5 w-5 mr-3" />
                 <span>Ayuda con mi cuenta</span>
               </button>
-              <a href="#" className="flex items-center px-2 py-2 text-white hover:bg-white/10 rounded-md">
+              <button 
+                onClick={() => { onNavigate('servicios'); setIsMobileMenuOpen(false); }}
+                className="w-full flex items-center px-2 py-2 text-white hover:bg-white/10 rounded-md"
+              >
                 <User className="h-5 w-5 mr-3" />
-                <span>Registro / Inicio de sesión</span>
-              </a>
+                <span>Mis Servicios (Inicio de Sesión)</span>
+              </button>
               {/* Removed ComboMenu from here */}
             </div>
           </div>

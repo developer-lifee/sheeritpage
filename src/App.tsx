@@ -11,6 +11,7 @@ import { WhatsAppButton } from './components/WhatsAppButton';
 import { SupportSection } from './components/SupportSection';
 import { AdminSupport } from './components/AdminSupport';
 import { VerificationPage } from './components/VerificationPage';
+import ClientLoginView from './components/ClientLoginView';
 import { useDarkMode } from './hooks/useDarkMode';
 import { Search, ShoppingCart, Lock, AlertCircle } from 'lucide-react';
 import { ComboCartProvider, useComboCart } from './hooks/useComboCart';
@@ -31,7 +32,7 @@ interface Platform {
   plans: Plan[];
 }
 
-export type ViewState = 'home' | 'support' | 'admin' | 'verificar';
+export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios';
 
 const AUTHORIZED_ADVISORS: { [email: string]: string } = {
   'esclepiades@hotmail.com': 'Esclepiades',
@@ -135,6 +136,7 @@ function AppContent() {
     if (path === '/aiuda') return 'support';
     if (path === '/aiuda/admin') return 'admin';
     if (path === '/verificar') return 'verificar';
+    if (path === '/mis-servicios') return 'servicios';
     return 'home';
   });
   const [isAdminAuth, setIsAdminAuth] = useState(() => {
@@ -164,6 +166,8 @@ function AppContent() {
       setCurrentView('admin');
     } else if (path === '/verificar') {
       setCurrentView('verificar');
+    } else if (path === '/mis-servicios') {
+      setCurrentView('servicios');
     } else {
       setCurrentView('home');
     }
@@ -179,6 +183,8 @@ function AppContent() {
         setCurrentView('admin');
       } else if (currentPath === '/verificar') {
         setCurrentView('verificar');
+      } else if (currentPath === '/mis-servicios') {
+        setCurrentView('servicios');
       } else {
         setCurrentView('home');
       }
@@ -190,7 +196,11 @@ function AppContent() {
 
   const navigateTo = (view: ViewState) => {
     setCurrentView(view);
-    const path = view === 'home' ? '/' : `/${view === 'support' ? 'aiuda' : (view === 'verificar' ? 'verificar' : 'aiuda/admin')}`;
+    let path = '/';
+    if (view === 'support') path = '/aiuda';
+    else if (view === 'admin') path = '/aiuda/admin';
+    else if (view === 'verificar') path = '/verificar';
+    else if (view === 'servicios') path = '/mis-servicios';
     window.history.pushState({}, '', path);
     window.scrollTo(0, 0);
   };
@@ -347,6 +357,10 @@ function AppContent() {
 
       {currentView === 'verificar' && (
         <VerificationPage />
+      )}
+
+      {currentView === 'servicios' && (
+        <ClientLoginView />
       )}
 
       {currentView === 'admin' && (

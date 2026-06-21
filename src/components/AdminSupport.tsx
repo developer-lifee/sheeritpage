@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard, Radio, FileText } from 'lucide-react';
+import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard, Radio, FileText, Smartphone, Settings, Cpu } from 'lucide-react';
 import { ClientsView } from './ClientsView';
 import { NetflixMatchView } from './NetflixMatchView';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
@@ -15,6 +15,9 @@ import { SupportScheduleView } from './SupportScheduleView';
 import { PaymentConfigView } from './PaymentConfigView';
 import { StreamingView } from './StreamingView';
 import { PoliciesView } from './PoliciesView';
+import ConnectionView from './ConnectionView';
+import PromptsConfigView from './PromptsConfigView';
+import RpaAutomatorView from './RpaAutomatorView';
 
 interface Step {
   text: string;
@@ -67,7 +70,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       console.error("Failed to write frontend audit log:", e);
     }
   };
-  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'payments' | 'streaming' | 'policies'>('tickets');
+  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'payments' | 'streaming' | 'policies' | 'whatsapp' | 'prompts' | 'rpa'>('tickets');
   const [searchQuery, setSearchQuery] = useState('');
 
 
@@ -322,6 +325,29 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
         >
           <LifeBuoy className="w-5 h-5 mr-2" /> Guías
         </button>
+
+        {/* Separador visual */}
+        <div className="h-6 w-px bg-gray-250 dark:bg-gray-700 self-center mx-1"></div>
+
+        {/* GRUPO 4: SaaS y Automatización */}
+        <button 
+          onClick={() => setActiveTab('whatsapp')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'whatsapp' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <Smartphone className="w-5 h-5 mr-2" /> Conexión WhatsApp
+        </button>
+        <button 
+          onClick={() => setActiveTab('prompts')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'prompts' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <Settings className="w-5 h-5 mr-2" /> Prompts IA
+        </button>
+        <button 
+          onClick={() => setActiveTab('rpa')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'rpa' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <Cpu className="w-5 h-5 mr-2" /> RPA Automator
+        </button>
       </div>
 
       <div className={activeTab === 'tickets' ? '' : 'hidden'}><TicketsView agentEmail={agentEmail} agentName={agentName} onLogout={onLogout} /></div>
@@ -346,6 +372,15 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       </div>
       <div className={activeTab === 'policies' ? '' : 'hidden'}>
         <PoliciesView />
+      </div>
+      <div className={activeTab === 'whatsapp' ? '' : 'hidden'}>
+        <ConnectionView />
+      </div>
+      <div className={activeTab === 'prompts' ? '' : 'hidden'}>
+        <PromptsConfigView />
+      </div>
+      <div className={activeTab === 'rpa' ? '' : 'hidden'}>
+        <RpaAutomatorView />
       </div>
 
       <div className={activeTab === 'support' ? '' : 'hidden'}>
