@@ -594,13 +594,74 @@ export default function RpaAutomatorView() {
 
           {/* Test results */}
           {runResult && (
-            <div className="bg-slate-900/50 backdrop-blur-md p-6 rounded-2xl border border-emerald-500/20 space-y-3">
-              <h4 className="text-xs font-semibold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+            <div className={`bg-slate-900/50 backdrop-blur-md p-6 rounded-2xl border space-y-4 ${
+              runResult.success ? 'border-emerald-500/20' : 'border-rose-500/20'
+            }`}>
+              <h4 className={`text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 ${
+                runResult.success ? 'text-emerald-400' : 'text-rose-400'
+              }`}>
                 📊 Resultados de Ejecución Puppeteer (RPA)
               </h4>
-              <pre className="bg-slate-950 p-4 rounded-xl text-xs text-slate-300 font-mono overflow-x-auto max-h-48 border border-slate-800">
-                {JSON.stringify(runResult, null, 2)}
-              </pre>
+              
+              {!runResult.success && (
+                <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-semibold">
+                  Error: {runResult.error || 'Falla de navegación o carga en la receta'}
+                </div>
+              )}
+
+              {runResult.success && runResult.data && (
+                <pre className="bg-slate-950 p-4 rounded-xl text-xs text-slate-300 font-mono overflow-x-auto border border-slate-800">
+                  {JSON.stringify(runResult.data, null, 2)}
+                </pre>
+              )}
+
+              {/* Failure Screenshot */}
+              {runResult.failureScreenshot && (
+                <div className="space-y-2">
+                  <span className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                    🚨 Pantalla del Fallo (Último estado del navegador):
+                  </span>
+                  <div className="overflow-hidden rounded-xl border border-rose-500/30 max-w-2xl bg-slate-950">
+                    <img 
+                      src={runResult.failureScreenshot} 
+                      alt="Captura del Fallo" 
+                      className="w-full h-auto max-h-96 object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Step-by-Step Screenshots */}
+              {runResult.screenshots && runResult.screenshots.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                    📸 Secuencia de Pantallas (Paso a Paso):
+                  </span>
+                  <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-850">
+                    {runResult.screenshots.map((shot: any, sIdx: number) => (
+                      <div key={sIdx} className="flex-shrink-0 w-64 bg-slate-950 rounded-xl border border-slate-850 p-2.5 space-y-2">
+                        <div className="flex justify-between items-center text-[10px] font-bold text-slate-450">
+                          <span>Paso {shot.step} ({shot.action})</span>
+                        </div>
+                        <div className="relative aspect-video bg-slate-900 rounded-lg overflow-hidden border border-slate-800">
+                          <img 
+                            src={shot.img} 
+                            alt={`Paso ${shot.step}`}
+                            className="w-full h-full object-contain cursor-pointer hover:scale-105 transition-transform"
+                            onClick={() => {
+                              const w = window.open();
+                              if (w) w.document.write(`<img src="${shot.img}" style="max-width:100%; height:auto;" />`);
+                            }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-slate-500 truncate" title={shot.description}>
+                          {shot.description || 'Ejecutando paso...'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
