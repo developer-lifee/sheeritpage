@@ -172,6 +172,7 @@ export default function RpaAutomatorView() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id: currentRecipe.id,
           name: currentRecipe.name,
           platform: currentRecipe.platform,
           recipeJson: currentRecipe.recipeJson,
