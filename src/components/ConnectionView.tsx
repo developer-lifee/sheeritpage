@@ -82,6 +82,32 @@ export default function ConnectionView() {
       setLoading(false);
     }
   };
+ 
+  const handleRestartBot = async () => {
+    if (!window.confirm('¿Estás seguro de que deseas reiniciar la conexión del bot? Esto forzará un reinicio del proceso y generará un nuevo código QR.')) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setSuccessMsg(null);
+    try {
+      const response = await fetch(`${API_BASE}/api/whatsapp/restart`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: 'admin123' })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Error al reiniciar el bot');
+      }
+      setSuccessMsg('Reinicio solicitado. El bot se reconectará y generará un nuevo código QR en unos segundos...');
+      setState(prev => ({ ...prev, status: 'CONNECTING', qr: null, pairingCode: null }));
+    } catch (err: any) {
+      setError(err.message || 'Fallo al enviar comando de reinicio');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -130,8 +156,18 @@ export default function ConnectionView() {
             Gestiona la vinculación del número oficial de soporte de Sheerit.
           </p>
         </div>
-        <div>
+        <div className="flex items-center gap-3">
           {getStatusBadge(state.status)}
+          {state.status !== 'CONNECTED' && (
+            <button
+              onClick={handleRestartBot}
+              disabled={loading}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-all disabled:opacity-50"
+              title="Cierra el bot y lo vuelve a iniciar para generar un nuevo código QR"
+            >
+              <RefreshCw size={12} className={loading ? "animate-spin" : ""} /> Generar QR / Reiniciar Bot
+            </button>
+          )}
         </div>
       </div>
 
@@ -189,8 +225,15 @@ export default function ConnectionView() {
               </div>
               <h3 className="text-lg font-medium text-slate-300">Esperando conexión</h3>
               <p className="text-slate-400 text-sm max-w-xs mx-auto">
-                Inicializa la conexión solicitando un código OTP por número o espera a que se genere un QR.
+                Inicializa la conexión solicitando un código OTP por número o haz clic abajo para generar el código QR.
               </p>
+              <button
+                onClick={handleRestartBot}
+                disabled={loading}
+                className="mt-2 px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/20 text-xs font-semibold rounded-xl transition-all disabled:opacity-50 flex items-center gap-2 mx-auto"
+              >
+                <RefreshCw size={12} className={loading ? "animate-spin" : ""} /> Generar Código QR (Reiniciar Bot)
+              </button>
             </div>
           )}
         </div>
