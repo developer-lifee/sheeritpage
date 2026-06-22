@@ -247,6 +247,31 @@ export default function RpaAutomatorView() {
     }
   };
 
+  const handleDeleteRecipe = async (id: number) => {
+    if (!window.confirm('¿Seguro que deseas eliminar esta receta de automatización?')) return;
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/rpa/delete/${id}?password=${password}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Error al eliminar la receta');
+      }
+
+      setSuccess('Receta de automatización eliminada con éxito.');
+      if (currentRecipe?.id === id) {
+        setCurrentRecipe(null);
+      }
+      fetchRecipes();
+    } catch (err: any) {
+      setError(err.message || 'Error al conectar con el servidor');
+    }
+  };
+
   const handleRunTest = async (recipeId: number) => {
     setRunning(true);
     setError(null);
@@ -420,16 +445,29 @@ export default function RpaAutomatorView() {
                         <span className="truncate font-medium text-slate-300 max-w-[130px]" title={rec.name}>
                           {rec.name}
                         </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            rec.id && handleRunTest(rec.id);
-                          }}
-                          disabled={running}
-                          className="flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-[10px] font-semibold transition-colors disabled:opacity-40"
-                        >
-                          <Play size={10} /> Test
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              rec.id && handleRunTest(rec.id);
+                            }}
+                            disabled={running}
+                            className="flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-[10px] font-semibold transition-colors disabled:opacity-40"
+                          >
+                            <Play size={10} /> Test
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              rec.id && handleDeleteRecipe(rec.id);
+                            }}
+                            disabled={running}
+                            className="p-1 text-red-400 hover:bg-red-950/20 hover:text-red-300 rounded-md transition-colors disabled:opacity-40"
+                            title="Eliminar Receta"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
