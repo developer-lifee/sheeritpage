@@ -12,6 +12,7 @@ import { InventoryAccountsView } from './InventoryAccountsView';
 import { AvailabilityView } from './AvailabilityView';
 import { AccountAlertsView } from './AccountAlertsView';
 import { SupportScheduleView } from './SupportScheduleView';
+import { AgentScheduleView } from './AgentScheduleView';
 import { PaymentConfigView } from './PaymentConfigView';
 import { StreamingView } from './StreamingView';
 import { PoliciesView } from './PoliciesView';
@@ -390,6 +391,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       <div className={activeTab === 'payments' ? 'space-y-8' : 'hidden'}>
         <PaymentConfigView />
         <SupportScheduleView />
+        <AgentScheduleView agentEmail={agentEmail} role={role} />
       </div>
       <div className={activeTab === 'streaming' ? '' : 'hidden'}>
         <StreamingView adminPassword={adminPassword} />
