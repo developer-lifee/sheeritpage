@@ -8,6 +8,7 @@ interface RpaStep {
   value?: string;
   save_as?: string;
   description?: string;
+  timeout?: string;
 }
 
 interface RpaRecipe {
@@ -832,6 +833,17 @@ export default function RpaAutomatorView() {
                               />
                             </div>
                           )}
+
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] text-slate-500 font-semibold">Timeout (segundos, opcional):</label>
+                            <input
+                              type="number"
+                              value={step.timeout || ''}
+                              onChange={(e) => handleStepChange(idx, 'timeout', e.target.value)}
+                              className="px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-slate-200 focus:outline-none focus:border-indigo-500 text-xs font-mono"
+                              placeholder="Por defecto"
+                            />
+                          </div>
                         </div>
 
                         {/* Suggested Variables badges for 'type' steps */}
