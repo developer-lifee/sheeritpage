@@ -44,6 +44,37 @@ export default function RpaAutomatorView() {
   const [testEmail, setTestEmail] = useState('cliente_prueba@gmail.com');
   const [runResult, setRunResult] = useState<any>(null);
 
+  const handleStepChange = (stepIdx: number, field: keyof RpaStep, value: string) => {
+    if (!currentRecipe || !currentRecipe.recipeJson) return;
+    
+    setCurrentRecipe(prev => {
+      if (!prev) return prev;
+      
+      let json = prev.recipeJson;
+      if (typeof json === 'string') {
+        try {
+          json = JSON.parse(json);
+        } catch (e) {
+          return prev;
+        }
+      }
+      
+      let steps = Array.isArray(json) ? [...json] : (json.steps ? [...json.steps] : []);
+      steps = steps.map((s, idx) => {
+        if (idx === stepIdx) {
+          return { ...s, [field]: value };
+        }
+        return s;
+      });
+      
+      const newJson = Array.isArray(json) ? steps : { ...json, steps };
+      return {
+        ...prev,
+        recipeJson: newJson as any
+      };
+    });
+  };
+
   const API_BASE = window.location.hostname.includes('sheerit.com.co')
     ? 'https://bot.sheerit.com.co'
     : `http://${window.location.hostname}:3000`;
@@ -637,60 +668,99 @@ export default function RpaAutomatorView() {
                           {step.description || 'Sin descripción.'}
                         </p>
                         
-                        {/* Selector / Value Details */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1">
-                          {step.selector && (
-                            <div className="bg-slate-900/50 p-2 rounded-lg border border-slate-800/60 font-mono text-[10px] text-slate-300">
-                              <span className="text-slate-500 mr-1 font-sans font-semibold">Selector:</span> {step.selector}
+                        {/* Selector / Value Details (Editable) */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] text-slate-500 font-semibold">Descripción del paso:</label>
+                            <input
+                              type="text"
+                              value={step.description || ''}
+                              onChange={(e) => handleStepChange(idx, 'description', e.target.value)}
+                              className="px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-slate-200 focus:outline-none focus:border-indigo-500 text-xs font-sans"
+                              placeholder="Ej. Ingresar contraseña"
+                            />
+                          </div>
+
+                          {step.action === 'navigate' && (
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] text-slate-500 font-semibold">URL de navegación:</label>
+                              <input
+                                type="text"
+                                value={step.url || ''}
+                                onChange={(e) => handleStepChange(idx, 'url', e.target.value)}
+                                className="px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-slate-200 focus:outline-none focus:border-indigo-500 text-xs font-mono"
+                                placeholder="https://..."
+                              />
                             </div>
                           )}
-                          {step.url && (
-                            <div className="bg-slate-900/50 p-2 rounded-lg border border-slate-800/60 font-mono text-[10px] text-slate-300 truncate" title={step.url}>
-                              <span className="text-slate-500 mr-1 font-sans font-semibold">URL:</span> {step.url}
+
+                          {['type', 'click', 'wait_selector', 'extract_text'].includes(step.action) && (
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] text-slate-500 font-semibold">Selector CSS:</label>
+                              <input
+                                type="text"
+                                value={step.selector || ''}
+                                onChange={(e) => handleStepChange(idx, 'selector', e.target.value)}
+                                className="px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-slate-200 focus:outline-none focus:border-indigo-500 text-xs font-mono"
+                                placeholder="Ej. #input-pass, .btn-submit"
+                              />
                             </div>
                           )}
-                          {step.value && (
-                            <div className="bg-slate-900/50 p-2 rounded-lg border border-slate-800/60 font-mono text-[10px] text-slate-300">
-                              <span className="text-slate-500 mr-1 font-sans font-semibold">Valor:</span> {step.value}
+
+                          {step.action === 'type' && (
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] text-slate-500 font-semibold">Valor a escribir:</label>
+                              <input
+                                type="text"
+                                value={step.value || ''}
+                                onChange={(e) => handleStepChange(idx, 'value', e.target.value)}
+                                className="px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-slate-200 focus:outline-none focus:border-indigo-500 text-xs font-sans"
+                                placeholder="Texto o {{CUSTOMER_EMAIL}}"
+                              />
                             </div>
                           )}
-                          {step.save_as && (
-                            <div className="bg-slate-900/50 p-2 rounded-lg border border-slate-850 font-mono text-[10px] text-emerald-400">
-                              <span className="text-slate-500 mr-1 font-sans font-semibold">Guardar en:</span> {step.save_as}
+
+                          {step.action === 'extract_text' && (
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] text-slate-500 font-semibold">Guardar resultado en variable:</label>
+                              <input
+                                type="text"
+                                value={step.save_as || ''}
+                                onChange={(e) => handleStepChange(idx, 'save_as', e.target.value)}
+                                className="px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-emerald-400 focus:outline-none focus:border-indigo-500 text-xs font-mono"
+                                placeholder="Ej. otp_code"
+                              />
                             </div>
                           )}
                         </div>
 
                         {/* Suggested Variables badges for 'type' steps */}
                         {step.action === 'type' && (
-                          <div className="pt-2 flex flex-wrap gap-1.5 items-center">
-                            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mr-1">Variables de inyección:</span>
+                          <div className="pt-3 flex flex-wrap gap-1.5 items-center">
+                            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mr-1">Inyectar variable (Clic para aplicar):</span>
                             <span 
-                              className="px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-mono text-[10px] cursor-pointer hover:bg-indigo-550/20 transition-all"
-                              title="Copiar variable"
+                              className="px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-mono text-[10px] cursor-pointer hover:bg-indigo-500/20 transition-all select-none"
+                              title="Asignar {{CUSTOMER_EMAIL}}"
                               onClick={() => {
-                                navigator.clipboard.writeText('{{CUSTOMER_EMAIL}}');
-                                alert('Copiado: {{CUSTOMER_EMAIL}}');
+                                handleStepChange(idx, 'value', '{{CUSTOMER_EMAIL}}');
                               }}
                             >
                               {"{{CUSTOMER_EMAIL}}"}
                             </span>
                             <span 
-                              className="px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 font-mono text-[10px] cursor-pointer hover:bg-purple-550/20 transition-all"
-                              title="Copiar variable"
+                              className="px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 font-mono text-[10px] cursor-pointer hover:bg-purple-500/20 transition-all select-none"
+                              title="Asignar {{PROVIDER_USER}}"
                               onClick={() => {
-                                navigator.clipboard.writeText('{{PROVIDER_USER}}');
-                                alert('Copiado: {{PROVIDER_USER}}');
+                                handleStepChange(idx, 'value', '{{PROVIDER_USER}}');
                               }}
                             >
                               {"{{PROVIDER_USER}}"}
                             </span>
                             <span 
-                              className="px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 font-mono text-[10px] cursor-pointer hover:bg-purple-550/20 transition-all"
-                              title="Copiar variable"
+                              className="px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 font-mono text-[10px] cursor-pointer hover:bg-purple-500/20 transition-all select-none"
+                              title="Asignar {{PROVIDER_PASSWORD}}"
                               onClick={() => {
-                                navigator.clipboard.writeText('{{PROVIDER_PASSWORD}}');
-                                alert('Copiado: {{PROVIDER_PASSWORD}}');
+                                handleStepChange(idx, 'value', '{{PROVIDER_PASSWORD}}');
                               }}
                             >
                               {"{{PROVIDER_PASSWORD}}"}
