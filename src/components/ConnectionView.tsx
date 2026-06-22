@@ -37,12 +37,25 @@ export default function ConnectionView() {
     });
 
     eventSource.onerror = (err) => {
-      console.error('SSE Connection failed:', err);
-      setState(prev => ({ ...prev, status: 'DISCONNECTED' }));
+      console.error('SSE Connection failed, falling back to polling...');
     };
+
+    // Polling fallback to ensure it works even if SSE is buffered or server restarts
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/whatsapp/status`);
+        if (res.ok) {
+          const data = await res.json();
+          setState(data);
+        }
+      } catch (err) {
+        // Silent catch during server restart
+      }
+    }, 3000);
 
     return () => {
       eventSource.close();
+      clearInterval(pollInterval);
     };
   }, []);
 
@@ -113,31 +126,31 @@ export default function ConnectionView() {
     switch (status) {
       case 'CONNECTED':
         return (
-          <span className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
             <CheckCircle size={14} className="animate-pulse" /> Conectado
           </span>
         );
       case 'QR_READY':
         return (
-          <span className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+          <span className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20">
             <QrCode size={14} /> Esperando Escaneo QR
           </span>
         );
       case 'PAIRING_CODE_READY':
         return (
-          <span className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+          <span className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-100 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20">
             <Key size={14} /> Código de Vinculación Listo
           </span>
         );
       case 'CONNECTING':
         return (
-          <span className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+          <span className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20">
             <RefreshCw size={14} className="animate-spin" /> Conectando...
           </span>
         );
       default:
         return (
-          <span className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+          <span className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-rose-100 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20">
             <AlertCircle size={14} /> Desconectado
           </span>
         );
@@ -145,14 +158,14 @@ export default function ConnectionView() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6 text-white">
+    <div className="max-w-4xl mx-auto p-6 space-y-6 text-slate-800 dark:text-white">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/60 backdrop-blur-md p-6 rounded-2xl border border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            🔌 Conexión de WhatsApp <span className="text-indigo-400">SaaS</span>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+            🔌 Conexión de WhatsApp <span className="text-indigo-600 dark:text-indigo-400">SaaS</span>
           </h2>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
             Gestiona la vinculación del número oficial de soporte de Sheerit.
           </p>
         </div>
@@ -162,7 +175,7 @@ export default function ConnectionView() {
             <button
               onClick={handleRestartBot}
               disabled={loading}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-100 hover:bg-rose-200 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20 transition-all disabled:opacity-50"
               title="Cierra el bot y lo vuelve a iniciar para generar un nuevo código QR"
             >
               <RefreshCw size={12} className={loading ? "animate-spin" : ""} /> Generar QR / Reiniciar Bot
@@ -175,62 +188,62 @@ export default function ConnectionView() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* Left Side: QR Scanner / Code Display */}
-        <div className="bg-slate-900/40 backdrop-blur-md p-8 rounded-2xl border border-slate-800/80 flex flex-col items-center justify-center min-h-[400px]">
+        <div className="bg-white dark:bg-slate-900/40 p-8 rounded-2xl border border-slate-200 dark:border-slate-800/80 shadow-sm flex flex-col items-center justify-center min-h-[400px]">
           {state.status === 'CONNECTED' ? (
             <div className="text-center space-y-4">
-              <div className="w-20 h-20 mx-auto rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20">
+              <div className="w-20 h-20 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
                 <CheckCircle size={44} className="animate-bounce" />
               </div>
-              <h3 className="text-xl font-bold">¡Bot Listo para Operar!</h3>
-              <p className="text-slate-400 text-sm max-w-xs mx-auto">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">¡Bot Listo para Operar!</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm max-w-xs mx-auto">
                 El bot de WhatsApp está conectado y atendiendo solicitudes del canal de streaming.
               </p>
             </div>
           ) : state.status === 'QR_READY' && state.qr ? (
             <div className="text-center space-y-6">
-              <h3 className="text-lg font-semibold text-slate-200">Escanea el Código QR</h3>
-              <div className="bg-white p-4 rounded-xl inline-block shadow-xl shadow-indigo-500/5">
+              <h3 className="text-lg font-semibold text-slate-850 dark:text-slate-200">Escanea el Código QR</h3>
+              <div className="bg-white p-4 rounded-xl inline-block shadow-lg border border-slate-100 dark:border-slate-800">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(state.qr)}`}
                   alt="WhatsApp QR Code"
                   className="w-48 h-48 md:w-56 md:h-56"
                 />
               </div>
-              <p className="text-xs text-slate-400 max-w-xs mx-auto">
+              <p className="text-xs text-slate-550 dark:text-slate-400 max-w-xs mx-auto">
                 Abre WhatsApp en tu teléfono {`>`} Dispositivos Vinculados {`>`} Vincular Dispositivo y escanea el QR.
               </p>
             </div>
           ) : state.status === 'PAIRING_CODE_READY' && state.pairingCode ? (
             <div className="text-center space-y-6">
-              <h3 className="text-lg font-semibold text-slate-200">Código de Vinculación</h3>
-              <div className="bg-slate-950 p-6 rounded-xl border border-indigo-500/30 inline-block">
-                <span className="text-3xl font-extrabold tracking-widest text-indigo-400 font-mono">
+              <h3 className="text-lg font-semibold text-slate-850 dark:text-slate-200">Código de Vinculación</h3>
+              <div className="bg-slate-50 dark:bg-slate-950 p-6 rounded-xl border border-indigo-200 dark:border-indigo-500/30 inline-block shadow-inner">
+                <span className="text-3xl font-extrabold tracking-widest text-indigo-600 dark:text-indigo-400 font-mono">
                   {state.pairingCode}
                 </span>
               </div>
-              <div className="text-xs text-slate-400 max-w-xs mx-auto space-y-2 text-left">
-                <p className="font-semibold text-slate-300">Pasos para vincular:</p>
+              <div className="text-xs text-slate-550 dark:text-slate-400 max-w-xs mx-auto space-y-2 text-left">
+                <p className="font-semibold text-slate-700 dark:text-slate-300">Pasos para vincular:</p>
                 <ol className="list-decimal list-inside space-y-1">
                   <li>Abre WhatsApp en tu teléfono.</li>
-                  <li>Ve a <span className="text-indigo-300 font-medium">Dispositivos vinculados</span>.</li>
-                  <li>Toca <span className="text-indigo-300 font-medium">Vincular dispositivo</span>.</li>
-                  <li>Selecciona <span className="text-indigo-300 font-medium">Vincular con número de teléfono</span> e ingresa este código de 8 dígitos.</li>
+                  <li>Ve a <span className="text-indigo-600 dark:text-indigo-300 font-medium">Dispositivos vinculados</span>.</li>
+                  <li>Toca <span className="text-indigo-600 dark:text-indigo-300 font-medium">Vincular dispositivo</span>.</li>
+                  <li>Selecciona <span className="text-indigo-600 dark:text-indigo-300 font-medium">Vincular con número de teléfono</span> e ingresa este código de 8 dígitos.</li>
                 </ol>
               </div>
             </div>
           ) : (
             <div className="text-center space-y-4">
-              <div className="w-16 h-16 mx-auto rounded-full bg-slate-800/80 flex items-center justify-center text-slate-400">
+              <div className="w-16 h-16 mx-auto rounded-full bg-slate-100 dark:bg-slate-800/80 flex items-center justify-center text-slate-450 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700">
                 <QrCode size={32} />
               </div>
-              <h3 className="text-lg font-medium text-slate-300">Esperando conexión</h3>
-              <p className="text-slate-400 text-sm max-w-xs mx-auto">
+              <h3 className="text-lg font-medium text-slate-800 dark:text-slate-300">Esperando conexión</h3>
+              <p className="text-slate-550 dark:text-slate-400 text-sm max-w-xs mx-auto">
                 Inicializa la conexión solicitando un código OTP por número o haz clic abajo para generar el código QR.
               </p>
               <button
                 onClick={handleRestartBot}
                 disabled={loading}
-                className="mt-2 px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/20 text-xs font-semibold rounded-xl transition-all disabled:opacity-50 flex items-center gap-2 mx-auto"
+                className="mt-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-600/20 dark:hover:bg-indigo-600/30 text-indigo-650 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 text-xs font-semibold rounded-xl transition-all disabled:opacity-50 flex items-center gap-2 mx-auto"
               >
                 <RefreshCw size={12} className={loading ? "animate-spin" : ""} /> Generar Código QR (Reiniciar Bot)
               </button>
@@ -239,20 +252,20 @@ export default function ConnectionView() {
         </div>
 
         {/* Right Side: Link with Phone Number (OTP) */}
-        <div className="bg-slate-900/40 backdrop-blur-md p-8 rounded-2xl border border-slate-800/80 flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900/40 p-8 rounded-2xl border border-slate-200 dark:border-slate-800/80 shadow-sm flex flex-col justify-between">
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Phone size={18} className="text-indigo-400" /> Vinculación Directa por Teléfono
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                <Phone size={18} className="text-indigo-600 dark:text-indigo-400" /> Vinculación Directa por Teléfono
               </h3>
-              <p className="text-slate-400 text-sm mt-1">
+              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
                 Puedes vincular tu bot ingresando el número de teléfono directamente en lugar de escanear el QR.
               </p>
             </div>
 
             <form onSubmit={handleRequestPairingCode} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                   Número de Teléfono (Formato Internacional)
                 </label>
                 <div className="relative">
@@ -263,9 +276,9 @@ export default function ConnectionView() {
                     onChange={(e) => setPhoneNumber(e.target.value)}
                     required
                     disabled={loading || state.status === 'CONNECTED'}
-                    className="w-full bg-slate-950/80 border border-slate-800 rounded-xl py-3 pl-4 pr-10 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
+                    className="w-full bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl py-3 pl-4 pr-10 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors"
                   />
-                  <Phone size={16} className="absolute right-3.5 top-4 text-slate-600" />
+                  <Phone size={16} className="absolute right-3.5 top-4 text-slate-400" />
                 </div>
               </div>
 
@@ -287,21 +300,21 @@ export default function ConnectionView() {
             </form>
           </div>
 
-          <div className="mt-6 pt-6 border-t border-slate-800/80">
+          <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800/80">
             {error && (
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-650 dark:text-rose-450 text-xs">
                 <AlertCircle size={16} className="shrink-0" />
                 <span>{error}</span>
               </div>
             )}
             {successMsg && (
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-450 text-xs">
                 <CheckCircle size={16} className="shrink-0" />
                 <span>{successMsg}</span>
               </div>
             )}
             {!error && !successMsg && (
-              <p className="text-slate-500 text-xs text-center">
+              <p className="text-slate-400 dark:text-slate-500 text-xs text-center">
                 Asegúrate de ingresar el prefijo de país sin símbolos (+). Ej: 57 para Colombia.
               </p>
             )}
