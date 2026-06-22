@@ -637,11 +637,19 @@ export default function RpaAutomatorView() {
             <div className={`bg-slate-900/50 backdrop-blur-md p-6 rounded-2xl border space-y-4 ${
               runResult.success ? 'border-emerald-500/20' : 'border-rose-500/20'
             }`}>
-              <h4 className={`text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 ${
-                runResult.success ? 'text-emerald-400' : 'text-rose-400'
-              }`}>
-                📊 Resultados de Ejecución Puppeteer (RPA)
-              </h4>
+              <div className="flex justify-between items-center">
+                <h4 className={`text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 ${
+                  runResult.success ? 'text-emerald-400' : 'text-rose-400'
+                }`}>
+                  📊 Resultados de Ejecución Puppeteer (RPA)
+                </h4>
+                <button
+                  onClick={() => setRunResult(null)}
+                  className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-2.5 py-1 rounded-lg border border-slate-750 transition-colors"
+                >
+                  Cerrar
+                </button>
+              </div>
               
               {!runResult.success && (
                 <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-semibold">
