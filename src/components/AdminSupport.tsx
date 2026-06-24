@@ -397,9 +397,9 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       <div className={activeTab === 'availability' ? '' : 'hidden'}><AvailabilityView /></div>
       <div className={activeTab === 'alerts' ? '' : 'hidden'}><AccountAlertsView /></div>
       <div className={activeTab === 'payments' ? 'space-y-8' : 'hidden'}>
-        <PaymentConfigView />
-        <SupportScheduleView />
         <AgentScheduleView agentEmail={agentEmail} role={role} />
+        <SupportScheduleView />
+        <PaymentConfigView />
       </div>
       <div className={activeTab === 'streaming' ? '' : 'hidden'}>
         <StreamingView adminPassword={adminPassword} />
