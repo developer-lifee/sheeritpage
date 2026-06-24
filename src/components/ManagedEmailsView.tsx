@@ -10,6 +10,8 @@ interface EmailMessage {
   snippet: string;
   body?: string;
   rawHtml?: string;
+  code?: string;
+  link?: string;
 }
 
 interface ParsedEmail {
@@ -55,20 +57,25 @@ const parseEmailData = (msg: EmailMessage): ParsedEmail => {
     }
 
     // Try to extract 4 to 8 digit code
-    let code = '';
-    const textWithoutUrls = textToSearch.replace(/https?:\/\/[^\s<>"`']+/gi, ' ');
-    const codeMatch = textWithoutUrls.match(/\b([0-9]{6})\b/) || 
-                      textWithoutUrls.match(/\b([0-9]{4})\b/) || 
-                      textWithoutUrls.match(/\b([0-9]{5})\b/) ||
-                      textWithoutUrls.match(/\b([0-9]{8})\b/) ||
-                      textWithoutUrls.match(/\b([A-Z0-9]{6,8})\b/i);
-    if (codeMatch) {
-      code = codeMatch[1].toUpperCase();
+    let code = msg.code || '';
+    if (!code) {
+      const textWithoutUrls = textToSearch.replace(/https?:\/\/[^\s<>"`']+/gi, ' ');
+      const codeMatch = textWithoutUrls.match(/\b([0-9]{6})\b/) || 
+                        textWithoutUrls.match(/\b([0-9]{4})\b/) || 
+                        textWithoutUrls.match(/\b([0-9]{5})\b/) ||
+                        textWithoutUrls.match(/\b([0-9]{8})\b/) ||
+                        textWithoutUrls.match(/\b([A-Z0-9]{6,8})\b/i);
+      if (codeMatch) {
+        code = codeMatch[1].toUpperCase();
+      }
     }
 
     // Extract link (including Claude and Anthropic magic link URLs)
-    const linkMatch = (msg.body || '').match(/https?:\/\/(?:www\.)?(?:netflix\.com|disneyplus\.com|starplus\.com|max\.com|hbomax\.com|primevideo\.com|amazon\.com|auth\.max\.com|claude\.ai|anthropic\.com|mail\.anthropic\.com)[^\s<>"']+/i);
-    const link = linkMatch ? linkMatch[0] : undefined;
+    let link = msg.link;
+    if (!link) {
+      const linkMatch = (msg.body || '').match(/https?:\/\/(?:www\.)?(?:netflix\.com|disneyplus\.com|starplus\.com|max\.com|hbomax\.com|primevideo\.com|amazon\.com|auth\.max\.com|claude\.ai|anthropic\.com|mail\.anthropic\.com)[^\s<>"']+/i);
+      link = linkMatch ? linkMatch[0] : undefined;
+    }
 
     return {
       type: 'otp',
