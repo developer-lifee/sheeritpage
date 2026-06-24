@@ -39,8 +39,13 @@ export const WebSalesView: React.FC = () => {
       if (!approvedRes.ok) throw new Error('Error al obtener ventas aprobadas');
       const approvedData = await approvedRes.json();
 
-      setPendingSales(pendingData.success && Array.isArray(pendingData.sales) ? pendingData.sales : []);
-      setApprovedSales(approvedData.success && Array.isArray(approvedData.sales) ? approvedData.sales : []);
+      const mapSales = (sales: any[]) => sales.map(s => ({
+        ...s,
+        orderId: s.orderId || s.order_id
+      }));
+
+      setPendingSales(pendingData.success && Array.isArray(pendingData.sales) ? mapSales(pendingData.sales) : []);
+      setApprovedSales(approvedData.success && Array.isArray(approvedData.sales) ? mapSales(approvedData.sales) : []);
     } catch (err: any) {
       console.error('Error fetching web sales:', err);
       setError('No se pudo conectar al servidor para listar las ventas de la página.');
@@ -85,7 +90,7 @@ export const WebSalesView: React.FC = () => {
     const searchLower = searchTerm.toLowerCase();
     const fullName = `${sale.firstName || ''} ${sale.lastName || ''}`.toLowerCase();
     return (
-      sale.orderId.toLowerCase().includes(searchLower) ||
+      (sale.orderId || '').toLowerCase().includes(searchLower) ||
       fullName.includes(searchLower) ||
       (sale.email || '').toLowerCase().includes(searchLower) ||
       (sale.whatsapp || '').includes(searchLower) ||
