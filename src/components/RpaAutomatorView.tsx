@@ -37,7 +37,7 @@ export default function RpaAutomatorView() {
   const [success, setSuccess] = useState<string | null>(null);
   
   // Provider credentials form state
-  const [providerForm, setProviderForm] = useState({ id: null as number | null, platform: '', providerName: '', username: '', password: '' });
+  const [providerForm, setProviderForm] = useState({ id: null as number | null, platform: '', providerName: '', username: '', password: '', phone: '' });
   const [showProviderForm, setShowProviderForm] = useState(false);
   const [savingProvider, setSavingProvider] = useState(false);
 
@@ -217,7 +217,7 @@ export default function RpaAutomatorView() {
       }
 
       setSuccess('Credenciales de proveedor guardadas con éxito.');
-      setProviderForm({ id: null, platform: '', providerName: '', username: '', password: '' });
+      setProviderForm({ id: null, platform: '', providerName: '', username: '', password: '', phone: '' });
       setShowProviderForm(false);
       fetchProviders();
     } catch (err: any) {
