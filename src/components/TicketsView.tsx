@@ -636,16 +636,21 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
   const findSharedTicketsWithDetails = (ticket: Ticket) => {
     if (!ticket.accounts || ticket.accounts.length === 0) return [];
-    const ticketEmails = ticket.accounts.map(a => a.correo.toLowerCase().trim()).filter(Boolean);
-    if (ticketEmails.length === 0) return [];
+    
+    // Create strict keys combining platform and email to identify shared accounts correctly
+    const ticketAccountKeys = ticket.accounts
+      .map(a => `${a.streaming.toLowerCase().trim()}|${a.correo.toLowerCase().trim()}`)
+      .filter(Boolean);
+
+    if (ticketAccountKeys.length === 0) return [];
 
     return tickets
       .filter(t => t.userId !== ticket.userId)
       .map(t => {
         if (!t.accounts) return null;
         const matchingAccounts = t.accounts.filter(a => {
-          const email = a.correo.toLowerCase().trim();
-          return email && ticketEmails.includes(email);
+          const key = `${a.streaming.toLowerCase().trim()}|${a.correo.toLowerCase().trim()}`;
+          return key && ticketAccountKeys.includes(key);
         });
         if (matchingAccounts.length === 0) return null;
         return {
