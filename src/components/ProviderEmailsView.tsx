@@ -688,7 +688,11 @@ export const ProviderEmailsView: React.FC = () => {
 
                   <div className="relative group border dark:border-gray-700 rounded-xl overflow-hidden bg-black flex items-center justify-center h-48">
                     <img
-                      src={currentRun.screenshots[currentRun.activeImageIndex || 0]}
+                      src={
+                        typeof currentRun.screenshots[currentRun.activeImageIndex || 0] === 'string'
+                          ? (currentRun.screenshots[currentRun.activeImageIndex || 0] as any)
+                          : (currentRun.screenshots[currentRun.activeImageIndex || 0] as any).img
+                      }
                       alt="Paso de automatización"
                       className="max-h-full max-w-full object-contain"
                     />
