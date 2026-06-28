@@ -17,6 +17,7 @@ interface Ticket {
   lastMessage: string;
   lastMessageTime: number | null;
   lastMessageFromMe?: boolean;
+  isProbablyFinished?: boolean;
   waitingHumanMode?: 'bot' | 'advisor';
   accounts?: AccountInfo[];
   summary?: string;
@@ -603,8 +604,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   });
 
   // Filter columns
-  const activeTickets = filteredTickets.filter(t => t.state !== 'resolved' && !t.lastMessageFromMe);
-  const resolvedTickets = filteredTickets.filter(t => t.state === 'resolved' || t.lastMessageFromMe);
+  const activeTickets = filteredTickets.filter(t => t.state !== 'resolved' && !t.isProbablyFinished);
+  const resolvedTickets = filteredTickets.filter(t => t.state === 'resolved' || t.isProbablyFinished);
 
   const unassignedTickets = activeTickets.filter(t => !t.agent);
   const myTickets = activeTickets.filter(t => t.agent && t.agent.toLowerCase().trim() === safeAgentName);
@@ -788,9 +789,9 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
               ✅ Resuelto
             </span>
           )}
-          {t.lastMessageFromMe && t.state !== 'resolved' && (
-            <span className="bg-blue-50 dark:bg-blue-950/40 text-blue-750 dark:text-blue-305 text-[8px] font-bold px-1.5 py-0.2 rounded" title="Último mensaje enviado por ti o el bot">
-              ✓ Atendido
+          {t.isProbablyFinished && t.state !== 'resolved' && (
+            <span className="bg-blue-50 dark:bg-blue-950/40 text-blue-755 dark:text-blue-305 text-[8px] font-bold px-1.5 py-0.2 rounded" title="La Inteligencia Artificial determinó que este chat no requiere atención inmediata o ya finalizó">
+              ✓ Terminado (IA)
             </span>
           )}
           {t.queuePosition !== undefined && t.queuePosition !== null && (
