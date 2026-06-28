@@ -139,6 +139,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const lastActivePhoneRef = useRef<string>('');
 
   const fetchTickets = (isSilent = false) => {
     if (!agentEmail) return;
@@ -181,8 +183,18 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
   // Scroll to bottom on new messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages]);
+    const container = chatContainerRef.current;
+    if (!container) return;
+    
+    const currentPhone = activeChatTicket?.phone || '';
+    const isNewChat = currentPhone !== lastActivePhoneRef.current;
+    const isCloseToBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+    
+    if (isNewChat || isCloseToBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: isNewChat ? 'auto' : 'smooth' });
+      lastActivePhoneRef.current = currentPhone;
+    }
+  }, [chatMessages, activeChatTicket?.phone]);
 
   const fetchChatMessages = async (isSilent = false) => {
     if (!activeChatTicket) return;
@@ -1135,7 +1147,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 </div>
 
                 {/* Conversation message list */}
-                <div className="flex-grow overflow-y-auto p-4 bg-gray-50/50 dark:bg-gray-900/20 space-y-3 flex flex-col min-h-0">
+                <div ref={chatContainerRef} className="flex-grow overflow-y-auto p-4 bg-gray-50/50 dark:bg-gray-900/20 space-y-3 flex flex-col min-h-0">
                   {loadingChat ? (
                     <div className="flex flex-col items-center justify-center my-auto text-gray-400">
                       <RefreshCw className="w-6 h-6 animate-spin text-brand-primary mb-2" />
