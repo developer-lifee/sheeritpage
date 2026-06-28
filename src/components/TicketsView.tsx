@@ -131,6 +131,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
   // LIVE CHAT STATE
   const [activeChatTicket, setActiveChatTicket] = useState<Ticket | null>(null);
+  const [rpaRecipesMap, setRpaRecipesMap] = useState<Record<string, { recipeId: number; name: string } | null>>({});
+  const [rpaRunningMap, setRpaRunningMap] = useState<Record<string, { loading: boolean; progress: string }>>({});
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [loadingChat, setLoadingChat] = useState(false);
   const [newMsgText, setNewMsgText] = useState('');
@@ -220,6 +222,38 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     fetchChatMessages(true);
     const interval = setInterval(() => fetchChatMessages(true), 4000);
     return () => clearInterval(interval);
+  }, [activeChatTicket?.phone]);
+
+  // Check which accounts of the active ticket have RPA recipes configured
+  useEffect(() => {
+    if (!activeChatTicket || !activeChatTicket.accounts || activeChatTicket.accounts.length === 0) {
+      setRpaRecipesMap({});
+      return;
+    }
+
+    const checkRpaRecipes = async () => {
+      const newMap: Record<string, { recipeId: number; name: string } | null> = {};
+      const promises = activeChatTicket.accounts!.map(async (acc) => {
+        if (!acc.correo) return;
+        try {
+          const res = await fetch(`${getApiUrl()}/api/admin/rpa/check-recipe?email=${encodeURIComponent(acc.correo)}`);
+          const data = await res.json();
+          if (data.success && data.hasRecipe) {
+            newMap[acc.correo] = { recipeId: data.recipeId, name: data.recipeName };
+          } else {
+            newMap[acc.correo] = null;
+          }
+        } catch (e) {
+          console.error('[RPA Check] Error buscando receta:', e);
+          newMap[acc.correo] = null;
+        }
+      });
+
+      await Promise.all(promises);
+      setRpaRecipesMap(newMap);
+    };
+
+    checkRpaRecipes();
   }, [activeChatTicket?.phone]);
 
   // Scroll to bottom on new messages
@@ -312,6 +346,86 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   };
 
 
+
+  const handleExecuteRpaFromChat = async (email: string, recipeId: number) => {
+    // Prevent running multiple times for the same account concurrently
+    if (rpaRunningMap[email]?.loading) return;
+
+    setRpaRunningMap(prev => ({
+      ...prev,
+      [email]: { loading: true, progress: 'Iniciando navegador en el servidor...' }
+    }));
+
+    try {
+      const res = await fetch(`${getApiUrl()}/api/admin/rpa/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipeId,
+          variables: { CUSTOMER_EMAIL: email },
+          password: 'admin123'
+        })
+      });
+      const data = await res.json();
+
+      if (data.success && data.jobId) {
+        const jobId = data.jobId;
+        
+        // Start polling the job status
+        const interval = setInterval(async () => {
+          try {
+            const statusRes = await fetch(`${getApiUrl()}/api/admin/rpa/job-status/${jobId}`);
+            const statusData = await statusRes.json();
+
+            if (statusData.success && statusData.job) {
+              const job = statusData.job;
+              const isFinished = job.status !== 'running';
+
+              setRpaRunningMap(prev => ({
+                ...prev,
+                [email]: {
+                  loading: !isFinished,
+                  progress: job.progress || 'Procesando en segundo plano...'
+                }
+              }));
+
+              if (isFinished) {
+                clearInterval(interval);
+                
+                if (job.status === 'success') {
+                  const code = Object.values(job.result || {}).find((v: any) => v && v.toString().trim().length >= 4);
+                  if (code) {
+                    setNewMsgText(prev => prev + (prev ? ' ' : '') + code);
+                  } else {
+                    setNewMsgText(prev => prev + (prev ? '\n' : '') + 'Automatización completada. No se pudo leer el código en pantalla.');
+                  }
+                } else {
+                  // If it failed or has a warning (like the 20 minutes expiration warning)
+                  const errorMsg = job.error || 'La receta falló en su ejecución.';
+                  setNewMsgText(prev => prev + (prev ? '\n' : '') + errorMsg);
+                }
+              }
+            }
+          } catch (pollErr) {
+            console.error('[RPA Poll Chat Error]', pollErr);
+          }
+        }, 3000);
+
+      } else {
+        setRpaRunningMap(prev => ({
+          ...prev,
+          [email]: { loading: false, progress: '' }
+        }));
+        alert(data.error || 'No se pudo iniciar la tarea RPA.');
+      }
+    } catch (err: any) {
+      setRpaRunningMap(prev => ({
+        ...prev,
+        [email]: { loading: false, progress: '' }
+      }));
+      alert('Error de red al intentar ejecutar la receta RPA: ' + err.message);
+    }
+  };
 
   const sendHogarNetflixTemplate = () => {
     if (!activeChatTicket) return;
@@ -1434,6 +1548,30 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                         >
                           📧 {acc.correo.split('@')[0]}
                         </button>
+                        {rpaRecipesMap[acc.correo] && (
+                          <button
+                            type="button"
+                            disabled={rpaRunningMap[acc.correo]?.loading}
+                            onClick={() => handleExecuteRpaFromChat(acc.correo, rpaRecipesMap[acc.correo]!.recipeId)}
+                            className={`text-[10px] px-2 py-1 rounded-lg font-bold flex items-center gap-1 transition-all active:scale-95 ${
+                              rpaRunningMap[acc.correo]?.loading
+                                ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 animate-pulse cursor-wait'
+                                : 'bg-emerald-100 hover:bg-emerald-250 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/30'
+                            }`}
+                            title={rpaRunningMap[acc.correo]?.loading ? rpaRunningMap[acc.correo].progress : `Ejecutar Receta RPA: ${rpaRecipesMap[acc.correo]!.name}`}
+                          >
+                            {rpaRunningMap[acc.correo]?.loading ? (
+                              <>
+                                <div className="w-2.5 h-2.5 border border-current border-t-transparent rounded-full animate-spin" />
+                                <span>{rpaRunningMap[acc.correo].progress.split(':')[0]}</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>⚡ RPA</span>
+                              </>
+                            )}
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => setNewMsgText(prev => prev + (prev ? ' ' : '') + acc.streaming)}
