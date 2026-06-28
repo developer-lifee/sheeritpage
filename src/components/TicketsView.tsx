@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp, Maximize2, Minimize2, Archive } from 'lucide-react';
+import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp, Maximize2, Minimize2, Archive, TrendingUp } from 'lucide-react';
 
 interface AccountInfo {
   streaming: string;
@@ -16,6 +16,7 @@ interface Ticket {
   agent: string | null;
   lastMessage: string;
   lastMessageTime: number | null;
+  lastMessageFromMe?: boolean;
   waitingHumanMode?: 'bot' | 'advisor';
   accounts?: AccountInfo[];
   summary?: string;
@@ -72,6 +73,27 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  
+  // Metrics state
+  const [showMetricsModal, setShowMetricsModal] = useState(false);
+  const [metricsData, setMetricsData] = useState<{ summary: { agent: string; count: number }[]; recent: { phone: string; customerName: string; agent: string; resolvedAt: string }[] } | null>(null);
+  const [loadingMetrics, setLoadingMetrics] = useState(false);
+
+  const fetchMetrics = async () => {
+    setLoadingMetrics(true);
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/tickets/metrics`);
+      if (res.ok) {
+        const data = await res.json();
+        setMetricsData(data);
+      }
+    } catch (e) {
+      console.error("Error fetching metrics:", e);
+    } finally {
+      setLoadingMetrics(false);
+    }
+  };
 
   // Drag and drop state
   const [draggedPhone, setDraggedPhone] = useState<string | null>(null);
@@ -581,8 +603,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   });
 
   // Filter columns
-  const activeTickets = filteredTickets.filter(t => t.state !== 'resolved');
-  const resolvedTickets = filteredTickets.filter(t => t.state === 'resolved');
+  const activeTickets = filteredTickets.filter(t => t.state !== 'resolved' && !t.lastMessageFromMe);
+  const resolvedTickets = filteredTickets.filter(t => t.state === 'resolved' || t.lastMessageFromMe);
 
   const unassignedTickets = activeTickets.filter(t => !t.agent);
   const myTickets = activeTickets.filter(t => t.agent && t.agent.toLowerCase().trim() === safeAgentName);
@@ -766,6 +788,11 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
               ✅ Resuelto
             </span>
           )}
+          {t.lastMessageFromMe && t.state !== 'resolved' && (
+            <span className="bg-blue-50 dark:bg-blue-950/40 text-blue-750 dark:text-blue-305 text-[8px] font-bold px-1.5 py-0.2 rounded" title="Último mensaje enviado por ti o el bot">
+              ✓ Atendido
+            </span>
+          )}
           {t.queuePosition !== undefined && t.queuePosition !== null && (
             <span className="bg-amber-100 dark:bg-amber-950 text-amber-850 dark:text-amber-300 text-[8px] font-extrabold px-1 py-0.2 rounded border border-amber-200/50">
               #{t.queuePosition}
@@ -855,6 +882,16 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto">
+          <button
+            onClick={() => {
+              setShowMetricsModal(true);
+              fetchMetrics();
+            }}
+            className="p-2 text-gray-660 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors border dark:border-gray-700 flex items-center gap-1.5 text-xs font-bold"
+            title="Ver Métricas de Desempeño"
+          >
+            <TrendingUp className="w-4 h-4 text-brand-primary" /> Métricas
+          </button>
           <button
             onClick={() => setIsFullscreen(!isFullscreen)}
             className="p-2 text-gray-660 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors border dark:border-gray-700 flex items-center gap-1 text-xs font-bold"
@@ -964,7 +1001,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
               {renderAccordionSection(
                 'resolved',
-                'Por Salir / Resueltos',
+                'Por Salir / Probablemente Terminados',
                 <CheckCircle className="w-4 h-4 text-emerald-600" />,
                 resolvedTickets.length,
                 resolvedTickets.length === 0 ? (
@@ -1525,10 +1562,108 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             <button
               type="button"
               onClick={() => setAssignDialog(null)}
-              className="w-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-650 text-gray-750 dark:text-gray-200 font-bold py-2.5 rounded-xl text-sm transition-all"
+              className="w-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-650 text-gray-755 dark:text-gray-200 font-bold py-2.5 rounded-xl text-sm transition-all"
             >
               Cancelar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Metrics Modal */}
+      {showMetricsModal && (
+        <div className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border dark:border-gray-800 shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="p-5 border-b dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-brand-primary" /> Métricas de Desempeño y Resoluciones
+              </h3>
+              <button
+                onClick={() => setShowMetricsModal(false)}
+                className="text-gray-450 hover:text-gray-600 dark:hover:text-gray-200 text-sm font-semibold p-1.5 hover:bg-gray-150 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-grow">
+              {loadingMetrics ? (
+                <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+                  <RefreshCw className="w-8 h-8 animate-spin text-brand-primary mb-2" />
+                  <span className="text-xs">Cargando métricas de resolución...</span>
+                </div>
+              ) : !metricsData ? (
+                <p className="text-center text-sm text-gray-500 italic py-10">No se pudieron cargar los datos.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                  {/* Summary Leaderboard */}
+                  <div className="md:col-span-5 space-y-4">
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Historial de Resoluciones por Asesor</h4>
+                    <div className="space-y-2">
+                      {metricsData.summary.length === 0 ? (
+                        <p className="text-xs text-gray-450 italic">Sin registros de resoluciones aún.</p>
+                      ) : (
+                        metricsData.summary.map((row) => (
+                          <div key={row.agent} className="flex justify-between items-center p-3 rounded-xl bg-gray-50 dark:bg-gray-850 border dark:border-gray-800 text-xs">
+                            <span className="font-bold text-gray-700 dark:text-gray-300">👤 {row.agent}</span>
+                            <span className="bg-brand-primary/10 text-brand-primary font-black px-2.5 py-0.5 rounded-full">{row.count} resueltos</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Recent Resolutions */}
+                  <div className="md:col-span-7 space-y-4">
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Últimos 100 tickets resueltos</h4>
+                    <div className="border dark:border-gray-800 rounded-xl overflow-hidden text-xs max-h-[300px] overflow-y-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-gray-50 dark:bg-gray-850 border-b dark:border-gray-800 text-[10px] text-gray-400 uppercase font-extrabold">
+                            <th className="p-3">Cliente</th>
+                            <th className="p-3">Asesor</th>
+                            <th className="p-3">Fecha</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                          {metricsData.recent.length === 0 ? (
+                            <tr>
+                              <td colSpan={3} className="p-4 text-center text-gray-450 italic">No hay tickets resueltos recientes.</td>
+                            </tr>
+                          ) : (
+                            metricsData.recent.map((rec, i) => (
+                              <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-850/30">
+                                <td className="p-3 font-semibold text-gray-800 dark:text-gray-200">
+                                  <div className="truncate max-w-[150px]">{rec.customerName}</div>
+                                  <div className="text-[9px] text-gray-450">+{rec.phone}</div>
+                                </td>
+                                <td className="p-3 text-gray-655 dark:text-gray-300 font-medium">{rec.agent}</td>
+                                <td className="p-3 text-gray-400 text-[10px] whitespace-nowrap">
+                                  {new Date(rec.resolvedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}{' '}
+                                  {new Date(rec.resolvedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t dark:border-gray-800 flex justify-end bg-gray-50/30 dark:bg-gray-900/10">
+              <button
+                onClick={() => setShowMetricsModal(false)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-200 text-xs font-bold rounded-xl transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}
