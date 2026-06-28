@@ -503,9 +503,13 @@ export const ProviderEmailsView: React.FC = () => {
                         </td>
                         <td className="px-4 py-3">
                           <div className="font-semibold text-gray-800 dark:text-gray-100 text-xs font-mono">{sub.account_email}</div>
-                          {sub.fullname && (
-                            <div className="text-[10px] text-gray-400 mt-0.5">
-                              Asociado a: {sub.fullname.split(',')[0]}...
+                          {sub.provider_name ? (
+                            <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium mt-0.5">
+                              Proveedor: {sub.provider_name}
+                            </div>
+                          ) : (
+                            <div className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mt-0.5">
+                              ⚠️ Sin proveedor asignado
                             </div>
                           )}
                         </td>
