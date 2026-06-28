@@ -1,11 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { Users, Mail, Search, Trash2, PlusCircle, RefreshCw, AlertTriangle, CheckCircle, Phone, FileText, Zap, Play, X } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Users, Search, RefreshCw, AlertTriangle, CheckCircle,
+  Zap, Play, X, Database, ExternalLink, Calendar, Phone
+} from 'lucide-react';
 
-interface ProviderEmail {
-  email: string;
-  providerNumber: string;
-  notes?: string;
-  rpaRecipeId?: number | null;
+interface Subscription {
+  id: number;
+  customer_phone: string;
+  streaming_platform: string;
+  account_email: string;
+  expiration_date: string | null;
+  status: 'active' | 'expired' | 'cancelled';
+  is_provider: number;
+  provider_name: string | null;
+  rpa_recipe_id: number | null;
+  recipe_name: string | null;
+  fullname: string | null;
+  notes: string | null;
 }
 
 interface RpaRecipe {
@@ -14,179 +25,172 @@ interface RpaRecipe {
   platform: string;
 }
 
+interface SyncResult {
+  inserted: number;
+  updated: number;
+  skipped: number;
+  total: number;
+}
+
 const getApiUrl = () =>
   window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
 
+const PLATFORM_COLORS: Record<string, string> = {
+  disney: 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300',
+  netflix: 'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300',
+  spotify: 'bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300',
+  max: 'bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300',
+  youtube: 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300',
+  amazon: 'bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300',
+};
+
+const getPlatformColor = (platform: string) => {
+  const key = Object.keys(PLATFORM_COLORS).find(k => platform.toLowerCase().includes(k));
+  return key ? PLATFORM_COLORS[key] : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+};
+
 export const ProviderEmailsView: React.FC = () => {
-  const [emails, setEmails] = useState<ProviderEmail[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [recipes, setRecipes] = useState<RpaRecipe[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [newEmail, setNewEmail] = useState('');
-  const [providerNumber, setProviderNumber] = useState('');
-  const [notes, setNotes] = useState('');
-  const [rpaRecipeId, setRpaRecipeId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [actionLoading, setActionLoading] = useState(false);
-  const [testModal, setTestModal] = useState<{ email: string; result: string; loading: boolean } | null>(null);
+  const [editingRecipe, setEditingRecipe] = useState<{ id: number; current: number | null } | null>(null);
+  const [testModal, setTestModal] = useState<{ email: string; platform: string; result: string; loading: boolean } | null>(null);
 
-  const fetchProviderEmails = () => {
+  const fetchSubscriptions = useCallback(() => {
     setLoading(true);
     setError('');
-    fetch(`${getApiUrl()}/api/admin/provider-emails`)
-      .then((res) => {
-        if (!res.ok) throw new Error('Error al obtener los correos de proveedores');
-        return res.json();
-      })
-      .then((data) => {
-        setEmails(Array.isArray(data) ? data : []);
+    fetch(`${getApiUrl()}/api/admin/subscriptions?is_provider=1`)
+      .then(r => r.json())
+      .then(data => {
+        setSubscriptions(Array.isArray(data.data) ? data.data : []);
         setLoading(false);
       })
-      .catch((err) => {
-        console.error('Error fetching provider emails:', err);
-        setError('No se pudo conectar al backend para listar las cuentas de proveedores.');
+      .catch(() => {
+        setError('No se pudo conectar al backend.');
         setLoading(false);
       });
-  };
-
-  const fetchRecipes = () => {
-    fetch(`${getApiUrl()}/api/admin/rpa/recipes`)
-      .then((res) => res.json())
-      .then((data) => setRecipes(Array.isArray(data) ? data : []))
-      .catch(() => setRecipes([]));
-  };
-
-  useEffect(() => {
-    fetchProviderEmails();
-    fetchRecipes();
   }, []);
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newEmail.trim() || !newEmail.includes('@') || !providerNumber.trim()) {
-      setError('Por favor ingresa un correo electrónico válido y el número del proveedor.');
-      return;
-    }
-    setActionLoading(true);
+  const fetchRecipes = useCallback(() => {
+    fetch(`${getApiUrl()}/api/admin/rpa/recipes`)
+      .then(r => r.json())
+      .then(data => setRecipes(Array.isArray(data) ? data : []))
+      .catch(() => setRecipes([]));
+  }, []);
+
+  useEffect(() => {
+    fetchSubscriptions();
+    fetchRecipes();
+  }, [fetchSubscriptions, fetchRecipes]);
+
+  const handleSync = async () => {
+    setSyncing(true);
     setError('');
     setSuccess('');
+    setSyncResult(null);
     try {
-      const res = await fetch(`${getApiUrl()}/api/admin/provider-emails/save`, {
+      const res = await fetch(`${getApiUrl()}/api/admin/subscriptions/sync-excel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: newEmail,
-          providerNumber,
-          notes,
-          rpaRecipeId: rpaRecipeId ? parseInt(rpaRecipeId) : null,
-          password: 'admin123'
-        })
+        body: JSON.stringify({ password: 'admin123' })
       });
       const result = await res.json();
       if (result.success) {
-        setSuccess(`Cuenta ${newEmail} vinculada con éxito.`);
-        setNewEmail('');
-        setProviderNumber('');
-        setNotes('');
-        setRpaRecipeId('');
-        fetchProviderEmails();
+        setSyncResult({ inserted: result.inserted, updated: result.updated, skipped: result.skipped, total: result.total });
+        setSuccess(`✅ Sincronización completada desde Excel.`);
+        fetchSubscriptions();
       } else {
-        setError(`❌ Error: ${result.message || result.error}`);
+        setError(`❌ Error: ${result.error}`);
       }
-    } catch (err) {
-      setError('❌ Error al comunicarse con el bot.');
+    } catch (e: any) {
+      setError(`❌ Error de conexión: ${e.message}`);
     } finally {
-      setActionLoading(false);
+      setSyncing(false);
     }
   };
 
-  const handleDelete = async (emailToDelete: string) => {
-    if (!window.confirm(`¿Estás seguro de desvincular: ${emailToDelete}?`)) return;
-    setError('');
-    setSuccess('');
+  const handleSetRecipe = async (id: number, rpa_recipe_id: number | null) => {
     try {
-      const res = await fetch(`${getApiUrl()}/api/admin/provider-emails/delete`, {
+      const res = await fetch(`${getApiUrl()}/api/admin/subscriptions/set-recipe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailToDelete, password: 'admin123' })
+        body: JSON.stringify({ id, rpa_recipe_id, password: 'admin123' })
       });
       const result = await res.json();
       if (result.success) {
-        setSuccess('Cuenta de proveedor desvinculada con éxito.');
-        fetchProviderEmails();
+        setSuccess('Receta vinculada correctamente.');
+        setEditingRecipe(null);
+        fetchSubscriptions();
       } else {
-        setError(`❌ Error: ${result.message || result.error}`);
+        setError(`❌ ${result.error}`);
       }
-    } catch (err) {
-      setError('❌ Error de conexión al desvincular el correo.');
+    } catch (e: any) {
+      setError(`❌ Error: ${e.message}`);
     }
   };
 
-  const handleTestRecipe = async (item: ProviderEmail) => {
-    if (!item.rpaRecipeId) return;
-    setTestModal({ email: item.email, result: '', loading: true });
+  const handleTestRecipe = async (sub: Subscription) => {
+    if (!sub.rpa_recipe_id) return;
+    setTestModal({ email: sub.account_email, platform: sub.streaming_platform, result: '', loading: true });
     try {
       const res = await fetch(`${getApiUrl()}/api/admin/rpa/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipeId: item.rpaRecipeId,
-          variables: { CUSTOMER_EMAIL: item.email },
-          password: 'admin123'
-        })
+        body: JSON.stringify({ recipeId: sub.rpa_recipe_id, variables: { CUSTOMER_EMAIL: sub.account_email }, password: 'admin123' })
       });
       const result = await res.json();
       if (result.success && result.data) {
         const code = Object.values(result.data).find((v: any) => v && v.toString().trim().length >= 4);
-        setTestModal({
-          email: item.email,
-          result: code ? `✅ Código extraído: ${code}` : '⚠️ La receta no devolvió un código válido.',
-          loading: false
-        });
+        setTestModal(prev => prev ? { ...prev, result: code ? `✅ Código extraído: ${code}` : '⚠️ No se extrajo ningún código.', loading: false } : null);
       } else {
-        setTestModal({ email: item.email, result: `❌ Error: ${result.error || 'La receta falló'}`, loading: false });
+        setTestModal(prev => prev ? { ...prev, result: `❌ Error: ${result.error || 'La receta falló'}`, loading: false } : null);
       }
     } catch (e: any) {
-      setTestModal({ email: item.email, result: `❌ Error de conexión: ${e.message}`, loading: false });
+      setTestModal(prev => prev ? { ...prev, result: `❌ Conexión: ${e.message}`, loading: false } : null);
     }
   };
 
-  const filteredEmails = emails.filter((item) =>
-    item.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.providerNumber.includes(searchTerm) ||
-    (item.notes || '').toLowerCase().includes(searchTerm.toLowerCase())
+  const filtered = subscriptions.filter(s =>
+    s.account_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    s.streaming_platform.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (s.fullname || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    s.customer_phone.includes(searchTerm)
   );
 
-  const getRecipeName = (id: number | null | undefined) => {
-    if (!id) return null;
-    return recipes.find((r) => r.id === id)?.name ?? `Receta #${id}`;
+  const daysUntil = (dateStr: string | null) => {
+    if (!dateStr) return null;
+    const diff = Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
+    return diff;
   };
 
   return (
     <div className="space-y-6">
-      {/* Test result modal */}
+      {/* Test Modal */}
       {testModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border dark:border-gray-700 p-6 max-w-sm w-full mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-gray-800 dark:text-white flex items-center gap-2">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold dark:text-white flex items-center gap-2">
                 <Zap className="w-4 h-4 text-brand-primary" /> Prueba de Receta RPA
               </h3>
               <button onClick={() => setTestModal(null)} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
                 <X className="w-4 h-4 text-gray-500" />
               </button>
             </div>
-            <p className="text-xs text-gray-500 mb-3">
-              Correo: <span className="font-mono font-bold text-gray-700 dark:text-gray-300">{testModal.email}</span>
-            </p>
+            <p className="text-xs text-gray-500 mb-1">Cuenta: <span className="font-mono font-bold text-gray-700 dark:text-gray-200">{testModal.email}</span></p>
+            <p className="text-xs text-gray-500 mb-4">Plataforma: <span className="font-bold uppercase text-gray-700 dark:text-gray-200">{testModal.platform}</span></p>
             {testModal.loading ? (
               <div className="flex items-center gap-3 py-4 text-sm text-gray-500">
                 <div className="w-4 h-4 border-2 border-brand-primary border-t-transparent rounded-full animate-spin" />
                 Ejecutando automatización... (30-60 seg)
               </div>
             ) : (
-              <div className={`p-3 rounded-xl text-sm font-medium ${testModal.result.startsWith('✅') ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-200' : 'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-200'}`}>
+              <div className={`p-3 rounded-xl text-sm font-medium ${testModal.result.startsWith('✅') ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-200' : 'bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200'}`}>
                 {testModal.result}
               </div>
             )}
@@ -199,155 +203,194 @@ export const ProviderEmailsView: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* List */}
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <div>
-              <h2 className="text-xl font-bold flex items-center dark:text-white">
-                <Users className="mr-2 text-brand-primary" /> Cuentas de Proveedores (Externas)
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Correos que no son nuestros. Vincula una receta RPA para extraer códigos automáticamente.
-              </p>
-            </div>
-            <div className="flex gap-2 w-full sm:w-auto">
-              <div className="relative flex-grow">
-                <Search className="absolute left-2.5 top-2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Buscar por correo o cel..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8 pr-3 py-1 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm w-full"
-                />
-              </div>
-              <button onClick={fetchProviderEmails} className="p-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-750 rounded-lg transition-colors" title="Refrescar">
-                <RefreshCw className="w-5 h-5" />
-              </button>
-            </div>
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold flex items-center gap-2 dark:text-white">
+              <Users className="text-brand-primary" /> Cuentas de Proveedores (Externas)
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+              Cuentas detectadas automáticamente desde el Excel que no son de correos propios.
+              Vincula una receta RPA para extraer códigos automáticamente.
+            </p>
           </div>
-
-          {error && (
-            <div className="flex items-center bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-200 p-4 rounded-xl mb-6 border border-red-200 dark:border-red-900/50">
-              <AlertTriangle className="w-5 h-5 mr-3 flex-shrink-0" /><p className="text-sm">{error}</p>
-            </div>
-          )}
-          {success && (
-            <div className="flex items-center bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-200 p-4 rounded-xl mb-6 border border-green-200 dark:border-green-900/50">
-              <CheckCircle className="w-5 h-5 mr-3 flex-shrink-0" /><p className="text-sm">{success}</p>
-            </div>
-          )}
-
-          {loading ? (
-            <div className="text-center py-12 text-gray-500 dark:text-gray-400">Cargando cuentas de proveedores...</div>
-          ) : filteredEmails.length === 0 ? (
-            <div className="text-center py-16 bg-gray-50 dark:bg-gray-900/30 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-750">
-              <Mail className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <h3 className="font-bold text-gray-700 dark:text-gray-300">No hay cuentas registradas</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {searchTerm ? 'Ningún registro coincide con tu búsqueda.' : 'Registra la primera cuenta externa usando el panel lateral.'}
-              </p>
-            </div>
-          ) : (
-            <div className="max-h-[60vh] overflow-y-auto border border-gray-150 dark:border-gray-750 rounded-xl divide-y divide-gray-150 dark:divide-gray-750 animate-fadeIn">
-              {filteredEmails.map((item) => {
-                const recipeName = getRecipeName(item.rpaRecipeId);
-                return (
-                  <div key={item.email} className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-750/30 transition-all gap-3">
-                    <div className="min-w-0 flex-grow">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="text-sm font-bold text-gray-800 dark:text-white truncate">{item.email}</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-900/30 flex items-center gap-1">
-                          <Phone className="w-2.5 h-2.5" /> {item.providerNumber}
-                        </span>
-                        {recipeName ? (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/30 flex items-center gap-1">
-                            <Zap className="w-2.5 h-2.5" /> {recipeName}
-                          </span>
-                        ) : (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 border border-gray-200 dark:border-gray-600">
-                            Manual
-                          </span>
-                        )}
-                      </div>
-                      {item.notes && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-1">
-                          <FileText className="w-3.5 h-3.5 text-gray-400" /> {item.notes}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {item.rpaRecipeId && (
-                        <button
-                          onClick={() => handleTestRecipe(item)}
-                          className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg transition-all"
-                          title="Probar receta RPA — extraer código ahora"
-                        >
-                          <Play className="w-4 h-4" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleDelete(item.email)}
-                        className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-all"
-                        title="Desvincular Cuenta"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Form */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6 self-start">
-          <h3 className="text-lg font-bold flex items-center mb-4 dark:text-white">
-            <PlusCircle className="mr-2 text-brand-primary" /> Agregar Cuenta de Proveedor
-          </h3>
-          <form onSubmit={handleSave} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Correo Electrónico</label>
-              <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)}
-                placeholder="proveedor@gmail.com"
-                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-750 dark:border-gray-600 dark:text-white text-sm" required />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Número de Proveedor (WhatsApp)</label>
-              <input type="text" value={providerNumber} onChange={(e) => setProviderNumber(e.target.value)}
-                placeholder="573027892574"
-                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-750 dark:border-gray-600 dark:text-white text-sm" required />
-              <p className="text-[10px] text-gray-400 mt-1">Número completo con código de país. Para filtrar alertas de renovación.</p>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Notas / Referencias</label>
-              <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)}
-                placeholder="Ej: Disney / Cuentas de Spotinet"
-                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-750 dark:border-gray-600 dark:text-white text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1 flex items-center gap-1">
-                <Zap className="w-3 h-3 text-emerald-500" /> Receta RPA para Códigos Automáticos
-              </label>
-              <select value={rpaRecipeId} onChange={(e) => setRpaRecipeId(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-750 dark:border-gray-600 dark:text-white text-sm">
-                <option value="">Sin automatización (manual)</option>
-                {recipes.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name} [{r.platform}]</option>
-                ))}
-              </select>
-              <p className="text-[10px] text-gray-400 mt-1">
-                El bot ejecutará esta receta cuando el cliente pida su código de acceso.
-              </p>
-            </div>
-            <button type="submit" disabled={actionLoading}
-              className="w-full bg-brand-primary hover:bg-brand-dark text-white font-bold text-sm py-2.5 rounded-xl transition-all disabled:opacity-50">
-              {actionLoading ? 'Registrando...' : 'Registrar Cuenta'}
+          <div className="flex gap-2 flex-shrink-0">
+            <button
+              onClick={fetchSubscriptions}
+              className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+              title="Refrescar lista"
+            >
+              <RefreshCw className="w-5 h-5" />
             </button>
-          </form>
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="flex items-center gap-2 px-4 py-2 bg-brand-primary hover:bg-brand-dark text-white text-sm font-bold rounded-xl transition-all disabled:opacity-60"
+              title="Sincronizar desde Excel de Microsoft Graph"
+            >
+              <Database className={`w-4 h-4 ${syncing ? 'animate-pulse' : ''}`} />
+              {syncing ? 'Sincronizando...' : 'Sincronizar desde Excel'}
+            </button>
+          </div>
         </div>
+
+        {/* Sync result banner */}
+        {syncResult && (
+          <div className="mt-4 p-3 bg-brand-primary/10 border border-brand-primary/20 rounded-xl text-sm flex flex-wrap gap-4">
+            <span className="font-bold text-brand-primary">✅ Sync completo</span>
+            <span className="text-gray-600 dark:text-gray-300">📥 {syncResult.inserted} nuevas</span>
+            <span className="text-gray-600 dark:text-gray-300">🔄 {syncResult.updated} actualizadas</span>
+            <span className="text-gray-600 dark:text-gray-300">⏭ {syncResult.skipped} omitidas</span>
+            <span className="text-gray-500 dark:text-gray-400">de {syncResult.total} filas Excel</span>
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-4 flex items-center bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-200 p-3 rounded-xl border border-red-200 dark:border-red-900/50">
+            <AlertTriangle className="w-4 h-4 mr-2 flex-shrink-0" />
+            <p className="text-sm">{error}</p>
+          </div>
+        )}
+        {success && !syncResult && (
+          <div className="mt-4 flex items-center bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-200 p-3 rounded-xl border border-green-200 dark:border-green-900/50">
+            <CheckCircle className="w-4 h-4 mr-2 flex-shrink-0" />
+            <p className="text-sm">{success}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Table */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="relative flex-grow max-w-xs">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar por correo, plataforma, cliente..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="pl-8 pr-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm w-full"
+            />
+          </div>
+          <span className="text-sm text-gray-400 font-medium">{filtered.length} cuentas</span>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-16 text-gray-400">
+            <div className="w-6 h-6 border-2 border-brand-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            Cargando cuentas de proveedores...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16 bg-gray-50 dark:bg-gray-900/30 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-750">
+            <Database className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+            <h3 className="font-bold text-gray-700 dark:text-gray-300">
+              {searchTerm ? 'Sin resultados' : 'Sin cuentas de proveedores'}
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
+              {searchTerm ? 'Prueba con otro término.' : 'Haz clic en "Sincronizar desde Excel" para cargar las cuentas automáticamente.'}
+            </p>
+            {!searchTerm && (
+              <button onClick={handleSync} disabled={syncing}
+                className="mt-4 px-4 py-2 bg-brand-primary text-white text-sm font-bold rounded-xl hover:bg-brand-dark transition-all disabled:opacity-60">
+                {syncing ? 'Sincronizando...' : '⚡ Sincronizar ahora'}
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-gray-150 dark:border-gray-750">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-gray-900/50 text-left">
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Correo / Cliente</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Plataforma</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Vencimiento</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Receta RPA</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-750">
+                {filtered.map(sub => {
+                  const days = daysUntil(sub.expiration_date);
+                  const isEditing = editingRecipe?.id === sub.id;
+                  return (
+                    <tr key={sub.id} className="hover:bg-gray-50/80 dark:hover:bg-gray-750/30 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-gray-800 dark:text-gray-100 text-xs font-mono">{sub.account_email}</div>
+                        {sub.fullname && (
+                          <div className="flex items-center gap-1 mt-0.5 text-[11px] text-gray-400">
+                            <Phone className="w-2.5 h-2.5" /> {sub.customer_phone} · {sub.fullname}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold uppercase ${getPlatformColor(sub.streaming_platform)}`}>
+                          {sub.streaming_platform}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {sub.expiration_date ? (
+                          <div className="flex items-center gap-1 text-xs">
+                            <Calendar className="w-3 h-3 text-gray-400" />
+                            <span className={days !== null && days <= 3 ? 'text-red-600 dark:text-red-400 font-bold' : days !== null && days <= 7 ? 'text-amber-600 dark:text-amber-400 font-bold' : 'text-gray-600 dark:text-gray-300'}>
+                              {new Date(sub.expiration_date).toLocaleDateString('es-CO')}
+                              {days !== null && <span className="ml-1 text-[10px] text-gray-400">({days >= 0 ? `${days}d` : `venc.`})</span>}
+                            </span>
+                          </div>
+                        ) : <span className="text-gray-400 text-xs">—</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        {isEditing ? (
+                          <div className="flex items-center gap-2">
+                            <select
+                              defaultValue={editingRecipe.current ?? ''}
+                              onChange={e => handleSetRecipe(sub.id, e.target.value ? parseInt(e.target.value) : null)}
+                              className="text-xs px-2 py-1 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                              autoFocus
+                            >
+                              <option value="">Sin receta (manual)</option>
+                              {recipes.map(r => (
+                                <option key={r.id} value={r.id}>{r.name}</option>
+                              ))}
+                            </select>
+                            <button onClick={() => setEditingRecipe(null)} className="text-gray-400 hover:text-gray-600">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : sub.recipe_name ? (
+                          <button
+                            onClick={() => setEditingRecipe({ id: sub.id, current: sub.rpa_recipe_id })}
+                            className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/30 hover:opacity-80 transition-opacity"
+                          >
+                            <Zap className="w-2.5 h-2.5" /> {sub.recipe_name}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setEditingRecipe({ id: sub.id, current: null })}
+                            className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-650 transition-colors"
+                          >
+                            <ExternalLink className="w-2.5 h-2.5" /> Asignar receta
+                          </button>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {sub.rpa_recipe_id && (
+                          <button
+                            onClick={() => handleTestRecipe(sub)}
+                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg transition-all"
+                            title="Probar receta — extraer código ahora"
+                          >
+                            <Play className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
