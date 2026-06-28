@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Users, Search, RefreshCw, AlertTriangle, CheckCircle,
   Zap, Play, X, Database, ExternalLink, Calendar, Phone, CheckSquare, Square,
-  ChevronLeft, ChevronRight, Eye
+  ChevronLeft, ChevronRight, Eye, Tag, Edit3
 } from 'lucide-react';
 
 interface Subscription {
@@ -71,7 +71,10 @@ export const ProviderEmailsView: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Inline edit state
   const [editingRecipe, setEditingRecipe] = useState<{ id: number; current: number | null } | null>(null);
+  const [editingProvider, setEditingProvider] = useState<{ id: number; current: string } | null>(null);
 
   // Multiple active RPA runs indexed by email
   const [runs, setRuns] = useState<Record<string, TestSidebarState>>({});
@@ -80,6 +83,7 @@ export const ProviderEmailsView: React.FC = () => {
   // Bulk selection states
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [bulkRecipeId, setBulkRecipeId] = useState<string>('');
+  const [bulkProviderName, setBulkProviderName] = useState<string>('');
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
   const fetchSubscriptions = useCallback(() => {
@@ -156,32 +160,65 @@ export const ProviderEmailsView: React.FC = () => {
     }
   };
 
-  const handleBulkSetRecipe = async () => {
+  const handleSetProviderName = async (id: number, provider_name: string) => {
+    try {
+      const res = await fetch(`${getApiUrl()}/api/admin/subscriptions/set-provider`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, provider_name, password: 'admin123' })
+      });
+      const result = await res.json();
+      if (result.success) {
+        setSuccess('Proveedor actualizado correctamente.');
+        setEditingProvider(null);
+        fetchSubscriptions();
+      } else {
+        setError(`❌ ${result.error}`);
+      }
+    } catch (e: any) {
+      setError(`❌ Error: ${e.message}`);
+    }
+  };
+
+  const handleBulkSetRecipeAndProvider = async () => {
     if (selectedIds.length === 0) return;
     setBulkActionLoading(true);
     setError('');
     setSuccess('');
     try {
-      const res = await fetch(`${getApiUrl()}/api/admin/subscriptions/set-recipe-bulk`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ids: selectedIds,
-          rpa_recipe_id: bulkRecipeId ? parseInt(bulkRecipeId) : null,
-          password: 'admin123'
-        })
-      });
-      const result = await res.json();
-      if (result.success) {
-        setSuccess(`✅ Se actualizó la receta para ${selectedIds.length} cuentas en lote.`);
-        setSelectedIds([]);
-        setBulkRecipeId('');
-        fetchSubscriptions();
-      } else {
-        setError(`❌ Error en lote: ${result.error}`);
+      // 1. Bulk Recipe if specified
+      if (bulkRecipeId !== undefined) {
+        await fetch(`${getApiUrl()}/api/admin/subscriptions/set-recipe-bulk`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ids: selectedIds,
+            rpa_recipe_id: bulkRecipeId ? parseInt(bulkRecipeId) : null,
+            password: 'admin123'
+          })
+        });
       }
+
+      // 2. Bulk Provider name if typed
+      if (bulkProviderName.trim()) {
+        await fetch(`${getApiUrl()}/api/admin/subscriptions/set-provider-bulk`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ids: selectedIds,
+            provider_name: bulkProviderName.trim(),
+            password: 'admin123'
+          })
+        });
+      }
+
+      setSuccess(`✅ Se actualizaron las cuentas en lote (${selectedIds.length} modificadas).`);
+      setSelectedIds([]);
+      setBulkRecipeId('');
+      setBulkProviderName('');
+      fetchSubscriptions();
     } catch (e: any) {
-      setError(`❌ Error de conexión: ${e.message}`);
+      setError(`❌ Error de conexión en lote: ${e.message}`);
     } finally {
       setBulkActionLoading(false);
     }
@@ -191,7 +228,6 @@ export const ProviderEmailsView: React.FC = () => {
     if (!sub.rpa_recipe_id) return;
     const email = sub.account_email;
 
-    // Add run state
     setRuns(prev => ({
       ...prev,
       [email]: {
@@ -268,8 +304,7 @@ export const ProviderEmailsView: React.FC = () => {
   const filtered = subscriptions.filter(s =>
     s.account_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     s.streaming_platform.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (s.fullname || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.customer_phone.includes(searchTerm)
+    (s.provider_name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const toggleSelectAll = () => {
@@ -291,7 +326,7 @@ export const ProviderEmailsView: React.FC = () => {
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 relative min-h-[85vh] pb-24">
-      {/* Main Table Space */}
+      {/* Main Table */}
       <div className="flex-grow space-y-6">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6">
@@ -301,7 +336,7 @@ export const ProviderEmailsView: React.FC = () => {
                 <Users className="text-brand-primary" /> Cuentas de Proveedores (Externas)
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                Selecciona múltiples cuentas para asignar una automatización de proveedor. Prueba recetas individualmente en segundo plano.
+                Clasifica por proveedor y asocia recetas RPA en lote para automatizar la extracción de códigos.
               </p>
             </div>
             <div className="flex gap-2 flex-shrink-0">
@@ -343,7 +378,7 @@ export const ProviderEmailsView: React.FC = () => {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Buscar por correo, plataforma, cliente..."
+                placeholder="Buscar por correo, proveedor, servicio..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="pl-8 pr-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm w-full"
@@ -378,16 +413,17 @@ export const ProviderEmailsView: React.FC = () => {
                         )}
                       </button>
                     </th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Correo / Clientes</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Correo de la Cuenta</th>
                     <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Plataforma</th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Vencimiento</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proveedor</th>
                     <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Receta RPA</th>
                     <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-750">
                   {filtered.map(sub => {
-                    const isEditing = editingRecipe?.id === sub.id;
+                    const isEditingR = editingRecipe?.id === sub.id;
+                    const isEditingP = editingProvider?.id === sub.id;
                     const isSelected = selectedIds.includes(sub.id);
                     const isRunning = runs[sub.account_email]?.loading;
                     return (
@@ -402,10 +438,10 @@ export const ProviderEmailsView: React.FC = () => {
                           </button>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="font-medium text-gray-800 dark:text-gray-100 text-xs font-mono">{sub.account_email}</div>
+                          <div className="font-semibold text-gray-800 dark:text-gray-100 text-xs font-mono">{sub.account_email}</div>
                           {sub.fullname && (
-                            <div className="flex items-center gap-1 mt-0.5 text-[11px] text-gray-400">
-                              <Phone className="w-2.5 h-2.5" /> {sub.customer_phone} · {sub.fullname}
+                            <div className="text-[10px] text-gray-400 mt-0.5">
+                              Asociado a: {sub.fullname.split(',')[0]}...
                             </div>
                           )}
                         </td>
@@ -414,11 +450,46 @@ export const ProviderEmailsView: React.FC = () => {
                             {sub.streaming_platform}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-xs">
-                          {sub.expiration_date ? new Date(sub.expiration_date).toLocaleDateString('es-CO') : '—'}
-                        </td>
+                        {/* COLUMN: PROVIDER */}
                         <td className="px-4 py-3">
-                          {isEditing ? (
+                          {isEditingP ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="text"
+                                defaultValue={editingProvider.current}
+                                onBlur={e => handleSetProviderName(sub.id, e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') handleSetProviderName(sub.id, e.currentTarget.value);
+                                  if (e.key === 'Escape') setEditingProvider(null);
+                                }}
+                                className="text-xs px-2 py-0.5 border rounded-md dark:bg-gray-700 dark:text-white max-w-[120px]"
+                                autoFocus
+                              />
+                            </div>
+                          ) : sub.provider_name ? (
+                            <div className="flex items-center gap-1.5 group">
+                              <span className="text-xs font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-750 px-2.5 py-0.5 rounded-md flex items-center gap-1">
+                                <Tag className="w-3 h-3 text-brand-primary" /> {sub.provider_name}
+                              </span>
+                              <button
+                                onClick={() => setEditingProvider({ id: sub.id, current: sub.provider_name || '' })}
+                                className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-gray-600 transition-opacity"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setEditingProvider({ id: sub.id, current: '' })}
+                              className="text-[11px] px-2 py-0.5 rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors flex items-center gap-1"
+                            >
+                              + Asignar Proveedor
+                            </button>
+                          )}
+                        </td>
+                        {/* COLUMN: RECIPE */}
+                        <td className="px-4 py-3">
+                          {isEditingR ? (
                             <div className="flex items-center gap-2">
                               <select
                                 defaultValue={editingRecipe.current ?? ''}
@@ -489,7 +560,6 @@ export const ProviderEmailsView: React.FC = () => {
             </button>
           </div>
 
-          {/* Tab selector for multiple email tests */}
           <div className="flex gap-1 overflow-x-auto pb-2 mb-4 border-b dark:border-gray-750 scrollbar-thin">
             {activeRunList.map(email => {
               const run = runs[email];
@@ -513,7 +583,6 @@ export const ProviderEmailsView: React.FC = () => {
             })}
           </div>
 
-          {/* Current selected test view */}
           {currentRun && (
             <div className="space-y-4">
               <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl space-y-1.5 text-xs border dark:border-gray-750">
@@ -539,7 +608,6 @@ export const ProviderEmailsView: React.FC = () => {
                 </div>
               )}
 
-              {/* IMAGE CAROUSEL FOR DEBUG */}
               {currentRun.screenshots && currentRun.screenshots.length > 0 ? (
                 <div className="space-y-2">
                   <div className="text-xs font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1">
@@ -592,9 +660,6 @@ export const ProviderEmailsView: React.FC = () => {
                       Paso {(currentRun.activeImageIndex || 0) + 1} de {currentRun.screenshots.length}
                     </div>
                   </div>
-                  <p className="text-[10px] text-gray-400 italic text-center">
-                    Usa las flechas para debugear visualmente la secuencia.
-                  </p>
                 </div>
               ) : !currentRun.loading && (
                 <div className="p-3 bg-gray-50 dark:bg-gray-900/30 rounded-xl text-center text-xs text-gray-400">
@@ -608,17 +673,27 @@ export const ProviderEmailsView: React.FC = () => {
 
       {/* Floating Action Bar for Bulk operations */}
       {selectedIds.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 bg-white dark:bg-gray-800 shadow-2xl border dark:border-gray-700 rounded-2xl px-6 py-4 flex items-center justify-between gap-6 max-w-xl w-full mx-4 animate-fadeIn border-brand-primary/20">
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 bg-white dark:bg-gray-800 shadow-2xl border dark:border-gray-700 rounded-2xl px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 max-w-2xl w-full mx-4 animate-fadeIn border-brand-primary/20">
           <div className="flex flex-col">
             <span className="text-sm font-bold text-gray-800 dark:text-white">
               {selectedIds.length} seleccionados
             </span>
             <span className="text-[11px] text-gray-400">
-              Aplicar automatización en lote
+              Configura automatización y proveedor en lote
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Bulk Provider Input */}
+            <input
+              type="text"
+              placeholder="Nombre Proveedor (Ej: Spotinet)"
+              value={bulkProviderName}
+              onChange={e => setBulkProviderName(e.target.value)}
+              className="text-xs px-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white max-w-[150px]"
+            />
+
+            {/* Bulk Recipe Select */}
             <select
               value={bulkRecipeId}
               onChange={e => setBulkRecipeId(e.target.value)}
@@ -629,8 +704,9 @@ export const ProviderEmailsView: React.FC = () => {
                 <option key={r.id} value={r.id}>{r.name} [{r.platform}]</option>
               ))}
             </select>
+
             <button
-              onClick={handleBulkSetRecipe}
+              onClick={handleBulkSetRecipeAndProvider}
               disabled={bulkActionLoading}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all disabled:opacity-50"
             >
@@ -639,7 +715,6 @@ export const ProviderEmailsView: React.FC = () => {
             <button
               onClick={() => setSelectedIds([])}
               className="p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all"
-              title="Cancelar selección"
             >
               <X className="w-4 h-4" />
             </button>
