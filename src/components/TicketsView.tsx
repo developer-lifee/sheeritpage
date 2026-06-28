@@ -37,14 +37,31 @@ interface ChatMessage {
   timestamp: number;
   type: string;
   hasMedia: boolean;
+  mediaPath?: string | null;
+  mediaMime?: string | null;
 }
 
 const COMMON_EMOJIS = ['🦈', '🟦', '🍃'];
 
 const detectClaudeLink = (text: string | null) => {
   if (!text) return null;
-  const match = text.match(/https?:\/\/(?:www\.)?(?:claude\.ai|anthropic\.com|mail\.anthropic\.com)[^\s<>"']+/i);
+  const match = text.match(/https:\/\/claude\.ai\/login\S+/);
   return match ? match[0] : null;
+};
+
+const formatMessageDate = (timestamp: number) => {
+  const date = new Date(timestamp);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) {
+    return 'Hoy';
+  } else if (date.toDateString() === yesterday.toDateString()) {
+    return 'Ayer';
+  } else {
+    return date.toLocaleDateString('es-ES', { weekday: 'long', month: 'long', day: 'numeric' });
+  }
 };
 
 const getApiUrl = () => {
@@ -1240,7 +1257,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     <button
                       key={idx}
                       onClick={() => insertCredentials(acc)}
-                      className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-805 dark:text-white text-[10px] font-bold py-1.2 px-2.5 rounded-lg border dark:border-gray-700 transition-all"
+                      className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-800 dark:text-white text-[10px] font-bold py-1.2 px-2.5 rounded-lg border dark:border-gray-700 transition-all"
                     >
                       <Key className="w-3 h-3 text-blue-500" /> Credenciales {acc.streaming} 🔑
                     </button>
@@ -1259,7 +1276,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 </div>
 
                 {/* Conversation message list */}
-                <div ref={chatContainerRef} className="flex-grow overflow-y-auto p-4 bg-gray-50/50 dark:bg-gray-900/20 space-y-3 flex flex-col min-h-0">
+                <div ref={chatContainerRef} className="flex-grow overflow-y-auto p-4 bg-[#efeae2] dark:bg-[#0b0f19] space-y-3 flex flex-col min-h-0">
                   {loadingChat ? (
                     <div className="flex flex-col items-center justify-center my-auto text-gray-400">
                       <RefreshCw className="w-6 h-6 animate-spin text-brand-primary mb-2" />
@@ -1273,30 +1290,68 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     chatMessages.map((msg, idx) => {
                       const isMe = msg.fromMe;
                       const claudeLink = detectClaudeLink(msg.body);
+                      
+                      const prevMsg = chatMessages[idx - 1];
+                      const showDateSeparator = !prevMsg || 
+                        new Date(msg.timestamp).toDateString() !== new Date(prevMsg.timestamp).toDateString();
+
                       return (
-                        <div
-                          key={msg.id || idx}
-                          className={`max-w-[75%] p-3 rounded-2xl text-xs flex flex-col gap-1 shadow-sm leading-relaxed ${
-                            isMe
-                              ? 'bg-brand-primary text-white ml-auto rounded-tr-none'
-                              : 'bg-white dark:bg-gray-800 dark:text-white rounded-tl-none border dark:border-gray-700'
-                          }`}
-                        >
-                          <p className="whitespace-pre-wrap font-medium">{msg.body}</p>
-                          {claudeLink && (
-                            <a
-                              href={claudeLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-black transition-all w-fit uppercase"
-                            >
-                              Iniciar Sesión Claude <ExternalLink className="w-3 h-3" />
-                            </a>
+                        <React.Fragment key={msg.id || idx}>
+                          {showDateSeparator && (
+                            <div className="flex justify-center my-3 w-full">
+                              <span className="bg-white/90 dark:bg-gray-850 text-gray-600 dark:text-gray-400 text-[10px] font-bold px-3 py-1 rounded-full shadow-sm border dark:border-gray-750">
+                                {formatMessageDate(msg.timestamp)}
+                              </span>
+                            </div>
                           )}
-                          <span className={`text-[9px] text-right block ${isMe ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'}`}>
-                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
+                          <div
+                            className={`max-w-[75%] p-3 rounded-2xl text-xs flex flex-col gap-1 shadow-sm leading-relaxed ${
+                              isMe
+                                ? 'bg-brand-primary/10 border border-brand-primary/20 dark:border-brand-primary/30 text-gray-850 dark:text-brand-light ml-auto rounded-tr-none'
+                                : 'bg-white dark:bg-gray-850 dark:text-gray-150 rounded-tl-none border border-gray-200/80 dark:border-gray-750'
+                            }`}
+                          >
+                            <p className="whitespace-pre-wrap font-medium">
+                              {msg.body || (msg.hasMedia ? '📷 Foto' : '')}
+                            </p>
+
+                            {msg.hasMedia && msg.mediaPath && (
+                              <div className="mt-1.5 rounded-lg overflow-hidden border border-gray-100 dark:border-gray-750 bg-gray-50 dark:bg-gray-900 w-fit max-w-full">
+                                {msg.mediaMime?.startsWith('image/') || !msg.mediaMime ? (
+                                  <img
+                                    src={`${getApiUrl()}/${msg.mediaPath}`}
+                                    alt="Imagen de chat"
+                                    className="max-w-full h-auto object-cover max-h-60 rounded cursor-pointer hover:opacity-95 transition-opacity"
+                                    onClick={() => window.open(`${getApiUrl()}/${msg.mediaPath}`, '_blank')}
+                                  />
+                                ) : (
+                                  <a
+                                    href={`${getApiUrl()}/${msg.mediaPath}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 p-2.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                                  >
+                                    📁 Descargar archivo ({msg.mediaMime || 'documento'})
+                                  </a>
+                                )}
+                              </div>
+                            )}
+
+                            {claudeLink && (
+                              <a
+                                href={claudeLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[10px] font-black transition-all w-fit uppercase"
+                              >
+                                Iniciar Sesión Claude <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                            <span className={`text-[9px] text-right block ${isMe ? 'text-gray-500 dark:text-brand-dark/70' : 'text-gray-400 dark:text-gray-500'}`}>
+                              {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        </React.Fragment>
                       );
                     })
                   )}
@@ -1434,7 +1489,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                         value={newMsgText}
                         onChange={(e) => handleInputChange(e.target.value)}
                         placeholder="Escribe un mensaje de respuesta (Usa / para atajos)..."
-                        className="w-full px-4 py-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-855 border dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:ring-1 focus:ring-brand-primary"
+                        className="w-full px-4 py-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:ring-1 focus:ring-brand-primary"
                       />
                     </div>
                     <button
@@ -1488,7 +1543,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                   </div>
 
                   {s.summary && (
-                    <div className="mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded text-[11px] text-gray-655 dark:text-gray-400 italic">
+                    <div className="mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded text-[11px] text-gray-600 dark:text-gray-400 italic">
                       <strong>Motivo:</strong> {s.summary}
                     </div>
                   )}
@@ -1640,7 +1695,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                                   <div className="truncate max-w-[150px]">{rec.customerName}</div>
                                   <div className="text-[9px] text-gray-450">+{rec.phone}</div>
                                 </td>
-                                <td className="p-3 text-gray-655 dark:text-gray-300 font-medium">{rec.agent}</td>
+                                <td className="p-3 text-gray-650 dark:text-gray-300 font-medium">{rec.agent}</td>
                                 <td className="p-3 text-gray-400 text-[10px] whitespace-nowrap">
                                   {new Date(rec.resolvedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}{' '}
                                   {new Date(rec.resolvedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
