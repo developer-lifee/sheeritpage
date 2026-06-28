@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Users, Search, RefreshCw, AlertTriangle, CheckCircle,
-  Zap, Play, X, Database, ExternalLink, Calendar, Phone
+  Zap, Play, X, Database, ExternalLink, Calendar, Phone, CheckSquare, Square
 } from 'lucide-react';
 
 interface Subscription {
@@ -61,6 +61,11 @@ export const ProviderEmailsView: React.FC = () => {
   const [editingRecipe, setEditingRecipe] = useState<{ id: number; current: number | null } | null>(null);
   const [testModal, setTestModal] = useState<{ email: string; platform: string; result: string; loading: boolean } | null>(null);
 
+  // Bulk selection states
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkRecipeId, setBulkRecipeId] = useState<string>('');
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
   const fetchSubscriptions = useCallback(() => {
     setLoading(true);
     setError('');
@@ -69,6 +74,7 @@ export const ProviderEmailsView: React.FC = () => {
       .then(data => {
         setSubscriptions(Array.isArray(data.data) ? data.data : []);
         setLoading(false);
+        setSelectedIds([]); // Reset selection on reload
       })
       .catch(() => {
         setError('No se pudo conectar al backend.');
@@ -134,14 +140,51 @@ export const ProviderEmailsView: React.FC = () => {
     }
   };
 
+  // Bulk recipe assignment
+  const handleBulkSetRecipe = async () => {
+    if (selectedIds.length === 0) return;
+    setBulkActionLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch(`${getApiUrl()}/api/admin/subscriptions/set-recipe-bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ids: selectedIds,
+          rpa_recipe_id: bulkRecipeId ? parseInt(bulkRecipeId) : null,
+          password: 'admin123'
+        })
+      });
+      const result = await res.json();
+      if (result.success) {
+        setSuccess(`✅ Se actualizó la receta para ${selectedIds.length} cuentas en lote.`);
+        setSelectedIds([]);
+        setBulkRecipeId('');
+        fetchSubscriptions();
+      } else {
+        setError(`❌ Error en lote: ${result.error}`);
+      }
+    } catch (e: any) {
+      setError(`❌ Error de conexión: ${e.message}`);
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  // Manual test trigger (Endpoint corrected to /rpa/run)
   const handleTestRecipe = async (sub: Subscription) => {
     if (!sub.rpa_recipe_id) return;
     setTestModal({ email: sub.account_email, platform: sub.streaming_platform, result: '', loading: true });
     try {
-      const res = await fetch(`${getApiUrl()}/api/admin/rpa/execute`, {
+      const res = await fetch(`${getApiUrl()}/api/admin/rpa/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipeId: sub.rpa_recipe_id, variables: { CUSTOMER_EMAIL: sub.account_email }, password: 'admin123' })
+        body: JSON.stringify({
+          recipeId: sub.rpa_recipe_id,
+          variables: { CUSTOMER_EMAIL: sub.account_email },
+          password: 'admin123'
+        })
       });
       const result = await res.json();
       if (result.success && result.data) {
@@ -162,6 +205,20 @@ export const ProviderEmailsView: React.FC = () => {
     s.customer_phone.includes(searchTerm)
   );
 
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filtered.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filtered.map(s => s.id));
+    }
+  };
+
+  const toggleSelectOne = (id: number) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
   const daysUntil = (dateStr: string | null) => {
     if (!dateStr) return null;
     const diff = Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
@@ -169,7 +226,7 @@ export const ProviderEmailsView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative pb-20">
       {/* Test Modal */}
       {testModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -211,58 +268,44 @@ export const ProviderEmailsView: React.FC = () => {
               <Users className="text-brand-primary" /> Cuentas de Proveedores (Externas)
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-              Cuentas detectadas automáticamente desde el Excel que no son de correos propios.
-              Vincula una receta RPA para extraer códigos automáticamente.
+              Administra recetas RPA en lote. Selecciona múltiples cuentas para asignar una automatización de proveedor.
             </p>
           </div>
           <div className="flex gap-2 flex-shrink-0">
-            <button
-              onClick={fetchSubscriptions}
-              className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
-              title="Refrescar lista"
-            >
+            <button onClick={fetchSubscriptions} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors" title="Refrescar lista">
               <RefreshCw className="w-5 h-5" />
             </button>
-            <button
-              onClick={handleSync}
-              disabled={syncing}
-              className="flex items-center gap-2 px-4 py-2 bg-brand-primary hover:bg-brand-dark text-white text-sm font-bold rounded-xl transition-all disabled:opacity-60"
-              title="Sincronizar desde Excel de Microsoft Graph"
-            >
+            <button onClick={handleSync} disabled={syncing} className="flex items-center gap-2 px-4 py-2 bg-brand-primary hover:bg-brand-dark text-white text-sm font-bold rounded-xl transition-all disabled:opacity-60">
               <Database className={`w-4 h-4 ${syncing ? 'animate-pulse' : ''}`} />
               {syncing ? 'Sincronizando...' : 'Sincronizar desde Excel'}
             </button>
           </div>
         </div>
 
-        {/* Sync result banner */}
         {syncResult && (
           <div className="mt-4 p-3 bg-brand-primary/10 border border-brand-primary/20 rounded-xl text-sm flex flex-wrap gap-4">
             <span className="font-bold text-brand-primary">✅ Sync completo</span>
             <span className="text-gray-600 dark:text-gray-300">📥 {syncResult.inserted} nuevas</span>
             <span className="text-gray-600 dark:text-gray-300">🔄 {syncResult.updated} actualizadas</span>
             <span className="text-gray-600 dark:text-gray-300">⏭ {syncResult.skipped} omitidas</span>
-            <span className="text-gray-500 dark:text-gray-400">de {syncResult.total} filas Excel</span>
           </div>
         )}
 
         {error && (
           <div className="mt-4 flex items-center bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-200 p-3 rounded-xl border border-red-200 dark:border-red-900/50">
-            <AlertTriangle className="w-4 h-4 mr-2 flex-shrink-0" />
-            <p className="text-sm">{error}</p>
+            <AlertTriangle className="w-4 h-4 mr-2 flex-shrink-0" /><p className="text-sm">{error}</p>
           </div>
         )}
         {success && !syncResult && (
           <div className="mt-4 flex items-center bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-200 p-3 rounded-xl border border-green-200 dark:border-green-900/50">
-            <CheckCircle className="w-4 h-4 mr-2 flex-shrink-0" />
-            <p className="text-sm">{success}</p>
+            <CheckCircle className="w-4 h-4 mr-2 flex-shrink-0" /><p className="text-sm">{success}</p>
           </div>
         )}
       </div>
 
       {/* Table */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6">
-        <div className="flex items-center gap-3 mb-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div className="relative flex-grow max-w-xs">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
             <input
@@ -273,36 +316,36 @@ export const ProviderEmailsView: React.FC = () => {
               className="pl-8 pr-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm w-full"
             />
           </div>
-          <span className="text-sm text-gray-400 font-medium">{filtered.length} cuentas</span>
+          <span className="text-sm text-gray-400 font-medium">
+            {selectedIds.length > 0 ? `${selectedIds.length} seleccionados de ` : ''} {filtered.length} cuentas
+          </span>
         </div>
 
         {loading ? (
           <div className="text-center py-16 text-gray-400">
             <div className="w-6 h-6 border-2 border-brand-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            Cargando cuentas de proveedores...
+            Cargando cuentas...
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-16 bg-gray-50 dark:bg-gray-900/30 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-750">
             <Database className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-            <h3 className="font-bold text-gray-700 dark:text-gray-300">
-              {searchTerm ? 'Sin resultados' : 'Sin cuentas de proveedores'}
-            </h3>
-            <p className="text-sm text-gray-500 mt-1">
-              {searchTerm ? 'Prueba con otro término.' : 'Haz clic en "Sincronizar desde Excel" para cargar las cuentas automáticamente.'}
-            </p>
-            {!searchTerm && (
-              <button onClick={handleSync} disabled={syncing}
-                className="mt-4 px-4 py-2 bg-brand-primary text-white text-sm font-bold rounded-xl hover:bg-brand-dark transition-all disabled:opacity-60">
-                {syncing ? 'Sincronizando...' : '⚡ Sincronizar ahora'}
-              </button>
-            )}
+            <h3 className="font-bold text-gray-700 dark:text-gray-300">Sin cuentas de proveedores</h3>
           </div>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-gray-150 dark:border-gray-750">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-900/50 text-left">
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Correo / Cliente</th>
+                  <th className="px-4 py-3 w-10 text-center">
+                    <button onClick={toggleSelectAll} className="text-gray-500 hover:text-brand-primary transition-colors">
+                      {selectedIds.length === filtered.length ? (
+                        <CheckSquare className="w-5 h-5 text-brand-primary" />
+                      ) : (
+                        <Square className="w-5 h-5" />
+                      )}
+                    </button>
+                  </th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Correo / Clientes</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Plataforma</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Vencimiento</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Receta RPA</th>
@@ -313,8 +356,18 @@ export const ProviderEmailsView: React.FC = () => {
                 {filtered.map(sub => {
                   const days = daysUntil(sub.expiration_date);
                   const isEditing = editingRecipe?.id === sub.id;
+                  const isSelected = selectedIds.includes(sub.id);
                   return (
-                    <tr key={sub.id} className="hover:bg-gray-50/80 dark:hover:bg-gray-750/30 transition-colors">
+                    <tr key={sub.id} className={`hover:bg-gray-50/80 dark:hover:bg-gray-750/30 transition-colors ${isSelected ? 'bg-brand-primary/5 dark:bg-brand-primary/10' : ''}`}>
+                      <td className="px-4 py-3 text-center">
+                        <button onClick={() => toggleSelectOne(sub.id)} className="text-gray-500 hover:text-brand-primary transition-colors">
+                          {isSelected ? (
+                            <CheckSquare className="w-5 h-5 text-brand-primary" />
+                          ) : (
+                            <Square className="w-5 h-5" />
+                          )}
+                        </button>
+                      </td>
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-800 dark:text-gray-100 text-xs font-mono">{sub.account_email}</div>
                         {sub.fullname && (
@@ -334,7 +387,6 @@ export const ProviderEmailsView: React.FC = () => {
                             <Calendar className="w-3 h-3 text-gray-400" />
                             <span className={days !== null && days <= 3 ? 'text-red-600 dark:text-red-400 font-bold' : days !== null && days <= 7 ? 'text-amber-600 dark:text-amber-400 font-bold' : 'text-gray-600 dark:text-gray-300'}>
                               {new Date(sub.expiration_date).toLocaleDateString('es-CO')}
-                              {days !== null && <span className="ml-1 text-[10px] text-gray-400">({days >= 0 ? `${days}d` : `venc.`})</span>}
                             </span>
                           </div>
                         ) : <span className="text-gray-400 text-xs">—</span>}
@@ -378,7 +430,7 @@ export const ProviderEmailsView: React.FC = () => {
                           <button
                             onClick={() => handleTestRecipe(sub)}
                             className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg transition-all"
-                            title="Probar receta — extraer código ahora"
+                            title="Probar receta"
                           >
                             <Play className="w-3.5 h-3.5" />
                           </button>
@@ -392,6 +444,47 @@ export const ProviderEmailsView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Floating Action Bar for Bulk operations */}
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 bg-white dark:bg-gray-800 shadow-2xl border dark:border-gray-700 rounded-2xl px-6 py-4 flex items-center justify-between gap-6 max-w-xl w-full mx-4 animate-fadeIn border-brand-primary/20">
+          <div className="flex flex-col">
+            <span className="text-sm font-bold text-gray-800 dark:text-white">
+              {selectedIds.length} seleccionados
+            </span>
+            <span className="text-[11px] text-gray-400">
+              Aplicar automatización en lote
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <select
+              value={bulkRecipeId}
+              onChange={e => setBulkRecipeId(e.target.value)}
+              className="text-xs px-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            >
+              <option value="">Quitar receta (manual)</option>
+              {recipes.map(r => (
+                <option key={r.id} value={r.id}>{r.name} [{r.platform}]</option>
+              ))}
+            </select>
+            <button
+              onClick={handleBulkSetRecipe}
+              disabled={bulkActionLoading}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all disabled:opacity-50"
+            >
+              {bulkActionLoading ? 'Aplicando...' : 'Aplicar'}
+            </button>
+            <button
+              onClick={() => setSelectedIds([])}
+              className="p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all"
+              title="Cancelar selección"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
