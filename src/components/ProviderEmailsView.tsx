@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Users, Search, RefreshCw, AlertTriangle, CheckCircle,
   Zap, Play, X, Database, ExternalLink, Calendar, Phone, CheckSquare, Square,
@@ -43,6 +43,7 @@ interface TestSidebarState {
   screenshots?: string[];
   errorDetail?: string;
   activeImageIndex?: number;
+  jobId?: string;
 }
 
 const getApiUrl = () =>
@@ -80,6 +81,9 @@ export const ProviderEmailsView: React.FC = () => {
   const [runs, setRuns] = useState<Record<string, TestSidebarState>>({});
   const [selectedRunEmail, setSelectedRunEmail] = useState<string | null>(null);
 
+  // References to track poll intervals for each email
+  const pollIntervals = useRef<Record<string, NodeJS.Timeout>>({});
+
   // Bulk selection states
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [bulkRecipeId, setBulkRecipeId] = useState<string>('');
@@ -112,6 +116,11 @@ export const ProviderEmailsView: React.FC = () => {
   useEffect(() => {
     fetchSubscriptions();
     fetchRecipes();
+    
+    // Clear poll intervals on unmount
+    return () => {
+      Object.values(pollIntervals.current).forEach(clearInterval);
+    };
   }, [fetchSubscriptions, fetchRecipes]);
 
   const handleSync = async () => {
@@ -186,8 +195,7 @@ export const ProviderEmailsView: React.FC = () => {
     setError('');
     setSuccess('');
     try {
-      // 1. Bulk Recipe if specified
-      if (bulkRecipeId !== undefined) {
+      if (bulkRecipeId !== '') {
         await fetch(`${getApiUrl()}/api/admin/subscriptions/set-recipe-bulk`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -199,7 +207,6 @@ export const ProviderEmailsView: React.FC = () => {
         });
       }
 
-      // 2. Bulk Provider name if typed
       if (bulkProviderName.trim()) {
         await fetch(`${getApiUrl()}/api/admin/subscriptions/set-provider-bulk`, {
           method: 'POST',
@@ -224,10 +231,64 @@ export const ProviderEmailsView: React.FC = () => {
     }
   };
 
+  // Polls the job status endpoint periodically to update screenshots and results dynamically
+  const startPolling = (email: string, jobId: string) => {
+    if (pollIntervals.current[email]) {
+      clearInterval(pollIntervals.current[email]);
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${getApiUrl()}/api/admin/rpa/job-status/${jobId}`);
+        const data = await res.json();
+        
+        if (data.success && data.job) {
+          const job = data.job;
+          
+          setRuns(prev => {
+            if (!prev[email]) return prev;
+            
+            const isFinished = job.status !== 'running';
+            let resultMsg = prev[email].resultMessage;
+
+            if (isFinished) {
+              clearInterval(interval);
+              delete pollIntervals.current[email];
+              
+              if (job.status === 'success') {
+                const code = Object.values(job.result || {}).find((v: any) => v && v.toString().trim().length >= 4);
+                resultMsg = code ? `Código extraído con éxito: ${code}` : 'Automatización completada sin código legible en pantalla.';
+              } else {
+                resultMsg = job.error || 'La receta falló en su ejecución.';
+              }
+            }
+
+            return {
+              ...prev,
+              [email]: {
+                ...prev[email],
+                loading: job.status === 'running',
+                success: job.status === 'success' ? true : job.status === 'failed' ? false : undefined,
+                resultMessage: resultMsg,
+                screenshots: job.screenshots || [],
+                errorDetail: job.error
+              }
+            };
+          });
+        }
+      } catch (err) {
+        console.error('Error polling status:', err);
+      }
+    }, 3000);
+
+    pollIntervals.current[email] = interval;
+  };
+
   const handleTestRecipe = async (sub: Subscription) => {
     if (!sub.rpa_recipe_id) return;
     const email = sub.account_email;
 
+    // Set initial loading run state
     setRuns(prev => ({
       ...prev,
       [email]: {
@@ -253,43 +314,46 @@ export const ProviderEmailsView: React.FC = () => {
       });
       const result = await res.json();
 
-      setRuns(prev => {
-        if (!prev[email]) return prev;
-        return {
+      if (result.success && result.jobId) {
+        // Start live polling of screenshots and status updates
+        startPolling(email, result.jobId);
+        setRuns(prev => ({
           ...prev,
           [email]: {
             ...prev[email],
-            loading: false,
-            success: result.success,
-            resultMessage: result.success
-              ? (Object.values(result.data || {}).find((v: any) => v && v.toString().trim().length >= 4)
-                  ? `Código extraído con éxito: ${Object.values(result.data).find((v: any) => v && v.toString().trim().length >= 4)}`
-                  : 'Automatización completada pero no se pudo leer el código en pantalla.')
-              : (result.error || 'La receta falló en su ejecución.'),
-            screenshots: result.screenshots || [],
-            activeImageIndex: 0
+            jobId: result.jobId
           }
-        };
-      });
-    } catch (e: any) {
-      setRuns(prev => {
-        if (!prev[email]) return prev;
-        return {
+        }));
+      } else {
+        setRuns(prev => ({
           ...prev,
           [email]: {
             ...prev[email],
             loading: false,
             success: false,
-            resultMessage: 'Error de red o timeout. Sin embargo, puede que el bot siga ejecutándolo en el servidor.',
-            errorDetail: e.message,
-            screenshots: []
+            resultMessage: result.error || 'No se pudo iniciar la tarea en segundo plano.'
           }
-        };
-      });
+        }));
+      }
+    } catch (e: any) {
+      setRuns(prev => ({
+        ...prev,
+        [email]: {
+          ...prev[email],
+          loading: false,
+          success: false,
+          resultMessage: 'Error de red al intentar lanzar la receta.',
+          errorDetail: e.message
+        }
+      }));
     }
   };
 
   const removeRun = (email: string) => {
+    if (pollIntervals.current[email]) {
+      clearInterval(pollIntervals.current[email]);
+      delete pollIntervals.current[email];
+    }
     setRuns(prev => {
       const copy = { ...prev };
       delete copy[email];
@@ -555,7 +619,14 @@ export const ProviderEmailsView: React.FC = () => {
             <h3 className="font-bold text-sm dark:text-white flex items-center gap-2">
               <Zap className="w-4 h-4 text-emerald-500" /> Monitoreo RPA ({activeRunList.length})
             </h3>
-            <button onClick={() => { setRuns({}); setSelectedRunEmail(null); }} className="text-xs text-red-500 hover:underline">
+            <button onClick={() => { 
+              activeRunList.forEach(email => {
+                if (pollIntervals.current[email]) clearInterval(pollIntervals.current[email]);
+              });
+              pollIntervals.current = {};
+              setRuns({}); 
+              setSelectedRunEmail(null); 
+            }} className="text-xs text-red-500 hover:underline">
               Cerrar todos
             </button>
           </div>
@@ -594,7 +665,7 @@ export const ProviderEmailsView: React.FC = () => {
               {currentRun.loading ? (
                 <div className="p-4 border border-dashed rounded-xl flex flex-col items-center justify-center text-center space-y-3 dark:border-gray-700">
                   <div className="w-6 h-6 border-2 border-brand-primary border-t-transparent rounded-full animate-spin" />
-                  <div className="text-xs text-gray-500 font-medium">Ejecutando navegador en el servidor...<br />(Normalmente demora 30-45 seg)</div>
+                  <div className="text-xs text-gray-500 font-medium">Ejecutando navegador en el servidor...<br />(Monitoreando progreso en vivo)</div>
                 </div>
               ) : (
                 <div className={`p-4 rounded-xl text-xs space-y-2 border ${currentRun.success ? 'bg-green-50/55 dark:bg-green-950/20 text-green-800 dark:text-green-200 border-green-200 dark:border-green-900/30' : 'bg-red-50/50 dark:bg-red-950/20 text-red-800 dark:text-red-200 border-red-200 dark:border-red-900/30'}`}>
@@ -608,6 +679,7 @@ export const ProviderEmailsView: React.FC = () => {
                 </div>
               )}
 
+              {/* IMAGE CAROUSEL FOR DEBUG */}
               {currentRun.screenshots && currentRun.screenshots.length > 0 ? (
                 <div className="space-y-2">
                   <div className="text-xs font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1">
@@ -684,7 +756,6 @@ export const ProviderEmailsView: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* Bulk Provider Input */}
             <input
               type="text"
               placeholder="Nombre Proveedor (Ej: Spotinet)"
@@ -693,7 +764,6 @@ export const ProviderEmailsView: React.FC = () => {
               className="text-xs px-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white max-w-[150px]"
             />
 
-            {/* Bulk Recipe Select */}
             <select
               value={bulkRecipeId}
               onChange={e => setBulkRecipeId(e.target.value)}
