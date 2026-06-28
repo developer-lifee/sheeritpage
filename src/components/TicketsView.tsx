@@ -133,6 +133,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const [activeChatTicket, setActiveChatTicket] = useState<Ticket | null>(null);
   const [rpaRecipesMap, setRpaRecipesMap] = useState<Record<string, { recipeId: number; name: string } | null>>({});
   const [rpaRunningMap, setRpaRunningMap] = useState<Record<string, { loading: boolean; progress: string }>>({});
+  const [selectedAccountAlert, setSelectedAccountAlert] = useState<{ correo: string; streaming: string; nombrePerfil: string } | null>(null);
+  const [availabilityOverrides, setAvailabilityOverrides] = useState<Record<string, { immediate: boolean; incident?: string; reason?: string }>>({});
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [loadingChat, setLoadingChat] = useState(false);
   const [newMsgText, setNewMsgText] = useState('');
@@ -205,6 +207,25 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         setLoading(false);
       });
   };
+
+  const fetchAvailabilityOverrides = async () => {
+    try {
+      const res = await fetch(`${getApiUrl()}/api/admin/availability`);
+      if (res.ok) {
+        const data = await res.json();
+        setAvailabilityOverrides(data || {});
+      }
+    } catch (e) {
+      console.error('[Availability] Error al cargar overrides:', e);
+    }
+  };
+
+  // Poll for tickets and load overrides
+  useEffect(() => {
+    if (agentEmail) {
+      fetchAvailabilityOverrides();
+    }
+  }, [agentEmail, activeChatTicket?.phone]);
 
   // Poll for tickets
   useEffect(() => {
@@ -1269,15 +1290,29 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                   {activeChatTicket.accounts && activeChatTicket.accounts.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                       <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px] mr-1">Vínculos:</span>
-                      {activeChatTicket.accounts.map((acc, idx) => (
-                        <span
-                          key={idx}
-                          title={`${acc.correo} - Perfil: ${acc.nombrePerfil}`}
-                          className="bg-brand-primary/10 dark:bg-brand-primary/20 text-brand-primary text-[10px] font-medium px-2 py-0.5 rounded border border-brand-primary/20"
-                        >
-                          📺 {acc.streaming} ({acc.correo.split('@')[0]})
-                        </span>
-                      ))}
+                      {activeChatTicket.accounts.map((acc, idx) => {
+                        const emailKey = acc.correo.toLowerCase().trim();
+                        const override = availabilityOverrides[emailKey];
+                        const isDown = override && override.immediate === false;
+
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setSelectedAccountAlert(acc)}
+                            title={`${acc.correo} - Perfil: ${acc.nombrePerfil} (Haz clic para ver alertas y detalles)`}
+                            className={`flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all active:scale-95 ${
+                              isDown
+                                ? 'bg-red-50 hover:bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800 animate-pulse'
+                                : 'bg-brand-primary/10 hover:bg-brand-primary/20 dark:bg-brand-primary/20 text-brand-primary border-brand-primary/20'
+                            }`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${isDown ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                            <span>📺 {acc.streaming} ({acc.correo.split('@')[0]})</span>
+                            {isDown && <span className="text-[8px] bg-red-600 text-white px-1.5 rounded uppercase font-extrabold tracking-wider">Caída</span>}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
 
@@ -1725,7 +1760,201 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         </div>
       )}
 
-      {/* Custom Assign Dialog Modal */}
+      {/* Account Details & Availability Alerts Modal (Unified Menu) */}
+      {selectedAccountAlert && (() => {
+        const emailKey = selectedAccountAlert.correo.toLowerCase().trim();
+        const override = availabilityOverrides[emailKey];
+        const isDown = override && override.immediate === false;
+        
+        // Find other active tickets sharing this account strictly (matching platform + email)
+        const sharedTickets = tickets.filter(t => {
+          if (t.userId === activeChatTicket?.userId || !t.accounts) return false;
+          // Filter to tickets in waiting_human / awaiting states
+          const pendingStates = ['waiting_human', 'awaiting_payment_confirmation', 'waiting_admin_confirmation'];
+          if (!pendingStates.includes(t.state)) return false;
+
+          return t.accounts.some(a => 
+            a.correo.toLowerCase().trim() === emailKey &&
+            a.streaming.toLowerCase().trim() === selectedAccountAlert.streaming.toLowerCase().trim()
+          );
+        });
+
+        // Calculate days elapsed if reported
+        let daysElapsedText = "N/A";
+        if (isDown && override.reason) {
+          const reportDate = new Date(override.reason);
+          if (!isNaN(reportDate.getTime())) {
+            const diffTime = Math.abs(Date.now() - reportDate.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) - 1;
+            daysElapsedText = diffDays <= 0 ? "Hoy mismo" : `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}`;
+          }
+        }
+
+        const handleSaveAvailability = async (immediate: boolean, incidentMsg: string) => {
+          const updatedOverrides = { ...availabilityOverrides };
+          if (immediate) {
+            delete updatedOverrides[emailKey];
+          } else {
+            // Store the current date as ISO string in the reason field to track days elapsed
+            updatedOverrides[emailKey] = {
+              immediate: false,
+              incident: incidentMsg || 'Falla técnica general',
+              reason: new Date().toISOString()
+            };
+          }
+
+          try {
+            const res = await fetch(`${getApiUrl()}/api/admin/availability/save`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ config: updatedOverrides, password: 'admin123' })
+            });
+            const data = await res.json();
+            if (data.success) {
+              setAvailabilityOverrides(updatedOverrides);
+              setSelectedAccountAlert(null);
+            } else {
+              alert("Error al guardar estado: " + data.message);
+            }
+          } catch (err) {
+            alert("Error al comunicar con el servidor.");
+          }
+        };
+
+        return (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+            <div className="bg-white dark:bg-gray-900 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border dark:border-gray-800 flex flex-col max-h-[90vh]">
+              {/* Header */}
+              <div className="p-5 border-b dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 flex justify-between items-center">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    📺 Detalle de Cuenta Vinculada
+                  </h3>
+                  <p className="text-[10px] text-gray-400 font-mono mt-0.5">{selectedAccountAlert.correo}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedAccountAlert(null)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-white text-sm p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 overflow-y-auto space-y-5 flex-grow">
+                {/* Info Card */}
+                <div className="grid grid-cols-2 gap-3 bg-gray-50 dark:bg-gray-950 p-4 rounded-2xl border dark:border-gray-850">
+                  <div>
+                    <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase block">Plataforma</span>
+                    <span className="text-xs font-bold text-gray-800 dark:text-white capitalize">{selectedAccountAlert.streaming}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase block">Perfil del Cliente</span>
+                    <span className="text-xs font-bold text-gray-850 dark:text-white">{selectedAccountAlert.nombrePerfil || 'N/A'}</span>
+                  </div>
+                </div>
+
+                {/* Availability State Banner */}
+                <div className={`p-4 rounded-2xl border flex flex-col gap-3 ${
+                  isDown 
+                    ? 'bg-red-50/70 border-red-200 dark:bg-red-950/20 dark:border-red-900/30' 
+                    : 'bg-emerald-50/70 border-emerald-250 dark:bg-emerald-950/20 dark:border-emerald-900/30'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full ${isDown ? 'bg-red-500 animate-ping' : 'bg-emerald-500'}`} />
+                      <span className={`text-xs font-extrabold uppercase ${isDown ? 'text-red-700 dark:text-red-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
+                        {isDown ? '⚠️ Cuenta Caída / Inhabilitada' : '🟢 Cuenta Activa (OK)'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {isDown && (
+                    <div className="text-xs text-red-650 dark:text-red-350/90 font-medium space-y-1 bg-white dark:bg-gray-900/60 p-3 rounded-xl border dark:border-gray-800">
+                      <p><strong>Motivo:</strong> "{override.incident || 'Falla técnica general'}"</p>
+                      <p><strong>Tiempo de espera:</strong> {daysElapsedText} ({override.reason ? new Date(override.reason).toLocaleDateString() : 'N/A'})</p>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-2 mt-1">
+                    {isDown ? (
+                      <button
+                        type="button"
+                        onClick={() => handleSaveAvailability(true, '')}
+                        className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-emerald-500/20 hover:scale-[1.02] active:scale-95"
+                      >
+                        ✅ Resolver / Activar Cuenta
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const reason = prompt("Ingresa el motivo/incidencia de la caída de la cuenta (ej. Caída de hogar, error contraseña):");
+                          if (reason !== null) {
+                            handleSaveAvailability(false, reason);
+                          }
+                        }}
+                        className="px-3.5 py-2 bg-red-600 hover:bg-red-505 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-red-500/20 hover:scale-[1.02] active:scale-95"
+                      >
+                        ⚠️ Reportar Falla (Inhabilitar)
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Shared Clients / Batch support list */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-brand-primary" /> Clientes con Tickets Abiertos en esta Cuenta ({sharedTickets.length})
+                  </h4>
+
+                  {sharedTickets.length === 0 ? (
+                    <p className="text-xs text-gray-400 italic bg-gray-50 dark:bg-gray-950 p-4 rounded-xl text-center">
+                      Ningún otro cliente de soporte comparte esta cuenta en este momento.
+                    </p>
+                  ) : (
+                    <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1">
+                      {sharedTickets.map((t, sIdx) => {
+                        const matchedAcc = t.accounts?.find(a => a.correo.toLowerCase().trim() === emailKey);
+                        return (
+                          <div 
+                            key={sIdx}
+                            className="p-3 bg-white dark:bg-gray-850 rounded-xl border dark:border-gray-800 flex justify-between items-center text-xs"
+                          >
+                            <div>
+                              <span className="font-bold text-gray-800 dark:text-white block">{t.nombre}</span>
+                              <span className="text-[10px] text-gray-400 font-mono">+{t.phone}</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[10px] font-semibold bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded capitalize">
+                                Perfil: {matchedAcc?.nombrePerfil || 'N/A'}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 border-t dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSelectedAccountAlert(null)}
+                  className="px-4 py-2 bg-gray-250 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl text-xs transition-all active:scale-95"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Metrics Modal */}
       {assignDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fadeIn">
           <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl border dark:border-gray-750">
