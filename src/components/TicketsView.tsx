@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'lucide-react';
+import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp, Maximize2, Minimize2, Archive } from 'lucide-react';
 
 interface AccountInfo {
   streaming: string;
@@ -456,6 +456,30 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     }
   };
 
+  const handleArchiveTicket = async (phone: string) => {
+    if (!window.confirm("¿Deseas archivar y quitar este ticket de la lista de resueltos?")) return;
+    
+    // Optimistic UI update
+    setTickets(prev => prev.filter(t => t.phone !== phone));
+    
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/tickets/archive`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, password: 'admin123' })
+      });
+      const result = await res.json();
+      if (!result.success) {
+        alert(`❌ Error: ${result.message}`);
+      }
+      fetchTickets(true);
+    } catch (e) {
+      console.error("Error archiving ticket:", e);
+      fetchTickets(true);
+    }
+  };
+
   const findSharedTicketsWithDetails = (ticket: Ticket) => {
     if (!ticket.accounts || ticket.accounts.length === 0) return [];
     const ticketEmails = ticket.accounts.map(a => a.correo.toLowerCase().trim()).filter(Boolean);
@@ -557,9 +581,12 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   });
 
   // Filter columns
-  const unassignedTickets = filteredTickets.filter(t => !t.agent);
-  const myTickets = filteredTickets.filter(t => t.agent && t.agent.toLowerCase().trim() === safeAgentName);
-  const otherTickets = filteredTickets.filter(t => t.agent && t.agent.toLowerCase().trim() !== safeAgentName);
+  const activeTickets = filteredTickets.filter(t => t.state !== 'resolved');
+  const resolvedTickets = filteredTickets.filter(t => t.state === 'resolved');
+
+  const unassignedTickets = activeTickets.filter(t => !t.agent);
+  const myTickets = activeTickets.filter(t => t.agent && t.agent.toLowerCase().trim() === safeAgentName);
+  const otherTickets = activeTickets.filter(t => t.agent && t.agent.toLowerCase().trim() !== safeAgentName);
 
   const getSidebarTickets = () => {
     switch (sidebarFilter) {
@@ -714,12 +741,31 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             </span>
             <span className="text-[10px] text-gray-450 font-mono">+{t.phone}</span>
           </div>
-          <span className="text-[9px] text-gray-400 shrink-0 font-mono">
-            {timeFormatted ? timeFormatted.replace('Hace ', '') : ''}
-          </span>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <span className="text-[9px] text-gray-400 font-mono">
+              {timeFormatted ? timeFormatted.replace('Hace ', '') : ''}
+            </span>
+            {t.state === 'resolved' && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleArchiveTicket(t.phone);
+                }}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-450 hover:text-red-500 rounded transition-colors"
+                title="Archivar / Ocultar"
+              >
+                <Archive className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
+          {t.state === 'resolved' && (
+            <span className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[8px] font-bold px-1.5 py-0.2 rounded">
+              ✅ Resuelto
+            </span>
+          )}
           {t.queuePosition !== undefined && t.queuePosition !== null && (
             <span className="bg-amber-100 dark:bg-amber-950 text-amber-850 dark:text-amber-300 text-[8px] font-extrabold px-1 py-0.2 rounded border border-amber-200/50">
               #{t.queuePosition}
@@ -913,6 +959,18 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                   <p className="text-center py-4 text-xs text-gray-455 italic">No hay tickets de otros asesores.</p>
                 ) : (
                   otherTickets.map(renderCompactTicketItem)
+                )
+              )}
+
+              {renderAccordionSection(
+                'resolved',
+                'Por Salir / Resueltos',
+                <CheckCircle className="w-4 h-4 text-emerald-600" />,
+                resolvedTickets.length,
+                resolvedTickets.length === 0 ? (
+                  <p className="text-center py-4 text-xs text-gray-450 italic">No hay tickets resueltos.</p>
+                ) : (
+                  resolvedTickets.map(renderCompactTicketItem)
                 )
               )}
 
