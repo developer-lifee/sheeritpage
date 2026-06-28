@@ -42,6 +42,7 @@ interface TestSidebarState {
   resultMessage?: string;
   screenshots?: string[];
   errorDetail?: string;
+  activeImageIndex?: number;
 }
 
 const getApiUrl = () =>
@@ -72,9 +73,9 @@ export const ProviderEmailsView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingRecipe, setEditingRecipe] = useState<{ id: number; current: number | null } | null>(null);
 
-  // Sidebar panel state for RPA testing (non-blocking!)
-  const [sidebar, setSidebar] = useState<TestSidebarState | null>(null);
-  const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
+  // Multiple active RPA runs indexed by email
+  const [runs, setRuns] = useState<Record<string, TestSidebarState>>({});
+  const [selectedRunEmail, setSelectedRunEmail] = useState<string | null>(null);
 
   // Bulk selection states
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -186,17 +187,23 @@ export const ProviderEmailsView: React.FC = () => {
     }
   };
 
-  // Run recipe and populate non-blocking sidebar
   const handleTestRecipe = async (sub: Subscription) => {
     if (!sub.rpa_recipe_id) return;
-    setSidebar({
-      email: sub.account_email,
-      platform: sub.streaming_platform,
-      recipeName: sub.recipe_name || `Receta #${sub.rpa_recipe_id}`,
-      loading: true,
-      screenshots: []
-    });
-    setActiveImageIndex(0);
+    const email = sub.account_email;
+
+    // Add run state
+    setRuns(prev => ({
+      ...prev,
+      [email]: {
+        email,
+        platform: sub.streaming_platform,
+        recipeName: sub.recipe_name || `Receta #${sub.rpa_recipe_id}`,
+        loading: true,
+        screenshots: [],
+        activeImageIndex: 0
+      }
+    }));
+    setSelectedRunEmail(email);
 
     try {
       const res = await fetch(`${getApiUrl()}/api/admin/rpa/run`, {
@@ -204,38 +211,57 @@ export const ProviderEmailsView: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recipeId: sub.rpa_recipe_id,
-          variables: { CUSTOMER_EMAIL: sub.account_email },
+          variables: { CUSTOMER_EMAIL: email },
           password: 'admin123'
         })
       });
       const result = await res.json();
-      
-      if (result.success) {
-        const code = Object.values(result.data || {}).find((v: any) => v && v.toString().trim().length >= 4);
-        setSidebar(prev => prev ? {
+
+      setRuns(prev => {
+        if (!prev[email]) return prev;
+        return {
           ...prev,
-          loading: false,
-          success: true,
-          resultMessage: code ? `Código extraído con éxito: ${code}` : 'La automatización finalizó pero no detectó un código.',
-          screenshots: result.screenshots || []
-        } : null);
-      } else {
-        setSidebar(prev => prev ? {
-          ...prev,
-          loading: false,
-          success: false,
-          resultMessage: result.error || 'La receta falló en su ejecución.',
-          screenshots: result.screenshots || []
-        } : null);
-      }
+          [email]: {
+            ...prev[email],
+            loading: false,
+            success: result.success,
+            resultMessage: result.success
+              ? (Object.values(result.data || {}).find((v: any) => v && v.toString().trim().length >= 4)
+                  ? `Código extraído con éxito: ${Object.values(result.data).find((v: any) => v && v.toString().trim().length >= 4)}`
+                  : 'Automatización completada pero no se pudo leer el código en pantalla.')
+              : (result.error || 'La receta falló en su ejecución.'),
+            screenshots: result.screenshots || [],
+            activeImageIndex: 0
+          }
+        };
+      });
     } catch (e: any) {
-      setSidebar(prev => prev ? {
-        ...prev,
-        loading: false,
-        success: false,
-        resultMessage: 'Error de red o timeout del proxy (Failed to fetch). Sin embargo, verifica si el navegador web del bot finalizó el flujo o revisa el estado del celular.',
-        errorDetail: e.message
-      } : null);
+      setRuns(prev => {
+        if (!prev[email]) return prev;
+        return {
+          ...prev,
+          [email]: {
+            ...prev[email],
+            loading: false,
+            success: false,
+            resultMessage: 'Error de red o timeout. Sin embargo, puede que el bot siga ejecutándolo en el servidor.',
+            errorDetail: e.message,
+            screenshots: []
+          }
+        };
+      });
+    }
+  };
+
+  const removeRun = (email: string) => {
+    setRuns(prev => {
+      const copy = { ...prev };
+      delete copy[email];
+      return copy;
+    });
+    if (selectedRunEmail === email) {
+      const remaining = Object.keys(runs).filter(e => e !== email);
+      setSelectedRunEmail(remaining.length > 0 ? remaining[0] : null);
     }
   };
 
@@ -260,9 +286,12 @@ export const ProviderEmailsView: React.FC = () => {
     );
   };
 
+  const activeRunList = Object.keys(runs);
+  const currentRun = selectedRunEmail ? runs[selectedRunEmail] : null;
+
   return (
     <div className="flex flex-col lg:flex-row gap-6 relative min-h-[85vh] pb-24">
-      {/* Main content area */}
+      {/* Main Table Space */}
       <div className="flex-grow space-y-6">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6">
@@ -360,6 +389,7 @@ export const ProviderEmailsView: React.FC = () => {
                   {filtered.map(sub => {
                     const isEditing = editingRecipe?.id === sub.id;
                     const isSelected = selectedIds.includes(sub.id);
+                    const isRunning = runs[sub.account_email]?.loading;
                     return (
                       <tr key={sub.id} className={`hover:bg-gray-50/80 dark:hover:bg-gray-750/30 transition-colors ${isSelected ? 'bg-brand-primary/5 dark:bg-brand-primary/10' : ''}`}>
                         <td className="px-4 py-3 text-center">
@@ -425,10 +455,15 @@ export const ProviderEmailsView: React.FC = () => {
                           {sub.rpa_recipe_id && (
                             <button
                               onClick={() => handleTestRecipe(sub)}
-                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg transition-all"
-                              title="Probar receta"
+                              disabled={isRunning}
+                              className={`p-1.5 rounded-lg transition-all ${isRunning ? 'text-gray-400 bg-gray-100 dark:bg-gray-800' : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'}`}
+                              title={isRunning ? 'Ejecutando...' : 'Probar receta'}
                             >
-                              <Play className="w-3.5 h-3.5" />
+                              {isRunning ? (
+                                <div className="w-3.5 h-3.5 border-2 border-brand-primary border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <Play className="w-3.5 h-3.5" />
+                              )}
                             </button>
                           )}
                         </td>
@@ -442,91 +477,132 @@ export const ProviderEmailsView: React.FC = () => {
         </div>
       </div>
 
-      {/* NON-BLOCKING DEBUG PANEL (RIGHT SIDEBAR) */}
-      {sidebar && (
+      {/* MULTIPLE RUNS DEBUG SIDEBAR PANEL */}
+      {activeRunList.length > 0 && (
         <div className="w-full lg:w-96 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border dark:border-gray-700 p-5 flex flex-col flex-shrink-0 animate-fadeIn h-fit max-h-[85vh] overflow-y-auto">
-          <div className="flex items-center justify-between border-b dark:border-gray-700 pb-3 mb-4">
+          <div className="flex items-center justify-between border-b dark:border-gray-700 pb-3 mb-3">
             <h3 className="font-bold text-sm dark:text-white flex items-center gap-2">
-              <Zap className="w-4 h-4 text-emerald-500" /> Monitoreo y Debug RPA
+              <Zap className="w-4 h-4 text-emerald-500" /> Monitoreo RPA ({activeRunList.length})
             </h3>
-            <button onClick={() => setSidebar(null)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-              <X className="w-4 h-4 text-gray-500" />
+            <button onClick={() => { setRuns({}); setSelectedRunEmail(null); }} className="text-xs text-red-500 hover:underline">
+              Cerrar todos
             </button>
           </div>
 
-          <div className="space-y-4">
-            {/* Account Metadata */}
-            <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl space-y-1.5 text-xs">
-              <div className="flex justify-between"><span className="text-gray-400">Cuenta:</span><span className="font-mono font-bold dark:text-gray-200">{sidebar.email}</span></div>
-              <div className="flex justify-between"><span className="text-gray-400">Plataforma:</span><span className="font-bold uppercase dark:text-gray-200">{sidebar.platform}</span></div>
-              <div className="flex justify-between"><span className="text-gray-400">Receta:</span><span className="text-gray-500 dark:text-gray-300">{sidebar.recipeName}</span></div>
-            </div>
-
-            {/* Status / Output Section */}
-            {sidebar.loading ? (
-              <div className="p-4 border border-dashed rounded-xl flex flex-col items-center justify-center text-center space-y-3 dark:border-gray-700">
-                <div className="w-6 h-6 border-2 border-brand-primary border-t-transparent rounded-full animate-spin" />
-                <div className="text-xs text-gray-500">Ejecutando navegador en el servidor...<br />(Normalmente demora 30-45 seg)</div>
-              </div>
-            ) : (
-              <div className={`p-4 rounded-xl text-xs space-y-2 border ${sidebar.success ? 'bg-green-50/55 dark:bg-green-950/20 text-green-800 dark:text-green-200 border-green-200 dark:border-green-900/30' : 'bg-red-50/50 dark:bg-red-950/20 text-red-800 dark:text-red-200 border-red-200 dark:border-red-900/30'}`}>
-                <div className="font-bold text-sm flex items-center gap-1.5">
-                  {sidebar.success ? '✅ Completado' : '❌ Falló la Ejecución'}
+          {/* Tab selector for multiple email tests */}
+          <div className="flex gap-1 overflow-x-auto pb-2 mb-4 border-b dark:border-gray-750 scrollbar-thin">
+            {activeRunList.map(email => {
+              const run = runs[email];
+              const isSelected = selectedRunEmail === email;
+              return (
+                <div
+                  key={email}
+                  onClick={() => setSelectedRunEmail(email)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer whitespace-nowrap transition-colors ${isSelected ? 'bg-brand-primary text-white' : 'bg-gray-50 dark:bg-gray-900 text-gray-500 hover:bg-gray-100'}`}
+                >
+                  {run.loading && <div className="w-2 h-2 border border-current border-t-transparent rounded-full animate-spin" />}
+                  <span className="max-w-[100px] truncate">{email.split('@')[0]}</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeRun(email); }}
+                    className="hover:bg-black/10 dark:hover:bg-white/10 p-0.5 rounded"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 </div>
-                <p className="font-medium whitespace-pre-wrap">{sidebar.resultMessage}</p>
-                {sidebar.errorDetail && (
-                  <p className="mt-1 text-[10px] font-mono opacity-80 border-t pt-1.5 dark:border-red-900/20">{sidebar.errorDetail}</p>
-                )}
-              </div>
-            )}
-
-            {/* SCREENSHOTS CAROUSEL (DEBUG) */}
-            {sidebar.screenshots && sidebar.screenshots.length > 0 ? (
-              <div className="space-y-2">
-                <div className="text-xs font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                  <Eye className="w-3.5 h-3.5 text-gray-400" /> Historial de Pantalla ({sidebar.screenshots.length} pasos)
-                </div>
-
-                <div className="relative group border dark:border-gray-700 rounded-xl overflow-hidden bg-black flex items-center justify-center h-48">
-                  <img
-                    src={sidebar.screenshots[activeImageIndex]}
-                    alt={`Paso de automatización ${activeImageIndex + 1}`}
-                    className="max-h-full max-w-full object-contain"
-                  />
-                  
-                  {/* Prev / Next buttons */}
-                  {sidebar.screenshots.length > 1 && (
-                    <>
-                      <button
-                        onClick={() => setActiveImageIndex(prev => (prev === 0 ? sidebar.screenshots!.length - 1 : prev - 1))}
-                        className="absolute left-2 p-1.5 bg-black/60 text-white rounded-lg hover:bg-black/80 transition-colors"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => setActiveImageIndex(prev => (prev === sidebar.screenshots!.length - 1 ? 0 : prev + 1))}
-                        className="absolute right-2 p-1.5 bg-black/60 text-white rounded-lg hover:bg-black/80 transition-colors"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </>
-                  )}
-                  
-                  {/* Index badge */}
-                  <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/75 text-white text-[10px] font-bold rounded-md">
-                    Paso {activeImageIndex + 1} de {sidebar.screenshots.length}
-                  </div>
-                </div>
-                <p className="text-[10px] text-gray-400 italic text-center">
-                  Usa las flechas para navegar en la secuencia de ejecución del navegador del Bot.
-                </p>
-              </div>
-            ) : !sidebar.loading && (
-              <div className="p-3 bg-gray-50 dark:bg-gray-900/30 rounded-xl text-center text-xs text-gray-400">
-                No hay capturas de pantalla de debug disponibles para esta ejecución.
-              </div>
-            )}
+              );
+            })}
           </div>
+
+          {/* Current selected test view */}
+          {currentRun && (
+            <div className="space-y-4">
+              <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl space-y-1.5 text-xs border dark:border-gray-750">
+                <div className="flex justify-between"><span className="text-gray-400">Cuenta:</span><span className="font-mono font-bold dark:text-gray-200">{currentRun.email}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">Plataforma:</span><span className="font-bold uppercase dark:text-gray-200">{currentRun.platform}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">Receta:</span><span className="text-gray-500 dark:text-gray-300">{currentRun.recipeName}</span></div>
+              </div>
+
+              {currentRun.loading ? (
+                <div className="p-4 border border-dashed rounded-xl flex flex-col items-center justify-center text-center space-y-3 dark:border-gray-700">
+                  <div className="w-6 h-6 border-2 border-brand-primary border-t-transparent rounded-full animate-spin" />
+                  <div className="text-xs text-gray-500 font-medium">Ejecutando navegador en el servidor...<br />(Normalmente demora 30-45 seg)</div>
+                </div>
+              ) : (
+                <div className={`p-4 rounded-xl text-xs space-y-2 border ${currentRun.success ? 'bg-green-50/55 dark:bg-green-950/20 text-green-800 dark:text-green-200 border-green-200 dark:border-green-900/30' : 'bg-red-50/50 dark:bg-red-950/20 text-red-800 dark:text-red-200 border-red-200 dark:border-red-900/30'}`}>
+                  <div className="font-bold text-sm">
+                    {currentRun.success ? '✅ Completado con Éxito' : '❌ Falló la Ejecución'}
+                  </div>
+                  <p className="font-medium whitespace-pre-wrap">{currentRun.resultMessage}</p>
+                  {currentRun.errorDetail && (
+                    <p className="mt-1 text-[10px] font-mono opacity-80 border-t pt-1.5 dark:border-red-900/20">{currentRun.errorDetail}</p>
+                  )}
+                </div>
+              )}
+
+              {/* IMAGE CAROUSEL FOR DEBUG */}
+              {currentRun.screenshots && currentRun.screenshots.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="text-xs font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                    <Eye className="w-3.5 h-3.5 text-gray-400" /> Secuencia del Navegador ({currentRun.screenshots.length} capturas)
+                  </div>
+
+                  <div className="relative group border dark:border-gray-700 rounded-xl overflow-hidden bg-black flex items-center justify-center h-48">
+                    <img
+                      src={currentRun.screenshots[currentRun.activeImageIndex || 0]}
+                      alt="Paso de automatización"
+                      className="max-h-full max-w-full object-contain"
+                    />
+
+                    {currentRun.screenshots.length > 1 && (
+                      <>
+                        <button
+                          onClick={() => {
+                            const max = currentRun.screenshots!.length;
+                            setRuns(prev => ({
+                              ...prev,
+                              [currentRun.email]: {
+                                ...prev[currentRun.email],
+                                activeImageIndex: ((prev[currentRun.email].activeImageIndex || 0) === 0 ? max - 1 : (prev[currentRun.email].activeImageIndex || 0) - 1)
+                              }
+                            }));
+                          }}
+                          className="absolute left-2 p-1.5 bg-black/60 text-white rounded-lg hover:bg-black/80 transition-colors"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            const max = currentRun.screenshots!.length;
+                            setRuns(prev => ({
+                              ...prev,
+                              [currentRun.email]: {
+                                ...prev[currentRun.email],
+                                activeImageIndex: ((prev[currentRun.email].activeImageIndex || 0) === max - 1 ? 0 : (prev[currentRun.email].activeImageIndex || 0) + 1)
+                              }
+                            }));
+                          }}
+                          className="absolute right-2 p-1.5 bg-black/60 text-white rounded-lg hover:bg-black/80 transition-colors"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+
+                    <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/75 text-white text-[10px] font-bold rounded-md">
+                      Paso {(currentRun.activeImageIndex || 0) + 1} de {currentRun.screenshots.length}
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-gray-400 italic text-center">
+                    Usa las flechas para debugear visualmente la secuencia.
+                  </p>
+                </div>
+              ) : !currentRun.loading && (
+                <div className="p-3 bg-gray-50 dark:bg-gray-900/30 rounded-xl text-center text-xs text-gray-400">
+                  No hay capturas de pantalla de debug disponibles para esta ejecución.
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
