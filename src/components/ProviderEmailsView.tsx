@@ -44,6 +44,7 @@ interface TestSidebarState {
   errorDetail?: string;
   activeImageIndex?: number;
   jobId?: string;
+  progress?: string;
 }
 
 const getApiUrl = () =>
@@ -271,7 +272,8 @@ export const ProviderEmailsView: React.FC = () => {
                 success: job.status === 'success' ? true : job.status === 'failed' ? false : undefined,
                 resultMessage: resultMsg,
                 screenshots: job.screenshots || [],
-                errorDetail: job.error
+                errorDetail: job.error,
+                progress: job.progress || ''
               }
             };
           });
@@ -669,7 +671,9 @@ export const ProviderEmailsView: React.FC = () => {
               {currentRun.loading ? (
                 <div className="p-4 border border-dashed rounded-xl flex flex-col items-center justify-center text-center space-y-3 dark:border-gray-700">
                   <div className="w-6 h-6 border-2 border-brand-primary border-t-transparent rounded-full animate-spin" />
-                  <div className="text-xs text-gray-500 font-medium">Ejecutando navegador en el servidor...<br />(Monitoreando progreso en vivo)</div>
+                  <div className="text-xs text-gray-500 font-medium">
+                    {currentRun.progress || 'Iniciando navegador en el servidor...'}
+                  </div>
                 </div>
               ) : (
                 <div className={`p-4 rounded-xl text-xs space-y-2 border ${currentRun.success ? 'bg-green-50/55 dark:bg-green-950/20 text-green-800 dark:text-green-200 border-green-200 dark:border-green-900/30' : 'bg-red-50/50 dark:bg-red-950/20 text-red-800 dark:text-red-200 border-red-200 dark:border-red-900/30'}`}>
@@ -741,9 +745,9 @@ export const ProviderEmailsView: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              ) : !currentRun.loading && (
+              ) : (
                 <div className="p-3 bg-gray-50 dark:bg-gray-900/30 rounded-xl text-center text-xs text-gray-400">
-                  No hay capturas de pantalla de debug disponibles para esta ejecución.
+                  Esperando primera captura del navegador...
                 </div>
               )}
             </div>
