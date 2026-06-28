@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp } from 'lucide-react';
+import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'lucide-react';
 
 interface AccountInfo {
   streaming: string;
@@ -71,6 +71,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Drag and drop state
   const [draggedPhone, setDraggedPhone] = useState<string | null>(null);
@@ -191,7 +192,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     const isCloseToBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
     
     if (isNewChat || isCloseToBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: isNewChat ? 'auto' : 'smooth' });
+      container.scrollTo({ top: container.scrollHeight, behavior: isNewChat ? 'auto' : 'smooth' });
       lastActivePhoneRef.current = currentPhone;
     }
   }, [chatMessages, activeChatTicket?.phone]);
@@ -795,7 +796,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-md border dark:border-gray-800 p-6 relative">
+    <div className={isFullscreen ? "fixed inset-0 z-[9999] w-screen h-screen max-w-none m-0 p-6 bg-white dark:bg-gray-900 flex flex-col overflow-hidden" : "bg-white dark:bg-gray-900 rounded-2xl shadow-md border dark:border-gray-800 p-6 relative"}>
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b dark:border-gray-800 pb-5">
         <div>
@@ -808,6 +809,21 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto">
+          <button
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="p-2 text-gray-660 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors border dark:border-gray-700 flex items-center gap-1 text-xs font-bold"
+            title={isFullscreen ? "Salir de Pantalla Completa" : "Pantalla Completa"}
+          >
+            {isFullscreen ? (
+              <>
+                <Minimize2 className="w-4 h-4 text-brand-primary" /> Salir
+              </>
+            ) : (
+              <>
+                <Maximize2 className="w-4 h-4 text-brand-primary" /> Pantalla Completa
+              </>
+            )}
+          </button>
           <button
             onClick={() => fetchTickets()}
             className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors border dark:border-gray-700"
@@ -844,7 +860,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[600px] h-[calc(100vh-250px)] border dark:border-gray-850 rounded-2xl overflow-hidden bg-gray-50/20 dark:bg-gray-900/10">
+        <div className={isFullscreen ? "grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0 border dark:border-gray-850 rounded-2xl overflow-hidden bg-gray-50/20 dark:bg-gray-900/10" : "grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[600px] h-[calc(100vh-250px)] border dark:border-gray-850 rounded-2xl overflow-hidden bg-gray-50/20 dark:bg-gray-900/10"}>
           
           {/* LEFT COLUMN: Collapsible Categories (col-span-5) */}
           <div className="lg:col-span-5 border-r dark:border-gray-850 flex flex-col h-full bg-white dark:bg-gray-900 overflow-hidden">

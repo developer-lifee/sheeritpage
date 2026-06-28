@@ -387,7 +387,7 @@ function AppContent() {
           <ReviewsSection />
         </>
       )}
-      <Footer />
+      {currentView !== 'admin' && <Footer />}
       {currentView !== 'admin' && <WhatsAppButton />}
       
       {/* Floating Custom Combo Cart Button */}
