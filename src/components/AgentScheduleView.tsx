@@ -8,6 +8,7 @@ interface Agent {
   email: string;
   role: string;
   status: string;
+  max_weekly_hours?: number;
 }
 
 interface ScheduleSlot {
@@ -364,7 +365,10 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
         setModalError(`La hora de inicio debe ser menor a la de cierre (${slot.start_time} - ${slot.end_time}).`);
         return;
       }
-      if (slot.break_type && slot.break_type !== 'none') {
+      const [sh, sm] = slot.start_time.split(':').map(Number);
+      const [eh, em] = slot.end_time.split(':').map(Number);
+      const durationHours = (eh * 60 + em - (sh * 60 + sm)) / 60;
+      if (durationHours >= 4 && slot.break_type && slot.break_type !== 'none') {
         if (!slot.break_start) {
           setModalError('Debes seleccionar la hora del break/almuerzo.');
           return;
@@ -382,6 +386,17 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
     const weekStart = getWeekStartParam();
 
     try {
+      // Clear breaks for slots under 4 hours
+      for (const slot of editingSlots) {
+        const [sh, sm] = slot.start_time.split(':').map(Number);
+        const [eh, em] = slot.end_time.split(':').map(Number);
+        const durationHours = (eh * 60 + em - (sh * 60 + sm)) / 60;
+        if (durationHours < 4) {
+          slot.break_type = 'none';
+          slot.break_start = '';
+        }
+      }
+
       // Validate Overtime Local rule
       const resConfig = await fetch(`${apiUrl}/api/admin/support-schedule`);
       const dataConfig = await resConfig.json();
@@ -791,10 +806,19 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
                         {/* Cost & Hours Info */}
                         <td className="py-4 px-4 text-center align-middle font-mono font-bold text-sm text-brand-primary">
                           <div className="flex flex-col items-center gap-1">
-                            <span className="bg-brand-primary/5 dark:bg-brand-primary/15 px-2.5 py-1 rounded-xl text-xs text-brand-primary">
-                              {totalWeeklyHours.toFixed(1)} hrs
+                            <span className={`px-2.5 py-1 rounded-xl text-xs font-bold ${
+                              totalWeeklyHours > (agent.max_weekly_hours || 40)
+                                ? 'bg-red-500/10 text-red-500'
+                                : 'bg-brand-primary/5 text-brand-primary'
+                            }`}>
+                              {totalWeeklyHours.toFixed(1)} / {(agent.max_weekly_hours || 40).toFixed(0)} hrs
                             </span>
-                            <span className="text-[11px] text-gray-500 dark:text-gray-400 font-sans font-normal">
+                            {allowOvertime && (
+                              <span className="text-[9px] text-emerald-600 dark:text-emerald-450 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded-lg mt-0.5">
+                                Extras permitidas
+                              </span>
+                            )}
+                            <span className="text-[11px] text-gray-500 dark:text-gray-400 font-sans font-normal mt-1">
                               Est: ${estimatedPay.toLocaleString('es-CO', { maximumFractionDigits: 0 })}
                             </span>
                           </div>
@@ -1061,30 +1085,49 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
                         </div>
 
                         {/* Tipo de Break */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 w-full">
                           <span className="text-xs font-bold text-gray-600 dark:text-gray-400 min-w-[50px]">Descanso:</span>
-                          <select
-                            value={slot.break_type || 'none'}
-                            onChange={(e) => handleSlotChange(index, 'break_type', e.target.value)}
-                            className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
-                          >
-                            <option value="none">Sin descanso</option>
-                            <option value="break_30">Break (30 min)</option>
-                            <option value="lunch_60">Almuerzo (1 hora)</option>
-                          </select>
+                          {(() => {
+                            const [sh, sm] = slot.start_time.split(':').map(Number);
+                            const [eh, em] = slot.end_time.split(':').map(Number);
+                            const durationHours = (eh * 60 + em - (sh * 60 + sm)) / 60;
+                            const needsBreak = durationHours >= 4;
+                            
+                            if (!needsBreak) {
+                              return (
+                                <span className="text-xxs text-gray-450 italic">
+                                  No requiere descanso (turno menor a 4 horas)
+                                </span>
+                              );
+                            }
+                            
+                            return (
+                              <>
+                                <select
+                                  value={slot.break_type || 'none'}
+                                  onChange={(e) => handleSlotChange(index, 'break_type', e.target.value)}
+                                  className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
+                                >
+                                  <option value="none">Sin descanso</option>
+                                  <option value="break_30">Break (30 min)</option>
+                                  <option value="lunch_60">Almuerzo (1 hora)</option>
+                                </select>
 
-                          {/* Inicio del Break */}
-                          {slot.break_type && slot.break_type !== 'none' && (
-                            <div className="flex items-center gap-1.5 animate-fadeIn">
-                              <span className="text-xxs font-bold text-gray-500">Hora:</span>
-                              <input
-                                type="time"
-                                value={slot.break_start || ''}
-                                onChange={(e) => handleSlotChange(index, 'break_start', e.target.value)}
-                                className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
-                              />
-                            </div>
-                          )}
+                                {/* Inicio del Break */}
+                                {slot.break_type && slot.break_type !== 'none' && (
+                                  <div className="flex items-center gap-1.5 animate-fadeIn">
+                                    <span className="text-xxs font-bold text-gray-500">Hora:</span>
+                                    <input
+                                      type="time"
+                                      value={slot.break_start || ''}
+                                      onChange={(e) => handleSlotChange(index, 'break_start', e.target.value)}
+                                      className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
+                                    />
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
 
                           {/* Delete Slot Button */}
                           <button
