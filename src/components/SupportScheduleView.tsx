@@ -8,6 +8,7 @@ interface SupportScheduleConfig {
   weekend_start: string;
   weekend_end: string;
   offline_message: string;
+  allow_overtime?: boolean;
 }
 
 export const SupportScheduleView: React.FC = () => {
@@ -17,7 +18,8 @@ export const SupportScheduleView: React.FC = () => {
     weekday_end: '22:00',
     weekend_start: '16:00',
     weekend_end: '22:00',
-    offline_message: ''
+    offline_message: '',
+    allow_overtime: true
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -292,6 +294,42 @@ export const SupportScheduleView: React.FC = () => {
                   />
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Overtime configuration */}
+          <div className="bg-gray-50/50 dark:bg-gray-850 p-5 rounded-2xl border dark:border-gray-750 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h4 className="font-bold text-sm text-gray-700 dark:text-gray-300 flex items-center">
+                <Shield className="w-4 h-4 mr-1.5 text-brand-primary" /> Control de Horas Extras de Asesores
+              </h4>
+              <p className="text-[11px] text-gray-400 mt-1 font-light">
+                Si está desactivado, el sistema impedirá a cualquier colaborador registrar turnos diarios que excedan las 8.0 horas netas.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfig(prev => ({ ...prev, allow_overtime: true }))}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  config.allow_overtime !== false 
+                    ? 'bg-brand-primary text-white shadow-sm' 
+                    : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
+                }`}
+              >
+                Permitidas
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfig(prev => ({ ...prev, allow_overtime: false }))}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  config.allow_overtime === false 
+                    ? 'bg-rose-500 text-white shadow-sm' 
+                    : 'text-gray-500 hover:text-rose-600 dark:text-gray-400 dark:hover:text-rose-450'
+                }`}
+              >
+                Bloqueadas (Máx 8h netas)
+              </button>
             </div>
           </div>
 
