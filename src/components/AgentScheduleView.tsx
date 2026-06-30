@@ -342,11 +342,25 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
     setEditingSlots(prev => prev.map((slot, idx) => {
       if (idx === index) {
         const updated = { ...slot, [field]: value };
-        if (field === 'break_type') {
-          if (value === 'none') {
+        
+        // Calculate slot duration
+        const [sh, sm] = updated.start_time.split(':').map(Number);
+        const [eh, em] = updated.end_time.split(':').map(Number);
+        const durationHours = (eh * 60 + em - (sh * 60 + sm)) / 60;
+        
+        // Enforce mental health break logic on time change
+        if (durationHours >= 5 && updated.break_type === 'none') {
+          updated.break_type = 'lunch_60';
+        } else if (durationHours < 4) {
+          updated.break_type = 'none';
+          updated.break_start = '';
+        }
+
+        if (field === 'break_type' || (durationHours >= 5 && updated.break_type === 'none') || field === 'start_time' || field === 'end_time') {
+          if (updated.break_type === 'none') {
             updated.break_start = '';
           } else {
-            const options = getBreakStartOptions(updated.start_time, updated.end_time, value);
+            const options = getBreakStartOptions(updated.start_time, updated.end_time, updated.break_type || 'lunch_60');
             updated.break_start = options.length > 0 ? options[0] : '';
           }
         }
@@ -1108,7 +1122,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
                                   onChange={(e) => handleSlotChange(index, 'break_type', e.target.value)}
                                   className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
                                 >
-                                  <option value="none">Sin descanso</option>
+                                  {durationHours < 5 && <option value="none">Sin descanso</option>}
                                   <option value="break_30">Break (30 min)</option>
                                   <option value="lunch_60">Almuerzo (1 hora)</option>
                                 </select>
