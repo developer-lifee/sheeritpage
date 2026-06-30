@@ -38,8 +38,7 @@ export const SupportScheduleView: React.FC = () => {
       const data = await res.json();
       setConfig(data);
 
-      // Simple local calculation to predict if it is open (approximate client-side view)
-      calculateStatus(data);
+      setCurrentStatusOpen(data.is_open);
     } catch (err) {
       console.error('Error fetching support schedule:', err);
       setError('No se pudo conectar con el bot para cargar los horarios.');
