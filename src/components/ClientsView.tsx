@@ -70,6 +70,13 @@ export const ClientsView: React.FC = () => {
     const [expandedClient, setExpandedClient] = useState<number | null>(null);
     const [clientHistory, setClientHistory] = useState<any>(null);
     const [historyLoading, setHistoryLoading] = useState(false);
+    const [editingProfile, setEditingProfile] = useState<{
+        phone: string;
+        fullname: string;
+        email: string;
+        notes: string;
+    } | null>(null);
+    const [savingNotes, setSavingNotes] = useState(false);
 
     // Ref for closing popovers on click outside
     const popoverRef = useRef<HTMLDivElement>(null);
@@ -291,21 +298,62 @@ export const ClientsView: React.FC = () => {
         if (expandedClient === idx) {
             setExpandedClient(null);
             setClientHistory(null);
+            setEditingProfile(null);
             return;
         }
         setExpandedClient(idx);
         setHistoryLoading(true);
         setClientHistory(null);
+        setEditingProfile(null);
         
         const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
         try {
             const res = await fetch(`${apiUrl}/api/admin/client-history?phone=${phone}`);
             const data = await res.json();
             setClientHistory(data);
+            setEditingProfile({
+                phone: data.phone || phone,
+                fullname: data.fullname || '',
+                email: data.email || '',
+                notes: data.notes || ''
+            });
         } catch (e) {
             console.error("Error fetching history:", e);
         } finally {
             setHistoryLoading(false);
+        }
+    };
+
+    const handleSaveProfileNotes = async () => {
+        if (!editingProfile) return;
+        setSavingNotes(true);
+        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+        try {
+            const res = await fetch(`${apiUrl}/api/admin/client-history/save-notes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(editingProfile)
+            });
+            const data = await res.json();
+            if (data.success) {
+                setClients(prev => prev.map(c => {
+                    const cleanC = c.whatsapp ? c.whatsapp.toString().replace(/\D/g, '') : '';
+                    const cleanP = editingProfile.phone.replace(/\D/g, '');
+                    if (cleanC.endsWith(cleanP.slice(-10))) {
+                        return { ...c, Nombre: editingProfile.fullname.split(' ')[0] || '', Apellido: editingProfile.fullname.split(' ').slice(1).join(' ') || '', email: editingProfile.email, Notas: editingProfile.notes };
+                    }
+                    return c;
+                }));
+                setClientHistory(prev => prev ? { ...prev, fullname: editingProfile.fullname, email: editingProfile.email, notes: editingProfile.notes } : null);
+                alert('Información y notas del cliente guardadas con éxito.');
+            } else {
+                alert(data.message || 'Error al guardar.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error de conexión al guardar.');
+        } finally {
+            setSavingNotes(false);
         }
     };
 
@@ -884,51 +932,128 @@ export const ClientsView: React.FC = () => {
                                                             <Clock className="w-4 h-4 animate-spin text-brand-primary" />
                                                             <span>Analizando historial en la base de datos...</span>
                                                         </div>
-                                                    ) : !clientHistory || !clientHistory.historial || clientHistory.historial.length === 0 ? (
-                                                        <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-450">
-                                                            <ShieldAlert className="w-4 h-4" />
-                                                            <span>No se encontraron registros anteriores para este cliente en el histórico.</span>
-                                                        </div>
                                                     ) : (
-                                                        <div className="space-y-4">
-                                                            <div className="flex justify-between items-center">
-                                                                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-450">
-                                                                    Historial de compras de {clientHistory.nombre} {clientHistory.apellido}
-                                                                </h4>
-                                                            </div>
-                                                            <div className="relative border-l-2 border-brand-primary/25 ml-3 space-y-4 py-1">
-                                                                {clientHistory.historial.map((h: any, hIdx: number) => (
-                                                                    <div key={hIdx} className="relative pl-6">
-                                                                        <div className="absolute -left-[7px] top-1.5 w-3 h-3 rounded-full bg-brand-primary border-2 border-white dark:border-gray-800"></div>
-                                                                        <div className="bg-white dark:bg-gray-800 p-3.5 rounded-xl border border-gray-150 dark:border-gray-700 shadow-sm max-w-2xl text-xs">
-                                                                            <div className="flex justify-between items-center mb-1">
-                                                                                <span className="font-bold text-gray-800 dark:text-white text-sm">
-                                                                                    🍿 {h.streaming}
-                                                                                </span>
-                                                                                <span className="font-mono text-gray-450 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
-                                                                                    Vence: {formatExcelDate(h.vencimiento || h.fecha_corte)}
-                                                                                </span>
-                                                                            </div>
-                                                                            <p className="text-gray-500 dark:text-gray-400 mb-1">
-                                                                                <b>Cuenta:</b> <span className="font-mono">{h.correo || 'N/A'}</span>
-                                                                            </p>
-                                                                            <div className="flex gap-4 text-[11px] text-gray-400 dark:text-gray-500 border-t dark:border-gray-700 pt-2 mt-2">
-                                                                                <span><b>Método Pago:</b> {h.metodo_pago || 'N/A'}</span>
-                                                                                {h.deben && <span><b>Debía:</b> ${parseFloat(h.deben).toLocaleString()}</span>}
-                                                                            </div>
-                                                                        </div>
+                                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-2 animate-fadeIn text-xs">
+                                                            {/* CRM / Profile Column */}
+                                                            <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border dark:border-gray-700 shadow-sm flex flex-col gap-4">
+                                                                <div>
+                                                                    <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-1">
+                                                                        🧠 Conocimientos y Perfil de Cliente
+                                                                    </h4>
+                                                                    <p className="text-xxs text-gray-400">Registra información valiosa y notas personalizadas sobre este cliente.</p>
+                                                                </div>
+
+                                                                <div className="flex flex-col gap-3">
+                                                                    <div>
+                                                                        <label className="block text-xxs font-bold text-gray-500 uppercase mb-1">Nombre Completo:</label>
+                                                                        <input
+                                                                            type="text"
+                                                                            value={editingProfile?.fullname || ''}
+                                                                            onChange={(e) => setEditingProfile(prev => prev ? { ...prev, fullname: e.target.value } : null)}
+                                                                            className="w-full px-3 py-1.5 border rounded-lg dark:bg-gray-855 dark:border-gray-700 dark:text-white text-xs"
+                                                                            placeholder="Nombre del cliente"
+                                                                        />
                                                                     </div>
-                                                                ))}
+                                                                    <div>
+                                                                        <label className="block text-xxs font-bold text-gray-500 uppercase mb-1">Correo Electrónico:</label>
+                                                                        <input
+                                                                            type="email"
+                                                                            value={editingProfile?.email || ''}
+                                                                            onChange={(e) => setEditingProfile(prev => prev ? { ...prev, email: e.target.value } : null)}
+                                                                            className="w-full px-3 py-1.5 border rounded-lg dark:bg-gray-855 dark:border-gray-700 dark:text-white text-xs"
+                                                                            placeholder="correo@ejemplo.com"
+                                                                        />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="block text-xxs font-bold text-gray-500 uppercase mb-1">Notas / Conocimientos del Cliente:</label>
+                                                                        <textarea
+                                                                            rows={4}
+                                                                            value={editingProfile?.notes || ''}
+                                                                            onChange={(e) => setEditingProfile(prev => prev ? { ...prev, notes: e.target.value } : null)}
+                                                                            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-855 dark:border-gray-700 dark:text-white text-xs"
+                                                                            placeholder="Escribe detalles importantes del cliente aquí..."
+                                                                        />
+                                                                    </div>
+                                                                </div>
+
+                                                                <button
+                                                                    onClick={handleSaveProfileNotes}
+                                                                    disabled={savingNotes}
+                                                                    className="bg-brand-primary hover:bg-brand-dark text-white px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50 mt-2"
+                                                                >
+                                                                    {savingNotes ? 'Guardando...' : '💾 Guardar Datos del Perfil'}
+                                                                </button>
+                                                            </div>
+
+                                                            {/* History / Accounts Column */}
+                                                            <div className="flex flex-col gap-5">
+                                                                {/* SUSCRIPCIONES (subscriptions table) */}
+                                                                <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border dark:border-gray-700 shadow-sm flex flex-col">
+                                                                    <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-3">
+                                                                        🍿 Cuentas y Suscripciones
+                                                                    </h4>
+                                                                    {!clientHistory.subscriptions || clientHistory.subscriptions.length === 0 ? (
+                                                                        <span className="text-xxs text-gray-400 italic">No tiene cuentas activas asignadas.</span>
+                                                                    ) : (
+                                                                        <div className="max-h-[160px] overflow-y-auto space-y-2.5 pr-1">
+                                                                            {clientHistory.subscriptions.map((sub: any, sIdx: number) => (
+                                                                                <div key={sIdx} className="p-3 bg-gray-50 dark:bg-gray-850 rounded-xl border dark:border-gray-750 flex flex-col gap-1 shadow-xxs">
+                                                                                    <div className="flex justify-between items-center">
+                                                                                        <span className="font-bold text-brand-primary text-xs uppercase">{sub.streaming_platform}</span>
+                                                                                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-extrabold uppercase ${
+                                                                                            sub.status === 'active' 
+                                                                                                ? 'bg-green-500/10 text-green-600' 
+                                                                                                : 'bg-red-500/10 text-red-500'
+                                                                                        }`}>
+                                                                                            {sub.status === 'active' ? 'Activo' : 'Vencido'}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    <div className="text-xxs text-gray-500 dark:text-gray-400 flex flex-col gap-0.5 mt-0.5 font-mono">
+                                                                                        <span><b>Correo:</b> {sub.account_email}</span>
+                                                                                        <span><b>Clave:</b> {sub.account_password || 'N/A'}</span>
+                                                                                        {sub.profile_pin && <span><b>PIN:</b> {sub.profile_pin}</span>}
+                                                                                        <span className="text-[10px] text-gray-400 mt-1">Vence: {sub.expiration_date ? sub.expiration_date.substring(0, 10) : 'N/A'}</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* COMPRAS (web_sales_approved table) */}
+                                                                <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border dark:border-gray-700 shadow-sm flex flex-col">
+                                                                    <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-3">
+                                                                        💳 Historial de Compras y Pagos
+                                                                    </h4>
+                                                                    {!clientHistory.purchases || clientHistory.purchases.length === 0 ? (
+                                                                        <span className="text-xxs text-gray-400 italic font-light">No tiene compras aprobadas registradas.</span>
+                                                                    ) : (
+                                                                        <div className="max-h-[160px] overflow-y-auto space-y-2 pr-1 font-mono text-xxs">
+                                                                            {clientHistory.purchases.map((pur: any, pIdx: number) => (
+                                                                                <div key={pIdx} className="flex justify-between items-center p-2 border-b dark:border-gray-750">
+                                                                                    <div className="flex flex-col">
+                                                                                        <span className="font-bold text-gray-700 dark:text-gray-300">{pur.platformName}</span>
+                                                                                        <span className="text-[10px] text-gray-400 font-sans mt-0.5">Fecha: {pur.approvedAt ? pur.approvedAt.substring(0, 10) : 'N/A'}</span>
+                                                                                    </div>
+                                                                                    <div className="text-right flex flex-col">
+                                                                                        <span className="font-bold text-emerald-600 dark:text-emerald-450 text-xs">${Number(pur.amount).toLocaleString('es-CO')}</span>
+                                                                                        <span className="text-[9px] text-gray-400 mt-0.5">ID: {pur.order_id}</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     )}
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </React.Fragment>
-                                );
-                            });
-                        })()}
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })
+                            })()}
                         </tbody>
                     </table>
                     {filtered.length > 50 && <p className="text-center text-sm text-gray-500 mt-4">Mostrando 50 resultados...</p>}
