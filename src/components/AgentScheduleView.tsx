@@ -146,6 +146,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState('');
   const [modalSaving, setModalSaving] = useState(false);
+  const [useAnalogueClock, setUseAnalogueClock] = useState(false);
 
   // Payroll States (Only for Esteban)
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
@@ -433,7 +434,8 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
         body: JSON.stringify({
           email: editingAgent.email,
           schedule: mergedSchedule,
-          week_start: weekStart
+          week_start: weekStart,
+          requester_email: agentEmail
         })
       });
       const dataSave = await resSave.json();
@@ -1016,6 +1018,17 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
               Configura los turnos para <strong>{editingAgent.fullname}</strong> el día <strong>{editingDay.label}</strong> ({getFormattedWeekLabel()}).
             </p>
 
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-xxs font-bold text-gray-500 uppercase tracking-wider">Formato de Entrada:</span>
+              <button
+                type="button"
+                onClick={() => setUseAnalogueClock(prev => !prev)}
+                className="text-xxs font-extrabold text-brand-primary bg-brand-primary/5 hover:bg-brand-primary/10 px-2.5 py-1 rounded-lg transition-colors border border-brand-primary/10"
+              >
+                {useAnalogueClock ? '🕒 Usar Desplegables (30 min)' : '⏰ Usar Reloj Analógico (Libre)'}
+              </button>
+            </div>
+
             {modalError && (
               <div className="bg-red-50/10 text-red-800 dark:text-red-200 border border-red-250 dark:border-red-900/50 p-3 rounded-xl mb-4 text-xs">
                 {modalError}
@@ -1042,25 +1055,45 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
                         {/* Horario de la Franja */}
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-gray-600 dark:text-gray-400 min-w-[50px]">Franja:</span>
-                          <select
-                            value={slot.start_time}
-                            onChange={(e) => handleSlotChange(index, 'start_time', e.target.value)}
-                            className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
-                          >
-                            {generateTimeOptions().map(opt => (
-                              <option key={opt} value={opt}>{opt}</option>
-                            ))}
-                          </select>
-                          <span className="text-xs text-gray-400">a</span>
-                          <select
-                            value={slot.end_time}
-                            onChange={(e) => handleSlotChange(index, 'end_time', e.target.value)}
-                            className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
-                          >
-                            {generateTimeOptions().map(opt => (
-                              <option key={opt} value={opt}>{opt}</option>
-                            ))}
-                          </select>
+                          {useAnalogueClock ? (
+                            <>
+                              <input
+                                type="time"
+                                value={slot.start_time}
+                                onChange={(e) => handleSlotChange(index, 'start_time', e.target.value)}
+                                className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
+                              />
+                              <span className="text-xs text-gray-400">a</span>
+                              <input
+                                type="time"
+                                value={slot.end_time}
+                                onChange={(e) => handleSlotChange(index, 'end_time', e.target.value)}
+                                className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <select
+                                value={slot.start_time}
+                                onChange={(e) => handleSlotChange(index, 'start_time', e.target.value)}
+                                className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
+                              >
+                                {generateTimeOptions().map(opt => (
+                                  <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                              </select>
+                              <span className="text-xs text-gray-400">a</span>
+                              <select
+                                value={slot.end_time}
+                                onChange={(e) => handleSlotChange(index, 'end_time', e.target.value)}
+                                className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
+                              >
+                                {generateTimeOptions().map(opt => (
+                                  <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                              </select>
+                            </>
+                          )}
 
                           <span className="text-xxs font-bold text-brand-primary bg-brand-primary/5 px-2 py-1 rounded ml-auto">
                             {calculateSlotHours(slot).toFixed(1)} hrs netas
@@ -1084,19 +1117,28 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
                           {slot.break_type && slot.break_type !== 'none' && (
                             <div className="flex items-center gap-1.5 animate-fadeIn">
                               <span className="text-xxs font-bold text-gray-500">Hora:</span>
-                              <select
-                                value={slot.break_start || ''}
-                                onChange={(e) => handleSlotChange(index, 'break_start', e.target.value)}
-                                className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
-                              >
-                                {breakOptions.length === 0 ? (
-                                  <option value="">Rango inválido</option>
-                                ) : (
-                                  breakOptions.map(opt => (
-                                    <option key={opt} value={opt}>{opt}</option>
-                                  ))
-                                )}
-                              </select>
+                              {useAnalogueClock ? (
+                                <input
+                                  type="time"
+                                  value={slot.break_start || ''}
+                                  onChange={(e) => handleSlotChange(index, 'break_start', e.target.value)}
+                                  className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
+                                />
+                              ) : (
+                                <select
+                                  value={slot.break_start || ''}
+                                  onChange={(e) => handleSlotChange(index, 'break_start', e.target.value)}
+                                  className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
+                                >
+                                  {breakOptions.length === 0 ? (
+                                    <option value="">Rango inválido</option>
+                                  ) : (
+                                    breakOptions.map(opt => (
+                                      <option key={opt} value={opt}>{opt}</option>
+                                    ))
+                                  )}
+                                </select>
+                              )}
                             </div>
                           )}
 
