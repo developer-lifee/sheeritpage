@@ -84,6 +84,17 @@ const getDayDateLabel = (mondayDate: Date, dayOfWeek: number) => {
   return d.toLocaleDateString('es-ES', options);
 };
 
+const generateTimeOptions = () => {
+  const options = [];
+  for (let h = 0; h < 24; h++) {
+    const hStr = String(h).padStart(2, '0');
+    options.push(`${hStr}:00`);
+    options.push(`${hStr}:30`);
+  }
+  options.push("24:00");
+  return options;
+};
+
 const getBreakStartOptions = (startTime: string, endTime: string, breakType: string) => {
   if (!startTime || !endTime || !breakType || breakType === 'none') return [];
   const [sh, sm] = startTime.split(':').map(Number);
@@ -91,10 +102,15 @@ const getBreakStartOptions = (startTime: string, endTime: string, breakType: str
   const startMin = sh * 60 + sm;
   const endMin = eh * 60 + em;
   const duration = breakType === 'break_30' ? 30 : 60;
-  const options = [];
   
-  // Generate options in 30-minute steps
-  for (let m = startMin; m <= endMin - duration; m += 30) {
+  // Care for mental health: break must start at least 90 minutes after start_time
+  // and must end at least 90 minutes before end_time.
+  const buffer = 90; 
+  const minStart = startMin + buffer;
+  const maxStart = endMin - duration - buffer;
+  
+  const options = [];
+  for (let m = minStart; m <= maxStart; m += 30) {
     const h = Math.floor(m / 60);
     const min = m % 60;
     const timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
@@ -1026,19 +1042,25 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
                         {/* Horario de la Franja */}
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-gray-600 dark:text-gray-400 min-w-[50px]">Franja:</span>
-                          <input
-                            type="time"
+                          <select
                             value={slot.start_time}
                             onChange={(e) => handleSlotChange(index, 'start_time', e.target.value)}
-                            className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white"
-                          />
+                            className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
+                          >
+                            {generateTimeOptions().map(opt => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
                           <span className="text-xs text-gray-400">a</span>
-                          <input
-                            type="time"
+                          <select
                             value={slot.end_time}
                             onChange={(e) => handleSlotChange(index, 'end_time', e.target.value)}
-                            className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white"
-                          />
+                            className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
+                          >
+                            {generateTimeOptions().map(opt => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
 
                           <span className="text-xxs font-bold text-brand-primary bg-brand-primary/5 px-2 py-1 rounded ml-auto">
                             {calculateSlotHours(slot).toFixed(1)} hrs netas
