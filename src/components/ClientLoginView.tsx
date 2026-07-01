@@ -125,23 +125,23 @@ export default function ClientLoginView() {
   };
 
   return (
-    <div className="max-w-md md:max-w-4xl mx-auto p-6 text-white min-h-[70vh] flex flex-col justify-center">
+    <div className="max-w-md md:max-w-4xl mx-auto p-6 text-gray-800 dark:text-white min-h-[70vh] flex flex-col justify-center">
       
       {step === 1 && (
-        <div className="max-w-md w-full mx-auto bg-slate-900/60 backdrop-blur-md p-8 rounded-2xl border border-slate-800 space-y-6">
+        <div className="max-w-md w-full mx-auto bg-white dark:bg-slate-900/60 backdrop-blur-md p-8 rounded-2xl border border-gray-150 dark:border-slate-800 space-y-6 shadow-md">
           <div className="text-center">
-            <div className="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-500/20 text-indigo-400">
+            <div className="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-500/20 text-indigo-500 dark:text-indigo-400">
               <Shield size={32} />
             </div>
-            <h2 className="text-2xl font-bold tracking-tight text-white">Ingreso de Clientes</h2>
-            <p className="text-slate-400 text-sm mt-1">
+            <h2 className="text-2xl font-bold tracking-tight text-gray-800 dark:text-white">Ingreso de Clientes</h2>
+            <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">
               Verifica tu identidad para ver tus credenciales o solicitar códigos 2FA.
             </p>
           </div>
 
           <form onSubmit={handleRequestOtp} className="space-y-4">
             <div className="space-y-2">
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              <label className="block text-xs font-semibold text-gray-400 dark:text-slate-400 uppercase tracking-wider">
                 Ingresa tu número de WhatsApp
               </label>
               <div className="relative">
@@ -151,17 +151,17 @@ export default function ClientLoginView() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-4 pr-10 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50"
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl py-3 pl-4 pr-10 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-600 focus:outline-none focus:border-indigo-500/50"
                 />
-                <Phone size={16} className="absolute right-3.5 top-4 text-slate-500" />
+                <Phone size={16} className="absolute right-3.5 top-4 text-gray-400 dark:text-slate-500" />
               </div>
-              <p className="text-[10px] text-slate-500">
+              <p className="text-[10px] text-gray-400 dark:text-slate-500">
                 Formato internacional con prefijo de país. Ej: 57 para Colombia.
               </p>
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-500 dark:text-rose-400 text-xs">
                 <AlertCircle size={14} className="shrink-0" />
                 <span>{error}</span>
               </div>
@@ -170,7 +170,7 @@ export default function ClientLoginView() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
+              className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/5"
             >
               {loading ? (
                 <>
@@ -187,20 +187,20 @@ export default function ClientLoginView() {
       )}
 
       {step === 2 && (
-        <div className="max-w-md w-full mx-auto bg-slate-900/60 backdrop-blur-md p-8 rounded-2xl border border-slate-800 space-y-6">
+        <div className="max-w-md w-full mx-auto bg-white dark:bg-slate-900/60 backdrop-blur-md p-8 rounded-2xl border border-gray-150 dark:border-slate-800 space-y-6 shadow-md">
           <div className="text-center">
-            <div className="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-500/20 text-indigo-400">
+            <div className="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-500/20 text-indigo-500 dark:text-indigo-400">
               <Key size={32} />
             </div>
-            <h2 className="text-2xl font-bold tracking-tight text-white">Verificación OTP</h2>
-            <p className="text-slate-400 text-sm mt-1">
+            <h2 className="text-2xl font-bold tracking-tight text-gray-800 dark:text-white">Verificación OTP</h2>
+            <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">
               Ingresa el código OTP de 6 dígitos que enviamos al chat de WhatsApp de @{phone}.
             </p>
           </div>
 
           <form onSubmit={handleVerifyOtp} className="space-y-4">
             <div className="space-y-2">
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              <label className="block text-xs font-semibold text-gray-400 dark:text-slate-400 uppercase tracking-wider">
                 Código de 6 dígitos
               </label>
               <input
@@ -210,18 +210,18 @@ export default function ClientLoginView() {
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 required
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 text-center text-2xl tracking-widest font-bold font-mono text-indigo-400 focus:outline-none focus:border-indigo-500/50"
+                className="w-full bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl py-3 text-center text-2xl tracking-widest font-bold font-mono text-indigo-500 dark:text-indigo-400 focus:outline-none focus:border-indigo-500/50"
               />
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-500 dark:text-rose-400 text-xs">
                 <AlertCircle size={14} className="shrink-0" />
                 <span>{error}</span>
               </div>
             )}
             {success && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs">
                 <CheckCircle size={14} className="shrink-0" />
                 <span>{success}</span>
               </div>
@@ -231,14 +231,14 @@ export default function ClientLoginView() {
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="w-1/3 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-xl transition-all duration-200"
+                className="w-1/3 py-3 px-4 bg-gray-150 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-white font-medium rounded-xl transition-all duration-200"
               >
                 Atrás
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-2/3 py-3 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
+                className="w-2/3 py-3 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/5"
               >
                 {loading ? (
                   <>
