@@ -1052,6 +1052,35 @@ export const ClientsView: React.FC = () => {
                                                                         </div>
                                                                     )}
                                                                 </div>
+
+                                                                {/* EXCEL HISTORICO (Matriz de Excel Historico) */}
+                                                                <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border dark:border-gray-700 shadow-sm flex flex-col">
+                                                                    <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-3">
+                                                                        📊 Histórico de Excel (Cortes Mensuales)
+                                                                    </h4>
+                                                                    {!clientHistory.excelHistory || clientHistory.excelHistory.length === 0 ? (
+                                                                        <span className="text-xxs text-gray-400 italic font-light">No tiene registros históricos en el Excel.</span>
+                                                                    ) : (
+                                                                        <div className="max-h-[180px] overflow-y-auto space-y-2.5 pr-1 font-mono text-xxs">
+                                                                            {clientHistory.excelHistory.map((hist: any, hIdx: number) => (
+                                                                                <div key={hIdx} className="flex flex-col p-2.5 bg-gray-50 dark:bg-gray-850 rounded-xl border dark:border-gray-750 gap-1">
+                                                                                    <div className="flex justify-between items-center font-bold">
+                                                                                        <span className="text-brand-primary uppercase">{hist.streaming}</span>
+                                                                                        <span className="text-gray-700 dark:text-gray-300">Corte: {hist.fecha_corte || 'N/A'}</span>
+                                                                                    </div>
+                                                                                    <div className="text-[10px] text-gray-550 dark:text-gray-400 font-sans flex flex-col gap-0.5 mt-0.5">
+                                                                                        <span>📧 Correo: {hist.correo || 'N/A'}</span>
+                                                                                        <span>💳 Pago: {hist.metodo_pago || 'N/A'}</span>
+                                                                                    </div>
+                                                                                    <div className="flex justify-between items-center text-[10px] font-sans mt-1 pt-1 border-t border-gray-100 dark:border-gray-800">
+                                                                                        <span className="text-gray-450 dark:text-gray-500">Vence: {hist.vencimiento || 'N/A'}</span>
+                                                                                        <span className="font-bold text-emerald-600 dark:text-emerald-450">${Number(hist.deben || 0).toLocaleString('es-CO')}</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     )}
