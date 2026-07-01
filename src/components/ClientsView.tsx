@@ -296,8 +296,8 @@ export const ClientsView: React.FC = () => {
         }
     };
 
-    const toggleExpandHistory = async (phone: string, idx: number, c: any) => {
-        if (expandedClient === idx) {
+    const toggleExpandHistory = async (phone: string, idx: number, c: any, force = false) => {
+        if (expandedClient === idx && !force) {
             setExpandedClient(null);
             setClientHistory(null);
             setEditingProfile(null);
@@ -305,12 +305,14 @@ export const ClientsView: React.FC = () => {
         }
         setExpandedClient(idx);
         setHistoryLoading(true);
-        setClientHistory(null);
-        setEditingProfile(null);
+        if (!force) {
+            setClientHistory(null);
+            setEditingProfile(null);
+        }
         
         const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
         try {
-            const res = await fetch(`${apiUrl}/api/admin/client-history?phone=${phone}`);
+            const res = await fetch(`${apiUrl}/api/admin/client-history?phone=${phone}${force ? '&force=true' : ''}`);
             const data = await res.json();
             setClientHistory(data);
             
@@ -1055,9 +1057,20 @@ export const ClientsView: React.FC = () => {
 
                                                                 {/* EXCEL HISTORICO (Matriz de Excel Historico) */}
                                                                 <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border dark:border-gray-700 shadow-sm flex flex-col">
-                                                                    <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-3">
-                                                                        📊 Histórico de Excel (Cortes Mensuales)
-                                                                    </h4>
+                                                                    <div className="flex justify-between items-center mb-3">
+                                                                        <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider">
+                                                                            📊 Histórico de Excel (Cortes Mensuales)
+                                                                        </h4>
+                                                                        <button
+                                                                            onClick={() => toggleExpandHistory(phone, i, c, true)}
+                                                                            disabled={historyLoading}
+                                                                            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 hover:text-brand-primary transition-colors flex items-center gap-1 text-[10px] font-semibold"
+                                                                            title="Sincronizar en vivo desde Excel"
+                                                                        >
+                                                                            <RefreshCw size={11} className={historyLoading ? 'animate-spin' : ''} />
+                                                                            Sincronizar
+                                                                        </button>
+                                                                    </div>
                                                                     {!clientHistory.excelHistory || clientHistory.excelHistory.length === 0 ? (
                                                                         <span className="text-xxs text-gray-400 italic font-light">No tiene registros históricos en el Excel.</span>
                                                                     ) : (
