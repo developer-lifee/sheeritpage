@@ -379,11 +379,17 @@ export default function ClientLoginView() {
                     >
                       {requesting2fa === acc.id ? (
                         <>
-                          <RefreshCw size={12} className="animate-spin" /> Solicitando Código...
+                          <RefreshCw size={12} className="animate-spin" /> Solicitando...
                         </>
                       ) : (
                         <>
-                          <Key size={12} /> Solicitar Código 2FA / Hogar
+                          <Key size={12} />
+                          {(() => {
+                            const p = (acc.platform || "").toUpperCase();
+                            if (p.includes('NETFLIX')) return 'Actualizar Hogar / Código de Acceso';
+                            if (p.includes('DISNEY')) return 'Solicitar Código / Enlace de Acceso';
+                            return 'Solicitar Código 2FA / Acceso';
+                          })()}
                         </>
                       )}
                     </button>
