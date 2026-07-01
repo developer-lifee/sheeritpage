@@ -258,18 +258,18 @@ export default function ClientLoginView() {
       {step === 3 && (
         <div className="w-full space-y-6">
           {/* Header */}
-          <div className="bg-slate-900/60 backdrop-blur-md p-6 rounded-2xl border border-slate-800 flex items-center justify-between">
+          <div className="bg-white dark:bg-slate-900/60 backdrop-blur-md p-6 rounded-2xl border border-gray-150 dark:border-slate-800 flex items-center justify-between shadow-sm">
             <div>
-              <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+              <h2 className="text-xl font-bold tracking-tight text-gray-800 dark:text-white flex items-center gap-2">
                 👋 Mis Servicios Contratados
               </h2>
-              <p className="text-slate-400 text-xs mt-1">
+              <p className="text-gray-500 dark:text-slate-400 text-xs mt-1">
                 Consulta los accesos o solicita códigos de seguridad de tus perfiles vigentes.
               </p>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/25 border border-rose-500/20 text-rose-400 rounded-xl transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/25 border border-rose-500/20 text-rose-500 dark:text-rose-400 rounded-xl transition-colors"
             >
               <LogOut size={12} /> Salir
             </button>
@@ -277,22 +277,22 @@ export default function ClientLoginView() {
 
           {/* Banner notification */}
           {(error || success) && (
-            <div className="space-y-3">
+            <div className="space-y-3 font-medium">
               {error && (
-                <div className="flex items-start gap-3 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs">
                   <AlertCircle size={18} className="shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold">Error al solicitar</p>
-                    <p className="text-rose-400/90 mt-0.5">{error}</p>
+                    <p className="text-rose-600 dark:text-rose-450 mt-0.5">{error}</p>
                   </div>
                 </div>
               )}
               {success && (
-                <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs animate-fade-in">
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs animate-fade-in">
                   <CheckCircle size={18} className="shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold">Solicitud recibida</p>
-                    <p className="text-emerald-400/90 mt-0.5">{success}</p>
+                    <p className="text-emerald-600 dark:text-emerald-450 mt-0.5">{success}</p>
                   </div>
                 </div>
               )}
@@ -301,7 +301,7 @@ export default function ClientLoginView() {
 
           {/* Accounts Grid */}
           {accounts.length === 0 ? (
-            <div className="bg-slate-900/20 rounded-2xl border border-slate-800/50 p-12 text-center text-slate-500">
+            <div className="bg-gray-50 dark:bg-slate-900/20 rounded-2xl border border-gray-150 dark:border-slate-800/50 p-12 text-center text-gray-400 dark:text-slate-500">
               <Tv size={48} className="mx-auto mb-4 opacity-50" />
               <p className="text-sm">No encontramos cuentas o servicios activos registrados para tu número.</p>
             </div>
@@ -310,20 +310,20 @@ export default function ClientLoginView() {
               {accounts.map((acc) => (
                 <div
                   key={acc.id}
-                  className="bg-slate-900/40 backdrop-blur-md rounded-2xl border border-slate-800 overflow-hidden flex flex-col justify-between hover:border-slate-750 transition-colors"
+                  className="bg-white dark:bg-slate-900/40 backdrop-blur-md rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden flex flex-col justify-between hover:border-gray-300 dark:hover:border-slate-750 transition-colors shadow-sm"
                 >
                   <div className="p-6 space-y-4">
                     {/* Header card */}
                     <div className="flex justify-between items-start gap-2">
                       <div className="space-y-1">
-                        <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">
+                        <span className="text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest">
                           {acc.platform}
                         </span>
-                        <h3 className="font-semibold text-white text-sm truncate max-w-[200px]" title={acc.email}>
+                        <h3 className="font-semibold text-gray-800 dark:text-white text-sm truncate max-w-[200px]" title={acc.email}>
                           {acc.email}
                         </h3>
                       </div>
-                      <span className="text-[10px] font-semibold px-2 py-0.5 bg-slate-950 border border-slate-800 text-slate-400 rounded-full">
+                      <span className="text-[10px] font-semibold px-2 py-0.5 bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-gray-500 dark:text-slate-400 rounded-full">
                         Vence: {acc.vencimiento}
                       </span>
                     </div>
@@ -332,25 +332,25 @@ export default function ClientLoginView() {
                     <div className="space-y-2.5 pt-2 text-xs">
                       {/* Password line */}
                       {acc.password ? (
-                        <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950/60 border border-slate-850">
+                        <div className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-slate-950/60 border border-gray-150 dark:border-slate-850">
                           <div className="flex items-center gap-1.5 truncate">
-                            <Lock size={12} className="text-slate-500 shrink-0" />
-                            <span className="text-slate-500">Clave:</span>
-                            <span className="font-mono text-slate-300 font-semibold truncate">
+                            <Lock size={12} className="text-gray-400 dark:text-slate-500 shrink-0" />
+                            <span className="text-gray-400 dark:text-slate-500">Clave:</span>
+                            <span className="font-mono text-gray-700 dark:text-slate-300 font-semibold truncate">
                               {showPass[acc.id] ? acc.password : '••••••••'}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => togglePasswordVisibility(acc.id)}
-                              className="text-slate-500 hover:text-slate-300 transition-colors"
+                              className="text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
                             >
                               {showPass[acc.id] ? <EyeOff size={14} /> : <Eye size={14} />}
                             </button>
                             {showPass[acc.id] && (
                               <button
                                 onClick={() => copyToClipboard(acc.password || '', 'Contraseña')}
-                                className="text-slate-500 hover:text-slate-300 transition-colors"
+                                className="text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
                               >
                                 <Copy size={14} />
                               </button>
@@ -358,20 +358,20 @@ export default function ClientLoginView() {
                           </div>
                         </div>
                       ) : (
-                        <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-850 text-slate-500 italic text-[11px]">
+                        <div className="p-2 rounded-lg bg-gray-50 dark:bg-slate-950/60 border border-gray-150 dark:border-slate-850 text-gray-400 dark:text-slate-500 italic text-[11px]">
                           Acceso por invitación/perfil propio
                         </div>
                       )}
 
                       {/* Profile / PIN line */}
-                      <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-850 text-slate-300">
-                        <span className="text-slate-500 mr-1.5">Perfil asignado:</span> {acc.profile}
+                      <div className="p-2.5 rounded-lg bg-gray-50 dark:bg-slate-950/60 border border-gray-150 dark:border-slate-850 text-gray-750 dark:text-slate-300">
+                        <span className="text-gray-400 dark:text-slate-500 mr-1.5 font-medium">Perfil asignado:</span> {acc.profile}
                       </div>
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="p-4 bg-slate-900/60 border-t border-slate-800/80">
+                  <div className="p-4 bg-gray-50/50 dark:bg-slate-900/60 border-t border-gray-100 dark:border-slate-800/80">
                     <button
                       onClick={() => handleRequest2fa(acc.id)}
                       disabled={requesting2fa !== null}
