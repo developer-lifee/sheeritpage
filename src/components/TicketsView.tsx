@@ -159,6 +159,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const [shortcutsFilter, setShortcutsFilter] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const [sendingMsg, setSendingMsg] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -236,6 +237,15 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       console.error('[Availability] Error al cargar overrides:', e);
     }
   };
+
+  // Reset ticket-specific UI states when changing active ticket
+  useEffect(() => {
+    setSelectedAccountAlert(null);
+    setShowBulkSharedInput(false);
+    setBulkSharedMessage('');
+    setShowVinculosPanel(false);
+    setNewMsgText('');
+  }, [activeChatTicket?.userId]);
 
   // Poll for tickets and load overrides
   useEffect(() => {
@@ -350,8 +360,27 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   };
 
   const handleSendChatMessage = async (textToSend = newMsgText) => {
-    if (!activeChatTicket || !textToSend.trim()) return;
+    if (!activeChatTicket || !textToSend.trim() || sendingMsg) return;
+    setSendingMsg(true);
     const apiUrl = getApiUrl();
+    
+    // Add optimistic message immediately to the UI
+    const tempId = `optimistic_${Date.now()}`;
+    const tempMsg = {
+      id: tempId,
+      body: textToSend,
+      fromMe: true,
+      timestamp: Date.now(),
+      type: 'text' as const,
+      hasMedia: false,
+      mediaPath: '',
+      mediaMime: '',
+      failed: false,
+      sending: true
+    };
+    
+    setChatMessages(prev => [...prev, tempMsg]);
+    setNewMsgText(''); // Clear input immediately
     
     try {
       const res = await fetch(`${apiUrl}/api/admin/chat-messages/send`, {
@@ -367,7 +396,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       });
       const data = await res.json();
       if (data.success) {
-        setNewMsgText('');
+        // Fetch fresh chat messages list
         fetchChatMessages(true);
         logAuditAction('SEND_MESSAGE', { ticketPhone: activeChatTicket.phone, textLength: textToSend.length });
         if (!activeChatTicket.agent) {
@@ -378,6 +407,9 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         throw new Error(data.message || "Error al enviar");
       }
     } catch (err) {
+      // Remove optimistic message on failure
+      setChatMessages(prev => prev.filter(m => m.id !== tempId));
+      
       const failedMsg = {
         id: `failed_${Date.now()}`,
         body: textToSend,
@@ -386,7 +418,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         phone: activeChatTicket.userId
       };
       setFailedMessages(prev => [...prev, failedMsg]);
-      setNewMsgText('');
+    } finally {
+      setSendingMsg(false);
     }
   };
 
@@ -827,6 +860,27 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     }
   };
 
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!window.confirm('¿Estás seguro de que deseas eliminar este mensaje de la base de datos?')) return;
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/chat-messages/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId, password: 'admin123' })
+      });
+      const result = await res.json();
+      if (result.success) {
+        setChatMessages(prev => prev.filter(m => m.id !== messageId));
+        logAuditAction('DELETE_MESSAGE', { ticketPhone: activeChatTicket?.phone, messageId });
+      } else {
+        alert(`❌ Error: ${result.message}`);
+      }
+    } catch (e) {
+      alert('❌ Error al conectar con el backend.');
+    }
+  };
+
   const handleArchiveTicket = async (phone: string) => {
     if (!window.confirm("¿Deseas archivar y quitar este ticket de la lista de resueltos?")) return;
     
@@ -1101,7 +1155,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     return `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}${remainingHours > 0 ? ` y ${remainingHours} hr${remainingHours > 1 ? 's' : ''}` : ''}`;
   };
 
-  const renderCompactTicketItem = (t: Ticket) => {
+  const renderCompactTicketItem = (t: Ticket, prefix = 'ticket') => {
     const isActive = activeChatTicket?.userId === t.userId;
     const isBotMode = t.waitingHumanMode === 'bot';
     const timeFormatted = formatTimeDiff(t.lastMessageTime);
@@ -1111,7 +1165,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
     return (
       <div
-        key={t.userId}
+        key={`${prefix}_${t.userId}`}
         onClick={() => setActiveChatTicket(t)}
         className={`p-3 rounded-xl flex flex-col gap-1.5 cursor-pointer transition-all border ${
           isActive
@@ -1334,7 +1388,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 myTickets.length === 0 ? (
                   <p className="text-center py-4 text-xs text-gray-450 italic">No tienes tickets asignados.</p>
                 ) : (
-                  myTickets.map(renderCompactTicketItem)
+                  myTickets.map(t => renderCompactTicketItem(t, 'my'))
                 )
               )}
 
@@ -1346,7 +1400,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 unassignedTickets.length === 0 ? (
                   <p className="text-center py-4 text-xs text-gray-450 italic">No hay tickets libres.</p>
                 ) : (
-                  unassignedTickets.map(renderCompactTicketItem)
+                  unassignedTickets.map(t => renderCompactTicketItem(t, 'free'))
                 )
               )}
 
@@ -1358,7 +1412,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 otherTickets.length === 0 ? (
                   <p className="text-center py-4 text-xs text-gray-455 italic">No hay tickets de otros asesores.</p>
                 ) : (
-                  otherTickets.map(renderCompactTicketItem)
+                  otherTickets.map(t => renderCompactTicketItem(t, 'other'))
                 )
               )}
 
@@ -1370,7 +1424,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 resolvedTickets.length === 0 ? (
                   <p className="text-center py-4 text-xs text-gray-450 italic">No hay tickets resueltos.</p>
                 ) : (
-                  resolvedTickets.map(renderCompactTicketItem)
+                  resolvedTickets.map(t => renderCompactTicketItem(t, 'resolved'))
                 )
               )}
 
@@ -1392,7 +1446,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                           <span className="shrink-0 text-[9px] bg-brand-primary/10 px-1.5 rounded">{groupTickets.length}</span>
                         </div>
                         <div className="space-y-2 pl-1.5 border-l-2 border-brand-primary/20">
-                          {groupTickets.map(renderCompactTicketItem)}
+                          {groupTickets.map(t => renderCompactTicketItem(t, `account_${groupName}`))}
                         </div>
                       </div>
                     ))
@@ -1418,7 +1472,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                           <span className="text-[9px] bg-gray-200 dark:bg-gray-700 px-1.5 rounded">{groupTickets.length}</span>
                         </div>
                         <div className="space-y-2 pl-1.5 border-l-2 border-gray-200 dark:border-gray-700">
-                          {groupTickets.map(renderCompactTicketItem)}
+                          {groupTickets.map(t => renderCompactTicketItem(t, `subject_${groupName}`))}
                         </div>
                       </div>
                     ))
@@ -1683,7 +1737,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                             </div>
                           )}
                           <div
-                            className={`max-w-[75%] p-3 rounded-2xl text-xs flex flex-col gap-1 shadow-sm leading-relaxed ${
+                            className={`max-w-[75%] p-3 rounded-2xl text-xs flex flex-col gap-1 shadow-sm leading-relaxed group ${
                               isMe
                                 ? 'bg-brand-primary/10 border border-brand-primary/20 dark:border-brand-primary/30 text-gray-850 dark:text-brand-light ml-auto rounded-tr-none'
                                 : 'bg-white dark:bg-gray-850 dark:text-gray-150 rounded-tl-none border border-gray-200/80 dark:border-gray-750'
@@ -1754,9 +1808,21 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                                 </button>
                               </div>
                             )}
-                            <span className={`text-[9px] text-right block ${isMe ? 'text-gray-500 dark:text-brand-dark/70' : 'text-gray-400 dark:text-gray-500'}`}>
-                              {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
+                            <div className="flex justify-between items-center mt-1">
+                              {!msg.failed && !msg.id?.startsWith('optimistic_') && !msg.sending && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteMessage(msg.id)}
+                                  className="text-[9px] text-red-500 hover:text-red-700 hover:underline active:scale-95 transition-all opacity-0 hover:opacity-100 group-hover:opacity-60 font-semibold"
+                                  title="Eliminar de base de datos"
+                                >
+                                  Eliminar
+                                </button>
+                              )}
+                              <span className={`text-[9px] text-right block ml-auto ${isMe ? 'text-gray-500 dark:text-brand-dark/70' : 'text-gray-400 dark:text-gray-500'}`}>
+                                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
                           </div>
                         </React.Fragment>
                       );
@@ -1940,13 +2006,14 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                           type="text"
                           value={newMsgText}
                           onChange={(e) => handleInputChange(e.target.value)}
-                          placeholder="Escribe un mensaje de respuesta (Usa / para atajos)..."
-                          className="w-full px-4 py-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:ring-1 focus:ring-brand-primary"
+                          placeholder={sendingMsg ? "Enviando mensaje..." : "Escribe un mensaje de respuesta (Usa / para atajos)..."}
+                          disabled={sendingMsg}
+                          className="w-full px-4 py-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-750 text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:ring-1 focus:ring-brand-primary disabled:opacity-60"
                         />
                       </div>
                       <button
                         type="submit"
-                        disabled={!newMsgText.trim()}
+                        disabled={!newMsgText.trim() || sendingMsg}
                         className="p-2.5 bg-brand-primary hover:bg-brand-dark text-white rounded-xl transition-all disabled:opacity-50 flex items-center justify-center shrink-0"
                       >
                         <Send className="w-4 h-4" />
