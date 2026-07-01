@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp, Maximize2, Minimize2, Archive, TrendingUp } from 'lucide-react';
+import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp, Maximize2, Minimize2, Archive, TrendingUp, Keyboard } from 'lucide-react';
 
 interface AccountInfo {
   streaming: string;
@@ -149,6 +149,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     return '🦈'; // default fallback
   });
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showVinculosPanel, setShowVinculosPanel] = useState(false);
+  const [showShortcutsBar, setShowShortcutsBar] = useState(false);
   const [bulkSharedMessage, setBulkSharedMessage] = useState('');
   const [showBulkSharedInput, setShowBulkSharedInput] = useState(false);
   const [bulkSending, setBulkSending] = useState(false);
@@ -1053,11 +1055,11 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
           <button
             onClick={() => setIsFullscreen(!isFullscreen)}
             className="p-2 text-gray-660 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors border dark:border-gray-700 flex items-center gap-1 text-xs font-bold"
-            title={isFullscreen ? "Salir de Pantalla Completa" : "Pantalla Completa"}
+            title={isFullscreen ? "Restaurar Pantalla" : "Pantalla Completa"}
           >
             {isFullscreen ? (
               <>
-                <Minimize2 className="w-4 h-4 text-brand-primary" /> Salir
+                <Minimize2 className="w-4 h-4 text-brand-primary" /> Restaurar
               </>
             ) : (
               <>
@@ -1238,7 +1240,23 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                         </span>
                       )}
                     </h3>
-                    <span className="text-xs text-gray-450 font-mono">+{activeChatTicket.phone}</span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs text-gray-450 font-mono">+{activeChatTicket.phone}</span>
+                      {activeChatTicket.accounts && activeChatTicket.accounts.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowVinculosPanel(!showVinculosPanel)}
+                          className={`text-[9px] font-bold px-2 py-0.5 rounded-full border transition-all active:scale-95 flex items-center gap-1 ${
+                            showVinculosPanel
+                              ? 'bg-brand-primary text-white border-brand-primary'
+                              : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20 hover:bg-brand-primary/20'
+                          }`}
+                          title="Mostrar/Ocultar Vínculos y Mensaje Masivo"
+                        >
+                          <span>🔗 Vínculos ({activeChatTicket.accounts.length})</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Top Bar actions */}
@@ -1284,8 +1302,9 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                   </div>
                 </div>
 
-                {/* Sub-Header: Accounts list & Shared alert */}
-                <div className="bg-gray-50/50 dark:bg-gray-950 border-b dark:border-gray-850 p-3 flex flex-col gap-2">
+                {/* Sub-Header: Accounts list & Shared alert (Collapsible) */}
+                {showVinculosPanel && (
+                  <div className="bg-gray-50/50 dark:bg-gray-950 border-b dark:border-gray-850 p-3 flex flex-col gap-2 animate-fadeIn">
                   {/* Cuentas vinculadas */}
                   {activeChatTicket.accounts && activeChatTicket.accounts.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
@@ -1391,7 +1410,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                       </div>
                     );
                   })()}
-                </div>
+                  </div>
+                )}
 
                 {/* Quick actions row */}
                 <div className="bg-brand-primary/5 dark:bg-brand-primary/10 border-b dark:border-brand-primary/10 p-2.5 flex flex-wrap gap-2 justify-center items-center">
@@ -1514,42 +1534,11 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
                 {/* Input area */}
                 <div className="p-4 bg-white dark:bg-gray-900 border-t dark:border-gray-850 flex flex-col gap-3">
-                  <div className="flex items-center justify-between border-b dark:border-gray-800 pb-2">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Firma:</span>
-                      <div className="relative">
-                        <button
-                          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                          className="text-base px-2 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-850 rounded border dark:border-gray-700 flex items-center gap-1"
-                        >
-                          <span>{advisorEmoji}</span>
-                          <Smile className="w-3.5 h-3.5 text-gray-400" />
-                        </button>
-                        
-                        {showEmojiPicker && (
-                          <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-gray-850 p-2.5 rounded-xl border dark:border-gray-750 shadow-2xl flex gap-1.5 flex-wrap z-50">
-                            {COMMON_EMOJIS.map(em => (
-                              <button
-                                key={em}
-                                type="button"
-                                onClick={() => changeEmoji(em)}
-                                className="hover:scale-125 transition-transform text-lg p-1"
-                              >
-                                {em}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
 
-                    <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500">
-                      Se enviará como: <strong className="dark:text-white">{advisorEmoji} [tu mensaje]</strong>
-                    </span>
-                  </div>
 
-                  {/* Atajos Clickables */}
-                  <div className="flex flex-wrap gap-1.5 pb-1 border-b dark:border-gray-800 items-center">
+                  {/* Atajos Clickables (Collapsible) */}
+                  {showShortcutsBar && (
+                    <div className="flex flex-wrap gap-1.5 pb-1 border-b dark:border-gray-800 items-center">
                     <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Atajos:</span>
                     <button
                       type="button"
@@ -1623,6 +1612,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                       </React.Fragment>
                     ))}
                   </div>
+                  )}
 
                   <form
                     onSubmit={(e) => {
@@ -1631,6 +1621,18 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     }}
                     className="flex gap-2 items-center"
                   >
+                    <button
+                      type="button"
+                      onClick={() => setShowShortcutsBar(!showShortcutsBar)}
+                      className={`p-2.5 rounded-xl border transition-all active:scale-95 flex items-center justify-center shrink-0 ${
+                        showShortcutsBar
+                          ? 'bg-brand-primary text-white border-brand-primary'
+                          : 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-500 border-gray-250 dark:border-gray-700'
+                      }`}
+                      title="Mostrar/Ocultar barra de atajos rápidos"
+                    >
+                      <Keyboard className="w-4 h-4" />
+                    </button>
                     <div className="relative flex-grow">
                       {showShortcutsMenu && (
                         <div className="absolute bottom-full left-0 mb-2 w-full bg-white dark:bg-gray-850 rounded-xl border dark:border-gray-750 shadow-2xl z-50 overflow-hidden max-h-60 overflow-y-auto">
