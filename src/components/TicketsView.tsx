@@ -162,6 +162,16 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [failedMessages, setFailedMessages] = useState<Array<{
+    id: string;
+    body: string;
+    type: 'text' | 'audio';
+    mediaPath?: string;
+    mediaMime?: string;
+    base64Audio?: string;
+    timestamp: number;
+    phone: string;
+  }>>([]);
   const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
     me: true,
     unassigned: true,
@@ -360,16 +370,23 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         setNewMsgText('');
         fetchChatMessages(true);
         logAuditAction('SEND_MESSAGE', { ticketPhone: activeChatTicket.phone, textLength: textToSend.length });
-        // auto-assign to me if unassigned
         if (!activeChatTicket.agent) {
           setActiveChatTicket(prev => prev ? { ...prev, agent: agentName } : null);
         }
         fetchTickets(true);
       } else {
-        alert("Error: " + data.message);
+        throw new Error(data.message || "Error al enviar");
       }
     } catch (err) {
-      alert("Error de conexión al enviar mensaje");
+      const failedMsg = {
+        id: `failed_${Date.now()}`,
+        body: textToSend,
+        type: 'text' as const,
+        timestamp: Date.now(),
+        phone: activeChatTicket.userId
+      };
+      setFailedMessages(prev => [...prev, failedMsg]);
+      setNewMsgText('');
     }
   };
 
@@ -452,11 +469,21 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 }
                 fetchTickets(true);
               } else {
-                alert("Error enviando audio: " + data.message);
+                throw new Error(data.message || "Error al enviar audio");
               }
             } catch (err) {
               console.error("Error connection sending audio", err);
-              alert("Error de conexión al enviar nota de voz");
+              const failedAudio = {
+                id: `failed_${Date.now()}`,
+                body: '',
+                type: 'audio' as const,
+                mediaPath: '',
+                mediaMime: 'audio/ogg',
+                base64Audio: base64Audio,
+                timestamp: Date.now(),
+                phone: activeChatTicket.userId
+              };
+              setFailedMessages(prev => [...prev, failedAudio]);
             }
           };
         }
@@ -474,7 +501,68 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
+  const handleRetryMessage = async (failedMsg: typeof failedMessages[0]) => {
+    if (!activeChatTicket) return;
+    const apiUrl = getApiUrl();
 
+    try {
+      if (failedMsg.type === 'text') {
+        const res = await fetch(`${apiUrl}/api/admin/chat-messages/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone: failedMsg.phone,
+            message: failedMsg.body,
+            emoji: advisorEmoji,
+            agentName: agentName,
+            password: 'admin123'
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          setFailedMessages(prev => prev.filter(m => m.id !== failedMsg.id));
+          fetchChatMessages(true);
+          logAuditAction('SEND_MESSAGE', { ticketPhone: activeChatTicket.phone, textLength: failedMsg.body.length });
+          if (!activeChatTicket.agent) {
+            setActiveChatTicket(prev => prev ? { ...prev, agent: agentName } : null);
+          }
+          fetchTickets(true);
+        } else {
+          alert(`Error al reintentar: ${data.message}`);
+        }
+      } else if (failedMsg.type === 'audio' && failedMsg.base64Audio) {
+        const res = await fetch(`${apiUrl}/api/admin/chat-messages/send-audio`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone: failedMsg.phone,
+            audio: failedMsg.base64Audio,
+            mimetype: 'audio/ogg',
+            agentName: agentName,
+            password: 'admin123'
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          setFailedMessages(prev => prev.filter(m => m.id !== failedMsg.id));
+          fetchChatMessages(true);
+          logAuditAction('SEND_VOICE_NOTE', { ticketPhone: activeChatTicket.phone });
+          if (!activeChatTicket.agent) {
+            setActiveChatTicket(prev => prev ? { ...prev, agent: agentName } : null);
+          }
+          fetchTickets(true);
+        } else {
+          alert(`Error al reintentar envío de audio: ${data.message}`);
+        }
+      }
+    } catch (err) {
+      alert("Error de conexión al reintentar envío.");
+    }
+  };
+
+  const handleDismissFailedMessage = (id: string) => {
+    setFailedMessages(prev => prev.filter(m => m.id !== id));
+  };
 
   const handleExecuteRpaFromChat = async (email: string, recipeId: number) => {
     // Prevent running multiple times for the same account concurrently
@@ -1552,14 +1640,33 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                       <RefreshCw className="w-6 h-6 animate-spin text-brand-primary mb-2" />
                       <span className="text-xs">Cargando conversación...</span>
                     </div>
-                  ) : chatMessages.length === 0 ? (
-                    <div className="text-center my-auto text-xs text-gray-400 italic">
+                  ) : (chatMessages.length === 0 && failedMessages.filter(fm => fm.phone === activeChatTicket.userId).length === 0) ? (
+                    <div className="text-center my-auto text-xs text-gray-450 italic">
                       No hay mensajes recientes. Escribe uno abajo para iniciar.
                     </div>
                   ) : (
-                    chatMessages.map((msg, idx) => {
-                      const isMe = msg.fromMe;
-                      const claudeLink = detectClaudeLink(msg.body);
+                    (() => {
+                      const allMsgs = [
+                        ...chatMessages.map(m => ({ ...m, failed: false, base64Audio: '' })),
+                        ...failedMessages
+                          .filter(fm => fm.phone === activeChatTicket.userId)
+                          .map(m => ({
+                            id: m.id,
+                            body: m.body,
+                            fromMe: true,
+                            timestamp: m.timestamp,
+                            type: m.type,
+                            hasMedia: m.type === 'audio',
+                            mediaPath: m.mediaPath || '',
+                            mediaMime: m.mediaMime || '',
+                            base64Audio: m.base64Audio || '',
+                            failed: true
+                          }))
+                      ].sort((a, b) => a.timestamp - b.timestamp);
+
+                      return allMsgs.map((msg, idx) => {
+                        const isMe = msg.fromMe;
+                        const claudeLink = detectClaudeLink(msg.body);
                       
                       const prevMsg = chatMessages[idx - 1];
                       const showDateSeparator = !prevMsg || 
@@ -1585,7 +1692,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                               {msg.body || (msg.hasMedia ? '📷 Foto' : '')}
                             </p>
 
-                            {msg.hasMedia && msg.mediaPath && (
+                            {msg.hasMedia && (msg.mediaPath || msg.base64Audio) && (
                               <div className="mt-1.5 rounded-lg overflow-hidden border border-gray-100 dark:border-gray-750 bg-gray-50 dark:bg-gray-900 w-fit max-w-full">
                                 {msg.mediaMime?.startsWith('image/') ? (
                                   <img
@@ -1598,7 +1705,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                                   <div className="p-2.5 flex flex-col gap-1 min-w-[240px]">
                                     <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">🎙️ Nota de Voz</span>
                                     <audio
-                                      src={`${getApiUrl()}/${msg.mediaPath}`}
+                                      src={msg.failed ? msg.base64Audio : `${getApiUrl()}/${msg.mediaPath}`}
                                       controls
                                       className="max-w-full h-8 outline-none"
                                     />
@@ -1626,13 +1733,34 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                                 Iniciar Sesión Claude <ExternalLink className="w-3 h-3" />
                               </a>
                             )}
+                            {msg.failed && (
+                              <div className="mt-1 flex items-center justify-end gap-1.5 text-[9px] text-red-500 font-bold border-t dark:border-gray-800/40 pt-1.5">
+                                <span>⚠️ No enviado</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRetryMessage(msg)}
+                                  className="underline hover:text-red-700 active:scale-95"
+                                >
+                                  Reintentar
+                                </button>
+                                <span>•</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDismissFailedMessage(msg.id)}
+                                  className="underline hover:text-red-700 active:scale-95"
+                                >
+                                  Descartar
+                                </button>
+                              </div>
+                            )}
                             <span className={`text-[9px] text-right block ${isMe ? 'text-gray-500 dark:text-brand-dark/70' : 'text-gray-400 dark:text-gray-500'}`}>
                               {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
                         </React.Fragment>
                       );
-                    })
+                    });
+                  })()
                   )}
                   <div ref={messagesEndRef} />
                 </div>
