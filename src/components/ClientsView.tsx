@@ -157,15 +157,17 @@ export const ClientsView: React.FC = () => {
         }
 
         // General search matches
+        // General search matches
         const phoneVal = (c.numero || c.Numero || '').toString();
+        const fullName = `${c.Nombre || ''} ${c.apellido || c.Apellido || ''}`.trim();
         const generalMatches = !generalSearch || 
-            (c.Nombre || '').toLowerCase().includes(generalSearch.toLowerCase()) || 
+            fullName.toLowerCase().includes(generalSearch.toLowerCase()) || 
             phoneVal.includes(generalSearch) || 
             (c.Streaming || '').toLowerCase().includes(generalSearch.toLowerCase()) || 
             (c.correo || '').toLowerCase().includes(generalSearch.toLowerCase());
 
         // Column level filters matches
-        const nameMatches = !filterName || (c.Nombre || '').toLowerCase().includes(filterName.toLowerCase());
+        const nameMatches = !filterName || fullName.toLowerCase().includes(filterName.toLowerCase());
         const phoneMatches = !filterPhone || phoneVal.includes(filterPhone);
         const serviceMatches = !filterService || (c.Streaming || '').toLowerCase().includes(filterService.toLowerCase());
         const emailMatches = !filterEmail || (c.correo || '').toLowerCase().includes(filterEmail.toLowerCase());
@@ -294,7 +296,7 @@ export const ClientsView: React.FC = () => {
         }
     };
 
-    const toggleExpandHistory = async (phone: string, idx: number) => {
+    const toggleExpandHistory = async (phone: string, idx: number, c: any) => {
         if (expandedClient === idx) {
             setExpandedClient(null);
             setClientHistory(null);
@@ -311,10 +313,14 @@ export const ClientsView: React.FC = () => {
             const res = await fetch(`${apiUrl}/api/admin/client-history?phone=${phone}`);
             const data = await res.json();
             setClientHistory(data);
+            
+            const excelFullName = `${c.Nombre || ''} ${c.apellido || c.Apellido || ''}`.trim();
+            const excelCustomerMail = c["customer mail"] || c.customer_mail || "";
+
             setEditingProfile({
                 phone: data.phone || phone,
-                fullname: data.fullname || '',
-                email: data.email || '',
+                fullname: data.fullname || excelFullName,
+                email: data.email || excelCustomerMail,
                 notes: data.notes || ''
             });
         } catch (e) {
@@ -891,7 +897,9 @@ export const ClientsView: React.FC = () => {
                                                         />
                                                     </td>
                                                 )}
-                                                <td data-label="Nombre" className="py-3.5 px-4 text-sm dark:text-gray-200 font-medium">{c.Nombre || 'N/A'}</td>
+                                                <td data-label="Nombre" className="py-3.5 px-4 text-sm dark:text-gray-200 font-medium">
+                                                    {`${c.Nombre || ''} ${c.apellido || c.Apellido || ''}`.trim() || 'N/A'}
+                                                </td>
                                                 <td data-label="Número" className="py-3.5 px-4 text-sm dark:text-gray-200 font-mono">{phone}</td>
                                                 <td data-label="Contraseña" className="py-3.5 px-4 text-sm dark:text-gray-200 font-mono">
                                                     {c.contraseña || c.Clave || c.clave || c.password || '-'}
@@ -910,7 +918,7 @@ export const ClientsView: React.FC = () => {
                                                 <td data-label="Acciones" className="py-3.5 px-4 text-sm text-center">
                                                     <div className="flex gap-2 justify-center">
                                                         <button 
-                                                            onClick={() => toggleExpandHistory(phone, i)}
+                                                            onClick={() => toggleExpandHistory(phone, i, c)}
                                                             className={`p-2 rounded-xl text-xs font-bold transition-all border ${
                                                                 expandedClient === i 
                                                                     ? 'bg-purple-600 text-white border-purple-600' 
