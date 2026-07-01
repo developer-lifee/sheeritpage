@@ -1660,7 +1660,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                             mediaPath: m.mediaPath || '',
                             mediaMime: m.mediaMime || '',
                             base64Audio: m.base64Audio || '',
-                            failed: true
+                            failed: true,
+                            phone: m.phone
                           }))
                       ].sort((a, b) => a.timestamp - b.timestamp);
 
