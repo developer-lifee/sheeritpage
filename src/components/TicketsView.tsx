@@ -299,7 +299,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     if (!isSilent) setLoadingChat(true);
     const apiUrl = getApiUrl();
     try {
-      const res = await fetch(`${apiUrl}/api/admin/chat-messages?phone=${activeChatTicket.phone}`);
+      const res = await fetch(`${apiUrl}/api/admin/chat-messages?phone=${activeChatTicket.userId}`);
       if (res.ok) {
         const data = await res.json();
         setChatMessages(data);
@@ -319,7 +319,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       const res = await fetch(`${apiUrl}/api/admin/chat-messages/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: activeChatTicket.phone })
+        body: JSON.stringify({ phone: activeChatTicket.userId })
       });
       if (res.ok) {
         const data = await res.json();
@@ -343,7 +343,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phone: activeChatTicket.phone,
+          phone: activeChatTicket.userId,
           message: textToSend,
           emoji: advisorEmoji,
           agentName: agentName,
@@ -1299,6 +1299,21 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     >
                       <CheckCircle className="w-3 h-3" /> Resolver
                     </button>
+
+                    <button
+                      onClick={() => handleToggleMode(activeChatTicket.phone, activeChatTicket.waitingHumanMode || 'bot')}
+                      className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-all active:scale-95 flex items-center gap-1 text-white ${
+                        (activeChatTicket.waitingHumanMode || 'bot') === 'bot'
+                          ? 'bg-purple-600 hover:bg-purple-705'
+                          : 'bg-indigo-600 hover:bg-indigo-705'
+                      }`}
+                      title={(activeChatTicket.waitingHumanMode || 'bot') === 'bot' ? 'El bot responderá automáticamente. Haz clic para pasar a modo manual.' : 'Modo manual activo. El bot está silenciado. Haz clic para reactivar el bot.'}
+                    >
+                      <Bot className="w-3.5 h-3.5" />
+                      <span>
+                        {(activeChatTicket.waitingHumanMode || 'bot') === 'bot' ? 'Modo: Bot' : 'Modo: Asesor'}
+                      </span>
+                    </button>
                   </div>
                 </div>
 
@@ -1413,41 +1428,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                   </div>
                 )}
 
-                {/* Quick actions row */}
-                <div className="bg-brand-primary/5 dark:bg-brand-primary/10 border-b dark:border-brand-primary/10 p-2.5 flex flex-wrap gap-2 justify-center items-center">
-                  <button
-                    onClick={sendHogarNetflixTemplate}
-                    className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-800 dark:text-white text-[10px] font-bold py-1.2 px-2.5 rounded-lg border dark:border-gray-700 transition-all"
-                  >
-                    <Home className="w-3 h-3 text-amber-500" /> Hogar Netflix 📺
-                  </button>
-                  <button
-                    onClick={insertCobroTemplate}
-                    className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-800 dark:text-white text-[10px] font-bold py-1.2 px-2.5 rounded-lg border dark:border-gray-700 transition-all"
-                  >
-                    <Smile className="w-3 h-3 text-emerald-500" /> Cobrar 💰
-                  </button>
-                  {activeChatTicket.accounts && activeChatTicket.accounts.map((acc, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => insertCredentials(acc)}
-                      className="flex items-center gap-1 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-800 dark:text-white text-[10px] font-bold py-1.2 px-2.5 rounded-lg border dark:border-gray-700 transition-all"
-                    >
-                      <Key className="w-3 h-3 text-blue-500" /> Credenciales {acc.streaming} 🔑
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => handleToggleMode(activeChatTicket.phone, activeChatTicket.waitingHumanMode || 'bot')}
-                    className={`flex items-center gap-1 text-white text-[10px] font-bold py-1.2 px-2.5 rounded-lg transition-all ${
-                      (activeChatTicket.waitingHumanMode || 'bot') === 'bot'
-                        ? 'bg-purple-600 hover:bg-purple-700'
-                        : 'bg-indigo-600 hover:bg-indigo-700'
-                    }`}
-                  >
-                    <Bot className="w-3.5 h-3.5" />
-                    {(activeChatTicket.waitingHumanMode || 'bot') === 'bot' ? 'Modo: Auto (Bot)' : 'Modo: Manual (Asesor)'}
-                  </button>
-                </div>
+
 
                 {/* Conversation message list */}
                 <div ref={chatContainerRef} className="flex-grow overflow-y-auto p-4 bg-[#efeae2] dark:bg-[#0b0f19] space-y-3 flex flex-col min-h-0">
