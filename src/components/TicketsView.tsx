@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp, Maximize2, Minimize2, Archive, TrendingUp, Keyboard } from 'lucide-react';
+import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp, Maximize2, Minimize2, Archive, TrendingUp, Keyboard, Mic, Square, Trash2 } from 'lucide-react';
 
 interface AccountInfo {
   streaming: string;
@@ -157,6 +157,11 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const [syncingChat, setSyncingChat] = useState(false);
   const [showShortcutsMenu, setShowShortcutsMenu] = useState(false);
   const [shortcutsFilter, setShortcutsFilter] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
     me: true,
     unassigned: true,
@@ -366,6 +371,107 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     } catch (err) {
       alert("Error de conexión al enviar mensaje");
     }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingDuration(0);
+      
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Error al iniciar grabación de audio:", err);
+      alert("No se pudo acceder al micrófono. Por favor verifica los permisos del navegador.");
+    }
+  };
+
+  const stopRecording = async (shouldSend: boolean) => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+
+    const recorder = mediaRecorderRef.current;
+    if (!recorder) {
+      setIsRecording(false);
+      return;
+    }
+
+    setIsRecording(false);
+
+    const processRecording = new Promise<void>((resolve) => {
+      recorder.onstop = async () => {
+        const stream = recorder.stream;
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+
+        if (shouldSend && audioChunksRef.current.length > 0 && activeChatTicket) {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
+          const reader = new FileReader();
+          reader.readAsDataURL(audioBlob);
+          reader.onloadend = async () => {
+            const base64Audio = reader.result as string;
+            const apiUrl = getApiUrl();
+            try {
+              const res = await fetch(`${apiUrl}/api/admin/chat-messages/send-audio`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  phone: activeChatTicket.userId,
+                  audio: base64Audio,
+                  mimetype: 'audio/ogg',
+                  agentName: agentName,
+                  password: 'admin123'
+                })
+              });
+              const data = await res.json();
+              if (data.success) {
+                fetchChatMessages(true);
+                logAuditAction('SEND_VOICE_NOTE', { ticketPhone: activeChatTicket.phone });
+                if (!activeChatTicket.agent) {
+                  setActiveChatTicket(prev => prev ? { ...prev, agent: agentName } : null);
+                }
+                fetchTickets(true);
+              } else {
+                alert("Error enviando audio: " + data.message);
+              }
+            } catch (err) {
+              console.error("Error connection sending audio", err);
+              alert("Error de conexión al enviar nota de voz");
+            }
+          };
+        }
+        resolve();
+      };
+    });
+
+    recorder.stop();
+    await processRecording;
+  };
+
+  const formatDuration = (sec: number) => {
+    const minutes = Math.floor(sec / 60);
+    const seconds = sec % 60;
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
 
@@ -1472,13 +1578,22 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
                             {msg.hasMedia && msg.mediaPath && (
                               <div className="mt-1.5 rounded-lg overflow-hidden border border-gray-100 dark:border-gray-750 bg-gray-50 dark:bg-gray-900 w-fit max-w-full">
-                                {msg.mediaMime?.startsWith('image/') || !msg.mediaMime ? (
+                                {msg.mediaMime?.startsWith('image/') ? (
                                   <img
                                     src={`${getApiUrl()}/${msg.mediaPath}`}
                                     alt="Imagen de chat"
                                     className="max-w-full h-auto object-cover max-h-60 rounded cursor-pointer hover:opacity-95 transition-opacity"
                                     onClick={() => window.open(`${getApiUrl()}/${msg.mediaPath}`, '_blank')}
                                   />
+                                ) : msg.mediaMime?.startsWith('audio/') ? (
+                                  <div className="p-2.5 flex flex-col gap-1 min-w-[240px]">
+                                    <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">🎙️ Nota de Voz</span>
+                                    <audio
+                                      src={`${getApiUrl()}/${msg.mediaPath}`}
+                                      controls
+                                      className="max-w-full h-8 outline-none"
+                                    />
+                                  </div>
                                 ) : (
                                   <a
                                     href={`${getApiUrl()}/${msg.mediaPath}`}
@@ -1595,72 +1710,111 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                   </div>
                   )}
 
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      handleSendChatMessage();
-                    }}
-                    className="flex gap-2 items-center"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setShowShortcutsBar(!showShortcutsBar)}
-                      className={`p-2.5 rounded-xl border transition-all active:scale-95 flex items-center justify-center shrink-0 ${
-                        showShortcutsBar
-                          ? 'bg-brand-primary text-white border-brand-primary'
-                          : 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-500 border-gray-250 dark:border-gray-700'
-                      }`}
-                      title="Mostrar/Ocultar barra de atajos rápidos"
-                    >
-                      <Keyboard className="w-4 h-4" />
-                    </button>
-                    <div className="relative flex-grow">
-                      {showShortcutsMenu && (
-                        <div className="absolute bottom-full left-0 mb-2 w-full bg-white dark:bg-gray-850 rounded-xl border dark:border-gray-750 shadow-2xl z-50 overflow-hidden max-h-60 overflow-y-auto">
-                          <div className="bg-gray-50 dark:bg-gray-800 px-3 py-1.5 border-b dark:border-gray-700 text-[10px] font-bold text-gray-500 uppercase">
-                            Atajos disponibles (Filtrado: /{shortcutsFilter})
-                          </div>
-                          <div className="divide-y dark:divide-gray-800 animate-fadeIn">
-                            {getShortcuts(activeChatTicket)
-                              .filter(s => s.key.includes(shortcutsFilter) || s.label.toLowerCase().includes(shortcutsFilter))
-                              .map(s => (
-                                <button
-                                  key={s.key}
-                                  type="button"
-                                  onClick={() => selectShortcut(s.text)}
-                                  className="w-full text-left px-3 py-2 hover:bg-brand-primary/10 dark:hover:bg-brand-primary/20 flex flex-col gap-0.5 transition-colors"
-                                >
-                                  <span className="text-xs font-bold text-gray-800 dark:text-white flex justify-between">
-                                    <span>{s.label}</span>
-                                    <span className="text-[10px] text-brand-primary font-mono font-black">/{s.key}</span>
-                                  </span>
-                                  <span className="text-[10px] text-gray-400 dark:text-gray-500">{s.description}</span>
-                                </button>
-                              ))}
-                            {getShortcuts(activeChatTicket).filter(s => s.key.includes(shortcutsFilter) || s.label.toLowerCase().includes(shortcutsFilter)).length === 0 && (
-                              <div className="p-3 text-xs text-gray-400 italic text-center">
-                                No se encontraron atajos para "/{shortcutsFilter}"
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      <input
-                        type="text"
-                        value={newMsgText}
-                        onChange={(e) => handleInputChange(e.target.value)}
-                        placeholder="Escribe un mensaje de respuesta (Usa / para atajos)..."
-                        className="w-full px-4 py-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:ring-1 focus:ring-brand-primary"
-                      />
+                  {isRecording ? (
+                    <div className="flex gap-2 items-center bg-red-50/50 dark:bg-red-950/20 border border-red-200/50 dark:border-red-900/30 p-2 rounded-xl w-full animate-fadeIn">
+                      <div className="flex items-center gap-2 flex-grow pl-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping shrink-0" />
+                        <span className="text-xs font-bold text-red-600 dark:text-red-400 font-mono">
+                          Grabando nota de voz: {formatDuration(recordingDuration)}
+                        </span>
+                      </div>
+                      
+                      <button
+                        type="button"
+                        onClick={() => stopRecording(false)}
+                        className="p-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 text-red-650 rounded-xl transition-all active:scale-95 flex items-center justify-center shrink-0"
+                        title="Cancelar grabación"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={() => stopRecording(true)}
+                        className="p-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all active:scale-95 flex items-center justify-center shrink-0"
+                        title="Enviar nota de voz"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
                     </div>
-                    <button
-                      type="submit"
-                      disabled={!newMsgText.trim()}
-                      className="p-2.5 bg-brand-primary hover:bg-brand-dark text-white rounded-xl transition-all disabled:opacity-50 flex items-center justify-center shrink-0"
+                  ) : (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        handleSendChatMessage();
+                      }}
+                      className="flex gap-2 items-center"
                     >
-                      <Send className="w-4 h-4" />
-                    </button>
-                  </form>
+                      <button
+                        type="button"
+                        onClick={() => setShowShortcutsBar(!showShortcutsBar)}
+                        className={`p-2.5 rounded-xl border transition-all active:scale-95 flex items-center justify-center shrink-0 ${
+                          showShortcutsBar
+                            ? 'bg-brand-primary text-white border-brand-primary'
+                            : 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-500 border-gray-250 dark:border-gray-700'
+                        }`}
+                        title="Mostrar/Ocultar barra de atajos rápidos"
+                      >
+                        <Keyboard className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={startRecording}
+                        className="p-2.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-550 border border-gray-250 dark:border-gray-700 rounded-xl transition-all active:scale-95 flex items-center justify-center shrink-0"
+                        title="Grabar nota de voz"
+                      >
+                        <Mic className="w-4 h-4 text-brand-primary" />
+                      </button>
+
+                      <div className="relative flex-grow">
+                        {showShortcutsMenu && (
+                          <div className="absolute bottom-full left-0 mb-2 w-full bg-white dark:bg-gray-850 rounded-xl border dark:border-gray-750 shadow-2xl z-50 overflow-hidden max-h-60 overflow-y-auto">
+                            <div className="bg-gray-50 dark:bg-gray-800 px-3 py-1.5 border-b dark:border-gray-700 text-[10px] font-bold text-gray-500 uppercase">
+                              Atajos disponibles (Filtrado: /{shortcutsFilter})
+                            </div>
+                            <div className="divide-y dark:divide-gray-800 animate-fadeIn">
+                              {getShortcuts(activeChatTicket)
+                                .filter(s => s.key.includes(shortcutsFilter) || s.label.toLowerCase().includes(shortcutsFilter))
+                                .map(s => (
+                                  <button
+                                    key={s.key}
+                                    type="button"
+                                    onClick={() => selectShortcut(s.text)}
+                                    className="w-full text-left px-3 py-2 hover:bg-brand-primary/10 dark:hover:bg-brand-primary/20 flex flex-col gap-0.5 transition-colors"
+                                  >
+                                    <span className="text-xs font-bold text-gray-800 dark:text-white flex justify-between">
+                                      <span>{s.label}</span>
+                                      <span className="text-[10px] text-brand-primary font-mono font-black">/{s.key}</span>
+                                    </span>
+                                    <span className="text-[10px] text-gray-400 dark:text-gray-500">{s.description}</span>
+                                  </button>
+                                ))}
+                              {getShortcuts(activeChatTicket).filter(s => s.key.includes(shortcutsFilter) || s.label.toLowerCase().includes(shortcutsFilter)).length === 0 && (
+                                <div className="p-3 text-xs text-gray-400 italic text-center">
+                                  No se encontraron atajos para "/{shortcutsFilter}"
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        <input
+                          type="text"
+                          value={newMsgText}
+                          onChange={(e) => handleInputChange(e.target.value)}
+                          placeholder="Escribe un mensaje de respuesta (Usa / para atajos)..."
+                          className="w-full px-4 py-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:ring-1 focus:ring-brand-primary"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={!newMsgText.trim()}
+                        className="p-2.5 bg-brand-primary hover:bg-brand-dark text-white rounded-xl transition-all disabled:opacity-50 flex items-center justify-center shrink-0"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    </form>
+                  )}
                 </div>
               </div>
             ) : (
