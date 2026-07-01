@@ -872,7 +872,16 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const activeTickets = filteredTickets.filter(t => t.state !== 'resolved' && !t.isProbablyFinished);
   const resolvedTickets = filteredTickets.filter(t => t.state === 'resolved' || t.isProbablyFinished);
 
-  const unassignedTickets = activeTickets.filter(t => !t.agent);
+  const unassignedTickets = activeTickets.filter(t => !t.agent).sort((a, b) => {
+    if (a.queuePosition != null && b.queuePosition != null) {
+      return a.queuePosition - b.queuePosition;
+    }
+    if (a.queuePosition != null) return -1;
+    if (b.queuePosition != null) return 1;
+    const timeA = a.lastMessageTime || 0;
+    const timeB = b.lastMessageTime || 0;
+    return timeB - timeA;
+  });
   const myTickets = activeTickets.filter(t => t.agent && t.agent.toLowerCase().trim() === safeAgentName);
   const otherTickets = activeTickets.filter(t => t.agent && t.agent.toLowerCase().trim() !== safeAgentName);
 
