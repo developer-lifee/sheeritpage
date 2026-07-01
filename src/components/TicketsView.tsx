@@ -160,6 +160,15 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [sendingMsg, setSendingMsg] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, messageId: string, messageBody: string, isFromMe: boolean } | null>(null);
+  const [editingMessage, setEditingMessage] = useState<{ id: string, body: string } | null>(null);
+
+  useEffect(() => {
+    const handleCloseMenu = () => setContextMenu(null);
+    window.addEventListener('click', handleCloseMenu);
+    return () => window.removeEventListener('click', handleCloseMenu);
+  }, []);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -402,7 +411,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         if (!activeChatTicket.agent) {
           setActiveChatTicket(prev => prev ? { ...prev, agent: agentName } : null);
         }
-        fetchTickets(true);
+        setTickets(prev => prev.map(t => t.userId === activeChatTicket.userId ? { ...t, lastMessage: textToSend, lastMessageTime: Date.now(), agent: t.agent || agentName } : t));
       } else {
         throw new Error(data.message || "Error al enviar");
       }
@@ -861,9 +870,12 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   };
 
   const handleDeleteMessage = async (messageId: string) => {
-    if (!window.confirm('¿Estás seguro de que deseas eliminar este mensaje de la base de datos?')) return;
+    if (!window.confirm('¿Estás seguro de que deseas eliminar este mensaje de WhatsApp (para todos) y de la base de datos?')) return;
     const apiUrl = getApiUrl();
     try {
+      // Optimistic delete
+      setChatMessages(prev => prev.filter(m => m.id !== messageId));
+
       const res = await fetch(`${apiUrl}/api/admin/chat-messages/delete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -871,13 +883,43 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       });
       const result = await res.json();
       if (result.success) {
-        setChatMessages(prev => prev.filter(m => m.id !== messageId));
         logAuditAction('DELETE_MESSAGE', { ticketPhone: activeChatTicket?.phone, messageId });
+        fetchChatMessages(true);
       } else {
         alert(`❌ Error: ${result.message}`);
+        fetchChatMessages(true);
       }
     } catch (e) {
       alert('❌ Error al conectar con el backend.');
+      fetchChatMessages(true);
+    }
+  };
+
+  const handleSaveEditMessage = async () => {
+    if (!editingMessage) return;
+    const { id, body } = editingMessage;
+    const apiUrl = getApiUrl();
+    try {
+      // Optimistic edit
+      setChatMessages(prev => prev.map(m => m.id === id ? { ...m, body } : m));
+      setEditingMessage(null);
+
+      const res = await fetch(`${apiUrl}/api/admin/chat-messages/edit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId: id, newBody: body, password: 'admin123' })
+      });
+      const result = await res.json();
+      if (result.success) {
+        logAuditAction('EDIT_MESSAGE', { ticketPhone: activeChatTicket?.phone, messageId: id });
+        fetchChatMessages(true);
+      } else {
+        alert(`❌ Error: ${result.message}`);
+        fetchChatMessages(true);
+      }
+    } catch (e) {
+      alert('❌ Error al conectar con el backend.');
+      fetchChatMessages(true);
     }
   };
 
@@ -1737,7 +1779,18 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                             </div>
                           )}
                           <div
-                            className={`max-w-[75%] p-3 rounded-2xl text-xs flex flex-col gap-1 shadow-sm leading-relaxed group ${
+                            onContextMenu={(e) => {
+                              if (msg.failed || msg.id?.startsWith('optimistic_') || msg.sending) return;
+                              e.preventDefault();
+                              setContextMenu({
+                                x: e.clientX,
+                                y: e.clientY,
+                                messageId: msg.id,
+                                messageBody: msg.body || '',
+                                isFromMe: isMe
+                              });
+                            }}
+                            className={`max-w-[75%] p-3 rounded-2xl text-xs flex flex-col gap-1 shadow-sm leading-relaxed select-none cursor-context-menu group ${
                               isMe
                                 ? 'bg-brand-primary/10 border border-brand-primary/20 dark:border-brand-primary/30 text-gray-850 dark:text-brand-light ml-auto rounded-tr-none'
                                 : 'bg-white dark:bg-gray-850 dark:text-gray-150 rounded-tl-none border border-gray-200/80 dark:border-gray-750'
@@ -1808,21 +1861,9 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                                 </button>
                               </div>
                             )}
-                            <div className="flex justify-between items-center mt-1">
-                              {!msg.failed && !msg.id?.startsWith('optimistic_') && !msg.sending && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteMessage(msg.id)}
-                                  className="text-[9px] text-red-500 hover:text-red-700 hover:underline active:scale-95 transition-all opacity-0 hover:opacity-100 group-hover:opacity-60 font-semibold"
-                                  title="Eliminar de base de datos"
-                                >
-                                  Eliminar
-                                </button>
-                              )}
-                              <span className={`text-[9px] text-right block ml-auto ${isMe ? 'text-gray-500 dark:text-brand-dark/70' : 'text-gray-400 dark:text-gray-500'}`}>
-                                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            </div>
+                            <span className={`text-[9px] text-right block ml-auto ${isMe ? 'text-gray-500 dark:text-brand-dark/70' : 'text-gray-400 dark:text-gray-500'}`}>
+                              {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
                           </div>
                         </React.Fragment>
                       );
@@ -2432,6 +2473,64 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-200 text-xs font-bold rounded-xl transition-colors"
               >
                 Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Context Menu Overlay */}
+      {contextMenu && (
+        <div
+          className="fixed bg-white dark:bg-gray-800 border dark:border-gray-750 shadow-xl rounded-xl py-1 z-50 text-xs w-44"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              handleDeleteMessage(contextMenu.messageId);
+              setContextMenu(null);
+            }}
+            className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 font-semibold"
+          >
+            🗑️ Eliminar para todos
+          </button>
+          {contextMenu.isFromMe && (
+            <button
+              onClick={() => {
+                setEditingMessage({ id: contextMenu.messageId, body: contextMenu.messageBody });
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium border-t dark:border-gray-750"
+            >
+              ✏️ Editar mensaje
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Editing Message Modal */}
+      {editingMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-5 shadow-2xl border dark:border-gray-750">
+            <h3 className="text-sm font-bold text-gray-950 dark:text-white mb-3">✏️ Editar Mensaje</h3>
+            <textarea
+              value={editingMessage.body}
+              onChange={(e) => setEditingMessage(prev => prev ? { ...prev, body: e.target.value } : null)}
+              className="w-full p-3 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary h-28 resize-none"
+            />
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                onClick={() => setEditingMessage(null)}
+                className="px-3.5 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 font-bold"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveEditMessage}
+                className="px-4 py-1.5 text-xs bg-brand-primary hover:bg-brand-dark text-white rounded-xl font-bold transition-all"
+              >
+                Guardar Cambios
               </button>
             </div>
           </div>
