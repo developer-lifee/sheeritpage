@@ -75,15 +75,26 @@ export const VerificationPage: React.FC = () => {
 
               {(result as any).link && (
                 <div className="mt-6">
-                  <a 
-                    href={(result as any).link} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center w-full px-5 py-3 text-sm font-bold text-white bg-red-650 hover:bg-red-700 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-[1.02]"
-                  >
-                    🚀 Actualizar Hogar en Netflix
-                  </a>
-                  <p className="text-[10px] text-gray-405 dark:text-gray-500 mt-2">Haz clic para autorizar el acceso de este dispositivo directamente en Netflix.</p>
+                  {(() => {
+                    const isTravel = (result as any).link.toLowerCase().includes('travel');
+                    return (
+                      <>
+                        <a 
+                          href={(result as any).link} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center w-full px-5 py-3 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-[1.02]"
+                        >
+                          {isTravel ? '✈️ Obtener Código de Viaje (Netflix)' : '🚀 Actualizar Hogar en Netflix'}
+                        </a>
+                        <p className="text-[10px] text-gray-500 mt-2">
+                          {isTravel 
+                            ? 'Haz clic para abrir el enlace oficial de Netflix y obtener tu código de acceso temporal (viajero).'
+                            : 'Haz clic para autorizar el acceso de este dispositivo directamente en Netflix.'}
+                        </p>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
 
