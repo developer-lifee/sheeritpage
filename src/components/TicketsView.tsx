@@ -809,7 +809,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       const res = await fetch(`${apiUrl}/api/admin/tickets/resolve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, password: 'admin123', resolveAll })
+        body: JSON.stringify({ phone, password: 'admin123', resolveAll, agentName })
       });
       const result = await res.json();
       if (!result.success) {
