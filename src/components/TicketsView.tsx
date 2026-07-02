@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp, Maximize2, Minimize2, Archive, TrendingUp, Keyboard, Mic, Square, Trash2 } from 'lucide-react';
+import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp, Maximize2, Minimize2, Archive, TrendingUp, Keyboard, Mic, Square, Trash2, Plus } from 'lucide-react';
 
 interface AccountInfo {
   streaming: string;
@@ -162,6 +162,12 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const [sendingMsg, setSendingMsg] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, messageId: string, messageBody: string, isFromMe: boolean } | null>(null);
   const [editingMessage, setEditingMessage] = useState<{ id: string, body: string } | null>(null);
+
+  // Create ticket states
+  const [showCreateTicketModal, setShowCreateTicketModal] = useState(false);
+  const [newTicketPhone, setNewTicketPhone] = useState('');
+  const [newTicketName, setNewTicketName] = useState('');
+  const [newTicketReason, setNewTicketReason] = useState('');
 
   useEffect(() => {
     const handleCloseMenu = () => setContextMenu(null);
@@ -429,6 +435,45 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       setFailedMessages(prev => [...prev, failedMsg]);
     } finally {
       setSendingMsg(false);
+    }
+  };
+
+  const handleCreateTicket = async () => {
+    if (!newTicketPhone.trim()) {
+      alert("Por favor ingresa un número de teléfono.");
+      return;
+    }
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/tickets/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: newTicketPhone,
+          name: newTicketName || undefined,
+          reason: newTicketReason || undefined,
+          agentName: agentName,
+          password: 'admin123'
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.ticket) {
+        setTickets(prev => {
+          const filtered = prev.filter(t => t.userId !== data.ticket.userId);
+          return [data.ticket, ...filtered];
+        });
+        setActiveChatTicket(data.ticket);
+        setShowCreateTicketModal(false);
+        setNewTicketPhone('');
+        setNewTicketName('');
+        setNewTicketReason('');
+        setTimeout(() => fetchChatMessages(true), 300);
+      } else {
+        alert(data.message || "Error al crear el ticket");
+      }
+    } catch (e: any) {
+      console.error(e);
+      alert("Error de conexión al servidor: " + e.message);
     }
   };
 
@@ -1397,9 +1442,15 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         <div className="text-center py-20 bg-gray-50 dark:bg-gray-900/30 rounded-2xl border-2 border-dashed border-gray-250 dark:border-gray-800 max-w-xl mx-auto">
           <CheckCircle className="w-14 h-14 text-emerald-500 mx-auto mb-4" />
           <h3 className="font-bold text-gray-800 dark:text-gray-250 text-lg">¡Tablero al Día!</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-md mx-auto">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-md mx-auto mb-6">
             Todos los clientes han sido atendidos y no hay tickets pendientes en este momento.
           </p>
+          <button
+            onClick={() => setShowCreateTicketModal(true)}
+            className="px-4 py-2 bg-brand-primary hover:bg-brand-dark text-white rounded-xl font-bold text-xs flex items-center gap-1.5 mx-auto transition-all shadow-sm active:scale-95"
+          >
+            <Plus className="h-4 w-4" /> Iniciar nuevo chat
+          </button>
         </div>
       ) : (
         <div className={isFullscreen ? "grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0 border dark:border-gray-850 rounded-2xl overflow-hidden bg-gray-50/20 dark:bg-gray-900/10" : "grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[600px] h-[calc(100vh-250px)] border dark:border-gray-850 rounded-2xl overflow-hidden bg-gray-50/20 dark:bg-gray-900/10"}>
@@ -1407,8 +1458,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
           {/* LEFT COLUMN: Collapsible Categories (col-span-5) */}
           <div className="lg:col-span-5 border-r dark:border-gray-850 flex flex-col h-full bg-white dark:bg-gray-900 overflow-hidden">
             {/* Search Box */}
-            <div className="p-4 border-b dark:border-gray-850 bg-gray-50/50 dark:bg-gray-900/50">
-              <div className="relative shadow-sm rounded-xl">
+            <div className="p-4 border-b dark:border-gray-850 bg-gray-50/50 dark:bg-gray-900/50 flex gap-2">
+              <div className="relative shadow-sm rounded-xl flex-grow">
                 <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
@@ -1418,6 +1469,13 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                   className="w-full pl-9 pr-4 py-2.5 text-xs rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-750 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200"
                 />
               </div>
+              <button
+                onClick={() => setShowCreateTicketModal(true)}
+                className="p-2.5 bg-brand-primary hover:bg-brand-dark text-white rounded-xl flex items-center justify-center shadow-sm transition-all duration-200 active:scale-95"
+                title="Iniciar nuevo chat / ticket"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
             </div>
 
             {/* Accordion List */}
@@ -2531,6 +2589,72 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 className="px-4 py-1.5 text-xs bg-brand-primary hover:bg-brand-dark text-white rounded-xl font-bold transition-all"
               >
                 Guardar Cambios
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Ticket / Start Chat Modal */}
+      {showCreateTicketModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-5 shadow-2xl border dark:border-gray-750">
+            <h3 className="text-sm font-bold text-gray-950 dark:text-white mb-4">💬 Iniciar nuevo chat / ticket</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+                  Número de Teléfono (con código de país, ej: 57311...)
+                </label>
+                <input
+                  type="text"
+                  placeholder="57311..."
+                  value={newTicketPhone}
+                  onChange={(e) => setNewTicketPhone(e.target.value)}
+                  className="w-full p-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-750 text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+                  Nombre del Cliente (Opcional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej. Luis Ovalles"
+                  value={newTicketName}
+                  onChange={(e) => setNewTicketName(e.target.value)}
+                  className="w-full p-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-750 text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+                  Motivo de contacto / Asunto (Opcional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej. Dudas renovación"
+                  value={newTicketReason}
+                  onChange={(e) => setNewTicketReason(e.target.value)}
+                  className="w-full p-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-750 text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <button
+                onClick={() => {
+                  setShowCreateTicketModal(false);
+                  setNewTicketPhone('');
+                  setNewTicketName('');
+                  setNewTicketReason('');
+                }}
+                className="px-3.5 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 font-bold"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCreateTicket}
+                className="px-4 py-1.5 text-xs bg-brand-primary hover:bg-brand-dark text-white rounded-xl font-bold transition-all shadow-sm active:scale-95"
+              >
+                Iniciar Chat
               </button>
             </div>
           </div>
