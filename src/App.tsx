@@ -37,7 +37,8 @@ export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios'
 const AUTHORIZED_ADVISORS: { [email: string]: string } = {
   'esclepiades@hotmail.com': 'Esclepiades',
   'camco08@hotmail.com': 'Camilo',
-  'estebanavila182@outlook.com': 'Esteban'
+  'estebanavila182@outlook.com': 'Esteban',
+  'carolcubillos03@outlook.es': 'Carol Cubillos'
 };
 
 function AdminLoginOnApp({ onSuccess }: { onSuccess: () => void }) {
