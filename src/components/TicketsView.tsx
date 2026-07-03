@@ -266,6 +266,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     setBulkSharedMessage('');
     setShowVinculosPanel(false);
     setNewMsgText('');
+    setChatMessages([]); // Limpiar mensajes del chat anterior de inmediato
   }, [activeChatTicket?.userId]);
 
   // Poll for tickets and load overrides
@@ -288,8 +289,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   useEffect(() => {
     if (!activeChatTicket) return;
     
-    fetchChatMessages(true);
-    const interval = setInterval(() => fetchChatMessages(true), 4000);
+    fetchChatMessages(false); // Carga inicial no silenciosa para mostrar el spinner de carga
+    const interval = setInterval(() => fetchChatMessages(true), 4000); // Polling silencioso
     return () => clearInterval(interval);
   }, [activeChatTicket?.phone]);
 
