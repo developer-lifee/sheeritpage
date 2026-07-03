@@ -94,7 +94,11 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   
   // Metrics state
   const [showMetricsModal, setShowMetricsModal] = useState(false);
-  const [metricsData, setMetricsData] = useState<{ summary: { agent: string; count: number }[]; recent: { phone: string; customerName: string; agent: string; resolvedAt: string }[] } | null>(null);
+  const [metricsData, setMetricsData] = useState<{
+    summary: { agent: string; count: number }[];
+    summaryToday?: { agent: string; count: number }[];
+    recent: { phone: string; customerName: string; agent: string; resolvedAt: string }[];
+  } | null>(null);
   const [loadingMetrics, setLoadingMetrics] = useState(false);
 
   const fetchMetrics = async () => {
@@ -192,6 +196,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     me: true,
     unassigned: true,
     other: false,
+    probablyFinished: false,
+    archived: false,
     accounts: false,
     subjects: false
   });
@@ -1099,7 +1105,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
   // Filter columns
   const activeTickets = filteredTickets.filter(t => t.state !== 'resolved' && !t.isProbablyFinished);
-  const resolvedTickets = filteredTickets.filter(t => t.state === 'resolved' || t.isProbablyFinished);
+  const probablyFinishedTickets = filteredTickets.filter(t => t.isProbablyFinished && t.state !== 'resolved');
+  const archivedTickets = filteredTickets.filter(t => t.state === 'resolved');
 
   const unassignedTickets = activeTickets.filter(t => !t.agent).sort((a, b) => {
     if (a.queuePosition != null && b.queuePosition != null) {
@@ -1289,7 +1296,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         <div className="flex flex-wrap items-center gap-1.5">
           {t.state === 'resolved' && (
             <span className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[8px] font-bold px-1.5 py-0.2 rounded">
-              ✅ Resuelto
+              ✅ Resuelto {t.agent ? `por ${t.agent}` : ''}
             </span>
           )}
           {t.isProbablyFinished && t.state !== 'resolved' && (
@@ -1517,14 +1524,26 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
               )}
 
               {renderAccordionSection(
-                'resolved',
-                'Por Salir / Probablemente Terminados',
-                <CheckCircle className="w-4 h-4 text-emerald-600" />,
-                resolvedTickets.length,
-                resolvedTickets.length === 0 ? (
-                  <p className="text-center py-4 text-xs text-gray-450 italic">No hay tickets resueltos.</p>
+                'probablyFinished',
+                'Por Salir / Probablemente Terminados (IA)',
+                <CheckCircle className="w-4 h-4 text-blue-500" />,
+                probablyFinishedTickets.length,
+                probablyFinishedTickets.length === 0 ? (
+                  <p className="text-center py-4 text-xs text-gray-450 italic">No hay chats probablemente terminados.</p>
                 ) : (
-                  resolvedTickets.map(t => renderCompactTicketItem(t, 'resolved'))
+                  probablyFinishedTickets.map(t => renderCompactTicketItem(t, 'probablyFinished'))
+                )
+              )}
+
+              {renderAccordionSection(
+                'archived',
+                'Archivados / Resueltos',
+                <Archive className="w-4 h-4 text-emerald-600" />,
+                archivedTickets.length,
+                archivedTickets.length === 0 ? (
+                  <p className="text-center py-4 text-xs text-gray-450 italic">No hay tickets archivados.</p>
+                ) : (
+                  archivedTickets.map(t => renderCompactTicketItem(t, 'archived'))
                 )
               )}
 
@@ -2468,19 +2487,41 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                   {/* Summary Leaderboard */}
-                  <div className="md:col-span-5 space-y-4">
-                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Historial de Resoluciones por Asesor</h4>
-                    <div className="space-y-2">
-                      {metricsData.summary.length === 0 ? (
-                        <p className="text-xs text-gray-450 italic">Sin registros de resoluciones aún.</p>
-                      ) : (
-                        metricsData.summary.map((row) => (
-                          <div key={row.agent} className="flex justify-between items-center p-3 rounded-xl bg-gray-50 dark:bg-gray-850 border dark:border-gray-800 text-xs">
-                            <span className="font-bold text-gray-700 dark:text-gray-300">👤 {row.agent}</span>
-                            <span className="bg-brand-primary/10 text-brand-primary font-black px-2.5 py-0.5 rounded-full">{row.count} resueltos</span>
-                          </div>
-                        ))
-                      )}
+                  <div className="md:col-span-5 space-y-6">
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                        ⚡ Resoluciones de Hoy
+                      </h4>
+                      <div className="space-y-2">
+                        {!metricsData.summaryToday || metricsData.summaryToday.length === 0 ? (
+                          <p className="text-xs text-gray-450 italic">Ningún asesor ha resuelto tickets hoy.</p>
+                        ) : (
+                          metricsData.summaryToday.map((row) => (
+                            <div key={row.agent} className="flex justify-between items-center p-2.5 rounded-xl bg-emerald-50/30 dark:bg-emerald-950/10 border border-emerald-100 dark:border-emerald-900/30 text-xs">
+                              <span className="font-bold text-gray-700 dark:text-gray-300">👤 {row.agent}</span>
+                              <span className="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-black px-2.5 py-0.5 rounded-full">{row.count} hoy</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 border-t dark:border-gray-800 pt-4">
+                      <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                        Historial Acumulado
+                      </h4>
+                      <div className="space-y-2">
+                        {metricsData.summary.length === 0 ? (
+                          <p className="text-xs text-gray-450 italic">Sin registros de resoluciones aún.</p>
+                        ) : (
+                          metricsData.summary.map((row) => (
+                            <div key={row.agent} className="flex justify-between items-center p-2.5 rounded-xl bg-gray-50 dark:bg-gray-850 border dark:border-gray-800 text-xs">
+                              <span className="font-bold text-gray-700 dark:text-gray-300">👤 {row.agent}</span>
+                              <span className="bg-brand-primary/10 text-brand-primary font-black px-2.5 py-0.5 rounded-full">{row.count} resueltos</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
                   </div>
 
