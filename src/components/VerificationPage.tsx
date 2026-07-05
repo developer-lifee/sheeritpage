@@ -98,7 +98,7 @@ export const VerificationPage: React.FC = () => {
                 </div>
               )}
 
-              {(result as any).code && (
+              {(result as any).code && !(result as any).link && (
                 <div className="mt-6 p-4 bg-white dark:bg-gray-750 rounded-xl border border-green-200 dark:border-green-800">
                   <p className="text-xs text-green-650 dark:text-green-400 uppercase tracking-wider mb-2 font-bold">Código de Confirmación</p>
                   <p className="text-3xl font-mono font-extrabold tracking-widest text-gray-900 dark:text-white select-all">
