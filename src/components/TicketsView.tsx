@@ -840,6 +840,31 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     }
   };
 
+  const handleForceBotReply = async (phone: string) => {
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/tickets/force-bot-reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, password: 'admin123' })
+      });
+      const result = await res.json();
+      if (!result.success) {
+        alert(`❌ Error: ${result.message}`);
+      } else {
+        // Cambiar el modo visual a bot ya que fue liberado
+        setTickets(prev => prev.map(t => t.phone === phone ? { ...t, waitingHumanMode: 'bot' } : t));
+        if (activeChatTicket && activeChatTicket.phone === phone) {
+          setActiveChatTicket(prev => prev ? { ...prev, waitingHumanMode: 'bot' } : null);
+        }
+      }
+      fetchTickets(true);
+    } catch (err) {
+      alert('❌ Error al forzar respuesta del bot.');
+      fetchTickets(true);
+    }
+  };
+
   const handleReleaseBot = async (phone: string) => {
     if (activeChatTicket && activeChatTicket.phone === phone) {
       setActiveChatTicket(null);
@@ -1691,6 +1716,16 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                         {(activeChatTicket.waitingHumanMode || 'bot') === 'bot' ? 'Modo: Bot' : 'Modo: Asesor'}
                       </span>
                     </button>
+                    {(activeChatTicket.waitingHumanMode || 'bot') === 'advisor' && (
+                      <button
+                        onClick={() => handleForceBotReply(activeChatTicket.phone)}
+                        className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1 active:scale-95 animate-fadeIn"
+                        title="Fuerza al bot a responder de inmediato al último mensaje del cliente"
+                      >
+                        <Bot className="w-3.5 h-3.5" />
+                        <span>Forzar Respuesta Bot</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
