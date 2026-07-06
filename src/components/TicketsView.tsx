@@ -49,6 +49,25 @@ const detectClaudeLink = (text: string | null) => {
   return match ? match[0] : null;
 };
 
+function formatExcelDate(excelDate: any): string {
+  if (!excelDate) return '-';
+  const str = excelDate.toString().trim();
+  if (isNaN(str)) {
+    return str;
+  }
+  try {
+    const serial = parseFloat(str);
+    const date = new Date((serial - 25569) * 86400 * 1000);
+    if (!isNaN(date.getTime())) {
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(date.getUTCDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+  } catch (e) {}
+  return str;
+}
+
 const formatMessageDate = (timestamp: number) => {
   const date = new Date(timestamp);
   const today = new Date();
@@ -172,6 +191,18 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const [newTicketPhone, setNewTicketPhone] = useState('');
   const [newTicketName, setNewTicketName] = useState('');
   const [newTicketReason, setNewTicketReason] = useState('');
+
+  // Client Profile states
+  const [showClientProfileModal, setShowClientProfileModal] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileData, setProfileData] = useState<any>(null);
+  const [profileEditing, setProfileEditing] = useState<{
+    phone: string;
+    fullname: string;
+    email: string;
+    notes: string;
+  } | null>(null);
+  const [profileSaving, setProfileSaving] = useState(false);
 
   useEffect(() => {
     const handleCloseMenu = () => setContextMenu(null);
@@ -378,6 +409,69 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       console.error("Error syncing chat messages:", e);
     } finally {
       setSyncingChat(false);
+    }
+  };
+
+  const fetchClientProfile = async (phone: string, force = false) => {
+    setProfileLoading(true);
+    setShowClientProfileModal(true);
+    setProfileData(null);
+    setProfileEditing(null);
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/client-history?phone=${phone}${force ? '&force=true' : ''}`);
+      if (res.ok) {
+        const data = await res.json();
+        setProfileData(data);
+        setProfileEditing({
+          phone: data.phone || phone,
+          fullname: data.fullname || '',
+          email: data.email || '',
+          notes: data.notes || ''
+        });
+      }
+    } catch (e) {
+      console.error("Error fetching client profile:", e);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handleSaveProfileNotes = async () => {
+    if (!profileEditing) return;
+    setProfileSaving(true);
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/client-history/save-notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profileEditing)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setProfileData((prev: any) => prev ? { ...prev, fullname: profileEditing.fullname, email: profileEditing.email, notes: profileEditing.notes } : null);
+          
+          // Update activeChatTicket
+          if (activeChatTicket && (activeChatTicket.phone === profileEditing.phone || activeChatTicket.userId === profileEditing.phone)) {
+            setActiveChatTicket((prev: any) => prev ? { ...prev, name: profileEditing.fullname, fullname: profileEditing.fullname } : null);
+          }
+          
+          // Update tickets list
+          setTickets((prev: any[]) => prev.map(t => {
+            const cleanT = t.phone ? t.phone.replace(/\D/g, '') : '';
+            const cleanP = profileEditing.phone.replace(/\D/g, '');
+            if (cleanT.endsWith(cleanP.slice(-10))) {
+              return { ...t, name: profileEditing.fullname, fullname: profileEditing.fullname };
+            }
+            return t;
+          }));
+        }
+      }
+    } catch (e) {
+      console.error("Error saving profile notes:", e);
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -1644,6 +1738,15 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     </h3>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-xs text-gray-450 font-mono">+{activeChatTicket.phone}</span>
+                      <button
+                        type="button"
+                        onClick={() => fetchClientProfile(activeChatTicket.phone)}
+                        className="text-[9px] font-bold px-2 py-0.5 rounded-full border bg-brand-primary/10 text-brand-primary border-brand-primary/20 hover:bg-brand-primary/20 transition-all flex items-center gap-1 active:scale-95"
+                        title="Ver Perfil y Detalles del Cliente"
+                      >
+                        <User className="w-2.5 h-2.5" />
+                        <span>Ver Perfil</span>
+                      </button>
                       {activeChatTicket.accounts && activeChatTicket.accounts.length > 0 && (
                         <button
                           type="button"
@@ -2732,6 +2835,228 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 className="px-4 py-1.5 text-xs bg-brand-primary hover:bg-brand-dark text-white rounded-xl font-bold transition-all shadow-sm active:scale-95"
               >
                 Iniciar Chat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Client Profile Modal */}
+      {showClientProfileModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-4xl w-full max-h-[85vh] flex flex-col shadow-2xl border dark:border-gray-850 overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-4 bg-gray-50 dark:bg-gray-950 border-b dark:border-gray-850 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-brand-primary/10 dark:bg-brand-primary/20 rounded-xl text-brand-primary">
+                  <User className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-950 dark:text-white leading-tight">
+                    Perfil del Cliente: {profileEditing?.fullname || 'Cliente'}
+                  </h3>
+                  <span className="text-[10px] text-gray-400 font-mono">+{profileEditing?.phone}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowClientProfileModal(false)}
+                className="p-1.5 hover:bg-gray-150 dark:hover:bg-gray-805 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-250 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 overflow-y-auto flex-1 bg-gray-50/50 dark:bg-gray-900/50">
+              {profileLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                  <RefreshCw className="w-8 h-8 animate-spin text-brand-primary" />
+                  <span className="text-xs text-gray-450 font-bold">Cargando perfil del cliente...</span>
+                </div>
+              ) : !profileData ? (
+                <div className="text-center py-20 text-xs text-gray-400">
+                  No se pudo cargar la información del perfil.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                  {/* Left Column: Editable Profile info (col-span-4) */}
+                  <div className="md:col-span-4 flex flex-col gap-4">
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border dark:border-gray-750 shadow-sm flex flex-col gap-3.5">
+                      <h4 className="text-xs font-bold text-gray-500 dark:text-gray-455 uppercase tracking-wider">
+                        📝 Datos Personales
+                      </h4>
+                      <div>
+                        <label className="block text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+                          Nombre Completo
+                        </label>
+                        <input
+                          type="text"
+                          value={profileEditing?.fullname || ''}
+                          onChange={(e) => setProfileEditing(prev => prev ? { ...prev, fullname: e.target.value } : null)}
+                          className="w-full p-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-850 border dark:border-gray-700 text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+                          Correo Electrónico
+                        </label>
+                        <input
+                          type="text"
+                          value={profileEditing?.email || ''}
+                          onChange={(e) => setProfileEditing(prev => prev ? { ...prev, email: e.target.value } : null)}
+                          className="w-full p-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-855 border dark:border-gray-700 text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+                          Notas Internas del Asesor
+                        </label>
+                        <textarea
+                          rows={6}
+                          value={profileEditing?.notes || ''}
+                          onChange={(e) => setProfileEditing(prev => prev ? { ...prev, notes: e.target.value } : null)}
+                          placeholder="Agrega notas sobre este cliente (ej. preferencias, acuerdos, incidentes pasados)..."
+                          className="w-full p-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-850 border dark:border-gray-700 text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary resize-none h-36"
+                        />
+                      </div>
+                      <button
+                        onClick={handleSaveProfileNotes}
+                        disabled={profileSaving}
+                        className="bg-brand-primary hover:bg-brand-dark text-white w-full py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 mt-1 flex justify-center items-center gap-1 shadow-sm active:scale-95"
+                      >
+                        {profileSaving ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <span>Guardando...</span>
+                          </>
+                        ) : (
+                          <span>💾 Guardar Cambios</span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Subscriptions, Payments & Excel History (col-span-8) */}
+                  <div className="md:col-span-8 flex flex-col gap-6">
+                    {/* Active/Expired Accounts */}
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border dark:border-gray-750 shadow-sm">
+                      <h4 className="text-xs font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                        🍿 Cuentas y Suscripciones Activas
+                      </h4>
+                      {!profileData.subscriptions || profileData.subscriptions.length === 0 ? (
+                        <span className="text-xxs text-gray-400 italic font-light block py-2">No tiene cuentas activas asignadas en la base de datos.</span>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[220px] overflow-y-auto pr-1">
+                          {profileData.subscriptions.map((sub: any, idx: number) => (
+                            <div key={idx} className="p-3 bg-gray-50 dark:bg-gray-850 rounded-xl border dark:border-gray-750 flex flex-col gap-1.5 shadow-xxs">
+                              <div className="flex justify-between items-center">
+                                <span className="font-extrabold text-brand-primary text-xs uppercase">{sub.streaming_platform}</span>
+                                <span className={`px-2 py-0.5 rounded-lg text-[9px] font-extrabold uppercase ${
+                                  sub.status === 'active' 
+                                    ? 'bg-green-500/10 text-green-600' 
+                                    : 'bg-red-500/10 text-red-500'
+                                }`}>
+                                  {sub.status === 'active' ? 'Activo' : 'Vencido'}
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-gray-600 dark:text-gray-400 flex flex-col gap-0.5 font-mono">
+                                <span className="truncate"><b>Correo:</b> {sub.account_email}</span>
+                                <span><b>Clave:</b> {sub.account_password || 'N/A'}</span>
+                                {sub.profile_pin && <span><b>PIN:</b> {sub.profile_pin}</span>}
+                                <span className="text-[9px] text-gray-400 dark:text-gray-500 mt-1 font-sans">
+                                  Vence: {sub.expiration_date ? sub.expiration_date.substring(0, 10) : 'N/A'}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Historical Excel cuts */}
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border dark:border-gray-750 shadow-sm">
+                      <div className="flex justify-between items-center mb-3">
+                        <h4 className="text-xs font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider flex items-center gap-1.5">
+                          📊 Histórico de Excel (Cortes Mensuales)
+                        </h4>
+                        <button
+                          onClick={() => fetchClientProfile(profileEditing?.phone || '', true)}
+                          disabled={profileLoading}
+                          className="px-2 py-1 bg-gray-50 dark:bg-gray-850 hover:bg-gray-100 dark:hover:bg-gray-750 border dark:border-gray-700 text-gray-650 dark:text-gray-350 font-bold text-[9px] rounded-lg transition-all flex items-center gap-1 active:scale-95 disabled:opacity-50"
+                          title="Sincronizar en vivo desde la base de datos de Excel"
+                        >
+                          <RefreshCw className={`w-2.5 h-2.5 ${profileLoading ? 'animate-spin' : ''}`} />
+                          <span>Forzar Sincronización</span>
+                        </button>
+                      </div>
+                      {!profileData.excelHistory || profileData.excelHistory.length === 0 ? (
+                        <span className="text-xxs text-gray-400 italic font-light block py-2">No tiene registros históricos en el Excel.</span>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[220px] overflow-y-auto pr-1">
+                          {profileData.excelHistory.map((hist: any, idx: number) => {
+                            const formattedVenc = hist.vencimiento ? (hist.vencimiento.toString().includes('-') ? hist.vencimiento.substring(0, 10) : formatExcelDate(hist.vencimiento)) : 'N/A';
+                            return (
+                              <div key={idx} className="p-3 bg-gray-50 dark:bg-gray-850 rounded-xl border dark:border-gray-750 flex flex-col gap-1 shadow-xxs">
+                                <div className="flex justify-between items-center font-bold">
+                                  <span className="text-brand-primary text-xs uppercase">{hist.streaming}</span>
+                                  <span className="text-[10px] text-gray-550 dark:text-gray-400">Corte: {hist.fecha_corte || 'N/A'}</span>
+                                </div>
+                                <div className="text-[10px] text-gray-650 dark:text-gray-400 flex flex-col gap-0.5 font-mono">
+                                  <span className="truncate"><b>Correo:</b> {hist.correo || 'N/A'}</span>
+                                  <span><b>Metodo:</b> {hist.metodo_pago || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-[9px] font-sans mt-1.5 pt-1.5 border-t border-gray-100 dark:border-gray-800">
+                                  <span className="text-gray-400">Vence: {formattedVenc}</span>
+                                  <span className="font-extrabold text-emerald-600 dark:text-emerald-450">
+                                    ${Number(hist.deben || 0).toLocaleString('es-CO')}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Approved purchases */}
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border dark:border-gray-750 shadow-sm">
+                      <h4 className="text-xs font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-3">
+                        💳 Historial de Compras de la Web
+                      </h4>
+                      {!profileData.purchases || profileData.purchases.length === 0 ? (
+                        <span className="text-xxs text-gray-400 italic font-light block py-2">No tiene compras aprobadas registradas.</span>
+                      ) : (
+                        <div className="max-h-[160px] overflow-y-auto space-y-2 pr-1 font-mono text-[10px]">
+                          {profileData.purchases.map((pur: any, idx: number) => (
+                            <div key={idx} className="flex justify-between items-center p-2.5 bg-gray-50 dark:bg-gray-850 rounded-xl border dark:border-gray-750">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="font-bold text-gray-800 dark:text-gray-200">{pur.platformName}</span>
+                                <span className="text-[9px] text-gray-400 font-sans">
+                                  Fecha: {pur.approvedAt ? pur.approvedAt.substring(0, 10) : 'N/A'}
+                                </span>
+                              </div>
+                              <div className="text-right flex flex-col gap-0.5">
+                                <span className="font-extrabold text-emerald-600 dark:text-emerald-450 text-xs">
+                                  ${Number(pur.amount).toLocaleString('es-CO')}
+                                </span>
+                                <span className="text-[9px] text-gray-400">ID: {pur.order_id}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* Modal Footer */}
+            <div className="p-4 bg-gray-50 dark:bg-gray-950 border-t dark:border-gray-850 flex justify-end gap-2 shrink-0">
+              <button
+                onClick={() => setShowClientProfileModal(false)}
+                className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-250 transition-colors"
+              >
+                Cerrar
               </button>
             </div>
           </div>
