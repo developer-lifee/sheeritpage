@@ -203,6 +203,9 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     notes: string;
   } | null>(null);
   const [profileSaving, setProfileSaving] = useState(false);
+  const [ticketTotal, setTicketTotal] = useState<number | null>(null);
+  const [ticketSaldo, setTicketSaldo] = useState<number | null>(null);
+  const [updatingTicketState, setUpdatingTicketState] = useState(false);
 
   useEffect(() => {
     const handleCloseMenu = () => setContextMenu(null);
@@ -417,6 +420,13 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     setShowClientProfileModal(true);
     setProfileData(null);
     setProfileEditing(null);
+    if (activeChatTicket) {
+      setTicketTotal(activeChatTicket.total !== undefined && activeChatTicket.total !== null ? activeChatTicket.total : null);
+      setTicketSaldo(activeChatTicket.saldo !== undefined && activeChatTicket.saldo !== null ? activeChatTicket.saldo : null);
+    } else {
+      setTicketTotal(null);
+      setTicketSaldo(null);
+    }
     const apiUrl = getApiUrl();
     try {
       const res = await fetch(`${apiUrl}/api/admin/client-history?phone=${phone}${force ? '&force=true' : ''}`);
@@ -472,6 +482,45 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       console.error("Error saving profile notes:", e);
     } finally {
       setProfileSaving(false);
+    }
+  };
+
+  const handleSaveTicketState = async () => {
+    if (!activeChatTicket) return;
+    setUpdatingTicketState(true);
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/tickets/update-state`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: activeChatTicket.phone,
+          total: ticketTotal,
+          saldo: ticketSaldo,
+          password: 'admin123'
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          // Actualizar en el estado local de activeChatTicket
+          setActiveChatTicket((prev: any) => prev ? { ...prev, total: ticketTotal, saldo: ticketSaldo } : null);
+          
+          // Actualizar en la lista de tickets
+          setTickets((prev: any[]) => prev.map(t => {
+            if (t.phone === activeChatTicket.phone || t.userId === activeChatTicket.userId) {
+              return { ...t, total: ticketTotal, saldo: ticketSaldo };
+            }
+            return t;
+          }));
+          alert('Cobro del ticket actualizado correctamente en la memoria del bot.');
+        }
+      }
+    } catch (e) {
+      console.error("Error updating ticket state:", e);
+      alert('Error al actualizar el cobro.');
+    } finally {
+      setUpdatingTicketState(false);
     }
   };
 
@@ -2934,6 +2983,60 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                         )}
                       </button>
                     </div>
+
+                    {activeChatTicket && (
+                      <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border dark:border-gray-750 shadow-sm flex flex-col gap-3 mt-4">
+                        <h4 className="text-xs font-bold text-gray-500 dark:text-gray-455 uppercase tracking-wider">
+                          🤖 Cobro y Saldo del Bot
+                        </h4>
+                        <div>
+                          <label className="block text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+                            Monto Total del Pedido ($)
+                          </label>
+                          <input
+                            type="number"
+                            value={ticketTotal !== null ? ticketTotal : ''}
+                            onChange={(e) => setTicketTotal(e.target.value === '' ? null : parseInt(e.target.value))}
+                            placeholder="Ej. 8000"
+                            className="w-full p-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-850 border dark:border-gray-700 text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+                            Saldo a Favor Aplicado ($)
+                          </label>
+                          <input
+                            type="number"
+                            value={ticketSaldo !== null ? ticketSaldo : ''}
+                            onChange={(e) => setTicketSaldo(e.target.value === '' ? null : parseInt(e.target.value))}
+                            placeholder="Ej. 2000"
+                            className="w-full p-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-850 border dark:border-gray-700 text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary"
+                          />
+                        </div>
+                        {ticketTotal !== null && (
+                          <div className="text-[10px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-850 p-2.5 rounded-xl border dark:border-gray-750 font-semibold">
+                            <span>Total Restante a Transferir: </span>
+                            <span className="font-extrabold text-brand-primary">
+                              ${(Math.max(0, (ticketTotal || 0) - (ticketSaldo || 0))).toLocaleString('es-CO')} COP
+                            </span>
+                          </div>
+                        )}
+                        <button
+                          onClick={handleSaveTicketState}
+                          disabled={updatingTicketState}
+                          className="bg-purple-600 hover:bg-purple-700 text-white w-full py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex justify-center items-center gap-1 shadow-sm active:scale-95"
+                        >
+                          {updatingTicketState ? (
+                            <>
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              <span>Actualizando...</span>
+                            </>
+                          ) : (
+                            <span>⚙️ Actualizar Cobro</span>
+                          )}
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Right Column: Subscriptions, Payments & Excel History (col-span-8) */}
