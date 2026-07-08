@@ -133,6 +133,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
 
   // Admin Config State (Only for Esteban)
   const [hourlyRate, setHourlyRate] = useState<number>(8333);
+  const [trialHourlyRate, setTrialHourlyRate] = useState<number>(5000);
   const [allowOvertime, setAllowOvertime] = useState<boolean>(true);
   const [updatingConfig, setUpdatingConfig] = useState(false);
   
@@ -192,6 +193,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
         const data = await res.json();
         setAllowOvertime(data.allow_overtime !== false);
         setHourlyRate(Number(data.hourly_rate || 8333));
+        setTrialHourlyRate(Number(data.trial_hourly_rate || 5000));
       }
     } catch (err) {
       console.error('Error fetching support schedule config:', err);
@@ -237,6 +239,30 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
       setError('Error al conectar para obtener los reportes de nómina.');
     } finally {
       setPayrollLoading(false);
+    }
+  };
+
+  const handleUpdateAgentRole = async (agentId: number, newRole: string) => {
+    const apiUrl = getApiUrl();
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/agents/role`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent_id: agentId, role: newRole, password: 'admin123' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccess('Rol de asesor actualizado.');
+        fetchPayrollData();
+        fetchAgents();
+      } else {
+        setError(data.message || 'Error al actualizar el rol.');
+      }
+    } catch (err) {
+      console.error('Error updating role:', err);
+      setError('Error de conexión al actualizar rol.');
     }
   };
 
@@ -500,7 +526,8 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
       const updatedConfig = {
         ...currentConfig,
         allow_overtime: allowOvertime,
-        hourly_rate: hourlyRate
+        hourly_rate: hourlyRate,
+        trial_hourly_rate: trialHourlyRate
       };
 
       // 3. Save
@@ -902,12 +929,23 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
 
               {/* Hourly rate value */}
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-gray-600 dark:text-gray-400">Valor Hora (COP):</span>
+                <span className="text-xs font-bold text-gray-600 dark:text-gray-400">Hora Normal (COP):</span>
                 <input
                   type="number"
                   value={hourlyRate}
                   onChange={(e) => setHourlyRate(Number(e.target.value))}
-                  className="px-2.5 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white w-24"
+                  className="px-2.5 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white w-20"
+                />
+              </div>
+
+              {/* Trial Hourly rate value */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-600 dark:text-gray-400">Hora Prueba (COP):</span>
+                <input
+                  type="number"
+                  value={trialHourlyRate}
+                  onChange={(e) => setTrialHourlyRate(Number(e.target.value))}
+                  className="px-2.5 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white w-20"
                 />
               </div>
 
@@ -949,8 +987,29 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
                       {/* Name / Info */}
                       <td className="py-4 px-4">
                         <div className="flex flex-col">
-                          <span className="font-bold text-xs text-gray-800 dark:text-gray-200">{agent.fullname}</span>
+                          <span className="font-bold text-xs text-gray-800 dark:text-gray-200">
+                            {agent.fullname}
+                            {agent.role === 'trial' && (
+                              <span className="ml-2 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-450 px-1.5 py-0.5 rounded-full text-xxs font-extrabold uppercase">
+                                En Prueba
+                              </span>
+                            )}
+                          </span>
                           <span className="text-xxs text-gray-500 font-mono mt-0.5">{agent.email}</span>
+                          {isEsteban ? (
+                            <select
+                              value={agent.role}
+                              onChange={(e) => handleUpdateAgentRole(agent.agent_id, e.target.value)}
+                              className="mt-1 text-xxs font-bold uppercase bg-gray-50 dark:bg-gray-700 dark:text-white border dark:border-gray-600 rounded px-1 py-0.5 w-24 outline-none"
+                            >
+                              <option value="agent">Asesor</option>
+                              <option value="trial">En Prueba</option>
+                              <option value="supervisor">Supervisor</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                          ) : (
+                            <span className="text-xxs font-bold text-brand-primary uppercase tracking-wider mt-1">{agent.role}</span>
+                          )}
                         </div>
                       </td>
 

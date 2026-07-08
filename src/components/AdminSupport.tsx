@@ -20,6 +20,7 @@ import ConnectionView from './ConnectionView';
 import PromptsConfigView from './PromptsConfigView';
 import RpaAutomatorView from './RpaAutomatorView';
 import { WebSalesView } from './WebSalesView';
+import { AccountingView } from './AccountingView';
 
 interface Step {
   text: string;
@@ -72,7 +73,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       console.error("Failed to write frontend audit log:", e);
     }
   };
-  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'payments' | 'streaming' | 'policies' | 'whatsapp' | 'prompts' | 'rpa' | 'web_sales'>('tickets');
+  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'payments' | 'streaming' | 'policies' | 'whatsapp' | 'prompts' | 'rpa' | 'web_sales' | 'accounting'>('tickets');
   const [searchQuery, setSearchQuery] = useState('');
 
 
@@ -289,6 +290,12 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
         >
           <ShoppingBag className="w-5 h-5 mr-2" /> Ventas Web
         </button>
+        <button 
+          onClick={() => setActiveTab('accounting')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'accounting' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <Calculator className="w-5 h-5 mr-2" /> Contabilidad
+        </button>
 
         {/* Separador visual */}
         <div className="h-6 w-px bg-gray-250 dark:bg-gray-700 self-center mx-1"></div>
@@ -388,6 +395,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       <div className={activeTab === 'stats' ? '' : 'hidden'}><AnalyticsDashboard /></div>
       <div className={activeTab === 'sales' ? '' : 'hidden'}><AddSaleForm /></div>
       <div className={activeTab === 'web_sales' ? '' : 'hidden'}><WebSalesView /></div>
+      <div className={activeTab === 'accounting' ? '' : 'hidden'}><AccountingView /></div>
       <div className={activeTab === 'gpt' ? 'space-y-8' : 'hidden'}>
         <GptAccountsView />
         <ManagedEmailsView />
