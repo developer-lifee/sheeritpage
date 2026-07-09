@@ -354,10 +354,10 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
       ...prev,
       {
         day_of_week: editingDay.value,
-        start_time: '10:00',
-        end_time: '19:00',
+        start_time: '08:00',
+        end_time: '17:00',
         break_type: 'lunch_60',
-        break_start: '14:00'
+        break_start: '12:00'
       }
     ]);
   };
