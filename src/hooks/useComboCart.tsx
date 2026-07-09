@@ -38,7 +38,8 @@ export function ComboCartProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/data/platforms.json')
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    fetch(`${apiUrl}/api/public/platforms`)
       .then(response => response.json())
       .then(data => {
         setPlatforms(data);

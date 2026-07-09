@@ -41,7 +41,7 @@ export const AvailabilityView: React.FC = () => {
     
     try {
       // Load platforms catalog
-      const platRes = await fetch('/data/platforms.json');
+      const platRes = await fetch(`${apiUrl}/api/public/platforms`);
       const platData = await platRes.json();
       setPlatforms(Array.isArray(platData) ? platData : []);
 
