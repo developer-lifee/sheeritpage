@@ -35,6 +35,7 @@ interface CostConfig {
   profile_slots: number;
   duration_days: number;
   expiration_date: string | null;
+  payment_method?: string | null;
 }
 
 export function AccountingView() {
@@ -60,7 +61,8 @@ export function AccountingView() {
     total_cost: 0,
     profile_slots: 5,
     duration_days: 30,
-    expiration_date: ''
+    expiration_date: '',
+    payment_method: ''
   });
 
   const getApiUrl = () => {
@@ -183,7 +185,8 @@ export function AccountingView() {
           total_cost: 0,
           profile_slots: 5,
           duration_days: 30,
-          expiration_date: ''
+          expiration_date: '',
+          payment_method: ''
         });
         fetchData();
       } else {
@@ -410,8 +413,8 @@ export function AccountingView() {
         <h3 className="font-bold dark:text-white text-sm mb-4">Administrar Costos de Cuentas (Costo Real Operativo)</h3>
         
         {/* Form to add Cost */}
-        <form onSubmit={handleAddCost} className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border dark:border-gray-700">
-          <div className="col-span-2 md:col-span-1">
+        <form onSubmit={handleAddCost} className="grid grid-cols-2 md:grid-cols-8 gap-3 mb-6 p-4 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border dark:border-gray-700">
+          <div>
             <label className="block text-2xs text-gray-400 uppercase font-bold mb-1">Plataforma</label>
             <input
               type="text"
@@ -419,7 +422,7 @@ export function AccountingView() {
               placeholder="NETFLIX, DISNEY"
               value={newCost.platform}
               onChange={(e) => setNewCost({ ...newCost, platform: e.target.value })}
-              className="w-full px-3 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white"
+              className="w-full px-2 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white"
             />
           </div>
           <div className="col-span-2">
@@ -430,7 +433,7 @@ export function AccountingView() {
               placeholder="cuenta@correo.com"
               value={newCost.email}
               onChange={(e) => setNewCost({ ...newCost, email: e.target.value })}
-              className="w-full px-3 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white"
+              className="w-full px-2 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white"
             />
           </div>
           <div>
@@ -440,7 +443,7 @@ export function AccountingView() {
               required
               value={newCost.total_cost}
               onChange={(e) => setNewCost({ ...newCost, total_cost: parseFloat(e.target.value) })}
-              className="w-full px-3 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white"
+              className="w-full px-2 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white"
             />
           </div>
           <div>
@@ -450,7 +453,36 @@ export function AccountingView() {
               required
               value={newCost.profile_slots}
               onChange={(e) => setNewCost({ ...newCost, profile_slots: parseInt(e.target.value) })}
-              className="w-full px-3 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white"
+              className="w-full px-2 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white"
+            />
+          </div>
+          <div>
+            <label className="block text-2xs text-gray-400 uppercase font-bold mb-1">Duración (Días)</label>
+            <input
+              type="number"
+              required
+              value={newCost.duration_days}
+              onChange={(e) => setNewCost({ ...newCost, duration_days: parseInt(e.target.value) })}
+              className="w-full px-2 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white"
+            />
+          </div>
+          <div>
+            <label className="block text-2xs text-gray-400 uppercase font-bold mb-1">Vencimiento</label>
+            <input
+              type="date"
+              value={newCost.expiration_date || ''}
+              onChange={(e) => setNewCost({ ...newCost, expiration_date: e.target.value || null })}
+              className="w-full px-2 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white"
+            />
+          </div>
+          <div>
+            <label className="block text-2xs text-gray-400 uppercase font-bold mb-1">Método Pago</label>
+            <input
+              type="text"
+              placeholder="ej. Visa Oro"
+              value={newCost.payment_method || ''}
+              onChange={(e) => setNewCost({ ...newCost, payment_method: e.target.value })}
+              className="w-full px-2 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white"
             />
           </div>
           <div className="col-span-2 md:col-span-1 flex items-end">
@@ -458,7 +490,7 @@ export function AccountingView() {
               type="submit"
               className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-1.5 rounded-lg text-xs"
             >
-              + Agregar Costo
+              + Agregar
             </button>
           </div>
         </form>
@@ -467,13 +499,16 @@ export function AccountingView() {
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-gray-150 dark:bg-gray-900/60 font-bold text-gray-500 uppercase">
-                <th className="px-4 py-2">Plataforma</th>
-                <th className="px-4 py-2">Correo Cuenta</th>
-                <th className="px-4 py-2">Costo Cuenta</th>
-                <th className="px-4 py-2">Cupos</th>
-                <th className="px-4 py-2">Costo Perfil</th>
-                <th className="px-4 py-2">Costo Diario</th>
-                <th className="px-4 py-2">Acciones</th>
+                <th className="px-3 py-2">Plataforma</th>
+                <th className="px-3 py-2">Correo Cuenta</th>
+                <th className="px-3 py-2">Costo Cuenta</th>
+                <th className="px-3 py-2">Cupos</th>
+                <th className="px-3 py-2">Costo Perfil</th>
+                <th className="px-3 py-2">Días</th>
+                <th className="px-3 py-2">Vencimiento</th>
+                <th className="px-3 py-2">Método Pago</th>
+                <th className="px-3 py-2">Costo Diario</th>
+                <th className="px-3 py-2">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y dark:divide-gray-700">
@@ -482,15 +517,20 @@ export function AccountingView() {
                 const dailyCost = costPerProfile / (cost.duration_days || 30);
                 return (
                   <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-gray-750/30">
-                    <td className="px-4 py-2 font-bold dark:text-white uppercase">{cost.platform}</td>
-                    <td className="px-4 py-2 text-gray-400">{cost.email}</td>
-                    <td className="px-4 py-2 text-red-650 dark:text-red-400 font-semibold">
+                    <td className="px-3 py-2 font-bold dark:text-white uppercase">{cost.platform}</td>
+                    <td className="px-3 py-2 text-gray-400">{cost.email}</td>
+                    <td className="px-3 py-2 text-red-650 dark:text-red-400 font-semibold">
                       ${cost.total_cost.toLocaleString()}
                     </td>
-                    <td className="px-4 py-2 text-gray-500">{cost.profile_slots}</td>
-                    <td className="px-4 py-2 text-gray-500">${costPerProfile.toFixed(0)}</td>
-                    <td className="px-4 py-2 text-gray-500">${dailyCost.toFixed(1)}</td>
-                    <td className="px-4 py-2">
+                    <td className="px-3 py-2 text-gray-500">{cost.profile_slots}</td>
+                    <td className="px-3 py-2 text-gray-500">${costPerProfile.toFixed(0)}</td>
+                    <td className="px-3 py-2 text-gray-500">{cost.duration_days} d</td>
+                    <td className="px-3 py-2 text-gray-500">
+                      {cost.expiration_date ? new Date(cost.expiration_date).toISOString().slice(0, 10) : 'Sin vencimiento'}
+                    </td>
+                    <td className="px-3 py-2 text-gray-500">{cost.payment_method || 'N/A'}</td>
+                    <td className="px-3 py-2 text-gray-500">${dailyCost.toFixed(1)}</td>
+                    <td className="px-3 py-2">
                       <button
                         onClick={() => cost.id && handleDeleteCost(cost.id)}
                         className="text-red-500 hover:text-red-750 p-1"
