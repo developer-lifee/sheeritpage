@@ -114,13 +114,17 @@ export function AccountingView() {
       const realJson = await realRes.json();
       setRealData(realJson);
 
-      // 2. Fetch prices
-      const priceRes = await fetch(`${apiUrl}/api/admin/prices`);
+      // 2. Fetch prices from public catalog
+      const priceRes = await fetch(`${apiUrl}/api/public/platforms`);
       const priceData = await priceRes.json();
-      setPrices(priceData);
+      const mappedPrices = priceData.map((p: any) => ({
+        platform: p.name,
+        normal_price: p.price
+      }));
+      setPrices(mappedPrices);
       
       const priceMap: Record<string, number> = {};
-      priceData.forEach((p: PriceConfig) => {
+      mappedPrices.forEach((p: PriceConfig) => {
         priceMap[p.platform] = p.normal_price;
       });
       setEditingPrice(priceMap);
@@ -401,6 +405,30 @@ export function AccountingView() {
                   </tr>
                 ))}
               </tbody>
+              {totals && (
+                <tfoot>
+                  <tr className="bg-gray-100 dark:bg-gray-900/60 font-bold border-t dark:border-gray-700 text-xs">
+                    <td className="px-6 py-4 dark:text-white">TOTAL PROYECTADO</td>
+                    <td className="px-6 py-4 text-center dark:text-white">
+                      {rows.reduce((sum, r) => sum + r.active_profiles, 0)} cupos
+                    </td>
+                    <td className="px-6 py-4 text-right text-green-600 dark:text-green-400 font-extrabold">
+                      ${Math.round(totals.ingreso_total).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-center">-</td>
+                    <td className="px-6 py-4 text-right text-red-650 dark:text-red-400 font-extrabold">
+                      ${Math.round(totals.egreso_total).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-center">-</td>
+                    <td className="px-6 py-4 text-center text-brand-primary font-extrabold">
+                      {totals.porcentaje_utilidad.toFixed(0)}%
+                    </td>
+                    <td className="px-6 py-4 text-right text-brand-primary font-extrabold">
+                      ${Math.round(totals.utilidad_total).toLocaleString()}
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         </div>
@@ -436,18 +464,33 @@ export function AccountingView() {
                     </td>
                   </tr>
                 ))}
-                {realData?.daily.filter(d => d.income > 0 || d.expense > 0).length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="text-center py-8 text-gray-400 italic">No hay transacciones registradas en este mes.</td>
-                  </tr>
-                )}
               </tbody>
+              {realData && (
+                <tfoot>
+                  <tr className="bg-gray-150 dark:bg-gray-900/60 font-bold border-t dark:border-gray-705 text-xs text-gray-800 dark:text-gray-250">
+                    <td className="px-6 py-3.5 dark:text-white font-bold">TOTAL MENSUAL</td>
+                    <td className="px-6 py-3.5 text-right text-green-650 dark:text-green-400 font-extrabold">
+                      ${Math.round(realData.totals.income).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-3.5 text-right text-red-650 dark:text-red-400 font-extrabold">
+                      ${Math.round(realData.totals.expense).toLocaleString()}
+                    </td>
+                    <td className={`px-6 py-3.5 text-right font-extrabold ${realData.totals.profit >= 0 ? 'text-brand-primary' : 'text-rose-500'}`}>
+                      ${Math.round(realData.totals.profit).toLocaleString()}
+                    </td>
+                  </tr>
+                  <tr className="bg-gray-100 dark:bg-gray-900/40 font-bold text-xxs uppercase tracking-wider text-gray-500 border-t dark:border-gray-750">
+                    <td colSpan={3} className="px-6 py-3 text-right">Rentabilidad / Porcentaje Utilidad Real:</td>
+                    <td className={`px-6 py-3 text-right font-extrabold ${realData.totals.profit >= 0 ? 'text-brand-primary' : 'text-rose-500'}`}>
+                      {realData.totals.income > 0 ? ((realData.totals.profit / realData.totals.income) * 100).toFixed(1) : '0.0'}%
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         </div>
       )}
-
-      {/* Metrics and Charts section */}
       {viewMode === 'real' && realData && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Daily Trend Area Chart */}

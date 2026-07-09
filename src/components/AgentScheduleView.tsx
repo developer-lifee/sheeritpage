@@ -135,6 +135,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
   const [hourlyRate, setHourlyRate] = useState<number>(8333);
   const [trialHourlyRate, setTrialHourlyRate] = useState<number>(5000);
   const [allowOvertime, setAllowOvertime] = useState<boolean>(true);
+  const [maxHoursLimit, setMaxHoursLimit] = useState<number>(10);
   const [updatingConfig, setUpdatingConfig] = useState(false);
   
   // Week Pager State
@@ -194,6 +195,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
         setAllowOvertime(data.allow_overtime !== false);
         setHourlyRate(Number(data.hourly_rate || 8333));
         setTrialHourlyRate(Number(data.trial_hourly_rate || 5000));
+        setMaxHoursLimit(Number(data.max_hours_limit || 10));
       }
     } catch (err) {
       console.error('Error fetching support schedule config:', err);
@@ -456,8 +458,9 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
           
           dailyNetMinutes += Math.max(0, diff - breakMin);
         }
-        if (dailyNetMinutes > 8 * 60) {
-          setModalError('No se permiten horas extras. El límite diario configurado es de 8.0 horas netas.');
+        const limitVal = parseFloat(dataConfig.max_hours_limit || 10);
+        if (dailyNetMinutes > limitVal * 60) {
+          setModalError(`No se permiten horas extras. El límite diario configurado es de ${limitVal.toFixed(1)} horas netas.`);
           setModalSaving(false);
           return;
         }
@@ -527,7 +530,8 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
         ...currentConfig,
         allow_overtime: allowOvertime,
         hourly_rate: hourlyRate,
-        trial_hourly_rate: trialHourlyRate
+        trial_hourly_rate: trialHourlyRate,
+        max_hours_limit: maxHoursLimit
       };
 
       // 3. Save
@@ -923,9 +927,25 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
                     !allowOvertime ? 'bg-rose-500 text-white shadow-sm' : 'bg-gray-200 dark:bg-gray-800 text-gray-500'
                   }`}
                 >
-                  No (Máx 8h netas)
+                  No (Máx {maxHoursLimit}h netas)
                 </button>
               </div>
+
+              {/* Individual Max hours limit */}
+              {!allowOvertime && (
+                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-1 duration-200">
+                  <span className="text-xs font-bold text-gray-600 dark:text-gray-400">Límite Horas:</span>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="1"
+                    max="24"
+                    value={maxHoursLimit}
+                    onChange={(e) => setMaxHoursLimit(Number(e.target.value))}
+                    className="px-2.5 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white w-14"
+                  />
+                </div>
+              )}
 
               {/* Hourly rate value */}
               <div className="flex items-center gap-2">
