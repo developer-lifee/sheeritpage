@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, Save, Plus, Trash2, TrendingUp, CreditCard, RefreshCcw, DollarSign } from 'lucide-react';
+import { Calculator, Save, Plus, Trash2, TrendingUp, CreditCard, RefreshCcw, DollarSign, Calendar, Eye, EyeOff } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts';
 
 interface AccountingRow {
   platform: string;
@@ -22,6 +35,15 @@ interface AccountingTotals {
   mensual_utilidad: number;
 }
 
+interface RealCashFlowData {
+  daily: Array<{ date: string; income: number; expense: number; profit: number }>;
+  totals: { income: number; expense: number; profit: number };
+  breakdown: {
+    income: Array<{ name: string; value: number }>;
+    expense: Array<{ name: string; value: number }>;
+  };
+}
+
 interface PriceConfig {
   platform: string;
   normal_price: number;
@@ -40,8 +62,10 @@ interface CostConfig {
 
 export function AccountingView() {
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'projections' | 'real'>('projections');
   const [rows, setRows] = useState<AccountingRow[]>([]);
   const [totals, setTotals] = useState<AccountingTotals | null>(null);
+  const [realData, setRealData] = useState<RealCashFlowData | null>(null);
   const [prices, setPrices] = useState<PriceConfig[]>([]);
   const [costs, setCosts] = useState<CostConfig[]>([]);
 
@@ -77,13 +101,18 @@ export function AccountingView() {
     setLoading(true);
     const apiUrl = getApiUrl();
     try {
-      // 1. Fetch accounting data
+      // 1. Fetch accounting data (projections)
       const accRes = await fetch(`${apiUrl}/api/admin/accounting/daily`);
       const accData = await accRes.json();
       if (accData.rows) {
         setRows(accData.rows);
         setTotals(accData.totals);
       }
+
+      // 1b. Fetch real cash flow
+      const realRes = await fetch(`${apiUrl}/api/admin/accounting/real`);
+      const realJson = await realRes.json();
+      setRealData(realJson);
 
       // 2. Fetch prices
       const priceRes = await fetch(`${apiUrl}/api/admin/prices`);
@@ -225,39 +254,65 @@ export function AccountingView() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex justify-between items-center">
+    <div className="space-y-8 animate-in fade-in duration-500 font-sans">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-xl font-bold dark:text-white">Contabilidad y Configuración de Precios</h2>
           <p className="text-xs text-gray-500 dark:text-gray-400">Control de ingresos, costos operativos y precios de venta.</p>
         </div>
-        <button 
-          onClick={fetchData}
-          className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-xl transition-all"
-        >
-          <RefreshCcw className="w-5 h-5 dark:text-white" />
-        </button>
+        <div className="flex items-center gap-2">
+          {/* View mode toggle */}
+          <div className="bg-gray-100 dark:bg-gray-750 p-1 rounded-xl flex">
+            <button
+              onClick={() => setViewMode('projections')}
+              className={`px-3 py-1.5 rounded-lg text-xxs font-bold transition-all ${
+                viewMode === 'projections'
+                  ? 'bg-white dark:bg-gray-800 text-brand-primary shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-800'
+              }`}
+            >
+              Matriz Proyectada (Diaria)
+            </button>
+            <button
+              onClick={() => setViewMode('real')}
+              className={`px-3 py-1.5 rounded-lg text-xxs font-bold transition-all ${
+                viewMode === 'real'
+                  ? 'bg-white dark:bg-gray-800 text-brand-primary shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-800'
+              }`}
+            >
+              Flujo de Caja Real (Mes)
+            </button>
+          </div>
+          <button 
+            onClick={fetchData}
+            className="p-2 bg-gray-150 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-650 rounded-xl transition-all"
+            title="Refrescar Datos"
+          >
+            <RefreshCcw className="w-4 h-4 dark:text-white" />
+          </button>
+        </div>
       </div>
 
       {/* Totales Resumen */}
-      {totals && (
+      {viewMode === 'projections' && totals && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
-            <span className="text-xs text-gray-400 font-semibold uppercase">Ingreso Diario / Mensual</span>
+            <span className="text-xs text-gray-400 font-semibold uppercase">Ingreso Diario (Normalizado)</span>
             <div className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
               ${Math.round(totals.ingreso_total).toLocaleString()}
             </div>
             <div className="text-xs text-gray-500 mt-1">
-              Mensual Proyectado: ${Math.round(totals.mensual_ingreso).toLocaleString()}
+              Proyección Mensual: ${Math.round(totals.mensual_ingreso).toLocaleString()}
             </div>
           </div>
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
-            <span className="text-xs text-gray-400 font-semibold uppercase">Egreso Diario / Mensual</span>
+            <span className="text-xs text-gray-400 font-semibold uppercase">Egreso Diario (Normalizado)</span>
             <div className="text-2xl font-bold text-red-650 dark:text-red-400 mt-1">
               ${Math.round(totals.egreso_total).toLocaleString()}
             </div>
             <div className="text-xs text-gray-500 mt-1">
-              Mensual Proyectado: ${Math.round(totals.mensual_egreso).toLocaleString()}
+              Costo Mensual Estimado: ${Math.round(totals.mensual_egreso).toLocaleString()}
             </div>
           </div>
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
@@ -272,50 +327,216 @@ export function AccountingView() {
         </div>
       )}
 
-      {/* Contabilidad Diaria Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 overflow-hidden">
-        <div className="px-6 py-4 border-b dark:border-gray-700 flex justify-between items-center">
-          <h3 className="font-bold dark:text-white text-sm">Matriz de Contabilidad Diaria (Normalizada)</h3>
+      {viewMode === 'real' && realData && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
+            <span className="text-xs text-gray-400 font-semibold uppercase">Ingresos Reales Cobrados (Mes)</span>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
+              ${Math.round(realData.totals.income).toLocaleString()}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Ventas web cobradas + ingresos manuales
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
+            <span className="text-xs text-gray-400 font-semibold uppercase">Egresos Reales Pagados (Mes)</span>
+            <div className="text-2xl font-bold text-red-650 dark:text-red-400 mt-1">
+              ${Math.round(realData.totals.expense).toLocaleString()}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Renovación de cuentas + gastos manuales
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
+            <span className="text-xs text-gray-400 font-semibold uppercase">Flujo Neto / Utilidad Real</span>
+            <div className={`text-2xl font-bold mt-1 ${realData.totals.profit >= 0 ? 'text-brand-primary' : 'text-red-500'}`}>
+              ${Math.round(realData.totals.profit).toLocaleString()}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Flujo de caja neto real acumulado del mes
+            </div>
+          </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-gray-900/50 text-xs font-bold text-gray-500 uppercase">
-                <th className="px-6 py-3">Streaming</th>
-                <th className="px-6 py-3">Cupos Activos</th>
-                <th className="px-6 py-3">Ingreso Total</th>
-                <th className="px-6 py-3">Ganancia %</th>
-                <th className="px-6 py-3">Egreso Total</th>
-                <th className="px-6 py-3">Egreso %</th>
-                <th className="px-6 py-3">Indicador Ganancia</th>
-                <th className="px-6 py-3">Utilidad Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y dark:divide-gray-700 text-sm">
-              {rows.map((row, i) => (
-                <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-750/30">
-                  <td className="px-6 py-4 font-bold dark:text-white">{row.platform}</td>
-                  <td className="px-6 py-4 text-gray-500">{row.active_profiles}</td>
-                  <td className="px-6 py-4 text-green-600 dark:text-green-400 font-semibold">
-                    ${Math.round(row.ingreso_total).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 text-gray-500">{row.ganancia_porcentaje.toFixed(1)}%</td>
-                  <td className="px-6 py-4 text-red-650 dark:text-red-400">
-                    ${Math.round(row.egreso_total).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 text-gray-500">{row.egreso_porcentaje.toFixed(1)}%</td>
-                  <td className={`px-6 py-4 font-bold ${row.indicador_gan >= 30 ? 'text-green-500' : 'text-yellow-500'}`}>
-                    {row.indicador_gan.toFixed(0)}%
-                  </td>
-                  <td className="px-6 py-4 font-bold dark:text-white">
-                    ${Math.round(row.utilidad_total).toLocaleString()}
-                  </td>
+      )}
+
+      {/* Main Table View */}
+      {viewMode === 'projections' ? (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 overflow-hidden">
+          <div className="px-6 py-4 border-b dark:border-gray-700">
+            <h3 className="font-bold dark:text-white text-sm">Matriz de Contabilidad Diaria (Normalizada)</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-gray-900/50 font-bold text-gray-500 uppercase">
+                  <th className="px-6 py-3">Streaming</th>
+                  <th className="px-6 py-3 text-center">Cupos Activos</th>
+                  <th className="px-6 py-3 text-right">Ingreso Diario</th>
+                  <th className="px-6 py-3 text-center">Ganancia %</th>
+                  <th className="px-6 py-3 text-right">Egreso Diario</th>
+                  <th className="px-6 py-3 text-center">Egreso %</th>
+                  <th className="px-6 py-3 text-center">Margen Utilidad</th>
+                  <th className="px-6 py-3 text-right">Utilidad Diaria</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y dark:divide-gray-700 text-sm">
+                {rows.map((row, i) => (
+                  <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-750/30 text-xs">
+                    <td className="px-6 py-3.5 font-bold dark:text-white uppercase">{row.platform}</td>
+                    <td className="px-6 py-3.5 text-center text-gray-500">{row.active_profiles}</td>
+                    <td className="px-6 py-3.5 text-right text-green-600 dark:text-green-400 font-semibold">
+                      ${Math.round(row.ingreso_total).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-3.5 text-center text-gray-500">{row.ganancia_porcentaje.toFixed(1)}%</td>
+                    <td className="px-6 py-3.5 text-right text-red-650 dark:text-red-400">
+                      ${Math.round(row.egreso_total).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-3.5 text-center text-gray-500">{row.egreso_porcentaje.toFixed(1)}%</td>
+                    <td className={`px-6 py-3.5 text-center font-bold ${row.indicador_gan >= 30 ? 'text-green-500' : 'text-yellow-500'}`}>
+                      {row.indicador_gan.toFixed(0)}%
+                    </td>
+                    <td className="px-6 py-3.5 text-right font-bold dark:text-white">
+                      ${Math.round(row.utilidad_total).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 overflow-hidden">
+          <div className="px-6 py-4 border-b dark:border-gray-700">
+            <h3 className="font-bold dark:text-white text-sm">Flujo de Caja Real Diario (Mensualizado)</h3>
+          </div>
+          <div className="overflow-x-auto max-h-[350px] overflow-y-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-gray-900/50 font-bold text-gray-500 uppercase sticky top-0">
+                  <th className="px-6 py-3">Fecha</th>
+                  <th className="px-6 py-3 text-right">Entradas Reales ($)</th>
+                  <th className="px-6 py-3 text-right">Salidas Reales ($)</th>
+                  <th className="px-6 py-3 text-right">Flujo Neto ($)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y dark:divide-gray-700 text-sm">
+                {realData?.daily.filter(d => d.income > 0 || d.expense > 0).map((day, i) => (
+                  <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-750/30 text-xs">
+                    <td className="px-6 py-3.5 font-semibold dark:text-white">
+                      {new Date(day.date).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="px-6 py-3.5 text-right text-green-600 dark:text-green-400 font-bold">
+                      ${day.income.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-3.5 text-right text-red-600 dark:text-red-400">
+                      ${day.expense.toLocaleString()}
+                    </td>
+                    <td className={`px-6 py-3.5 text-right font-extrabold ${day.profit >= 0 ? 'text-brand-primary' : 'text-rose-500'}`}>
+                      ${day.profit.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+                {realData?.daily.filter(d => d.income > 0 || d.expense > 0).length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="text-center py-8 text-gray-400 italic">No hay transacciones registradas en este mes.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Metrics and Charts section */}
+      {viewMode === 'real' && realData && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Daily Trend Area Chart */}
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
+            <h3 className="font-bold dark:text-white text-sm mb-4 flex items-center">
+              <TrendingUp className="w-4 h-4 mr-1.5 text-brand-primary" /> Tendencia de Flujo de Caja Diario
+            </h3>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={realData.daily} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10B981" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#EF4444" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" className="dark:stroke-gray-700" />
+                  <XAxis dataKey="date" tickFormatter={(val) => val.split('-')[2]} stroke="#9CA3AF" fontSize={10} />
+                  <YAxis stroke="#9CA3AF" fontSize={10} />
+                  <Tooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
+                  <Legend wrapperStyle={{ fontSize: '11px' }} />
+                  <Area type="monotone" dataKey="income" name="Entradas" stroke="#10B981" fillOpacity={1} fill="url(#colorIncome)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="expense" name="Salidas" stroke="#EF4444" fillOpacity={1} fill="url(#colorExpense)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Platform Performance Breakdowns */}
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700 flex flex-col justify-between">
+            <div>
+              <h3 className="font-bold dark:text-white text-sm mb-4">¿Qué plataforma da más y qué quita más?</h3>
+              <div className="grid grid-cols-2 gap-6">
+                {/* Income Breakdown */}
+                <div>
+                  <h4 className="text-2xs font-extrabold text-gray-400 uppercase mb-3 flex items-center">
+                    <DollarSign className="w-3.5 h-3.5 text-green-500 mr-1" /> Mayores Ingresos
+                  </h4>
+                  <div className="space-y-2.5">
+                    {realData.breakdown.income.slice(0, 5).map((item, idx) => (
+                      <div key={idx} className="flex justify-between items-center text-xs pb-1 border-b border-gray-50 dark:border-gray-700">
+                        <span className="font-semibold text-gray-700 dark:text-gray-300 truncate max-w-[90px]">{item.name}</span>
+                        <span className="text-green-600 dark:text-green-400 font-mono font-bold">${item.value.toLocaleString()}</span>
+                      </div>
+                    ))}
+                    {realData.breakdown.income.length === 0 && <span className="text-xxs text-gray-400 italic">Sin ingresos</span>}
+                  </div>
+                </div>
+
+                {/* Expense Breakdown */}
+                <div>
+                  <h4 className="text-2xs font-extrabold text-gray-400 uppercase mb-3 flex items-center">
+                    <CreditCard className="w-3.5 h-3.5 text-red-500 mr-1" /> Mayores Egresos
+                  </h4>
+                  <div className="space-y-2.5">
+                    {realData.breakdown.expense.slice(0, 5).map((item, idx) => (
+                      <div key={idx} className="flex justify-between items-center text-xs pb-1 border-b border-gray-50 dark:border-gray-700">
+                        <span className="font-semibold text-gray-700 dark:text-gray-300 truncate max-w-[90px]">{item.name}</span>
+                        <span className="text-red-500 dark:text-red-400 font-mono font-bold">${item.value.toLocaleString()}</span>
+                      </div>
+                    ))}
+                    {realData.breakdown.expense.length === 0 && <span className="text-xxs text-gray-400 italic">Sin egresos</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Visual indicators */}
+            <div className="mt-6 pt-4 border-t dark:border-gray-700 grid grid-cols-2 gap-4 text-center">
+              <div className="bg-emerald-50 dark:bg-emerald-950/20 p-3.5 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                <span className="text-3xs font-extrabold text-emerald-800 dark:text-emerald-350 uppercase tracking-wider block">Producto Estrella (Inflow)</span>
+                <div className="text-sm font-bold text-emerald-600 dark:text-emerald-405 mt-0.5 uppercase">
+                  {realData.breakdown.income[0]?.name || 'N/A'}
+                </div>
+              </div>
+              <div className="bg-rose-50 dark:bg-rose-950/20 p-3.5 rounded-xl border border-rose-100 dark:border-rose-900/30">
+                <span className="text-3xs font-extrabold text-rose-800 dark:text-rose-350 uppercase tracking-wider block">Mayor Costo (Outflow)</span>
+                <div className="text-sm font-bold text-rose-600 dark:text-rose-455 mt-0.5 uppercase">
+                  {realData.breakdown.expense[0]?.name || 'N/A'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Prices Configurator */}
