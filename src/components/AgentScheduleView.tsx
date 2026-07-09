@@ -354,10 +354,10 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
       ...prev,
       {
         day_of_week: editingDay.value,
-        start_time: '09:00',
-        end_time: '18:00',
+        start_time: '10:00',
+        end_time: '19:00',
         break_type: 'lunch_60',
-        break_start: '13:00'
+        break_start: '14:00'
       }
     ]);
   };
@@ -492,7 +492,8 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
           email: editingAgent.email,
           schedule: mergedSchedule,
           week_start: weekStart,
-          requester_email: agentEmail
+          requester_email: agentEmail,
+          day_of_week: editingDay.value
         })
       });
       const dataSave = await resSave.json();
