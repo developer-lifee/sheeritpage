@@ -11,6 +11,7 @@ import { WhatsAppButton } from './components/WhatsAppButton';
 import { SupportSection } from './components/SupportSection';
 import { AdminSupport } from './components/AdminSupport';
 import { VerificationPage } from './components/VerificationPage';
+import { SoftwarePricingPage } from './components/SoftwarePricingPage';
 import ClientLoginView from './components/ClientLoginView';
 import { useDarkMode } from './hooks/useDarkMode';
 import { Search, ShoppingCart, Lock, AlertCircle } from 'lucide-react';
@@ -32,7 +33,7 @@ interface Platform {
   plans: Plan[];
 }
 
-export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios';
+export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software';
 
 const AUTHORIZED_ADVISORS: { [email: string]: string } = {
   'esclepiades@hotmail.com': 'Esclepiades',
@@ -138,6 +139,7 @@ function AppContent() {
     if (path === '/aiuda/admin') return 'admin';
     if (path === '/verificar') return 'verificar';
     if (path === '/mis-servicios') return 'servicios';
+    if (path === '/software') return 'software';
     return 'home';
   });
   const [isAdminAuth, setIsAdminAuth] = useState(() => {
@@ -169,6 +171,8 @@ function AppContent() {
       setCurrentView('verificar');
     } else if (path === '/mis-servicios') {
       setCurrentView('servicios');
+    } else if (path === '/software') {
+      setCurrentView('software');
     } else {
       setCurrentView('home');
     }
@@ -186,6 +190,8 @@ function AppContent() {
         setCurrentView('verificar');
       } else if (currentPath === '/mis-servicios') {
         setCurrentView('servicios');
+      } else if (currentPath === '/software') {
+        setCurrentView('software');
       } else {
         setCurrentView('home');
       }
@@ -202,6 +208,7 @@ function AppContent() {
     else if (view === 'admin') path = '/aiuda/admin';
     else if (view === 'verificar') path = '/verificar';
     else if (view === 'servicios') path = '/mis-servicios';
+    else if (view === 'software') path = '/software';
     window.history.pushState({}, '', path);
     window.scrollTo(0, 0);
   };
@@ -363,6 +370,10 @@ function AppContent() {
 
       {currentView === 'servicios' && (
         <ClientLoginView />
+      )}
+
+      {currentView === 'software' && (
+        <SoftwarePricingPage />
       )}
 
       {currentView === 'admin' && (
