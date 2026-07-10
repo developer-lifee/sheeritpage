@@ -345,18 +345,18 @@ export function SoftwarePricingPage() {
                 </div>
 
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
-                  El software es de ustedes para siempre. Haz un pago único de desarrollo y hospédalo en tu propio servidor o paga un bajo mantenimiento con nosotros.
+                  El software es de ustedes para siempre. Se realiza una cotización previa según el alcance del proyecto. Puedes hospedarlo en tu propio servidor.
                 </p>
 
                 <div className="mb-8">
                   <div className="flex flex-col gap-1">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-gray-500 dark:text-gray-400 text-sm font-bold">Pago Único:</span>
-                      <span className="text-4xl font-black text-gray-950 dark:text-white">$980.000 COP</span>
+                      <span className="text-gray-500 dark:text-gray-400 text-sm font-bold">Inversión:</span>
+                      <span className="text-3xl font-black text-gray-950 dark:text-white">A convenir</span>
                     </div>
                     <div className="flex items-baseline gap-2 mt-1">
-                      <span className="text-gray-500 dark:text-gray-400 text-xs font-bold">Servidor/Nube:</span>
-                      <span className="text-lg font-bold text-emerald-500">$30.000 COP / mes</span>
+                      <span className="text-gray-500 dark:text-gray-400 text-xs font-bold">Servidor:</span>
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Cotización previa según requerimientos</span>
                     </div>
                   </div>
                 </div>
