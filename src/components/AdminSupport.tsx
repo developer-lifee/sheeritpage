@@ -117,7 +117,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
     const apiUrl = getApiUrl();
     fetch(`${apiUrl}/api/support`)
       .then(res => res.json())
-      .then(json => setData(json))
+      .then(json => setData(Array.isArray(json) ? json : []))
       .catch(err => console.error('Error loading data:', err));
   }, []);
 
