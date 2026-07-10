@@ -1287,8 +1287,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     const timeB = b.lastMessageTime || 0;
     return timeB - timeA;
   });
-  const myTickets = activeTickets.filter(t => t.agent && t.agent.toLowerCase().trim() === safeAgentName);
-  const otherTickets = activeTickets.filter(t => t.agent && t.agent.toLowerCase().trim() !== safeAgentName);
+  const myTickets = activeTickets.filter(t => t.agent && String(t.agent).toLowerCase().trim() === safeAgentName);
+  const otherTickets = activeTickets.filter(t => t.agent && String(t.agent).toLowerCase().trim() !== safeAgentName);
 
   const getSidebarTickets = () => {
     switch (sidebarFilter) {
@@ -1831,7 +1831,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                       >
                         Reclamar Ticket
                       </button>
-                    ) : activeChatTicket.agent.toLowerCase().trim() === safeAgentName ? (
+                    ) : String(activeChatTicket.agent || '').toLowerCase().trim() === safeAgentName ? (
                       <button
                         onClick={() => handleClaim(activeChatTicket.phone, '')}
                         className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition-all"
