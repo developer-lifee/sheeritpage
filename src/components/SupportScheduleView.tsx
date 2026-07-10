@@ -12,6 +12,8 @@ interface SupportScheduleConfig {
   max_hours_limit?: string | number;
   shift_start_limit?: string;
   shift_end_limit?: string;
+  hourly_rate?: string | number;
+  trial_hourly_rate?: string | number;
 }
 
 export const SupportScheduleView: React.FC = () => {
@@ -25,7 +27,9 @@ export const SupportScheduleView: React.FC = () => {
     allow_overtime: true,
     max_hours_limit: 10,
     shift_start_limit: '08:00',
-    shift_end_limit: '22:00'
+    shift_end_limit: '22:00',
+    hourly_rate: 8333,
+    trial_hourly_rate: 5000
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -302,39 +306,75 @@ export const SupportScheduleView: React.FC = () => {
             </div>
           </div>
 
-          {/* Overtime configuration */}
-          <div className="bg-gray-50/50 dark:bg-gray-850 p-5 rounded-2xl border dark:border-gray-750 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h4 className="font-bold text-sm text-gray-700 dark:text-gray-300 flex items-center">
-                <Shield className="w-4 h-4 mr-1.5 text-brand-primary" /> Control de Horas Extras de Asesores
-              </h4>
-              <p className="text-[11px] text-gray-400 mt-1 font-light">
-                Si está desactivado, el sistema impedirá a cualquier colaborador registrar turnos diarios que excedan las 8.0 horas netas.
-              </p>
+          {/* Overtime and Value configuration */}
+          <div className="bg-gray-50/50 dark:bg-gray-850 p-5 rounded-2xl border dark:border-gray-750">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 pb-4 border-b dark:border-gray-750">
+              <div>
+                <h4 className="font-bold text-sm text-gray-700 dark:text-gray-300 flex items-center">
+                  <Shield className="w-4 h-4 mr-1.5 text-brand-primary" /> Control de Horas Extras de Asesores
+                </h4>
+                <p className="text-[11px] text-gray-400 mt-1 font-light">
+                  Si está desactivado, el sistema limitará el total diario de turnos al valor configurado.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfig(prev => ({ ...prev, allow_overtime: true }))}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    config.allow_overtime !== false 
+                      ? 'bg-brand-primary text-white shadow-sm' 
+                      : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
+                  }`}
+                >
+                  Permitidas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfig(prev => ({ ...prev, allow_overtime: false }))}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    config.allow_overtime === false 
+                      ? 'bg-rose-500 text-white shadow-sm' 
+                      : 'text-gray-500 hover:text-rose-600 dark:text-gray-400 dark:hover:text-rose-450'
+                  }`}
+                >
+                  Bloqueadas (Límite Configurable)
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setConfig(prev => ({ ...prev, allow_overtime: true }))}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  config.allow_overtime !== false 
-                    ? 'bg-brand-primary text-white shadow-sm' 
-                    : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
-                }`}
-              >
-                Permitidas
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfig(prev => ({ ...prev, allow_overtime: false }))}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  config.allow_overtime === false 
-                    ? 'bg-rose-500 text-white shadow-sm' 
-                    : 'text-gray-500 hover:text-rose-600 dark:text-gray-400 dark:hover:text-rose-450'
-                }`}
-              >
-                Bloqueadas (Máx 8h netas)
-              </button>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-400 mb-1">Límite Horas (Grupales):</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="1"
+                  max="24"
+                  value={config.max_hours_limit || 10}
+                  onChange={(e) => handleInputChange('max_hours_limit', e.target.value)}
+                  disabled={config.allow_overtime !== false}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm disabled:opacity-50"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-400 mb-1">Hora Normal (COP):</label>
+                <input
+                  type="number"
+                  value={config.hourly_rate || 8333}
+                  onChange={(e) => handleInputChange('hourly_rate', e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-400 mb-1">Hora Prueba (COP):</label>
+                <input
+                  type="number"
+                  value={config.trial_hourly_rate || 5000}
+                  onChange={(e) => handleInputChange('trial_hourly_rate', e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                />
+              </div>
             </div>
           </div>
 
