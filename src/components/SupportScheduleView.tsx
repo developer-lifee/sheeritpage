@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Shield, Save, RefreshCw, AlertTriangle, CheckCircle, HelpCircle, ToggleLeft, ToggleRight, Radio } from 'lucide-react';
+import { Clock, Shield, Save, RefreshCw, AlertTriangle, CheckCircle, HelpCircle, ToggleLeft, ToggleRight, Radio, CalendarDays } from 'lucide-react';
 
 interface SupportScheduleConfig {
   manual_status: 'online' | 'offline' | 'auto';
@@ -9,6 +9,9 @@ interface SupportScheduleConfig {
   weekend_end: string;
   offline_message: string;
   allow_overtime?: boolean;
+  max_hours_limit?: string | number;
+  shift_start_limit?: string;
+  shift_end_limit?: string;
 }
 
 export const SupportScheduleView: React.FC = () => {
@@ -19,7 +22,10 @@ export const SupportScheduleView: React.FC = () => {
     weekend_start: '16:00',
     weekend_end: '22:00',
     offline_message: '',
-    allow_overtime: true
+    allow_overtime: true,
+    max_hours_limit: 10,
+    shift_start_limit: '08:00',
+    shift_end_limit: '22:00'
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -329,6 +335,36 @@ export const SupportScheduleView: React.FC = () => {
               >
                 Bloqueadas (Máx 8h netas)
               </button>
+            </div>
+          </div>
+
+          {/* Support Shift Booking Range Limits */}
+          <div className="bg-gray-50/50 dark:bg-gray-850 p-5 rounded-2xl border dark:border-gray-750">
+            <h4 className="font-bold text-sm text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+              <CalendarDays className="w-4 h-4 mr-1.5 text-brand-primary" /> Rango Horario de Turnos Permitido
+            </h4>
+            <p className="text-[11px] text-gray-400 mb-4 font-light">
+              Establece las horas límites en las cuales los agentes pueden programar sus turnos semanales de soporte.
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-400 mb-1">Hora Mínima Permitida</label>
+                <input
+                  type="time"
+                  value={config.shift_start_limit || '08:00'}
+                  onChange={(e) => handleInputChange('shift_start_limit', e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-400 mb-1">Hora Máxima Permitida</label>
+                <input
+                  type="time"
+                  value={config.shift_end_limit || '22:00'}
+                  onChange={(e) => handleInputChange('shift_end_limit', e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
+                />
+              </div>
             </div>
           </div>
 
