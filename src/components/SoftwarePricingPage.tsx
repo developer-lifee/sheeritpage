@@ -1,15 +1,73 @@
-import React from 'react';
-import { Shield, Sparkles, Server, Clock, Code, Award, CheckCircle2, MessageSquare, ArrowRight, Database, Settings, Zap, ArrowLeftRight, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { Shield, Sparkles, Server, Clock, Code, Award, CheckCircle2, MessageSquare, ArrowRight, Database, Settings, Zap, ArrowLeftRight, Check, ChevronLeft, ChevronRight, Laptop } from 'lucide-react';
 
 export function SoftwarePricingPage() {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
   const handleContactWhatsApp = (planType: string) => {
     const message = `Hola Sheerit! Estoy interesado en sus servicios de desarrollo de software y automatización (Opción: ${planType}). Me gustaría agendar una asesoría para mi proyecto.`;
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/57314615670?text=${encodedMessage}`, '_blank');
   };
 
+  const cases = [
+    {
+      title: "Plataformas de Autogestión de Proveedores y Logística",
+      badge: "Operación & Logística",
+      desc: "Ideal para empresas que manejan personal externo, contratistas o logísticos. En lugar de revisar planillas manualmente por chat, se crea un flujo automatizado:",
+      steps: [
+        "El contratista ingresa de forma segura usando su número de registro o documento de identidad.",
+        "El sistema le muestra el detalle de su planilla precargada y este valida o solicita soporte en un clic.",
+        "Automatiza la generación de archivos planos bancarios y contables, eliminando errores de digitación."
+      ],
+      metrics: [
+        { label: "Tiempo de validación manual", value: "-90% de reducción" },
+        { label: "Errores de pago digitados", value: "0% de incidencias" },
+        { label: "Gestión administrativa", value: "100% digital y en línea" }
+      ]
+    },
+    {
+      title: "Automatización de Reportes & Archivos Planos Financieros",
+      badge: "Finanzas & Conciliación",
+      desc: "Perfecto para áreas contables que pierden horas consolidando archivos Excel para subirlos a bancos o sistemas ERP:",
+      steps: [
+        "El sistema lee de forma inteligente planillas de cobro, ventas o nómina en diversos formatos.",
+        "Genera automáticamente los archivos planos estructurados (.txt, .csv) bajo el formato exacto del banco (Bancolombia, Bogotá, etc.).",
+        "Exporta automáticamente la información al formato de cargue masivo de tu software contable (Siigo, Helisa, etc.)."
+      ],
+      metrics: [
+        { label: "Velocidad de generación", value: "Segundos en vez de horas" },
+        { label: "Compatibilidad bancaria", value: "100% garantizada" },
+        { label: "Esfuerzo del equipo contable", value: "Reducido al mínimo" }
+      ]
+    },
+    {
+      title: "Bots de Notificaciones y Alertas por WhatsApp",
+      badge: "Atención al Cliente",
+      desc: "Conecta tu base de datos de Excel o CRM para enviar notificaciones automáticas y alertas en tiempo real a tus clientes:",
+      steps: [
+        "Envío masivo o programado de credenciales, facturas, recordatorios de pago o alertas de vencimiento.",
+        "El bot responde preguntas frecuentes y atiende solicitudes repetitivas 24/7 sin sobrecargar al equipo.",
+        "Panel centralizado para que tus asesores tomen el control de las conversaciones cuando sea necesario."
+      ],
+      metrics: [
+        { label: "Tasa de apertura de mensajes", value: "98% promedio en WhatsApp" },
+        { label: "Atención al cliente", value: "Respuestas inmediatas 24/7" },
+        { label: "Saturación del equipo", value: "-75% de llamadas operativas" }
+      ]
+    }
+  ];
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % cases.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + cases.length) % cases.length);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300 animate-fadeIn">
       {/* Hero Section */}
       <section className="relative overflow-hidden pt-20 pb-16 md:pt-28 md:pb-24 bg-gradient-to-br from-brand-primary/10 via-transparent to-emerald-500/5 dark:from-brand-primary/20 dark:to-emerald-500/10">
         <div className="max-w-6xl mx-auto px-4 text-center relative z-10">
@@ -59,7 +117,7 @@ export function SoftwarePricingPage() {
             ¿Cómo te ayudamos a escalar?
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-            Desarrollamos soluciones enfocadas en la eficiencia, seguridad y escalabilidad de tu operación.
+            Desarrollamos soluciones enfocadas en la eficiencia, seguridad y la total autonomía de tu operación.
           </p>
         </div>
 
@@ -96,61 +154,92 @@ export function SoftwarePricingPage() {
         </div>
       </section>
 
-      {/* Caso Destacado: Cuentas de Cobro y Flujos Administrativos */}
+      {/* Carrusel de Casos de Uso */}
       <section id="cases" className="py-16 bg-gray-100 dark:bg-gray-900/30">
         <div className="max-w-6xl mx-auto px-4">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 md:p-12 shadow-lg border border-gray-200 dark:border-gray-700 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <span className="px-3 py-1 text-xs font-bold text-brand-primary bg-brand-primary/10 dark:text-brand-light dark:bg-brand-primary/20 rounded-full uppercase tracking-wider">
-                Caso Destacado de Aplicación
-              </span>
-              <h2 className="text-3xl font-black text-gray-950 dark:text-white mt-4 mb-6">
-                Automatización de Cuentas de Cobro & Dispersión de Pagos
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-                Ideal para empresas que manejan personal externo, contratistas o logísticos que pasan cuentas de cobro recurrentes:
-              </p>
-              
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                  <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  Carga una planilla consolidada de Excel en segundos.
-                </li>
-                <li className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                  <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  El contratista entra con su cédula para validar y aprobar de forma segura.
-                </li>
-                <li className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                  <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  El sistema genera archivos planos bancarios y contables de inmediato.
-                </li>
-              </ul>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-extrabold text-gray-950 dark:text-white">
+              Casos Reales de Automatización
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+              Explora cómo ayudamos a las empresas a simplificar y agilizar sus flujos de trabajo diarios.
+            </p>
+          </div>
 
-              <a 
-                href="#pricing-comparison"
-                className="inline-flex items-center gap-2 font-bold text-brand-primary hover:text-brand-dark dark:text-brand-light text-sm"
-              >
-                Ver cotización para este tipo de software <ArrowRight className="w-4 h-4" />
-              </a>
-            </div>
+          {/* Carrusel Container */}
+          <div className="relative bg-white dark:bg-gray-800 rounded-3xl p-8 md:p-12 shadow-lg border border-gray-200 dark:border-gray-700 min-h-[400px] flex flex-col justify-between transition-all duration-300">
             
-            <div className="bg-gray-50 dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800">
-              <h4 className="font-bold text-sm text-gray-500 uppercase tracking-wider mb-4">Métricas de impacto promedio</h4>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b border-gray-250 dark:border-gray-800 pb-2">
-                  <span className="text-xs text-gray-600 dark:text-gray-400">Tiempo de revisión manual</span>
-                  <span className="font-bold text-red-500 text-sm">-90% de reducción</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-gray-250 dark:border-gray-800 pb-2">
-                  <span className="text-xs text-gray-600 dark:text-gray-400">Errores en datos de pago bancarios</span>
-                  <span className="font-bold text-emerald-500 text-sm">0% de incidencias</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600 dark:text-gray-400">Autogestión por logísticos</span>
-                  <span className="font-bold text-gray-800 dark:text-white text-sm">100% digital e inmediato</span>
+            {/* Contenido Dinámico del Slide */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center animate-fadeIn">
+              <div>
+                <span className="px-3 py-1 text-xs font-bold text-brand-primary bg-brand-primary/10 dark:text-brand-light dark:bg-brand-primary/20 rounded-full uppercase tracking-wider">
+                  {cases[currentSlide].badge}
+                </span>
+                
+                <h3 className="text-2xl md:text-3xl font-black text-gray-950 dark:text-white mt-4 mb-6">
+                  {cases[currentSlide].title}
+                </h3>
+                
+                <p className="text-sm text-gray-650 dark:text-gray-300 mb-6 leading-relaxed">
+                  {cases[currentSlide].desc}
+                </p>
+                
+                <ul className="space-y-3 mb-8">
+                  {cases[currentSlide].steps.map((step, idx) => (
+                    <li key={idx} className="flex items-start gap-2.5 text-sm text-gray-600 dark:text-gray-300">
+                      <Check className="w-4.5 h-4.5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <span>{step}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              
+              <div className="bg-gray-50 dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800">
+                <h4 className="font-bold text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">
+                  Impacto & Métricas Promedio
+                </h4>
+                <div className="space-y-4">
+                  {cases[currentSlide].metrics.map((metric, idx) => (
+                    <div key={idx} className="flex justify-between items-center border-b border-gray-250 dark:border-gray-800 pb-2 last:border-0 last:pb-0">
+                      <span className="text-xs text-gray-650 dark:text-gray-400">{metric.label}</span>
+                      <span className="font-bold text-emerald-500 text-sm">{metric.value}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
+
+            {/* Controles del Carrusel */}
+            <div className="flex items-center justify-between mt-10 pt-6 border-t border-gray-100 dark:border-gray-700">
+              <div className="flex gap-2">
+                {cases.map((_, idx) => (
+                  <button 
+                    key={idx}
+                    onClick={() => setCurrentSlide(idx)}
+                    className={`w-2.5 h-2.5 rounded-full transition-all ${currentSlide === idx ? 'bg-brand-primary w-6' : 'bg-gray-300 dark:bg-gray-600'}`}
+                    aria-label={`Ir al slide ${idx + 1}`}
+                  />
+                ))}
+              </div>
+              
+              <div className="flex gap-3">
+                <button 
+                  onClick={prevSlide}
+                  className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-550 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+                  aria-label="Caso anterior"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={nextSlide}
+                  className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-550 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+                  aria-label="Siguiente caso"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
@@ -256,7 +345,7 @@ export function SoftwarePricingPage() {
                 </div>
 
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
-                  El software es de ustedes para siempre. Haz un pago único de desarrollo y paga solo almacenamiento y servidor en la nube de manera mensual.
+                  El software es de ustedes para siempre. Haz un pago único de desarrollo y hospédalo en tu propio servidor o paga un bajo mantenimiento con nosotros.
                 </p>
 
                 <div className="mb-8">
@@ -288,15 +377,15 @@ export function SoftwarePricingPage() {
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" />
+                    <Laptop className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" />
                     <span className="text-sm text-gray-600 dark:text-gray-300">
-                      <strong>Mantenimiento Económico:</strong> Cero rentas de software, solo pagas el consumo de la infraestructura en la nube para mantenerlo en línea.
+                      <strong>Servidor Propio Opcional:</strong> Si lo deseas, instalamos el sistema en tus propios servidores (AWS, VPS, etc.). Una vez entregado, eres 100% autónomo y no pagas mensualidad.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" />
                     <span className="text-sm text-gray-600 dark:text-gray-300">
-                      <strong>Seguridad Dedicada:</strong> Posibilidad de desplegar en tus propios servidores empresariales si así lo requieres.
+                      <strong>Mantenimiento opcional:</strong> Si prefieres que nosotros administremos la nube, solo pagas el consumo mínimo de servidor.
                     </span>
                   </li>
                 </ul>
