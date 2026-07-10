@@ -136,6 +136,8 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
   const [trialHourlyRate, setTrialHourlyRate] = useState<number>(5000);
   const [allowOvertime, setAllowOvertime] = useState<boolean>(true);
   const [maxHoursLimit, setMaxHoursLimit] = useState<number>(10);
+  const [shiftStartLimit, setShiftStartLimit] = useState<string>('08:00');
+  const [shiftEndLimit, setShiftEndLimit] = useState<string>('22:00');
   const [updatingConfig, setUpdatingConfig] = useState(false);
   
   // Week Pager State
@@ -196,6 +198,8 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
         setHourlyRate(Number(data.hourly_rate || 8333));
         setTrialHourlyRate(Number(data.trial_hourly_rate || 5000));
         setMaxHoursLimit(Number(data.max_hours_limit || 10));
+        setShiftStartLimit(data.shift_start_limit || '08:00');
+        setShiftEndLimit(data.shift_end_limit || '22:00');
       }
     } catch (err) {
       console.error('Error fetching support schedule config:', err);
@@ -532,7 +536,9 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
         allow_overtime: allowOvertime,
         hourly_rate: hourlyRate,
         trial_hourly_rate: trialHourlyRate,
-        max_hours_limit: maxHoursLimit
+        max_hours_limit: maxHoursLimit,
+        shift_start_limit: shiftStartLimit,
+        shift_end_limit: shiftEndLimit
       };
 
       // 3. Save
@@ -967,6 +973,24 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
                   value={trialHourlyRate}
                   onChange={(e) => setTrialHourlyRate(Number(e.target.value))}
                   className="px-2.5 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white w-20"
+                />
+              </div>
+
+              {/* Shift Limits range */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-600 dark:text-gray-400">Rango Turnos:</span>
+                <input
+                  type="time"
+                  value={shiftStartLimit}
+                  onChange={(e) => setShiftStartLimit(e.target.value)}
+                  className="px-2 py-0.5 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white w-[75px]"
+                />
+                <span className="text-xxs font-bold text-gray-400">a</span>
+                <input
+                  type="time"
+                  value={shiftEndLimit}
+                  onChange={(e) => setShiftEndLimit(e.target.value)}
+                  className="px-2 py-0.5 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white w-[75px]"
                 />
               </div>
 
