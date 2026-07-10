@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Menu, User, HelpCircle, Home, X, ShoppingCart } from 'lucide-react';
+import { Menu, User, HelpCircle, Home, X, ShoppingCart, Code } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { useComboCart } from '../hooks/useComboCart';
 
@@ -127,6 +127,13 @@ export function Navbar({ isDark, toggleDark, onNavigate, currentView, agentName,
                   <User className="h-5 w-5 mr-3" />
                   <span>Mis Servicios (Inicio de Sesión)</span>
                 </button>
+                <button 
+                  onClick={() => { onNavigate('software'); setIsMenuOpen(false); }}
+                  className="w-full flex items-center px-4 py-3 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <Code className="h-5 w-5 mr-3" />
+                  <span>Desarrollo de Software</span>
+                </button>
               </div>
             )}
           </div>
@@ -228,6 +235,13 @@ export function Navbar({ isDark, toggleDark, onNavigate, currentView, agentName,
                 <span>Mis Servicios (Inicio de Sesión)</span>
               </button>
               {/* Removed ComboMenu from here */}
+              <button 
+                onClick={() => { onNavigate('software'); setIsMobileMenuOpen(false); }}
+                className="w-full flex items-center px-2 py-2 text-white hover:bg-white/10 rounded-md"
+              >
+                <Code className="h-5 w-5 mr-3" />
+                <span>Desarrollo de Software</span>
+              </button>
             </div>
           </div>
         )}

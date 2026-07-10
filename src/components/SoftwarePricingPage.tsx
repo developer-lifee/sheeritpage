@@ -190,7 +190,7 @@ export function SoftwarePricingPage() {
                 <div className="mb-8">
                   <div className="flex items-baseline gap-2">
                     <span className="text-gray-500 dark:text-gray-400 text-sm font-bold">Desde</span>
-                    <span className="text-4xl font-black text-gray-950 dark:text-white">$100.000 COP</span>
+                    <span className="text-4xl font-black text-gray-950 dark:text-white">$20.000 COP</span>
                     <span className="text-gray-500 dark:text-gray-400 text-sm">/ mes</span>
                   </div>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
@@ -263,11 +263,11 @@ export function SoftwarePricingPage() {
                   <div className="flex flex-col gap-1">
                     <div className="flex items-baseline gap-2">
                       <span className="text-gray-500 dark:text-gray-400 text-sm font-bold">Pago Único:</span>
-                      <span className="text-4xl font-black text-gray-950 dark:text-white">$3.000.000 COP</span>
+                      <span className="text-4xl font-black text-gray-950 dark:text-white">$980.000 COP</span>
                     </div>
                     <div className="flex items-baseline gap-2 mt-1">
                       <span className="text-gray-500 dark:text-gray-400 text-xs font-bold">Servidor/Nube:</span>
-                      <span className="text-lg font-bold text-emerald-500">$100.000 COP / mes</span>
+                      <span className="text-lg font-bold text-emerald-500">$30.000 COP / mes</span>
                     </div>
                   </div>
                 </div>
