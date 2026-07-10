@@ -12,48 +12,48 @@ export function SoftwarePricingPage() {
 
   const cases = [
     {
-      title: "Plataformas de Autogestión de Proveedores y Logística",
-      badge: "Operación & Logística",
-      desc: "Ideal para empresas que manejan personal externo, contratistas o logísticos. En lugar de revisar planillas manualmente por chat, se crea un flujo automatizado:",
+      title: "Centros de Atención Multicanal & Multiagente (Helpdesk)",
+      badge: "Soporte & Ventas",
+      desc: "Perfecto para empresas que gestionan un alto volumen de clientes por WhatsApp. Centraliza tu soporte en un panel web colaborativo:",
       steps: [
-        "El contratista ingresa de forma segura usando su número de registro o documento de identidad.",
-        "El sistema le muestra el detalle de su planilla precargada y este valida o solicita soporte en un clic.",
-        "Automatiza la generación de archivos planos bancarios y contables, eliminando errores de digitación."
+        "Múltiples asesores chatean desde un único número oficial de WhatsApp con distribución inteligente de chats.",
+        "Integración nativa con inteligencia artificial (IA) para auto-responder consultas comunes y resolver soporte 24/7.",
+        "Historial unificado de clientes, auditorías de asesores y métricas de rendimiento en tiempo real."
       ],
       metrics: [
-        { label: "Tiempo de validación manual", value: "-90% de reducción" },
-        { label: "Errores de pago digitados", value: "0% de incidencias" },
-        { label: "Gestión administrativa", value: "100% digital y en línea" }
+        { label: "Tiempo de espera del cliente", value: "Reducido a segundos" },
+        { label: "Tasa de auto-resolución (IA)", value: "70% de las consultas" },
+        { label: "Colaboración del equipo", value: "Panel multiagente centralizado" }
       ]
     },
     {
-      title: "Automatización de Reportes & Archivos Planos Financieros",
-      badge: "Finanzas & Conciliación",
-      desc: "Perfecto para áreas contables que pierden horas consolidando archivos Excel para subirlos a bancos o sistemas ERP:",
+      title: "Automatización de Procesos de Negocio (RPA & Bots Inteligentes)",
+      badge: "Operaciones & Eficiencia",
+      desc: "Bots de automatización robótica de procesos (RPA) que realizan tareas repetitivas imitando el comportamiento humano:",
       steps: [
-        "El sistema lee de forma inteligente planillas de cobro, ventas o nómina en diversos formatos.",
-        "Genera automáticamente los archivos planos estructurados (.txt, .csv) bajo el formato exacto del banco (Bancolombia, Bogotá, etc.).",
-        "Exporta automáticamente la información al formato de cargue masivo de tu software contable (Siigo, Helisa, etc.)."
+        "Creación automática de cuentas, perfiles o accesos en plataformas SaaS sin intervención manual.",
+        "Verificación en tiempo real y lectura automatizada de códigos de seguridad (2FA / OTP) de correos electrónicos.",
+        "Sincronización masiva de bases de datos entre hojas de cálculo (Excel) y bases de datos relacionales SQL."
       ],
       metrics: [
-        { label: "Velocidad de generación", value: "Segundos en vez de horas" },
-        { label: "Compatibilidad bancaria", value: "100% garantizada" },
-        { label: "Esfuerzo del equipo contable", value: "Reducido al mínimo" }
+        { label: "Tiempo de ejecución de tareas", value: "-95% más rápido que un humano" },
+        { label: "Precisión operativa", value: "100% libre de errores manuales" },
+        { label: "Disponibilidad del bot", value: "24 horas al día, 7 días a la semana" }
       ]
     },
     {
-      title: "Bots de Notificaciones y Alertas por WhatsApp",
-      badge: "Atención al Cliente",
-      desc: "Conecta tu base de datos de Excel o CRM para enviar notificaciones automáticas y alertas en tiempo real a tus clientes:",
+      title: "Portales de Autogestión Segura para Usuarios y Clientes",
+      badge: "Experiencia del Cliente",
+      desc: "Brinda a tus clientes o usuarios finales un canal web inmediato para consultar su estado sin tener que llamar o escribir:",
       steps: [
-        "Envío masivo o programado de credenciales, facturas, recordatorios de pago o alertas de vencimiento.",
-        "El bot responde preguntas frecuentes y atiende solicitudes repetitivas 24/7 sin sobrecargar al equipo.",
-        "Panel centralizado para que tus asesores tomen el control de las conversaciones cuando sea necesario."
+        "Acceso seguro e inmediato introduciendo un identificador único (cédula, código de cliente o número de registro).",
+        "Consulta de credenciales activas, fechas de vencimiento de servicios y estado de facturación.",
+        "Generación automática de archivos PDF de soporte y descarga de archivos planos de cobro."
       ],
       metrics: [
-        { label: "Tasa de apertura de mensajes", value: "98% promedio en WhatsApp" },
-        { label: "Atención al cliente", value: "Respuestas inmediatas 24/7" },
-        { label: "Saturación del equipo", value: "-75% de llamadas operativas" }
+        { label: "Saturación del canal telefónico/chat", value: "-80% de consultas informativas" },
+        { label: "Satisfacción de los clientes", value: "Acceso a sus datos en 2 clics" },
+        { label: "Seguridad y privacidad", value: "Cumplimiento estricto de Habeas Data" }
       ]
     }
   ];
