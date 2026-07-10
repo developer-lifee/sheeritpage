@@ -349,15 +349,15 @@ export function SoftwarePricingPage() {
       </section>
 
       {/* CTA Final */}
-      <section className="bg-brand-primary text-white py-16 text-center">
+      <section className="bg-brand-primary dark:bg-gray-800 text-white py-16 text-center border-t dark:border-gray-750 transition-colors duration-300">
         <div className="max-w-4xl mx-auto px-4">
-          <h2 className="text-3xl font-extrabold mb-4">¿Tienes una idea o proceso que deseas automatizar?</h2>
-          <p className="text-brand-light/90 mb-8 max-w-lg mx-auto text-sm md:text-base">
+          <h2 className="text-3xl font-extrabold mb-4 dark:text-white">¿Tienes una idea o proceso que deseas automatizar?</h2>
+          <p className="text-brand-light/90 dark:text-gray-400 mb-8 max-w-lg mx-auto text-sm md:text-base">
             Agenda una asesoría virtual de 10 minutos y te ayudamos a co-diseñar la solución tecnológica óptima para tu negocio.
           </p>
           <button 
             onClick={() => handleContactWhatsApp('Asesoría General')}
-            className="px-8 py-4 bg-white text-brand-primary hover:bg-gray-100 font-extrabold rounded-2xl transition-all shadow-md active:scale-95 text-sm md:text-base"
+            className="px-8 py-4 bg-white dark:bg-brand-primary text-brand-primary dark:text-white hover:bg-gray-100 dark:hover:bg-brand-dark font-extrabold rounded-2xl transition-all shadow-md active:scale-95 text-sm md:text-base"
           >
             Quiero agendar una demo gratuita
           </button>

@@ -1172,7 +1172,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     
     // Create strict keys combining platform and email to identify shared accounts correctly
     const ticketAccountKeys = ticket.accounts
-      .map(a => `${a.streaming.toLowerCase().trim()}|${a.correo.toLowerCase().trim()}`)
+      .map(a => `${String(a.streaming || '').toLowerCase().trim()}|${String(a.correo || '').toLowerCase().trim()}`)
       .filter(Boolean);
 
     if (ticketAccountKeys.length === 0) return [];
@@ -1182,7 +1182,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       .map(t => {
         if (!t.accounts) return null;
         const matchingAccounts = t.accounts.filter(a => {
-          const key = `${a.streaming.toLowerCase().trim()}|${a.correo.toLowerCase().trim()}`;
+          const key = `${String(a.streaming || '').toLowerCase().trim()}|${String(a.correo || '').toLowerCase().trim()}`;
           return key && ticketAccountKeys.includes(key);
         });
         if (matchingAccounts.length === 0) return null;
@@ -1889,7 +1889,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                       <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px] mr-1">Vínculos:</span>
                       {activeChatTicket.accounts.map((acc, idx) => {
-                        const emailKey = acc.correo.toLowerCase().trim();
+                        const emailKey = String(acc.correo || '').toLowerCase().trim();
                         const override = availabilityOverrides[emailKey];
                         const isDown = override && override.immediate === false;
 
@@ -2410,7 +2410,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
       {/* Account Details & Availability Alerts Modal (Unified Menu) */}
       {selectedAccountAlert && (() => {
-        const emailKey = selectedAccountAlert.correo.toLowerCase().trim();
+        const emailKey = String(selectedAccountAlert.correo || '').toLowerCase().trim();
         const override = availabilityOverrides[emailKey];
         const isDown = override && override.immediate === false;
         
@@ -2422,8 +2422,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
           if (!pendingStates.includes(t.state)) return false;
 
           return t.accounts.some(a => 
-            a.correo.toLowerCase().trim() === emailKey &&
-            a.streaming.toLowerCase().trim() === selectedAccountAlert.streaming.toLowerCase().trim()
+            String(a.correo || '').toLowerCase().trim() === emailKey &&
+            String(a.streaming || '').toLowerCase().trim() === String(selectedAccountAlert.streaming || '').toLowerCase().trim()
           );
         });
 
@@ -2564,7 +2564,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                   ) : (
                     <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1">
                       {sharedTickets.map((t, sIdx) => {
-                        const matchedAcc = t.accounts?.find(a => a.correo.toLowerCase().trim() === emailKey);
+                        const matchedAcc = t.accounts?.find(a => String(a.correo || '').toLowerCase().trim() === emailKey);
                         return (
                           <div 
                             key={sIdx}
