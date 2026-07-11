@@ -1262,12 +1262,12 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const filteredTickets = tickets.filter(t => {
     const term = searchTerm.toLowerCase().trim();
     if (!term) return true;
-    const nameMatches = t.nombre?.toLowerCase().includes(term);
-    const phoneMatches = t.phone?.includes(term);
-    const summaryMatches = t.summary?.toLowerCase().includes(term);
+    const nameMatches = String(t.nombre || '').toLowerCase().includes(term);
+    const phoneMatches = String(t.phone || '').includes(term);
+    const summaryMatches = String(t.summary || '').toLowerCase().includes(term);
     const accountMatches = t.accounts?.some(acc =>
-      acc.correo?.toLowerCase().includes(term) ||
-      acc.streaming?.toLowerCase().includes(term)
+      String(acc.correo || '').toLowerCase().includes(term) ||
+      String(acc.streaming || '').toLowerCase().includes(term)
     );
     return nameMatches || phoneMatches || summaryMatches || accountMatches;
   });

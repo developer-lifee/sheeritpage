@@ -163,14 +163,14 @@ export const ClientsView: React.FC = () => {
         const generalMatches = !generalSearch || 
             fullName.toLowerCase().includes(generalSearch.toLowerCase()) || 
             phoneVal.includes(generalSearch) || 
-            (c.Streaming || '').toLowerCase().includes(generalSearch.toLowerCase()) || 
-            (c.correo || '').toLowerCase().includes(generalSearch.toLowerCase());
+            String(c.Streaming || '').toLowerCase().includes(generalSearch.toLowerCase()) || 
+            String(c.correo || '').toLowerCase().includes(generalSearch.toLowerCase());
 
         // Column level filters matches
         const nameMatches = !filterName || fullName.toLowerCase().includes(filterName.toLowerCase());
         const phoneMatches = !filterPhone || phoneVal.includes(filterPhone);
-        const serviceMatches = !filterService || (c.Streaming || '').toLowerCase().includes(filterService.toLowerCase());
-        const emailMatches = !filterEmail || (c.correo || '').toLowerCase().includes(filterEmail.toLowerCase());
+        const serviceMatches = !filterService || String(c.Streaming || '').toLowerCase().includes(filterService.toLowerCase());
+        const emailMatches = !filterEmail || String(c.correo || '').toLowerCase().includes(filterEmail.toLowerCase());
 
         return statusMatches && generalMatches && nameMatches && phoneMatches && serviceMatches && emailMatches;
     });
