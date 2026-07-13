@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp, Maximize2, Minimize2, Archive, TrendingUp, Keyboard, Mic, Square, Trash2, Plus } from 'lucide-react';
+import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp, Maximize2, Minimize2, Archive, TrendingUp, Keyboard, Mic, Square, Trash2, Plus, History } from 'lucide-react';
 
 interface AccountInfo {
   streaming: string;
@@ -120,6 +120,33 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     recent: { phone: string; customerName: string; agent: string; resolvedAt: string }[];
   } | null>(null);
   const [loadingMetrics, setLoadingMetrics] = useState(false);
+
+  // Account History state
+  const [showAccountHistoryModal, setShowAccountHistoryModal] = useState(false);
+  const [accountHistoryEmail, setAccountHistoryEmail] = useState('');
+  const [accountHistoryData, setAccountHistoryData] = useState<any[]>([]);
+  const [loadingAccountHistory, setLoadingAccountHistory] = useState(false);
+
+  const handleViewAccountHistory = async (email: string) => {
+    setAccountHistoryEmail(email);
+    setLoadingAccountHistory(true);
+    setShowAccountHistoryModal(true);
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/account-history?email=${encodeURIComponent(email)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAccountHistoryData(data);
+      } else {
+        setAccountHistoryData([]);
+      }
+    } catch (e) {
+      console.error("Error fetching account history:", e);
+      setAccountHistoryData([]);
+    } finally {
+      setLoadingAccountHistory(false);
+    }
+  };
 
   const fetchMetrics = async () => {
     setLoadingMetrics(true);
@@ -3109,7 +3136,16 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                                 </span>
                               </div>
                               <div className="text-[10px] text-gray-600 dark:text-gray-400 flex flex-col gap-0.5 font-mono">
-                                <span className="truncate"><b>Correo:</b> {sub.account_email}</span>
+                                <span className="truncate flex items-center justify-between gap-1">
+                                  <span className="truncate"><b>Correo:</b> {sub.account_email}</span>
+                                  <button
+                                    onClick={() => handleViewAccountHistory(sub.account_email)}
+                                    className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 text-brand-primary rounded-lg transition-colors shrink-0"
+                                    title="Ver Historial de la Cuenta (Quién la ha tenido)"
+                                  >
+                                    <History className="w-3.5 h-3.5" />
+                                  </button>
+                                </span>
                                 <span><b>Clave:</b> {sub.account_password || 'N/A'}</span>
                                 {sub.profile_pin && <span><b>PIN:</b> {sub.profile_pin}</span>}
                                 <span className="text-[9px] text-gray-400 dark:text-gray-500 mt-1 font-sans">
@@ -3203,6 +3239,72 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             <div className="p-4 bg-gray-50 dark:bg-gray-950 border-t dark:border-gray-850 flex justify-end gap-2 shrink-0">
               <button
                 onClick={() => setShowClientProfileModal(false)}
+                className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-250 transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Account History Modal */}
+      {showAccountHistoryModal && (
+        <div className="fixed inset-0 z-55 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden border dark:border-gray-805 animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-5 border-b dark:border-gray-850 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
+              <div>
+                <h3 className="font-extrabold text-gray-800 dark:text-white text-sm flex items-center gap-2 uppercase tracking-wide">
+                  <History className="w-5 h-5 text-brand-primary" /> Historial de la Cuenta
+                </h3>
+                <p className="text-[10px] text-gray-400 font-mono mt-0.5">{accountHistoryEmail}</p>
+              </div>
+              <button
+                onClick={() => setShowAccountHistoryModal(false)}
+                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+              >
+                <LogOut className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+              </button>
+            </div>
+            {/* Modal Body */}
+            <div className="flex-grow overflow-y-auto p-5 space-y-4">
+              {loadingAccountHistory ? (
+                <div className="text-center py-12 text-xs text-gray-500 font-medium">Cargando historial de la cuenta...</div>
+              ) : accountHistoryData.length === 0 ? (
+                <p className="text-center py-12 text-xs text-gray-450 italic">No hay registros históricos para esta cuenta en Excel.</p>
+              ) : (
+                <div className="space-y-3">
+                  {accountHistoryData.map((hist: any, idx: number) => (
+                    <div key={idx} className="p-3.5 bg-gray-50 dark:bg-gray-850 rounded-xl border dark:border-gray-750 flex flex-col gap-1.5 shadow-xxs">
+                      <div className="flex justify-between items-center font-bold">
+                        <span className="text-brand-primary text-[10px] bg-brand-primary/10 px-2 py-0.5 rounded-lg uppercase">
+                          Corte: {hist.fecha_corte || 'N/A'}
+                        </span>
+                        <span className="text-[10px] text-gray-700 dark:text-gray-300 font-sans">
+                          👤 {hist.customer_name || 'Cliente'} (+{hist.customer_phone})
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-gray-650 dark:text-gray-400 flex flex-col gap-0.5 font-mono">
+                        {hist.profile_name && <span><b>Perfil:</b> {hist.profile_name}</span>}
+                        {hist.profile_pin && <span><b>PIN:</b> {hist.profile_pin}</span>}
+                        <span><b>Método:</b> {hist.payment_method || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-[9px] font-sans mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                        <span className="text-gray-450">Vence: {hist.vencimiento ? hist.vencimiento.substring(0, 10) : 'N/A'}</span>
+                        <span className="font-extrabold text-emerald-600 dark:text-emerald-450">
+                          Valor: ${Number(hist.deben || 0).toLocaleString('es-CO')}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* Modal Footer */}
+            <div className="p-4 bg-gray-50 dark:bg-gray-950 border-t dark:border-gray-850 flex justify-end gap-2 shrink-0">
+              <button
+                onClick={() => setShowAccountHistoryModal(false)}
                 className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-250 transition-colors"
               >
                 Cerrar
