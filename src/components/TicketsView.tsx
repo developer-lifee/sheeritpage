@@ -106,6 +106,7 @@ const logAuditAction = async (action: string, details: any) => {
 
 export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName, onLogout }) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [chatFilter, setChatFilter] = useState<'my' | 'all_tickets' | 'all_chats'>('all_tickets');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -260,12 +261,13 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const lastActivePhoneRef = useRef<string>('');
 
-  const fetchTickets = (isSilent = false) => {
+  const fetchTickets = (isSilent = false, currentFilter = chatFilter) => {
     if (!agentEmail) return;
     if (!isSilent) setLoading(true);
     setError('');
     const apiUrl = getApiUrl();
-    fetch(`${apiUrl}/api/admin/tickets`)
+    const queryParam = currentFilter === 'all_chats' ? '?allChats=true' : '';
+    fetch(`${apiUrl}/api/admin/tickets${queryParam}`)
       .then((res) => {
         if (!res.ok) throw new Error('Error al obtener los tickets');
         return res.json();
@@ -313,11 +315,11 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   // Poll for tickets
   useEffect(() => {
     if (agentEmail) {
-      fetchTickets(false);
-      const interval = setInterval(() => fetchTickets(true), 10000);
+      fetchTickets(false, chatFilter);
+      const interval = setInterval(() => fetchTickets(true, chatFilter), 10000);
       return () => clearInterval(interval);
     }
-  }, [agentEmail]);
+  }, [agentEmail, chatFilter]);
 
   // Poll chat messages if a chat is active
   useEffect(() => {
@@ -1614,20 +1616,6 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       {/* Unified Split-Screen Layout */}
       {loading ? (
         <div className="text-center py-20 text-gray-500 dark:text-gray-400 font-medium">Cargando tickets de soporte...</div>
-      ) : tickets.length === 0 ? (
-        <div className="text-center py-20 bg-gray-50 dark:bg-gray-900/30 rounded-2xl border-2 border-dashed border-gray-250 dark:border-gray-800 max-w-xl mx-auto">
-          <CheckCircle className="w-14 h-14 text-emerald-500 mx-auto mb-4" />
-          <h3 className="font-bold text-gray-800 dark:text-gray-250 text-lg">¡Tablero al Día!</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-md mx-auto mb-6">
-            Todos los clientes han sido atendidos y no hay tickets pendientes en este momento.
-          </p>
-          <button
-            onClick={() => setShowCreateTicketModal(true)}
-            className="px-4 py-2 bg-brand-primary hover:bg-brand-dark text-white rounded-xl font-bold text-xs flex items-center gap-1.5 mx-auto transition-all shadow-sm active:scale-95"
-          >
-            <Plus className="h-4 w-4" /> Iniciar nuevo chat
-          </button>
-        </div>
       ) : (
         <div className={isFullscreen ? "grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0 border dark:border-gray-850 rounded-2xl overflow-hidden bg-gray-50/20 dark:bg-gray-900/10" : "grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[600px] h-[calc(100vh-250px)] border dark:border-gray-850 rounded-2xl overflow-hidden bg-gray-50/20 dark:bg-gray-900/10"}>
           
@@ -1654,119 +1642,177 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
               </button>
             </div>
 
-            {/* Accordion List */}
+            {/* Filter Tabs */}
+            <div className="px-4 py-2 border-b dark:border-gray-850 bg-gray-50/30 dark:bg-gray-900/30 flex gap-1 text-xs">
+              <button
+                onClick={() => setChatFilter('my')}
+                className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-center transition-all ${
+                  chatFilter === 'my'
+                    ? 'bg-brand-primary/10 text-brand-primary'
+                    : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+              >
+                Mis Tickets
+              </button>
+              <button
+                onClick={() => setChatFilter('all_tickets')}
+                className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-center transition-all ${
+                  chatFilter === 'all_tickets'
+                    ? 'bg-brand-primary/10 text-brand-primary'
+                    : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+              >
+                Tickets Activos
+              </button>
+              <button
+                onClick={() => setChatFilter('all_chats')}
+                className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-center transition-all ${
+                  chatFilter === 'all_chats'
+                    ? 'bg-brand-primary/10 text-brand-primary'
+                    : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+              >
+                Todos los Chats
+              </button>
+            </div>
+
+            {/* Accordion / Flat List */}
             <div className="flex-grow overflow-y-auto p-4 space-y-4">
-              {renderAccordionSection(
-                'me',
-                'Mis Tickets',
-                <User className="w-4 h-4 text-emerald-500" />,
-                myTickets.length,
-                myTickets.length === 0 ? (
-                  <p className="text-center py-4 text-xs text-gray-450 italic">No tienes tickets asignados.</p>
-                ) : (
-                  myTickets.map(t => renderCompactTicketItem(t, 'my'))
-                )
-              )}
-
-              {renderAccordionSection(
-                'unassigned',
-                'Tickets Libres',
-                <RefreshCw className="w-4 h-4 text-amber-500" />,
-                unassignedTickets.length,
-                unassignedTickets.length === 0 ? (
-                  <p className="text-center py-4 text-xs text-gray-450 italic">No hay tickets libres.</p>
-                ) : (
-                  unassignedTickets.map(t => renderCompactTicketItem(t, 'free'))
-                )
-              )}
-
-              {renderAccordionSection(
-                'other',
-                'Otros Asesores',
-                <Users className="w-4 h-4 text-blue-500" />,
-                otherTickets.length,
-                otherTickets.length === 0 ? (
-                  <p className="text-center py-4 text-xs text-gray-455 italic">No hay tickets de otros asesores.</p>
-                ) : (
-                  otherTickets.map(t => renderCompactTicketItem(t, 'other'))
-                )
-              )}
-
-              {renderAccordionSection(
-                'probablyFinished',
-                'Por Salir / Probablemente Terminados (IA)',
-                <CheckCircle className="w-4 h-4 text-blue-500" />,
-                probablyFinishedTickets.length,
-                probablyFinishedTickets.length === 0 ? (
-                  <p className="text-center py-4 text-xs text-gray-450 italic">No hay chats probablemente terminados.</p>
-                ) : (
-                  probablyFinishedTickets.map(t => renderCompactTicketItem(t, 'probablyFinished'))
-                )
-              )}
-
-              {renderAccordionSection(
-                'archived',
-                'Archivados / Resueltos',
-                <Archive className="w-4 h-4 text-emerald-600" />,
-                archivedTickets.length,
-                archivedTickets.length === 0 ? (
-                  <p className="text-center py-4 text-xs text-gray-450 italic">No hay tickets archivados.</p>
-                ) : (
-                  archivedTickets.map(t => renderCompactTicketItem(t, 'archived'))
-                )
-              )}
-
-              {(() => {
-                const groupedAccounts = getGroupedByAccounts();
-                const totalAccountTickets = Object.values(groupedAccounts).reduce((sum, list) => sum + list.length, 0);
-                return renderAccordionSection(
-                  'accounts',
-                  'Agrupados por Cuenta',
-                  <Columns className="w-4 h-4 text-brand-primary" />,
-                  totalAccountTickets,
-                  Object.keys(groupedAccounts).length === 0 ? (
-                    <p className="text-center py-4 text-xs text-gray-450 italic">No hay tickets vinculados a cuentas.</p>
+              {chatFilter === 'my' && (
+                <div className="space-y-2">
+                  {myTickets.length === 0 ? (
+                    <p className="text-center py-8 text-xs text-gray-450 italic">No tienes tickets asignados en este momento.</p>
                   ) : (
-                    Object.entries(groupedAccounts).map(([groupName, groupTickets]) => (
-                      <div key={groupName} className="space-y-1.5 border-b last:border-b-0 pb-3 last:pb-0 border-gray-150 dark:border-gray-800">
-                        <div className="text-[10px] font-bold text-brand-primary bg-brand-primary/5 px-2.5 py-1 rounded-lg flex justify-between items-center mb-1">
-                          <span className="truncate max-w-[200px]" title={groupName}>📺 {groupName}</span>
-                          <span className="shrink-0 text-[9px] bg-brand-primary/10 px-1.5 rounded">{groupTickets.length}</span>
-                        </div>
-                        <div className="space-y-2 pl-1.5 border-l-2 border-brand-primary/20">
-                          {groupTickets.map(t => renderCompactTicketItem(t, `account_${groupName}`))}
-                        </div>
-                      </div>
-                    ))
-                  )
-                );
-              })()}
+                    myTickets.map(t => renderCompactTicketItem(t, 'my'))
+                  )}
+                </div>
+              )}
 
-              {(() => {
-                const groupedSubjects = getGroupedBySubjects();
-                const totalSubjectTickets = Object.values(groupedSubjects).reduce((sum, list) => sum + list.length, 0);
-                return renderAccordionSection(
-                  'subjects',
-                  'Agrupados por Asunto',
-                  <MessageSquare className="w-4 h-4 text-purple-500" />,
-                  totalSubjectTickets,
-                  Object.keys(groupedSubjects).length === 0 ? (
-                    <p className="text-center py-4 text-xs text-gray-450 italic">No hay tickets por asunto.</p>
+              {chatFilter === 'all_chats' && (
+                <div className="space-y-2">
+                  {filteredTickets.length === 0 ? (
+                    <p className="text-center py-8 text-xs text-gray-450 italic">No se encontraron chats.</p>
                   ) : (
-                    Object.entries(groupedSubjects).map(([groupName, groupTickets]) => (
-                      <div key={groupName} className="space-y-1.5 border-b last:border-b-0 pb-3 last:pb-0 border-gray-150 dark:border-gray-800">
-                        <div className="text-[10px] font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-lg flex justify-between items-center mb-1">
-                          <span>🏷️ {groupName}</span>
-                          <span className="text-[9px] bg-gray-200 dark:bg-gray-700 px-1.5 rounded">{groupTickets.length}</span>
-                        </div>
-                        <div className="space-y-2 pl-1.5 border-l-2 border-gray-200 dark:border-gray-700">
-                          {groupTickets.map(t => renderCompactTicketItem(t, `subject_${groupName}`))}
-                        </div>
-                      </div>
-                    ))
-                  )
-                );
-              })()}
+                    filteredTickets.map(t => renderCompactTicketItem(t, 'chat'))
+                  )}
+                </div>
+              )}
+
+              {chatFilter === 'all_tickets' && (
+                <>
+                  {renderAccordionSection(
+                    'me',
+                    'Mis Tickets',
+                    <User className="w-4 h-4 text-emerald-500" />,
+                    myTickets.length,
+                    myTickets.length === 0 ? (
+                      <p className="text-center py-4 text-xs text-gray-450 italic">No tienes tickets asignados.</p>
+                    ) : (
+                      myTickets.map(t => renderCompactTicketItem(t, 'my'))
+                    )
+                  )}
+
+                  {renderAccordionSection(
+                    'unassigned',
+                    'Tickets Libres',
+                    <RefreshCw className="w-4 h-4 text-amber-500" />,
+                    unassignedTickets.length,
+                    unassignedTickets.length === 0 ? (
+                      <p className="text-center py-4 text-xs text-gray-450 italic">No hay tickets libres.</p>
+                    ) : (
+                      unassignedTickets.map(t => renderCompactTicketItem(t, 'free'))
+                    )
+                  )}
+
+                  {renderAccordionSection(
+                    'other',
+                    'Otros Asesores',
+                    <Users className="w-4 h-4 text-blue-500" />,
+                    otherTickets.length,
+                    otherTickets.length === 0 ? (
+                      <p className="text-center py-4 text-xs text-gray-455 italic">No hay tickets de otros asesores.</p>
+                    ) : (
+                      otherTickets.map(t => renderCompactTicketItem(t, 'other'))
+                    )
+                  )}
+
+                  {renderAccordionSection(
+                    'probablyFinished',
+                    'Por Salir / Probablemente Terminados (IA)',
+                    <CheckCircle className="w-4 h-4 text-blue-500" />,
+                    probablyFinishedTickets.length,
+                    probablyFinishedTickets.length === 0 ? (
+                      <p className="text-center py-4 text-xs text-gray-450 italic">No hay chats probablemente terminados.</p>
+                    ) : (
+                      probablyFinishedTickets.map(t => renderCompactTicketItem(t, 'probablyFinished'))
+                    )
+                  )}
+
+                  {renderAccordionSection(
+                    'archived',
+                    'Archivados / Resueltos',
+                    <Archive className="w-4 h-4 text-emerald-600" />,
+                    archivedTickets.length,
+                    archivedTickets.length === 0 ? (
+                      <p className="text-center py-4 text-xs text-gray-450 italic">No hay tickets archivados.</p>
+                    ) : (
+                      archivedTickets.map(t => renderCompactTicketItem(t, 'archived'))
+                    )
+                  )}
+
+                  {(() => {
+                    const groupedAccounts = getGroupedByAccounts();
+                    const totalAccountTickets = Object.values(groupedAccounts).reduce((sum, list) => sum + list.length, 0);
+                    return renderAccordionSection(
+                      'accounts',
+                      'Agrupados por Cuenta',
+                      <Columns className="w-4 h-4 text-brand-primary" />,
+                      totalAccountTickets,
+                      Object.keys(groupedAccounts).length === 0 ? (
+                        <p className="text-center py-4 text-xs text-gray-450 italic">No hay tickets vinculados a cuentas.</p>
+                      ) : (
+                        Object.entries(groupedAccounts).map(([groupName, groupTickets]) => (
+                          <div key={groupName} className="space-y-1.5 border-b last:border-b-0 pb-3 last:pb-0 border-gray-150 dark:border-gray-800">
+                            <div className="text-[10px] font-bold text-brand-primary bg-brand-primary/5 px-2.5 py-1 rounded-lg flex justify-between items-center mb-1">
+                              <span className="truncate max-w-[200px]" title={groupName}>📺 {groupName}</span>
+                              <span className="shrink-0 text-[9px] bg-brand-primary/10 px-1.5 rounded">{groupTickets.length}</span>
+                            </div>
+                            <div className="space-y-2 pl-1.5 border-l-2 border-brand-primary/20">
+                              {groupTickets.map(t => renderCompactTicketItem(t, `account_${groupName}`))}
+                            </div>
+                          </div>
+                        ))
+                      )
+                    );
+                  })()}
+
+                  {(() => {
+                    const groupedSubjects = getGroupedBySubjects();
+                    const totalSubjectTickets = Object.values(groupedSubjects).reduce((sum, list) => sum + list.length, 0);
+                    return renderAccordionSection(
+                      'subjects',
+                      'Agrupados por Asunto',
+                      <MessageSquare className="w-4 h-4 text-purple-500" />,
+                      totalSubjectTickets,
+                      Object.keys(groupedSubjects).length === 0 ? (
+                        <p className="text-center py-4 text-xs text-gray-450 italic">No hay tickets por asunto.</p>
+                      ) : (
+                        Object.entries(groupedSubjects).map(([groupName, groupTickets]) => (
+                          <div key={groupName} className="space-y-1.5 border-b last:border-b-0 pb-3 last:pb-0 border-gray-150 dark:border-gray-800">
+                            <div className="text-[10px] font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-lg flex justify-between items-center mb-1">
+                              <span>🏷️ {groupName}</span>
+                              <span className="text-[9px] bg-gray-200 dark:bg-gray-700 px-1.5 rounded">{groupTickets.length}</span>
+                            </div>
+                            <div className="space-y-2 pl-1.5 border-l-2 border-gray-200 dark:border-gray-700">
+                              {groupTickets.map(t => renderCompactTicketItem(t, `subject_${groupName}`))}
+                            </div>
+                          </div>
+                        ))
+                      )
+                    );
+                  })()}
+                </>
+              )}
             </div>
           </div>
 
