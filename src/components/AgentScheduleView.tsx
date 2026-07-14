@@ -120,11 +120,25 @@ const getBreakStartOptions = (startTime: string, endTime: string, breakType: str
   return options;
 };
 
-export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail, role }) => {
+interface AgentScheduleViewProps {
+  agentEmail: string;
+  role: string;
+  activeMainTab?: 'calendar' | 'payroll';
+  setActiveMainTab?: (tab: 'calendar' | 'payroll') => void;
+}
+
+export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
+  agentEmail,
+  role,
+  activeMainTab: externalActiveMainTab,
+  setActiveMainTab: externalSetActiveMainTab
+}) => {
   // Check if current user is Esteban
   const isEsteban = agentEmail.trim().toLowerCase() === 'estebanavila182@outlook.com';
 
-  const [activeMainTab, setActiveMainTab] = useState<'calendar' | 'payroll'>('calendar');
+  const [internalActiveMainTab, internalSetActiveMainTab] = useState<'calendar' | 'payroll'>('calendar');
+  const activeMainTab = externalActiveMainTab !== undefined ? externalActiveMainTab : internalActiveMainTab;
+  const setActiveMainTab = externalSetActiveMainTab !== undefined ? externalSetActiveMainTab : internalSetActiveMainTab;
   const [agents, setAgents] = useState<Agent[]>([]);
   const [allSchedules, setAllSchedules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

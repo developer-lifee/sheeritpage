@@ -74,6 +74,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
     }
   };
   const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'payments' | 'streaming' | 'policies' | 'whatsapp' | 'prompts' | 'rpa' | 'web_sales' | 'accounting'>('tickets');
+  const [activePaymentsSubTab, setActivePaymentsSubTab] = useState<'calendar' | 'payroll'>('calendar');
   const [searchQuery, setSearchQuery] = useState('');
 
 
@@ -405,9 +406,18 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       <div className={activeTab === 'availability' ? '' : 'hidden'}><AvailabilityView /></div>
       <div className={activeTab === 'alerts' ? '' : 'hidden'}><AccountAlertsView /></div>
       <div className={activeTab === 'payments' ? 'space-y-8' : 'hidden'}>
-        <AgentScheduleView agentEmail={agentEmail} role={role} />
-        <SupportScheduleView />
-        <PaymentConfigView />
+        <AgentScheduleView 
+          agentEmail={agentEmail} 
+          role={role} 
+          activeMainTab={activePaymentsSubTab} 
+          setActiveMainTab={setActivePaymentsSubTab} 
+        />
+        {activePaymentsSubTab === 'payroll' && (
+          <>
+            <SupportScheduleView />
+            <PaymentConfigView />
+          </>
+        )}
       </div>
       <div className={activeTab === 'streaming' ? '' : 'hidden'}>
         <StreamingView adminPassword={adminPassword} />
