@@ -7,6 +7,12 @@ interface AccountInfo {
   nombrePerfil: string;
 }
 
+// Helper: limpiar LIDs y sufijos de WhatsApp del teléfono
+const cleanPhone = (phone: string): string => {
+  if (!phone) return '';
+  return phone.replace(/@(lid|c\.us)/g, '').replace(/^\+/, '');
+};
+
 interface Ticket {
   userId: string;
   phone: string;
@@ -1472,7 +1478,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             <span className="font-bold text-xs text-gray-800 dark:text-white block truncate" title={t.nombre}>
               {t.nombre || 'Cliente WhatsApp'}
             </span>
-            <span className="text-[10px] text-gray-450 font-mono">+{t.phone}</span>
+            <span className="text-[10px] text-gray-450 font-mono">+{cleanPhone(t.phone)}</span>
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
             <span className="text-[9px] text-gray-400 font-mono">
@@ -1861,7 +1867,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                       )}
                     </h3>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-gray-450 font-mono">+{activeChatTicket.phone}</span>
+                      <span className="text-xs text-gray-450 font-mono">+{cleanPhone(activeChatTicket.phone)}</span>
                       <button
                         type="button"
                         onClick={() => fetchClientProfile(activeChatTicket.phone)}
@@ -2647,7 +2653,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                           >
                             <div>
                               <span className="font-bold text-gray-800 dark:text-white block">{t.nombre}</span>
-                              <span className="text-[10px] text-gray-400 font-mono">+{t.phone}</span>
+                              <span className="text-[10px] text-gray-400 font-mono">+{cleanPhone(t.phone)}</span>
                             </div>
                             <div className="text-right">
                               <span className="text-[10px] font-semibold bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded capitalize">
