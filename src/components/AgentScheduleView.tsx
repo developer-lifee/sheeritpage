@@ -908,7 +908,29 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentEmail
             </div>
           </div>
 
-
+          {/* Tarjeta de Resumen de Nómina */}
+          {!payrollLoading && payrollList.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              <div className="bg-gray-50 dark:bg-gray-850 p-4 rounded-xl border dark:border-gray-700 flex justify-between items-center">
+                <div>
+                  <span className="text-xxs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Total Horas Acumuladas</span>
+                  <div className="text-xl font-black text-gray-800 dark:text-white mt-1 font-mono">
+                    {payrollList.reduce((sum, agent) => sum + Number(agent.total_hours || 0), 0).toFixed(1)} hrs
+                  </div>
+                </div>
+                <Clock className="w-8 h-8 text-brand-primary/20" />
+              </div>
+              <div className="bg-emerald-500/5 dark:bg-emerald-500/10 p-4 rounded-xl border border-emerald-500/25 flex justify-between items-center animate-pulse">
+                <div>
+                  <span className="text-xxs font-bold text-emerald-600/70 dark:text-emerald-450 uppercase tracking-wider">Costo de Nómina Consolidado</span>
+                  <div className="text-xl font-black text-emerald-600 dark:text-emerald-450 mt-1 font-mono">
+                    ${Math.round(payrollList.reduce((sum, agent) => sum + Number(agent.total_payment || 0), 0)).toLocaleString('es-CO')}
+                  </div>
+                </div>
+                <DollarSign className="w-8 h-8 text-emerald-500/20" />
+              </div>
+            </div>
+          )}
 
           {/* Tabla de Nómina */}
           {payrollLoading ? (

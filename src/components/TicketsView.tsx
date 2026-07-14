@@ -114,11 +114,12 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   
   // Metrics state
   const [showMetricsModal, setShowMetricsModal] = useState(false);
-  const [metricsData, setMetricsData] = useState<{
-    summary: { agent: string; count: number }[];
-    summaryToday?: { agent: string; count: number }[];
-    recent: { phone: string; customerName: string; agent: string; resolvedAt: string }[];
-  } | null>(null);
+   const [metricsData, setMetricsData] = useState<{
+     summary: { agent: string; count: number }[];
+     summaryToday?: { agent: string; count: number }[];
+     recent: { phone: string; customerName: string; agent: string; resolvedAt: string }[];
+     weeklyFlow?: { day_label: string; count: number }[];
+   } | null>(null);
   const [loadingMetrics, setLoadingMetrics] = useState(false);
 
   // Account History state
@@ -2822,6 +2823,36 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                       </table>
                     </div>
                   </div>
+
+                  {/* Weekly Flow Chart */}
+                  {metricsData.weeklyFlow && metricsData.weeklyFlow.length > 0 && (
+                    <div className="md:col-span-12 border-t dark:border-gray-800 pt-6 mt-2">
+                      <h4 className="text-xs font-bold text-gray-450 uppercase tracking-wider mb-4">
+                        📈 Flujo de Resoluciones Semanal (Últimos 7 Días)
+                      </h4>
+                      <div className="flex items-end justify-between gap-2 h-36 bg-gray-50/50 dark:bg-gray-850/50 p-4 rounded-2xl border dark:border-gray-800">
+                        {metricsData.weeklyFlow.map((day: any, idx: number) => {
+                          const maxCount = Math.max(...metricsData.weeklyFlow!.map((d: any) => d.count), 1);
+                          const pct = (day.count / maxCount) * 100;
+                          return (
+                            <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                              <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300 font-mono">{day.count}</span>
+                              <div 
+                                style={{ height: `${Math.max(pct, 5)}%` }} 
+                                className="w-full max-w-[28px] bg-brand-primary/80 hover:bg-brand-primary rounded-t-lg transition-all duration-300 relative group"
+                                title={`${day.count} tickets resueltos el ${day.day_label}`}
+                              >
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-gray-850 text-white text-[9px] px-1.5 py-0.5 rounded shadow opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                                  {day.count} resueltos
+                                </div>
+                              </div>
+                              <span className="text-[9px] text-gray-400 dark:text-gray-500 font-semibold">{day.day_label}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
