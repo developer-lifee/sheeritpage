@@ -2748,35 +2748,77 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 <p className="text-center text-sm text-gray-500 italic py-10">No se pudieron cargar los datos.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                  {/* Weekly Flow Chart */}
-                  {metricsData.weeklyFlow && metricsData.weeklyFlow.length > 0 && (
-                    <div className="md:col-span-12 border-b dark:border-gray-800 pb-6 mb-2">
-                      <h4 className="text-xs font-bold text-gray-450 uppercase tracking-wider mb-4">
-                        📈 Flujo de Resoluciones Semanal (Últimos 7 Días)
-                      </h4>
-                      <div className="flex items-end justify-between gap-2 h-32 bg-gray-50/50 dark:bg-gray-850/50 p-4 rounded-2xl border dark:border-gray-800">
-                        {metricsData.weeklyFlow.map((day: any, idx: number) => {
-                          const maxCount = Math.max(...metricsData.weeklyFlow!.map((d: any) => d.count), 1);
-                          const pct = (day.count / maxCount) * 100;
-                          return (
-                            <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                              <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300 font-mono">{day.count}</span>
-                              <div 
-                                style={{ height: `${Math.max(pct, 5)}%` }} 
-                                className="w-full max-w-[28px] bg-brand-primary/80 hover:bg-brand-primary rounded-t-lg transition-all duration-300 relative group"
-                                title={`${day.count} tickets resueltos el ${day.day_label}`}
-                              >
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-gray-850 text-white text-[9px] px-1.5 py-0.5 rounded shadow opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                                  {day.count} resueltos
-                                </div>
-                              </div>
-                              <span className="text-[9px] text-gray-400 dark:text-gray-500 font-semibold">{day.day_label}</span>
+                  {/* Weekly Flow Chart - Stacked by Agent */}
+                  {metricsData.weeklyFlow && metricsData.weeklyFlow.length > 0 && (() => {
+                    const AGENT_COLORS: Record<string, string> = {};
+                    const palette = ['#2dd4bf', '#6366f1', '#f59e0b', '#ec4899', '#3b82f6', '#10b981', '#f43f5e', '#8b5cf6'];
+                    const uniqueAgents: string[] = [];
+                    metricsData.weeklyFlow.forEach((r: any) => {
+                      if (r.agent && !uniqueAgents.includes(r.agent)) uniqueAgents.push(r.agent);
+                    });
+                    uniqueAgents.forEach((a, i) => { AGENT_COLORS[a] = palette[i % palette.length]; });
+
+                    // Group by day_label
+                    const dayMap: Record<string, Record<string, number>> = {};
+                    metricsData.weeklyFlow.forEach((r: any) => {
+                      if (!dayMap[r.day_label]) dayMap[r.day_label] = {};
+                      dayMap[r.day_label][r.agent || 'Desconocido'] = (dayMap[r.day_label][r.agent || 'Desconocido'] || 0) + r.count;
+                    });
+
+                    const dayLabels = Object.keys(dayMap);
+                    const maxDayTotal = Math.max(...dayLabels.map(d => Object.values(dayMap[d]).reduce((s, v) => s + v, 0)), 1);
+
+                    return (
+                      <div className="md:col-span-12 border-b dark:border-gray-800 pb-6 mb-2">
+                        <h4 className="text-xs font-bold text-gray-450 uppercase tracking-wider mb-3">
+                          📈 Flujo de Resoluciones Semanal (Últimos 7 Días) — por Asesor
+                        </h4>
+                        {/* Legend */}
+                        <div className="flex flex-wrap gap-3 mb-3">
+                          {uniqueAgents.map(a => (
+                            <div key={a} className="flex items-center gap-1.5">
+                              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: AGENT_COLORS[a] }}></div>
+                              <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400">{a}</span>
                             </div>
-                          );
-                        })}
+                          ))}
+                        </div>
+                        <div className="flex items-end justify-between gap-2 h-36 bg-gray-50/50 dark:bg-gray-850/50 p-4 rounded-2xl border dark:border-gray-800">
+                          {dayLabels.map((dayLabel, idx) => {
+                            const agents = dayMap[dayLabel];
+                            const dayTotal = Object.values(agents).reduce((s, v) => s + v, 0);
+                            const pct = (dayTotal / maxDayTotal) * 100;
+                            return (
+                              <div key={idx} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                                <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300 font-mono">{dayTotal}</span>
+                                <div 
+                                  style={{ height: `${Math.max(pct, 5)}%` }} 
+                                  className="w-full max-w-[32px] rounded-t-lg overflow-hidden flex flex-col-reverse relative group"
+                                  title={Object.entries(agents).map(([a, c]) => `${a}: ${c}`).join(' | ')}
+                                >
+                                  {uniqueAgents.map(agent => {
+                                    const agentCount = agents[agent] || 0;
+                                    if (agentCount === 0) return null;
+                                    const agentPct = (agentCount / dayTotal) * 100;
+                                    return (
+                                      <div
+                                        key={agent}
+                                        style={{ height: `${agentPct}%`, backgroundColor: AGENT_COLORS[agent] }}
+                                        className="w-full transition-all duration-300 hover:brightness-110"
+                                      />
+                                    );
+                                  })}
+                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-gray-850 text-white text-[9px] px-2 py-1 rounded shadow opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                                    {Object.entries(agents).map(([a, c]) => `${a}: ${c}`).join(' · ')}
+                                  </div>
+                                </div>
+                                <span className="text-[9px] text-gray-400 dark:text-gray-500 font-semibold">{dayLabel}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Summary Leaderboard */}
                   <div className="md:col-span-5 space-y-6">

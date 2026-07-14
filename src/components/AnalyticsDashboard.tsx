@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, LineChart, Line, Legend 
 } from 'recharts';
-import { Users, TrendingUp, AlertTriangle, Calendar, RefreshCcw, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Users, TrendingUp, Calendar, RefreshCcw, ArrowUpRight, ArrowDownRight, DollarSign, Award, Heart, ShoppingBag } from 'lucide-react';
 
 interface Stats {
   totalClients: number;
@@ -14,20 +14,31 @@ interface Stats {
   newsCount: number;
   renewalsCount: number;
   churnedCount: number;
+  financials: {
+    totalIncome: number;
+    totalExpense: number;
+    netProfit: number;
+    trend: Array<{ name: string; ingresos: number; egresos: number; ganancias: number }>;
+  };
+  loyalty: {
+    topPurchasers: Array<{ phone: string; name: string; count: number }>;
+    topRenewals: Array<{ phone: string; name: string; count: number }>;
+    topSpenders: Array<{ phone: string; name: string; count: number }>;
+  };
 }
 
-const COLORS = ['#6366f1', '#10b981', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+const COLORS = ['#6366f1', '#10b981', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ec4899', '#f43f5e', '#3b82f6'];
 
 export const AnalyticsDashboard: React.FC = () => {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [timeframe, setTimeframe] = useState<string>('all_time');
 
   const fetchStats = async () => {
     setLoading(true);
     const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
     try {
-      const res = await fetch(`${apiUrl}/api/admin/stats`);
+      const res = await fetch(`${apiUrl}/api/admin/stats?timeframe=${timeframe}`);
       const data = await res.json();
       setStats(data);
     } catch (err) {
@@ -39,7 +50,7 @@ export const AnalyticsDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [timeframe]);
 
   if (loading || !stats) {
     return (
@@ -50,30 +61,8 @@ export const AnalyticsDashboard: React.FC = () => {
     );
   }
 
-  // Extract available months for the filter from historyTrend
-  const availableMonths = stats.historyTrend ? stats.historyTrend.map(t => t.name) : [];
-
-  // Filter data based on selected month (simulation for cohort filters)
-  const isMonthSelected = selectedMonth !== 'all';
-  
-  // Adjusted statistics based on selected month (for mock drill down)
-  const displayTotalClients = isMonthSelected 
-    ? (stats.historyTrend?.find(t => t.name === selectedMonth)?.ventas || stats.totalClients) 
-    : stats.totalClients;
-
-  const displayNewsCount = isMonthSelected 
-    ? Math.round(displayTotalClients * 0.35) // Approximate distribution when filtered
-    : stats.newsCount;
-
-  const displayRenewalsCount = isMonthSelected 
-    ? Math.round(displayTotalClients * 0.65)
-    : stats.renewalsCount;
-
-  const displayChurnCount = isMonthSelected
-    ? Math.max(2, Math.round(displayTotalClients * 0.05))
-    : stats.churnedCount;
-
   const platformData = Object.entries(stats.byPlatform).map(([name, value]) => ({ name, value }));
+  
   const expirationData = [
     { name: '7 días', vences: stats.expirations.next7Days },
     { name: '15 días', vences: stats.expirations.next15Days },
@@ -87,8 +76,8 @@ export const AnalyticsDashboard: React.FC = () => {
   ];
 
   const acquisitionData = [
-    { name: 'Nuevos', value: displayNewsCount, color: '#6366f1' },
-    { name: 'Renovaciones', value: displayRenewalsCount, color: '#10b981' },
+    { name: 'Nuevos', value: stats.newsCount, color: '#6366f1' },
+    { name: 'Renovaciones', value: stats.renewalsCount, color: '#10b981' },
   ];
 
   return (
@@ -97,19 +86,19 @@ export const AnalyticsDashboard: React.FC = () => {
       {/* Top Filter Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border dark:border-gray-700 gap-4">
         <div>
-          <h3 className="font-bold text-gray-800 dark:text-white text-base">Filtro de Análisis Cohorte</h3>
-          <p className="text-xs text-gray-400">Selecciona un periodo específico para recalcular KPIs.</p>
+          <h3 className="font-bold text-gray-800 dark:text-white text-base">Análisis de Desempeño General</h3>
+          <p className="text-xs text-gray-400">Selecciona el periodo para filtrar las métricas y los indicadores financieros.</p>
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="w-full sm:w-48 px-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
+            value={timeframe}
+            onChange={(e) => setTimeframe(e.target.value)}
+            className="w-full sm:w-56 px-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm font-semibold"
           >
-            <option value="all">Todo el histórico</option>
-            {availableMonths.map(m => (
-              <option key={m} value={m}>{m}</option>
-            ))}
+            <option value="all_time">Todo el histórico</option>
+            <option value="this_month">Este Mes</option>
+            <option value="last_30_days">Últimos 30 días</option>
+            <option value="last_6_months">Últimos 6 meses</option>
           </select>
           <button
             onClick={fetchStats}
@@ -121,53 +110,84 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards: General & Financial */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Clientes Activos</span>
             <Users className="w-5 h-5 text-blue-500" />
           </div>
-          <div className="text-2xl font-bold dark:text-white">{displayTotalClients}</div>
+          <div className="text-2xl font-bold dark:text-white">{stats.totalClients}</div>
           <div className="text-xs text-green-500 mt-1 font-medium flex items-center gap-1">
-            <ArrowUpRight className="w-3.5 h-3.5" /> +4.2% este mes
+            <ArrowUpRight className="w-3.5 h-3.5" /> Suscriptores vigentes
           </div>
         </div>
 
         <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Nuevos Clientes</span>
-            <TrendingUp className="w-5 h-5 text-indigo-500" />
+            <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Ingresos de Caja</span>
+            <DollarSign className="w-5 h-5 text-emerald-500" />
           </div>
-          <div className="text-2xl font-bold dark:text-white">{displayNewsCount}</div>
+          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+            ${stats.financials.totalIncome.toLocaleString('es-CO')}
+          </div>
+          <div className="text-xs text-emerald-500 mt-1 font-medium flex items-center gap-1">
+            <ArrowUpRight className="w-3.5 h-3.5" /> Recaudo acumulado
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Costos / Egresos</span>
+            <DollarSign className="w-5 h-5 text-red-500" />
+          </div>
+          <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+            ${stats.financials.totalExpense.toLocaleString('es-CO')}
+          </div>
+          <div className="text-xs text-red-500 mt-1 font-medium flex items-center gap-1">
+            <ArrowDownRight className="w-3.5 h-3.5" /> Gastos del periodo
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Utilidad Neta</span>
+            <DollarSign className="w-5 h-5 text-indigo-500" />
+          </div>
+          <div className={`text-2xl font-bold ${stats.financials.netProfit >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-rose-600'}`}>
+            ${stats.financials.netProfit.toLocaleString('es-CO')}
+          </div>
           <div className="text-xs text-indigo-500 mt-1 font-medium flex items-center gap-1">
-            <ArrowUpRight className="w-3.5 h-3.5" /> Adquisición acelerada
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Renovaciones</span>
-            <TrendingUp className="w-5 h-5 text-green-500" />
-          </div>
-          <div className="text-2xl font-bold dark:text-white">{displayRenewalsCount}</div>
-          <div className="text-xs text-green-500 mt-1 font-medium flex items-center gap-1">
-            <ArrowUpRight className="w-3.5 h-3.5" /> Retención óptima
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Desistidos (Churn)</span>
-            <Calendar className="w-5 h-5 text-red-500" />
-          </div>
-          <div className="text-2xl font-bold dark:text-white">{displayChurnCount}</div>
-          <div className="text-xs text-red-450 mt-1 font-medium flex items-center gap-1">
-            <ArrowDownRight className="w-3.5 h-3.5" /> Bajas del periodo
+            <ArrowUpRight className="w-3.5 h-3.5" /> Rendimiento de caja
           </div>
         </div>
       </div>
 
+      {/* Financial Trend / Breakdown Chart */}
+      {stats.financials.trend && stats.financials.trend.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
+          <h3 className="text-base font-bold mb-4 dark:text-white">Flujo de Caja Mensual (Ingresos vs Egresos vs Ganancia Neta)</h3>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.financials.trend}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ccc" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                <YAxis axisLine={false} tickLine={false} />
+                <Tooltip 
+                  formatter={(value: any) => [`$${value.toLocaleString('es-CO')}`, '']}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
+                />
+                <Legend />
+                <Bar dataKey="ingresos" name="Ingresos" fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="egresos" name="Egresos" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="ganancias" name="Ganancia Neta" fill="#6366f1" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* Grid: Acquisition & Platforms */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         {/* Customer Acquisition (New vs Renewal) Donut */}
@@ -200,7 +220,7 @@ export const AnalyticsDashboard: React.FC = () => {
                   <div className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: d.color }}></div>
                   <div>
                     <span className="block text-sm font-semibold text-gray-700 dark:text-white">{d.name}</span>
-                    <span className="text-xs text-gray-400">{d.value} clientes ({Math.round((d.value / (displayTotalClients || 1)) * 100)}%)</span>
+                    <span className="text-xs text-gray-400">{d.value} clientes ({Math.round((d.value / (stats.totalClients || 1)) * 100)}%)</span>
                   </div>
                 </div>
               ))}
@@ -235,6 +255,7 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Grid: Grid: Expirations Forecast & Sales Trend */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Expirations Forecast */}
         <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
@@ -269,6 +290,90 @@ export const AnalyticsDashboard: React.FC = () => {
             </div>
           </div>
         )}
+      </div>
+
+      {/* CLIENT FIDELITY / LOYALTY LEADERBOARDS */}
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700 space-y-6">
+        <div className="border-b dark:border-gray-700 pb-3">
+          <h3 className="text-lg font-bold dark:text-white flex items-center gap-2">
+            <Award className="w-6 h-6 text-brand-primary animate-pulse" /> Fidelización y Clientes Destacados
+          </h3>
+          <p className="text-xs text-gray-400">Identifica a tus mejores clientes históricos en base a compras, renovaciones y gasto total.</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Column 1: Most Platforms Purchased */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+              <ShoppingBag className="w-4 h-4 text-indigo-500" /> Mayor Diversidad de Cuentas
+            </h4>
+            <div className="space-y-2">
+              {stats.loyalty.topPurchasers.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">Sin datos disponibles.</p>
+              ) : (
+                stats.loyalty.topPurchasers.map((user, idx) => (
+                  <div key={user.phone} className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-gray-850/50 border dark:border-gray-750 text-xs">
+                    <div>
+                      <span className="font-extrabold text-gray-700 dark:text-gray-300 block">{idx + 1}. {user.name}</span>
+                      <span className="text-[10px] text-gray-400 font-mono">{user.phone}</span>
+                    </div>
+                    <span className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-extrabold px-2.5 py-1 rounded-lg">
+                      {user.count} plts
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Column 2: Most Renewals */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+              <Heart className="w-4 h-4 text-emerald-500" /> Clientes más Recurrentes
+            </h4>
+            <div className="space-y-2">
+              {stats.loyalty.topRenewals.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">Sin datos disponibles.</p>
+              ) : (
+                stats.loyalty.topRenewals.map((user, idx) => (
+                  <div key={user.phone} className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-gray-850/50 border dark:border-gray-750 text-xs">
+                    <div>
+                      <span className="font-extrabold text-gray-700 dark:text-gray-300 block">{idx + 1}. {user.name}</span>
+                      <span className="text-[10px] text-gray-400 font-mono">{user.phone}</span>
+                    </div>
+                    <span className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-extrabold px-2.5 py-1 rounded-lg">
+                      {user.count} renov.
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Column 3: Highest Investment */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+              <DollarSign className="w-4 h-4 text-indigo-500" /> Clientes de Mayor Valor (VIP)
+            </h4>
+            <div className="space-y-2">
+              {stats.loyalty.topSpenders.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">Sin datos disponibles.</p>
+              ) : (
+                stats.loyalty.topSpenders.map((user, idx) => (
+                  <div key={user.phone} className="flex justify-between items-center p-3 rounded-xl bg-gray-50/50 dark:bg-gray-850/50 border dark:border-gray-750 text-xs">
+                    <div>
+                      <span className="font-extrabold text-gray-700 dark:text-gray-300 block">{idx + 1}. {user.name}</span>
+                      <span className="text-[10px] text-gray-400 font-mono">{user.phone}</span>
+                    </div>
+                    <span className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-extrabold px-2.5 py-1 rounded-lg">
+                      ${user.count.toLocaleString('es-CO')}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Health Indicator */}
