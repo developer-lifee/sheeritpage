@@ -1665,6 +1665,32 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                   placeholder="Buscar por nombre, teléfono, cuenta o servicio..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const cleanTerm = searchTerm.replace(/\D/g, '');
+                      if (cleanTerm.length >= 8) {
+                        const tempChat: Ticket = {
+                          userId: `${cleanTerm}@c.us`,
+                          phone: cleanTerm,
+                          nombre: `Cliente +${cleanTerm}`,
+                          state: 'unassigned',
+                          agent: null,
+                          lastMessage: 'Chat visualizado por asesor',
+                          lastMessageTime: Date.now(),
+                          summary: 'Visualización directa',
+                          accounts: []
+                        };
+                        // Cargar en el estado e iniciar sincronización de chat de inmediato
+                        setTickets(prev => {
+                          const filtered = prev.filter(t => t.userId !== tempChat.userId);
+                          return [tempChat, ...filtered];
+                        });
+                        setChatFilter('all_chats');
+                        setActiveChatTicket(tempChat);
+                        setTimeout(() => fetchChatMessages(true), 150);
+                      }
+                    }
+                  }}
                   className="w-full pl-9 pr-4 py-2.5 text-xs rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-750 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200"
                 />
               </div>
@@ -1737,10 +1763,26 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                                 ¿Quieres iniciar una conversación con el número <strong className="font-mono text-gray-800 dark:text-white">+{cleanTerm}</strong> directamente?
                               </p>
                               <button
-                                onClick={() => {
-                                  setNewTicketPhone(cleanTerm);
-                                  setShowCreateTicketModal(true);
-                                }}
+                               onClick={() => {
+                                 const tempChat: Ticket = {
+                                   userId: `${cleanTerm}@c.us`,
+                                   phone: cleanTerm,
+                                   nombre: `Cliente +${cleanTerm}`,
+                                   state: 'unassigned',
+                                   agent: null,
+                                   lastMessage: 'Chat visualizado por asesor',
+                                   lastMessageTime: Date.now(),
+                                   summary: 'Visualización directa',
+                                   accounts: []
+                                 };
+                                 // Agregar al estado local temporalmente para poder listarlo en "Todos los chats"
+                                 setTickets(prev => {
+                                   const filtered = prev.filter(t => t.userId !== tempChat.userId);
+                                   return [tempChat, ...filtered];
+                                 });
+                                 setActiveChatTicket(tempChat);
+                                 setTimeout(() => fetchChatMessages(true), 150);
+                               }}
                                 className="w-full py-1.5 px-3 bg-brand-primary hover:bg-brand-dark text-white rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1.5"
                               >
                                 <Plus className="w-3.5 h-3.5" />
