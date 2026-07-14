@@ -13,6 +13,7 @@ import { AdminSupport } from './components/AdminSupport';
 import { VerificationPage } from './components/VerificationPage';
 import { SoftwarePricingPage } from './components/SoftwarePricingPage';
 import { RayTracingSupportPage } from './components/RayTracingSupportPage';
+import { RayTracingPrivacyPage } from './components/RayTracingPrivacyPage';
 import ClientLoginView from './components/ClientLoginView';
 import { useDarkMode } from './hooks/useDarkMode';
 import { Search, ShoppingCart, Lock, AlertCircle } from 'lucide-react';
@@ -34,7 +35,7 @@ interface Platform {
   plans: Plan[];
 }
 
-export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software' | 'raytracing-support';
+export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software' | 'raytracing-support' | 'raytracing-privacy';
 
 const AUTHORIZED_ADVISORS: { [email: string]: string } = {
   'esclepiades@hotmail.com': 'Esclepiades',
@@ -142,6 +143,7 @@ function AppContent() {
     if (path === '/mis-servicios') return 'servicios';
     if (path === '/software') return 'software';
     if (path === '/support/raytracinggame') return 'raytracing-support';
+    if (path === '/support/raytracinggame/privacy') return 'raytracing-privacy';
     return 'home';
   });
   const [isAdminAuth, setIsAdminAuth] = useState(() => {
@@ -177,6 +179,8 @@ function AppContent() {
       setCurrentView('software');
     } else if (path === '/support/raytracinggame') {
       setCurrentView('raytracing-support');
+    } else if (path === '/support/raytracinggame/privacy') {
+      setCurrentView('raytracing-privacy');
     } else {
       setCurrentView('home');
     }
@@ -198,6 +202,8 @@ function AppContent() {
         setCurrentView('software');
       } else if (currentPath === '/support/raytracinggame') {
         setCurrentView('raytracing-support');
+      } else if (currentPath === '/support/raytracinggame/privacy') {
+        setCurrentView('raytracing-privacy');
       } else {
         setCurrentView('home');
       }
@@ -216,6 +222,7 @@ function AppContent() {
     else if (view === 'servicios') path = '/mis-servicios';
     else if (view === 'software') path = '/software';
     else if (view === 'raytracing-support') path = '/support/raytracinggame';
+    else if (view === 'raytracing-privacy') path = '/support/raytracinggame/privacy';
     window.history.pushState({}, '', path);
     window.scrollTo(0, 0);
   };
@@ -385,6 +392,10 @@ function AppContent() {
 
       {currentView === 'raytracing-support' && (
         <RayTracingSupportPage />
+      )}
+
+      {currentView === 'raytracing-privacy' && (
+        <RayTracingPrivacyPage />
       )}
 
       {currentView === 'admin' && (

@@ -13,7 +13,7 @@ export const RayTracingSupportPage: React.FC = () => {
     },
     {
       q: '¿La app funciona en mi dispositivo?',
-      a: 'Ray Tracing Game requiere iOS 16 o superior y un dispositivo con chip A14 Bionic o posterior (iPhone 12 en adelante) para renderizado por ray tracing en tiempo real.'
+      a: 'Ray Tracing Game requiere iOS 17 o superior y un dispositivo con chip A17 Pro o posterior (iPhone 15 Pro / iPhone 15 Pro Max en adelante) para la simulación de ray tracing en tiempo real con aceleración por hardware.'
     },
     {
       q: '¿Cómo reporto un bug o crash?',
@@ -239,13 +239,32 @@ export const RayTracingSupportPage: React.FC = () => {
       {/* Privacy & Legal */}
       <section className="relative z-10 px-6 pb-16">
         <div className="max-w-3xl mx-auto">
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-6">Privacidad</h3>
           <div className="rounded-2xl border border-white/5 bg-white/[0.015] p-6 md:p-8">
-            <h3 className="text-sm font-bold text-white mb-3">Política de Privacidad</h3>
-            <div className="space-y-2 text-sm text-gray-400 leading-relaxed">
-              <p>Ray Tracing Game no recopila, almacena ni comparte datos personales del usuario. La app no requiere inicio de sesión y no utiliza servicios de analytics de terceros.</p>
-              <p>Las compras dentro de la app se procesan exclusivamente a través de Apple y están sujetas a los términos de servicio de la App Store.</p>
-              <p>Si tienes preguntas adicionales sobre privacidad, no dudes en contactarnos por los canales indicados arriba.</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="rounded-xl border border-emerald-500/10 bg-emerald-500/5 p-4 text-center">
+                <span className="text-2xl block mb-1.5">🚫</span>
+                <span className="text-xs font-bold text-emerald-300">No Rastrea</span>
+              </div>
+              <div className="rounded-xl border border-cyan-500/10 bg-cyan-500/5 p-4 text-center">
+                <span className="text-2xl block mb-1.5">🔒</span>
+                <span className="text-xs font-bold text-cyan-300">No Recoge Datos</span>
+              </div>
+              <div className="rounded-xl border border-purple-500/10 bg-purple-500/5 p-4 text-center">
+                <span className="text-2xl block mb-1.5">🤝</span>
+                <span className="text-xs font-bold text-purple-300">No Comparte con Terceros</span>
+              </div>
             </div>
+            <p className="text-sm text-gray-400 leading-relaxed mb-4">
+              Ray Tracing Game no recopila, almacena ni comparte datos personales del usuario. La app no requiere inicio de sesión, no utiliza servicios de analíticas y funciona completamente offline.
+            </p>
+            <a
+              href="/support/raytracinggame/privacy"
+              className="inline-flex items-center gap-2 text-sm font-bold text-purple-400 hover:text-purple-300 transition-colors"
+            >
+              Leer Política de Privacidad Completa
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+            </a>
           </div>
         </div>
       </section>
