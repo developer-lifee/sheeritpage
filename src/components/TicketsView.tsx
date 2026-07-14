@@ -1726,7 +1726,32 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
               {chatFilter === 'all_chats' && (
                 <div className="space-y-2">
                   {filteredTickets.length === 0 ? (
-                    <p className="text-center py-8 text-xs text-gray-450 italic">No se encontraron chats.</p>
+                    <div className="text-center py-6 px-4">
+                      <p className="text-xs text-gray-450 italic mb-3">No se encontraron chats.</p>
+                      {(() => {
+                        const cleanTerm = searchTerm.replace(/\D/g, '');
+                        if (cleanTerm.length >= 8) {
+                          return (
+                            <div className="bg-brand-primary/5 dark:bg-brand-primary/10 border border-brand-primary/20 rounded-xl p-4 max-w-xs mx-auto animate-fadeIn">
+                              <p className="text-[11px] text-gray-600 dark:text-gray-300 mb-2.5">
+                                ¿Quieres iniciar una conversación con el número <strong className="font-mono text-gray-800 dark:text-white">+{cleanTerm}</strong> directamente?
+                              </p>
+                              <button
+                                onClick={() => {
+                                  setNewTicketPhone(cleanTerm);
+                                  setShowCreateTicketModal(true);
+                                }}
+                                className="w-full py-1.5 px-3 bg-brand-primary hover:bg-brand-dark text-white rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1.5"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                Abrir Chat / Ticket
+                              </button>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
                   ) : (
                     filteredTickets.map(t => renderCompactTicketItem(t, 'chat'))
                   )}
