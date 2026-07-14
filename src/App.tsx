@@ -12,6 +12,7 @@ import { SupportSection } from './components/SupportSection';
 import { AdminSupport } from './components/AdminSupport';
 import { VerificationPage } from './components/VerificationPage';
 import { SoftwarePricingPage } from './components/SoftwarePricingPage';
+import { RayTracingSupportPage } from './components/RayTracingSupportPage';
 import ClientLoginView from './components/ClientLoginView';
 import { useDarkMode } from './hooks/useDarkMode';
 import { Search, ShoppingCart, Lock, AlertCircle } from 'lucide-react';
@@ -33,7 +34,7 @@ interface Platform {
   plans: Plan[];
 }
 
-export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software';
+export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software' | 'raytracing-support';
 
 const AUTHORIZED_ADVISORS: { [email: string]: string } = {
   'esclepiades@hotmail.com': 'Esclepiades',
@@ -140,6 +141,7 @@ function AppContent() {
     if (path === '/verificar') return 'verificar';
     if (path === '/mis-servicios') return 'servicios';
     if (path === '/software') return 'software';
+    if (path === '/support/raytracinggame') return 'raytracing-support';
     return 'home';
   });
   const [isAdminAuth, setIsAdminAuth] = useState(() => {
@@ -173,6 +175,8 @@ function AppContent() {
       setCurrentView('servicios');
     } else if (path === '/software') {
       setCurrentView('software');
+    } else if (path === '/support/raytracinggame') {
+      setCurrentView('raytracing-support');
     } else {
       setCurrentView('home');
     }
@@ -192,6 +196,8 @@ function AppContent() {
         setCurrentView('servicios');
       } else if (currentPath === '/software') {
         setCurrentView('software');
+      } else if (currentPath === '/support/raytracinggame') {
+        setCurrentView('raytracing-support');
       } else {
         setCurrentView('home');
       }
@@ -209,6 +215,7 @@ function AppContent() {
     else if (view === 'verificar') path = '/verificar';
     else if (view === 'servicios') path = '/mis-servicios';
     else if (view === 'software') path = '/software';
+    else if (view === 'raytracing-support') path = '/support/raytracinggame';
     window.history.pushState({}, '', path);
     window.scrollTo(0, 0);
   };
@@ -374,6 +381,10 @@ function AppContent() {
 
       {currentView === 'software' && (
         <SoftwarePricingPage />
+      )}
+
+      {currentView === 'raytracing-support' && (
+        <RayTracingSupportPage />
       )}
 
       {currentView === 'admin' && (
