@@ -118,9 +118,10 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
      summary: { agent: string; count: number }[];
      summaryToday?: { agent: string; count: number }[];
      recent: { phone: string; customerName: string; agent: string; resolvedAt: string }[];
-     weeklyFlow?: { day_label: string; count: number }[];
+     weeklyFlow?: { day_label: string; agent: string; count: number }[];
    } | null>(null);
   const [loadingMetrics, setLoadingMetrics] = useState(false);
+  const [hiddenChartAgents, setHiddenChartAgents] = useState<Set<string>>(new Set());
 
   // Account History state
   const [showAccountHistoryModal, setShowAccountHistoryModal] = useState(false);
@@ -2748,7 +2749,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 <p className="text-center text-sm text-gray-500 italic py-10">No se pudieron cargar los datos.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                  {/* Weekly Flow Chart - Stacked by Agent */}
+                  {/* Weekly Flow Chart - Stacked by Agent with Toggle Filters */}
                   {metricsData.weeklyFlow && metricsData.weeklyFlow.length > 0 && (() => {
                     const AGENT_COLORS: Record<string, string> = {};
                     const palette = ['#2dd4bf', '#6366f1', '#f59e0b', '#ec4899', '#3b82f6', '#10b981', '#f43f5e', '#8b5cf6'];
@@ -2758,47 +2759,81 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     });
                     uniqueAgents.forEach((a, i) => { AGENT_COLORS[a] = palette[i % palette.length]; });
 
-                    // Group by day_label
+                    const visibleAgents = uniqueAgents.filter(a => !hiddenChartAgents.has(a));
+
+                    const toggleAgent = (agent: string) => {
+                      setHiddenChartAgents(prev => {
+                        const next = new Set(prev);
+                        if (next.has(agent)) next.delete(agent); else next.add(agent);
+                        return next;
+                      });
+                    };
+
+                    // Group by day_label — only visible agents
                     const dayMap: Record<string, Record<string, number>> = {};
                     metricsData.weeklyFlow.forEach((r: any) => {
+                      if (hiddenChartAgents.has(r.agent)) return;
                       if (!dayMap[r.day_label]) dayMap[r.day_label] = {};
                       dayMap[r.day_label][r.agent || 'Desconocido'] = (dayMap[r.day_label][r.agent || 'Desconocido'] || 0) + r.count;
                     });
 
-                    const dayLabels = Object.keys(dayMap);
-                    const maxDayTotal = Math.max(...dayLabels.map(d => Object.values(dayMap[d]).reduce((s, v) => s + v, 0)), 1);
+                    // Maintain all day_labels even if a day has 0 after filter
+                    const allDayLabels: string[] = [];
+                    metricsData.weeklyFlow.forEach((r: any) => {
+                      if (!allDayLabels.includes(r.day_label)) allDayLabels.push(r.day_label);
+                    });
+
+                    const maxDayTotal = Math.max(...allDayLabels.map(d => {
+                      if (!dayMap[d]) return 0;
+                      return Object.values(dayMap[d]).reduce((s, v) => s + v, 0);
+                    }), 1);
 
                     return (
                       <div className="md:col-span-12 border-b dark:border-gray-800 pb-6 mb-2">
                         <h4 className="text-xs font-bold text-gray-450 uppercase tracking-wider mb-3">
                           📈 Flujo de Resoluciones Semanal (Últimos 7 Días) — por Asesor
                         </h4>
-                        {/* Legend */}
-                        <div className="flex flex-wrap gap-3 mb-3">
-                          {uniqueAgents.map(a => (
-                            <div key={a} className="flex items-center gap-1.5">
-                              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: AGENT_COLORS[a] }}></div>
-                              <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400">{a}</span>
-                            </div>
-                          ))}
+                        {/* Clickable Legend Toggles */}
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {uniqueAgents.map(a => {
+                            const isHidden = hiddenChartAgents.has(a);
+                            return (
+                              <button
+                                key={a}
+                                onClick={() => toggleAgent(a)}
+                                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all ${
+                                  isHidden
+                                    ? 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-600 bg-transparent opacity-50'
+                                    : 'border-transparent text-white'
+                                }`}
+                                style={!isHidden ? { backgroundColor: AGENT_COLORS[a] } : undefined}
+                              >
+                                <div
+                                  className={`w-2.5 h-2.5 rounded-sm border ${isHidden ? 'border-gray-300 dark:border-gray-600' : 'border-white/30'}`}
+                                  style={!isHidden ? { backgroundColor: 'rgba(255,255,255,0.3)' } : undefined}
+                                />
+                                {a}
+                              </button>
+                            );
+                          })}
                         </div>
                         <div className="flex items-end justify-between gap-2 h-36 bg-gray-50/50 dark:bg-gray-850/50 p-4 rounded-2xl border dark:border-gray-800">
-                          {dayLabels.map((dayLabel, idx) => {
-                            const agents = dayMap[dayLabel];
+                          {allDayLabels.map((dayLabel, idx) => {
+                            const agents = dayMap[dayLabel] || {};
                             const dayTotal = Object.values(agents).reduce((s, v) => s + v, 0);
-                            const pct = (dayTotal / maxDayTotal) * 100;
+                            const pct = maxDayTotal > 0 ? (dayTotal / maxDayTotal) * 100 : 0;
                             return (
                               <div key={idx} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
                                 <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300 font-mono">{dayTotal}</span>
                                 <div 
-                                  style={{ height: `${Math.max(pct, 5)}%` }} 
+                                  style={{ height: `${Math.max(pct, dayTotal > 0 ? 5 : 2)}%` }} 
                                   className="w-full max-w-[32px] rounded-t-lg overflow-hidden flex flex-col-reverse relative group"
                                   title={Object.entries(agents).map(([a, c]) => `${a}: ${c}`).join(' | ')}
                                 >
-                                  {uniqueAgents.map(agent => {
+                                  {visibleAgents.map(agent => {
                                     const agentCount = agents[agent] || 0;
                                     if (agentCount === 0) return null;
-                                    const agentPct = (agentCount / dayTotal) * 100;
+                                    const agentPct = dayTotal > 0 ? (agentCount / dayTotal) * 100 : 0;
                                     return (
                                       <div
                                         key={agent}
