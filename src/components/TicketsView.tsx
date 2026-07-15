@@ -2778,6 +2778,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                         <Send className="w-4 h-4" />
                       </button>
                     </form>
+                  )}
                 </div>
               </div>
             ) : activeHeavyTicket ? (
