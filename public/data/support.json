@@ -333,23 +333,6 @@
     ]
   },
   {
-    "id": "gamepass",
-    "name": "Xbox Game Pass",
-    "logo": "https://th.bing.com/th/id/R.6b6125b82e9694dae2125c36b7d917c3?rik=aFR3QZK9HRmLIw&pid=ImgRaw&r=0",
-    "issues": [
-      {
-        "id": "sin_premium",
-        "title": "Sin suscripción",
-        "image": "/errores_img/suscripcion_game.png",
-        "whatsappMessage": "Hola, mi cuenta de Xbox Game Pass aparece sin la suscripción activa.",
-        "steps": [
-          { "text": "Recuerda que estas suscripciones se activan por código o cuenta compartida." },
-          { "text": "Dinos qué método usaste para revisar el inconveniente." }
-        ]
-      }
-    ]
-  },
-  {
     "id": "gemini",
     "name": "Gemini",
     "logo": "https://meta-q.cdn.bubble.io/f1724422026295x667563819270324800/GeminiStreamingPro2.svg",
@@ -441,23 +424,6 @@
           { "text": "Entra a chat.openai.com e inicia sesión." },
           { "text": "Haz clic en tu foto de perfil (esquina inferior izquierda) y ve a 'Configuración' (Settings)." },
           { "text": "Entra a la sección 'Memoria' (Memory) y apaga el interruptor principal." }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "gamma",
-    "name": "Gamma App",
-    "logo": "https://cdn.mos.cms.futurecdn.net/cfo9wrPuw9H2NXugivFUJh-1200-80.jpg.webp",
-    "issues": [
-      {
-        "id": "acceso_cuenta",
-        "title": "Problemas de acceso",
-        "image": "https://images.unsplash.com/photo-1614064641938-3bbee52942c7?q=80&w=1470&auto=format&fit=crop",
-        "whatsappMessage": "Hola, tengo problemas para acceder a mi cuenta de Gamma App.",
-        "steps": [
-          { "text": "Verifica que el correo y contraseña sean los correctos." },
-          { "text": "Si el error persiste, contacta a soporte para validar tu suscripción." }
         ]
       }
     ]

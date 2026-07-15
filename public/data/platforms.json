@@ -346,29 +346,6 @@
     ]
   },
   {
-    "id": 12,
-    "name": "Xbox Game Pass Ultimate",
-    "image": "https://th.bing.com/th/id/R.6b6125b82e9694dae2125c36b7d917c3?rik=aFR3QZK9HRmLIw&pid=ImgRaw&r=0",
-    "price": 15000,
-    "characteristics": [
-      "Acceso a todo el catálogo Ultimate",
-      "Cuenta compartida por horarios (1/7 del mes)",
-      "Incluye EA Play, PC y Consola"
-    ],
-    "plans": [
-      {
-        "id": 1201,
-        "name": "Compartida por horarios",
-        "price": 15000,
-        "characteristics": [
-          "Elige tus franjas horarias (pico y valle)",
-          "Juega 1/7 parte del mes",
-          "Cuenta administrada por nosotros, sin cortes"
-        ]
-      }
-    ]
-  },
-  {
     "id": 16,
     "name": "Platzi Expert",
     "image": "https://latamlist.com/wp-content/uploads/2018/05/platzi-logo-huge.png",
@@ -501,30 +478,6 @@
           "Acceso completo a Canva Pro",
           "Todas las herramientas premium",
           "Ahorro frente al plan mensual"
-        ]
-      }
-    ]
-  },
-  {
-    "id": 22,
-    "name": "Gamma App",
-    "image": "https://cdn.mos.cms.futurecdn.net/cfo9wrPuw9H2NXugivFUJh-1200-80.jpg.webp",
-    "price": 20000,
-    "characteristics": [
-      "Uso ilimitado de IA para presentaciones",
-      "Exportación completa a PDF y PPT",
-      "Sin marca de agua y analíticas avanzadas"
-    ],
-    "plans": [
-      {
-        "id": 2202,
-        "name": "Plan Pro",
-        "price": 20000,
-        "characteristics": [
-          "Uso ilimitado de IA",
-          "Analíticas avanzadas",
-          "Fuentes personalizadas",
-          "Soporte prioritario"
         ]
       }
     ]
