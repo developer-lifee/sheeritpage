@@ -1695,9 +1695,33 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 />
               </div>
               <button
-                onClick={() => setShowCreateTicketModal(true)}
+                onClick={() => {
+                  const cleanTerm = searchTerm.replace(/\D/g, '');
+                  if (cleanTerm.length >= 8) {
+                    const tempChat: Ticket = {
+                      userId: `${cleanTerm}@c.us`,
+                      phone: cleanTerm,
+                      nombre: `Cliente +${cleanTerm}`,
+                      state: 'unassigned',
+                      agent: null,
+                      lastMessage: 'Chat visualizado por asesor',
+                      lastMessageTime: Date.now(),
+                      summary: 'Visualización directa',
+                      accounts: []
+                    };
+                    setTickets(prev => {
+                      const filtered = prev.filter(t => t.userId !== tempChat.userId);
+                      return [tempChat, ...filtered];
+                    });
+                    setChatFilter('all_chats');
+                    setActiveChatTicket(tempChat);
+                    setTimeout(() => fetchChatMessages(true), 150);
+                  } else {
+                    setShowCreateTicketModal(true);
+                  }
+                }}
                 className="p-2.5 bg-brand-primary hover:bg-brand-dark text-white rounded-xl flex items-center justify-center shadow-sm transition-all duration-200 active:scale-95"
-                title="Iniciar nuevo chat / ticket"
+                title="Abrir chat directamente o crear ticket"
               >
                 <Plus className="h-4 w-4" />
               </button>
@@ -1760,7 +1784,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                           return (
                             <div className="bg-brand-primary/5 dark:bg-brand-primary/10 border border-brand-primary/20 rounded-xl p-4 max-w-xs mx-auto animate-fadeIn">
                               <p className="text-[11px] text-gray-600 dark:text-gray-300 mb-2.5">
-                                ¿Quieres iniciar una conversación con el número <strong className="font-mono text-gray-800 dark:text-white">+{cleanTerm}</strong> directamente?
+                                ¿Quieres ver e iniciar chat con el número <strong className="font-mono text-gray-800 dark:text-white">+{cleanTerm}</strong> directamente?
                               </p>
                               <button
                                onClick={() => {
@@ -1785,8 +1809,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                                }}
                                 className="w-full py-1.5 px-3 bg-brand-primary hover:bg-brand-dark text-white rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1.5"
                               >
-                                <Plus className="w-3.5 h-3.5" />
-                                Abrir Chat / Ticket
+                                <MessageSquare className="w-3.5 h-3.5" />
+                                Abrir Chat Directo
                               </button>
                             </div>
                           );
