@@ -315,7 +315,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
   const fetchTickets = (isSilent = false, currentFilter = chatFilter) => {
     if (!agentEmail) return;
-    if (!isSilent) setLoading(true);
+    const shouldShowLoading = !isSilent && tickets.length === 0;
+    if (shouldShowLoading) setLoading(true);
     setError('');
     const apiUrl = getApiUrl();
     const queryParam = currentFilter === 'all_chats' ? '?allChats=true' : '';
@@ -366,7 +367,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
   const fetchHeavyTickets = async (isSilent = false) => {
     if (!agentEmail) return;
-    if (!isSilent) setLoading(true);
+    const shouldShowLoading = !isSilent && heavyTickets.length === 0;
+    if (shouldShowLoading) setLoading(true);
     setError('');
     const apiUrl = getApiUrl();
     try {
