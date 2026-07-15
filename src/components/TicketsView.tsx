@@ -112,11 +112,28 @@ const logAuditAction = async (action: string, details: any) => {
 
 export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName, onLogout }) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [chatFilter, setChatFilter] = useState<'my' | 'all_tickets' | 'all_chats'>('all_tickets');
+  const [chatFilter, setChatFilter] = useState<'my' | 'all_tickets' | 'all_chats' | 'heavy'>('all_tickets');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // States for Heavy Tickets (Internal Tasks)
+  const [heavyTickets, setHeavyTickets] = useState<any[]>([]);
+  const [activeHeavyTicket, setActiveHeavyTicket] = useState<any | null>(null);
+  const [heavyComments, setHeavyComments] = useState<any[]>([]);
+  const [loadingHeavyComments, setLoadingHeavyComments] = useState(false);
+  const [newHeavyCommentText, setNewHeavyCommentText] = useState('');
+  const [submittingHeavyComment, setSubmittingHeavyComment] = useState(false);
+
+  // Modal creation states for Heavy Tickets
+  const [showCreateHeavyModal, setShowCreateHeavyModal] = useState(false);
+  const [newHeavyTitle, setNewHeavyTitle] = useState('');
+  const [newHeavyDescription, setNewHeavyDescription] = useState('');
+  const [newHeavyPriority, setNewHeavyPriority] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
+  const [newHeavyAgent, setNewHeavyAgent] = useState(agentName || '');
+  const [newHeavyInitialComment, setNewHeavyInitialComment] = useState('');
+  const [creatingHeavyTicket, setCreatingHeavyTicket] = useState(false);
   
   // Metrics state
   const [showMetricsModal, setShowMetricsModal] = useState(false);
@@ -347,12 +364,173 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     }
   }, [agentEmail, activeChatTicket?.phone]);
 
+  const fetchHeavyTickets = async (isSilent = false) => {
+    if (!agentEmail) return;
+    if (!isSilent) setLoading(true);
+    setError('');
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/heavy-tickets`);
+      if (!res.ok) throw new Error('Error al obtener tickets pesados');
+      const data = await res.json();
+      if (data.success) {
+        setHeavyTickets(data.tickets || []);
+      }
+    } catch (err: any) {
+      console.error('Error fetching heavy tickets:', err);
+      setError(err.message || 'No se pudieron cargar las labores internas.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchHeavyComments = async (ticketId: number) => {
+    setLoadingHeavyComments(true);
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/heavy-tickets/${ticketId}/comments`);
+      const data = await res.json();
+      if (data.success) {
+        setHeavyComments(data.comments || []);
+      }
+    } catch (e) {
+      console.error("Error fetching comments:", e);
+    } finally {
+      setLoadingHeavyComments(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeHeavyTicket) {
+      fetchHeavyComments(activeHeavyTicket.id);
+    } else {
+      setHeavyComments([]);
+    }
+  }, [activeHeavyTicket?.id]);
+
+  const handleCreateHeavyTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newHeavyTitle.trim()) return;
+    setCreatingHeavyTicket(true);
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/heavy-tickets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newHeavyTitle,
+          description: newHeavyDescription,
+          priority: newHeavyPriority,
+          assigned_agent: newHeavyAgent,
+          initial_comment: newHeavyInitialComment,
+          password: 'admin123'
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowCreateHeavyModal(false);
+        setNewHeavyTitle('');
+        setNewHeavyDescription('');
+        setNewHeavyPriority('medium');
+        setNewHeavyAgent(agentName || '');
+        setNewHeavyInitialComment('');
+        await fetchHeavyTickets(false);
+        logAuditAction('create_heavy_ticket', { title: newHeavyTitle, agent: newHeavyAgent });
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCreatingHeavyTicket(false);
+    }
+  };
+
+  const handleUpdateHeavyTicket = async (updatedFields: any) => {
+    if (!activeHeavyTicket) return;
+    const apiUrl = getApiUrl();
+    const payload = {
+      title: activeHeavyTicket.title,
+      description: activeHeavyTicket.description,
+      priority: activeHeavyTicket.priority,
+      status: activeHeavyTicket.status,
+      assigned_agent: activeHeavyTicket.assigned_agent,
+      password: 'admin123',
+      ...updatedFields
+    };
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/heavy-tickets/${activeHeavyTicket.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setActiveHeavyTicket((prev: any) => ({ ...prev, ...updatedFields }));
+        await fetchHeavyTickets(true);
+        logAuditAction('update_heavy_ticket', { id: activeHeavyTicket.id, fields: updatedFields });
+      }
+    } catch (e) {
+      console.error("Error updating heavy ticket:", e);
+    }
+  };
+
+  const handleDeleteHeavyTicket = async (ticketId: number) => {
+    if (!window.confirm("¿Estás seguro de que deseas eliminar esta labor/ticket pesado?")) return;
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/heavy-tickets/${ticketId}?password=admin123`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setActiveHeavyTicket(null);
+        await fetchHeavyTickets(false);
+        logAuditAction('delete_heavy_ticket', { id: ticketId });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleAddHeavyComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeHeavyTicket || !newHeavyCommentText.trim()) return;
+    setSubmittingHeavyComment(true);
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/heavy-tickets/${activeHeavyTicket.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent_name: agentName || 'Asesor',
+          comment: newHeavyCommentText,
+          password: 'admin123'
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNewHeavyCommentText('');
+        await fetchHeavyComments(activeHeavyTicket.id);
+        await fetchHeavyTickets(true);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSubmittingHeavyComment(false);
+    }
+  };
+
   // Poll for tickets
   useEffect(() => {
     if (agentEmail) {
-      fetchTickets(false, chatFilter);
-      const interval = setInterval(() => fetchTickets(true, chatFilter), 10000);
-      return () => clearInterval(interval);
+      if (chatFilter === 'heavy') {
+        fetchHeavyTickets(false);
+        const interval = setInterval(() => fetchHeavyTickets(true), 10000);
+        return () => clearInterval(interval);
+      } else {
+        fetchTickets(false, chatFilter);
+        const interval = setInterval(() => fetchTickets(true, chatFilter), 10000);
+        return () => clearInterval(interval);
+      }
     }
   }, [agentEmail, chatFilter]);
 
@@ -1455,6 +1633,85 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     return `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}${remainingHours > 0 ? ` y ${remainingHours} hr${remainingHours > 1 ? 's' : ''}` : ''}`;
   };
 
+  const renderHeavyTicketItem = (ht: any) => {
+    const isActive = activeHeavyTicket?.id === ht.id;
+    const priorityColors: Record<string, string> = {
+      low: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800',
+      medium: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800',
+      high: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-850',
+      critical: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-850 animate-pulse'
+    };
+
+    const statusColors: Record<string, string> = {
+      pending: 'bg-yellow-100 text-yellow-800 border-yellow-250 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-900',
+      in_progress: 'bg-purple-100 text-purple-800 border-purple-250 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-900',
+      completed: 'bg-green-100 text-green-850 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-900',
+      cancelled: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600'
+    };
+
+    const statusLabels: Record<string, string> = {
+      pending: 'Pendiente',
+      in_progress: 'En Progreso',
+      completed: 'Completado',
+      cancelled: 'Cancelado'
+    };
+
+    const priorityLabels: Record<string, string> = {
+      low: 'Baja',
+      medium: 'Media',
+      high: 'Alta',
+      critical: 'Crítica'
+    };
+
+    return (
+      <div
+        key={`heavy_${ht.id}`}
+        onClick={() => {
+          setActiveChatTicket(null);
+          setActiveHeavyTicket(ht);
+        }}
+        className={`p-3 rounded-xl flex flex-col gap-1.5 cursor-pointer transition-all border ${
+          isActive
+            ? 'bg-brand-primary/10 border-brand-primary shadow-sm'
+            : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-750 hover:bg-gray-50 dark:hover:bg-gray-750'
+        }`}
+      >
+        <div className="flex justify-between items-start gap-1">
+          <div className="min-w-0 flex-1">
+            <span className="font-bold text-xs text-gray-800 dark:text-white block truncate" title={ht.title}>
+              {ht.title}
+            </span>
+            <span className="text-[10px] text-gray-450 block truncate mt-0.5">
+              {ht.description || 'Sin descripción'}
+            </span>
+          </div>
+          <div className="flex flex-col items-end gap-1 shrink-0 text-[9px] text-gray-400">
+            <span>{new Date(ht.created_at).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })}</span>
+            {ht.comments_count > 0 && (
+              <span className="bg-gray-100 dark:bg-gray-700 px-1 py-0.2 rounded text-[8px] font-bold text-gray-500 dark:text-gray-305 mt-1 block">
+                💬 {ht.comments_count}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+          <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${statusColors[ht.status] || ''}`}>
+            {statusLabels[ht.status] || ht.status}
+          </span>
+          <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${priorityColors[ht.priority] || ''}`}>
+            {priorityLabels[ht.priority] || ht.priority}
+          </span>
+          {ht.assigned_agent && (
+            <span className="bg-gray-105 dark:bg-gray-850 text-gray-600 dark:text-gray-300 text-[9px] px-1.5 py-0.2 rounded border border-gray-200 dark:border-gray-700">
+              👤 {ht.assigned_agent}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderCompactTicketItem = (t: Ticket, prefix = 'ticket') => {
     const isActive = activeChatTicket?.userId === t.userId;
     const isBotMode = t.waitingHumanMode === 'bot';
@@ -1696,6 +1953,10 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
               </div>
               <button
                 onClick={() => {
+                  if (chatFilter === 'heavy') {
+                    setShowCreateHeavyModal(true);
+                    return;
+                  }
                   const cleanTerm = searchTerm.replace(/\D/g, '');
                   if (cleanTerm.length >= 8) {
                     const tempChat: Ticket = {
@@ -1721,7 +1982,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                   }
                 }}
                 className="p-2.5 bg-brand-primary hover:bg-brand-dark text-white rounded-xl flex items-center justify-center shadow-sm transition-all duration-200 active:scale-95"
-                title="Abrir chat directamente o crear ticket"
+                title={chatFilter === 'heavy' ? "Crear Labor / Tkt Pesado" : "Abrir chat directamente o crear ticket"}
               >
                 <Plus className="h-4 w-4" />
               </button>
@@ -1759,10 +2020,30 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
               >
                 Todos los Chats
               </button>
+              <button
+                onClick={() => setChatFilter('heavy')}
+                className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-center transition-all ${
+                  chatFilter === 'heavy'
+                    ? 'bg-brand-primary/10 text-brand-primary'
+                    : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+              >
+                Labores
+              </button>
             </div>
 
             {/* Accordion / Flat List */}
             <div className="flex-grow overflow-y-auto p-4 space-y-4">
+              {chatFilter === 'heavy' && (
+                <div className="space-y-2">
+                  {heavyTickets.length === 0 ? (
+                    <p className="text-center py-8 text-xs text-gray-450 italic">No hay labores o tickets pesados creados.</p>
+                  ) : (
+                    heavyTickets.map(ht => renderHeavyTicketItem(ht))
+                  )}
+                </div>
+              )}
+
               {chatFilter === 'my' && (
                 <div className="space-y-2">
                   {myTickets.length === 0 ? (
@@ -2497,7 +2778,142 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                         <Send className="w-4 h-4" />
                       </button>
                     </form>
+                </div>
+              </div>
+            ) : activeHeavyTicket ? (
+              <div className="flex flex-col h-full relative overflow-hidden bg-gray-50/20 dark:bg-gray-900/10">
+                {/* Heavy Ticket Header */}
+                <div className="p-5 bg-white dark:bg-gray-950 border-b dark:border-gray-850 flex flex-wrap justify-between items-center gap-4 shadow-sm">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-brand-primary/10 text-brand-primary rounded-full border border-brand-primary/20">
+                        LABOR / TKT PESADO #{activeHeavyTicket.id}
+                      </span>
+                      <span className="text-[10px] font-medium text-gray-400">
+                        Creado el: {new Date(activeHeavyTicket.created_at).toLocaleString('es-ES')}
+                      </span>
+                    </div>
+                    <h3 className="font-extrabold text-lg text-gray-900 dark:text-white truncate">
+                      {activeHeavyTicket.title}
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-1 whitespace-pre-wrap max-h-24 overflow-y-auto leading-relaxed">
+                      {activeHeavyTicket.description || 'Sin descripción detallada.'}
+                    </p>
+                  </div>
+
+                  {/* Settings dropdowns */}
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    {/* Status Select */}
+                    <div className="flex flex-col gap-0.5">
+                      <label className="text-[9px] font-bold text-gray-400 uppercase">Estado</label>
+                      <select
+                        value={activeHeavyTicket.status}
+                        onChange={(e) => handleUpdateHeavyTicket({ status: e.target.value })}
+                        className="text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1.5 focus:outline-none focus:ring-1 focus:ring-brand-primary text-gray-800 dark:text-white"
+                      >
+                        <option value="pending">⏳ Pendiente</option>
+                        <option value="in_progress">⚙️ En Progreso</option>
+                        <option value="completed">✅ Completado</option>
+                        <option value="cancelled">❌ Cancelado</option>
+                      </select>
+                    </div>
+
+                    {/* Priority Select */}
+                    <div className="flex flex-col gap-0.5">
+                      <label className="text-[9px] font-bold text-gray-400 uppercase">Prioridad</label>
+                      <select
+                        value={activeHeavyTicket.priority}
+                        onChange={(e) => handleUpdateHeavyTicket({ priority: e.target.value })}
+                        className="text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1.5 focus:outline-none focus:ring-1 focus:ring-brand-primary text-gray-800 dark:text-white"
+                      >
+                        <option value="low">🟢 Baja</option>
+                        <option value="medium">🔵 Media</option>
+                        <option value="high">🟡 Alta</option>
+                        <option value="critical">🔴 Crítica</option>
+                      </select>
+                    </div>
+
+                    {/* Agent Select */}
+                    <div className="flex flex-col gap-0.5">
+                      <label className="text-[9px] font-bold text-gray-400 uppercase">Asignado a</label>
+                      <input
+                        type="text"
+                        value={activeHeavyTicket.assigned_agent || ''}
+                        placeholder="Sin asignar"
+                        onBlur={(e) => handleUpdateHeavyTicket({ assigned_agent: e.target.value || null })}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setActiveHeavyTicket((prev: any) => prev ? ({ ...prev, assigned_agent: val }) : null);
+                        }}
+                        className="text-xs font-semibold rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1.5 focus:outline-none focus:ring-1 focus:ring-brand-primary w-28 text-gray-800 dark:text-white"
+                      />
+                    </div>
+
+                    {/* Delete Action */}
+                    <button
+                      onClick={() => handleDeleteHeavyTicket(activeHeavyTicket.id)}
+                      className="p-2 mt-3.5 bg-red-50 hover:bg-red-100 text-red-650 dark:bg-red-950/20 dark:hover:bg-red-950/50 rounded-xl transition-all font-bold"
+                      title="Eliminar esta labor"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Comments / Registry log Feed */}
+                <div className="flex-grow overflow-y-auto p-5 space-y-4">
+                  <h4 className="text-xs font-bold text-gray-450 uppercase tracking-wider mb-2">
+                    Historial de Comentarios ({heavyComments.length})
+                  </h4>
+
+                  {loadingHeavyComments ? (
+                    <div className="text-center py-12 text-xs text-gray-500 font-medium">Cargando comentarios...</div>
+                  ) : heavyComments.length === 0 ? (
+                    <div className="text-center py-12 text-xs text-gray-400 italic">No hay comentarios en la bitácora todavía.</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {heavyComments.map((comment: any) => (
+                        <div
+                          key={comment.id}
+                          className="p-4 bg-white dark:bg-gray-800/80 rounded-2xl border dark:border-gray-750/80 flex flex-col gap-1.5 shadow-sm hover:shadow-md transition-all duration-200"
+                        >
+                          <div className="flex justify-between items-center">
+                            <span className="font-bold text-xs text-brand-primary flex items-center gap-1.5 bg-brand-primary/5 dark:bg-brand-primary/10 px-2 py-0.5 rounded-lg">
+                              👤 {comment.agent_name}
+                            </span>
+                            <span className="text-[10px] text-gray-405 font-mono">
+                              {new Date(comment.created_at).toLocaleString('es-ES')}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-705 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                            {comment.comment}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
                   )}
+                </div>
+
+                {/* Comment Form Footer */}
+                <div className="p-4 bg-white dark:bg-gray-950 border-t dark:border-gray-850 shadow-lg">
+                  <form onSubmit={handleAddHeavyComment} className="flex gap-3 items-end">
+                    <div className="flex-grow">
+                      <textarea
+                        value={newHeavyCommentText}
+                        onChange={(e) => setNewHeavyCommentText(e.target.value)}
+                        placeholder="Escribe una actualización o comentario sobre esta labor..."
+                        rows={2}
+                        className="w-full px-4 py-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-850 border dark:border-gray-750 text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:ring-1 focus:ring-brand-primary resize-none"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={!newHeavyCommentText.trim() || submittingHeavyComment}
+                      className="p-3 bg-brand-primary hover:bg-brand-dark text-white rounded-xl transition-all disabled:opacity-50 flex items-center justify-center shrink-0 h-[42px] active:scale-95"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </form>
                 </div>
               </div>
             ) : (
@@ -2505,7 +2921,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 <MessageSquare className="w-16 h-16 text-gray-300 dark:text-gray-700 mb-4 animate-bounce" />
                 <h3 className="font-bold text-lg dark:text-gray-300 font-sans">Bandeja de Conversaciones</h3>
                 <p className="text-xs max-w-sm mt-2 text-gray-500 leading-relaxed">
-                  Selecciona una conversación de las categorías expandibles de la izquierda para responder. Puedes reclamar tickets, enviar respuestas automáticas y ver detalles de la cuenta.
+                  Selecciona una conversación de las categorías de la izquierda para responder, o ve al tab "Labores" para tareas de gestión interna.
                 </p>
               </div>
             )}
@@ -3165,6 +3581,114 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Create Heavy Ticket Modal */}
+      {showCreateHeavyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <form onSubmit={handleCreateHeavyTicket} className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-5 shadow-2xl border dark:border-gray-750 flex flex-col gap-4">
+            <h3 className="text-sm font-bold text-gray-950 dark:text-white flex items-center gap-1.5 border-b dark:border-gray-750 pb-2">
+              🛠️ Crear Labor / Ticket Pesado
+            </h3>
+            
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+                  Título de la Labor *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Conciliar transferencias Bancolombia"
+                  value={newHeavyTitle}
+                  onChange={(e) => setNewHeavyTitle(e.target.value)}
+                  className="w-full p-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-750 text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+                  Descripción / Instrucciones
+                </label>
+                <textarea
+                  placeholder="Instrucciones detalladas de la tarea..."
+                  value={newHeavyDescription}
+                  onChange={(e) => setNewHeavyDescription(e.target.value)}
+                  rows={3}
+                  className="w-full p-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-750 text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+                    Prioridad
+                  </label>
+                  <select
+                    value={newHeavyPriority}
+                    onChange={(e: any) => setNewHeavyPriority(e.target.value)}
+                    className="w-full p-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-750 text-gray-950 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary font-bold"
+                  >
+                    <option value="low">🟢 Baja</option>
+                    <option value="medium">🔵 Media</option>
+                    <option value="high">🟡 Alta</option>
+                    <option value="critical">🔴 Crítica</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+                    Asignar Asesor
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Katherine"
+                    value={newHeavyAgent}
+                    onChange={(e) => setNewHeavyAgent(e.target.value)}
+                    className="w-full p-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-750 text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+                  Comentario Inicial (Bitácora)
+                </label>
+                <textarea
+                  placeholder="Primer comentario o nota inicial para el historial..."
+                  value={newHeavyInitialComment}
+                  onChange={(e) => setNewHeavyInitialComment(e.target.value)}
+                  rows={2}
+                  className="w-full p-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-750 text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-2 pt-2 border-t dark:border-gray-750">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreateHeavyModal(false);
+                  setNewHeavyTitle('');
+                  setNewHeavyDescription('');
+                  setNewHeavyPriority('medium');
+                  setNewHeavyAgent(agentName || '');
+                  setNewHeavyInitialComment('');
+                }}
+                className="px-3.5 py-2 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 font-bold"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={creatingHeavyTicket}
+                className="px-5 py-2 text-xs bg-brand-primary hover:bg-brand-dark text-white rounded-xl font-bold transition-all shadow-sm active:scale-95 disabled:opacity-50"
+              >
+                {creatingHeavyTicket ? 'Creando...' : 'Crear Labor'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
