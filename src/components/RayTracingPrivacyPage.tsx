@@ -144,7 +144,7 @@ export const RayTracingPrivacyPage: React.FC = () => {
                   </p>
                   <p className="text-sm">
                     <span className="text-gray-500">💬 WhatsApp:</span>{' '}
-                    <a href="https://wa.me/573118587974" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 font-mono">+57 311 858 7974</a>
+                    <a href="https://wa.me/573107946794" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 font-mono">+57 310 794 6794</a>
                   </p>
                 </div>
               </div>

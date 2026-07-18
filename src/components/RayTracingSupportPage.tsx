@@ -4,7 +4,7 @@ export const RayTracingSupportPage: React.FC = () => {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
   const SUPPORT_EMAIL = 'estebanavila182@outlook.com';
-  const WHATSAPP_NUMBER = '573118587974';
+  const WHATSAPP_NUMBER = '573107946794';
 
   const faqItems = [
     {

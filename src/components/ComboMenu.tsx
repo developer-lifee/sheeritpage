@@ -174,7 +174,7 @@ export function ComboMenu() {
     const message = `Hola, estoy interesado en el siguiente combo por ${mesStr}: ${selectedPlanNames.join(', ')}. Precio total: ${formatPrice(total)}`;
     const encodedMessage = encodeURIComponent(message);
     try {
-      window.open(`https://api.whatsapp.com/send?phone=573118587974&text=${encodedMessage}`, '_blank');
+      window.open(`https://api.whatsapp.com/send?phone=573107946794&text=${encodedMessage}`, '_blank');
     } catch (err) {
       console.error('No se pudo abrir WhatsApp', err);
     }

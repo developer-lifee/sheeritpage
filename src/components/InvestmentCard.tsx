@@ -67,7 +67,7 @@ export function InvestmentCard() {
       message += ` Corresponde al ${equityPercentage.toFixed(2)}% de equity.`;
     }
     // Number of Sheerit (from PlatformCard)
-    const url = `https://api.whatsapp.com/send?phone=573118587974&text=${encodeURIComponent(message)}`;
+    const url = `https://api.whatsapp.com/send?phone=573107946794&text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
 

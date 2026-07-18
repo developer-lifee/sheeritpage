@@ -39,7 +39,7 @@ export function SupportSection() {
       .catch(err => console.error('Error loading support data:', err));
   }, []);
 
-  const WHATSAPP_NUMBER = "573118587974"; // From previous WhatsAppButton component
+  const WHATSAPP_NUMBER = "573107946794"; // From previous WhatsAppButton component
 
   const handleIssueSelect = (issue: Issue) => {
     setSelectedIssue(issue);
