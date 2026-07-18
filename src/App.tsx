@@ -227,6 +227,78 @@ function AppContent() {
     window.scrollTo(0, 0);
   };
 
+  // --- TRAFFIC & CLICK TRACKING ---
+  useEffect(() => {
+    if (currentView === 'admin') return;
+
+    const getDeviceType = () => {
+      const width = window.innerWidth;
+      const ua = navigator.userAgent.toLowerCase();
+      if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) {
+        return 'tablet';
+      }
+      if (/mobile|iphone|ipod|android|blackberry|iemobile|kindle|silk-accelerated|(hpw|web)os|opera m(obi|ini)/.test(ua) || width < 768) {
+        return 'mobile';
+      }
+      return 'desktop';
+    };
+
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const deviceType = getDeviceType();
+
+    fetch(`${apiUrl}/api/public/track-visit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        pagePath: window.location.pathname,
+        referrer: document.referrer,
+        userAgent: navigator.userAgent,
+        deviceType
+      })
+    }).catch(err => console.warn('Failed to track visit:', err));
+
+    const handleGlobalClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target) return;
+
+      const path = window.location.pathname;
+      const docWidth = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth, window.innerWidth);
+      const docHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight, window.innerHeight);
+
+      const xPx = e.pageX;
+      const yPx = e.pageY;
+
+      const xPct = parseFloat(((xPx / (docWidth || 1)) * 100).toFixed(2));
+      const yPct = parseFloat(((yPx / (docHeight || 1)) * 100).toFixed(2));
+
+      let selector = target.tagName.toLowerCase();
+      if (target.id) {
+        selector += `#${target.id}`;
+      } else if (target.className && typeof target.className === 'string') {
+        const firstClass = target.className.trim().split(/\s+/)[0];
+        if (firstClass) selector += `.${firstClass}`;
+      }
+
+      fetch(`${apiUrl}/api/public/track-click`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pagePath: path,
+          xPct,
+          yPct,
+          elementSelector: selector.substring(0, 100),
+          screenWidth: window.innerWidth,
+          screenHeight: window.innerHeight
+        })
+      }).catch(err => console.warn('Failed to track click:', err));
+    };
+
+    window.addEventListener('click', handleGlobalClick);
+    return () => {
+      window.removeEventListener('click', handleGlobalClick);
+    };
+  }, [currentView]);
+
   const [isDark, toggleDark] = useDarkMode();
   const [searchTerm, setSearchTerm] = useState('');
   const [platforms, setPlatforms] = useState<Platform[]>([]);
