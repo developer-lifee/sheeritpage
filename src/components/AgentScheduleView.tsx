@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, User, Plus, Trash2, Save, RefreshCw, AlertTriangle, CheckCircle, Calendar, Users, X, ChevronLeft, ChevronRight, Lock, DollarSign, Gift, Settings, ShieldAlert } from 'lucide-react';
+import { Clock, User, Plus, Trash2, Save, RefreshCw, AlertTriangle, CheckCircle, Calendar, Users, X, ChevronLeft, ChevronRight, Lock, DollarSign, Gift, Settings, ShieldAlert, FileText, Printer, Award, History } from 'lucide-react';
 
 interface Agent {
   id: number;
@@ -24,12 +24,41 @@ interface PayrollAgent {
   fullname: string;
   email: string;
   role: string;
+  start_date?: string;
+  end_date?: string;
   total_hours: number;
+  trial_hours?: number;
+  normal_hours?: number;
+  trial_hours_target?: number;
+  trial_hours_left?: number;
+  total_hist_trial?: number;
   hourly_rate: number;
+  trial_hourly_rate?: number;
   bonuses: Array<{ id: number; amount: number; reason: string; bonus_month: string }>;
   total_bonuses: number;
   total_payment: number;
   status: 'draft' | 'paid';
+}
+
+interface PayrollHistoryRecord {
+  id: number;
+  agent_id: number;
+  fullname: string;
+  email: string;
+  role?: string;
+  current_role?: string;
+  payroll_month: string;
+  start_date: string;
+  end_date: string;
+  total_hours: number;
+  trial_hours: number;
+  normal_hours: number;
+  hourly_rate: number;
+  total_bonuses: number;
+  total_payment: number;
+  period_label: string;
+  status: string;
+  created_at: string;
 }
 
 export const calculateSlotHours = (slot: { start_time: string; end_time: string; break_type?: string }) => {
@@ -148,6 +177,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
   // Admin Config State (Only for Esteban)
   const [hourlyRate, setHourlyRate] = useState<number>(8333);
   const [trialHourlyRate, setTrialHourlyRate] = useState<number>(5000);
+  const [trialHoursTarget, setTrialHoursTarget] = useState<number>(80);
   const [allowOvertime, setAllowOvertime] = useState<boolean>(true);
   const [maxHoursLimit, setMaxHoursLimit] = useState<number>(10);
   const [shiftStartLimit, setShiftStartLimit] = useState<string>('08:00');
@@ -166,10 +196,22 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
   const [modalError, setModalError] = useState('');
   const [modalSaving, setModalSaving] = useState(false);
 
-  // Payroll States (Only for Esteban)
+  // Payroll & Cutoff States (Only for Esteban)
+  const [selectedPeriodMode, setSelectedPeriodMode] = useState<'month' | 'range'>('month');
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [startDate, setStartDate] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  });
+  const [endDate, setEndDate] = useState<string>(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   });
   const [payrollList, setPayrollList] = useState<PayrollAgent[]>([]);
   const [payrollLoading, setPayrollLoading] = useState(false);
@@ -178,6 +220,13 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
   const [bonusAmount, setBonusAmount] = useState<string>('');
   const [bonusReason, setBonusReason] = useState<string>('');
   const [bonusSaving, setBonusSaving] = useState(false);
+
+  // Pay Stub & History Modals State
+  const [stubModalOpen, setStubModalOpen] = useState<boolean>(false);
+  const [selectedStubAgent, setSelectedStubAgent] = useState<PayrollAgent | null>(null);
+  const [historyModalOpen, setHistoryModalOpen] = useState<boolean>(false);
+  const [payrollHistory, setPayrollHistory] = useState<PayrollHistoryRecord[]>([]);
+  const [historyLoading, setHistoryLoading] = useState<boolean>(false);
 
   const getWeekStartParam = () => {
     return isTemplateMode ? 'default' : formatDateYMD(currentWeekDate);
@@ -211,6 +260,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         setAllowOvertime(data.allow_overtime !== false);
         setHourlyRate(Number(data.hourly_rate || 8333));
         setTrialHourlyRate(Number(data.trial_hourly_rate || 5000));
+        setTrialHoursTarget(Number(data.trial_hours_target || 80));
         setMaxHoursLimit(Number(data.max_hours_limit || 10));
         setShiftStartLimit(data.shift_start_limit || '08:00');
         setShiftEndLimit(data.shift_end_limit || '22:00');
@@ -247,7 +297,10 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
     setError('');
     const apiUrl = getApiUrl();
     try {
-      const res = await fetch(`${apiUrl}/api/admin/payroll?month=${selectedMonth}`);
+      const url = selectedPeriodMode === 'range'
+        ? `${apiUrl}/api/admin/payroll?start_date=${startDate}&end_date=${endDate}`
+        : `${apiUrl}/api/admin/payroll?month=${selectedMonth}`;
+      const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
         setPayrollList(data.payroll);
@@ -259,6 +312,22 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
       setError('Error al conectar para obtener los reportes de nómina.');
     } finally {
       setPayrollLoading(false);
+    }
+  };
+
+  const fetchPayrollHistory = async () => {
+    setHistoryLoading(true);
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/payroll/history`);
+      const data = await res.json();
+      if (data.success) {
+        setPayrollHistory(data.history);
+      }
+    } catch (err) {
+      console.error('Error fetching payroll history:', err);
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
@@ -550,6 +619,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         allow_overtime: allowOvertime,
         hourly_rate: hourlyRate,
         trial_hourly_rate: trialHourlyRate,
+        trial_hours_target: trialHoursTarget,
         max_hours_limit: maxHoursLimit,
         shift_start_limit: shiftStartLimit,
         shift_end_limit: shiftEndLimit
@@ -563,7 +633,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
       });
       const dataSave = await resSave.json();
       if (dataSave.success) {
-        setSuccess('Configuración de horas extras y valor hora actualizada.');
+        setSuccess('Configuración de tarifas y horas de prueba actualizada.');
       } else {
         setError(dataSave.message || 'Error al guardar la configuración.');
       }
@@ -627,9 +697,10 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
     }
   };
 
-  // Close Payroll Month (Only for Esteban)
+  // Close Payroll Period (Only for Esteban)
   const handleClosePayroll = async (agent: PayrollAgent) => {
-    if (!window.confirm(`¿Seguro de cerrar/pagar la nómina de ${agent.fullname} para el mes ${selectedMonth}? Esto persistirá el registro en la contabilidad.`)) return;
+    const periodDesc = selectedPeriodMode === 'range' ? `período ${startDate} al ${endDate}` : `mes ${selectedMonth}`;
+    if (!window.confirm(`¿Seguro de cerrar/pagar la nómina de ${agent.fullname} para el ${periodDesc}? Esto archivará las horas pagadas y generará el desprendible.`)) return;
     const apiUrl = getApiUrl();
     try {
       const res = await fetch(`${apiUrl}/api/admin/payroll/close`, {
@@ -638,20 +709,39 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         body: JSON.stringify({
           email: agent.email,
           payroll_month: selectedMonth,
+          start_date: startDate,
+          end_date: endDate,
           total_hours: agent.total_hours,
+          trial_hours: agent.trial_hours || 0,
+          normal_hours: agent.normal_hours || agent.total_hours,
           hourly_rate: agent.hourly_rate,
           total_bonuses: agent.total_bonuses,
           total_payment: agent.total_payment,
+          period_label: `Período ${startDate} al ${endDate}`,
           status: 'paid'
         })
       });
       const data = await res.json();
       if (data.success) {
+        if (data.promoted) {
+          alert(`🎉 ¡EXCELENTE! ${agent.fullname} ha sido promovido automáticamente a AGENT tras completar las ${trialHoursTarget} horas de prueba.`);
+        } else {
+          setSuccess(data.message || 'Nómina cerrada correctamente.');
+        }
         fetchPayrollData();
       }
     } catch (err) {
       console.error('Error closing payroll:', err);
     }
+  };
+
+  const handleOpenStubModal = (agent: PayrollAgent) => {
+    setSelectedStubAgent(agent);
+    setStubModalOpen(true);
+  };
+
+  const handlePrintStub = () => {
+    window.print();
   };
 
   const getAgentSlotsForDay = (agentEmail: string, dayValue: number) => {
@@ -903,28 +993,129 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div>
               <h2 className="text-xl font-bold flex items-center dark:text-white">
-                <DollarSign className="mr-2 text-brand-primary" /> Reporte de Nómina Mensual
+                <DollarSign className="mr-2 text-brand-primary" /> Reporte y Cierre de Nómina
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Visualiza, añade bonos y cierra el historial de pagos de tu equipo para contabilidad.
+                Visualiza, efectúa cierres parciales/mitad de mes, asigna bonos y genera desprendibles de pago.
               </p>
             </div>
 
-            {/* Selector de Mes */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-600 dark:text-gray-400">Seleccionar Mes:</span>
-              <input
-                type="month"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="px-3 py-2 border rounded-xl dark:bg-gray-850 dark:border-gray-700 dark:text-white text-sm"
-              />
+            {/* Selector de Período y Modal Historial */}
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => { fetchPayrollHistory(); setHistoryModalOpen(true); }}
+                className="flex items-center gap-1.5 px-3 py-2 border rounded-xl dark:bg-gray-800 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+              >
+                <History className="w-4 h-4 text-brand-primary" /> Historial de Desprendibles
+              </button>
+
+              <div className="flex items-center bg-gray-100 dark:bg-gray-850 p-1 rounded-xl border dark:border-gray-700 text-xs">
+                <button
+                  onClick={() => setSelectedPeriodMode('month')}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                    selectedPeriodMode === 'month'
+                      ? 'bg-white dark:bg-gray-700 text-brand-primary shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                  }`}
+                >
+                  Mes Completo
+                </button>
+                <button
+                  onClick={() => setSelectedPeriodMode('range')}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                    selectedPeriodMode === 'range'
+                      ? 'bg-white dark:bg-gray-700 text-brand-primary shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                  }`}
+                >
+                  Cierre por Fecha Corte
+                </button>
+              </div>
+
+              {selectedPeriodMode === 'month' ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-gray-600 dark:text-gray-400">Mes:</span>
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="px-3 py-1.5 border rounded-xl dark:bg-gray-850 dark:border-gray-700 dark:text-white text-xs font-mono font-bold"
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-850 p-2 rounded-xl border dark:border-gray-700">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xxs font-bold text-gray-500">Desde:</span>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="px-2 py-1 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white text-xs font-mono"
+                    />
+                  </div>
+                  <span className="text-xs text-gray-400">a</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xxs font-bold text-gray-500">Hasta:</span>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="px-2 py-1 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white text-xs font-mono"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
+          {/* Preset Buttons for Quick Cutoffs */}
+          {selectedPeriodMode === 'range' && (
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <span className="text-xxs font-bold text-gray-400 uppercase tracking-wider">Atajos de Fecha Corte:</span>
+              <button
+                onClick={() => {
+                  const now = new Date();
+                  const y = now.getFullYear();
+                  const m = String(now.getMonth() + 1).padStart(2, '0');
+                  setStartDate(`${y}-${m}-01`);
+                  setEndDate(`${y}-${m}-15`);
+                }}
+                className="px-2.5 py-1 text-xxs font-bold bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
+              >
+                1 al 15 (Primera Quincena)
+              </button>
+              <button
+                onClick={() => {
+                  const now = new Date();
+                  const y = now.getFullYear();
+                  const m = String(now.getMonth() + 1).padStart(2, '0');
+                  const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
+                  setStartDate(`${y}-${m}-16`);
+                  setEndDate(`${y}-${m}-${lastDay}`);
+                }}
+                className="px-2.5 py-1 text-xxs font-bold bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
+              >
+                16 a Fin de Mes
+              </button>
+              <button
+                onClick={() => {
+                  const now = new Date();
+                  const y = now.getFullYear();
+                  const m = String(now.getMonth() + 1).padStart(2, '0');
+                  const d = String(now.getDate()).padStart(2, '0');
+                  setStartDate(`${y}-${m}-01`);
+                  setEndDate(`${y}-${m}-${d}`);
+                }}
+                className="px-2.5 py-1 text-xxs font-bold bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary rounded-lg transition-colors"
+              >
+                1 al {new Date().getDate()} (Cierre a hoy)
+              </button>
+            </div>
+          )}
+
           {/* Tarjeta de Resumen de Nómina */}
           {!payrollLoading && payrollList.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               <div className="bg-gray-50 dark:bg-gray-850 p-4 rounded-xl border dark:border-gray-700 flex justify-between items-center">
                 <div>
                   <span className="text-xxs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Total Horas Acumuladas</span>
@@ -934,7 +1125,18 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                 </div>
                 <Clock className="w-8 h-8 text-brand-primary/20" />
               </div>
-              <div className="bg-emerald-500/5 dark:bg-emerald-500/10 p-4 rounded-xl border border-emerald-500/25 flex justify-between items-center animate-pulse">
+
+              <div className="bg-amber-500/5 dark:bg-amber-500/10 p-4 rounded-xl border border-amber-500/25 flex justify-between items-center">
+                <div>
+                  <span className="text-xxs font-bold text-amber-600 dark:text-amber-450 uppercase tracking-wider">Meta de Horas Trial</span>
+                  <div className="text-xl font-black text-amber-600 dark:text-amber-450 mt-1 font-mono">
+                    {trialHoursTarget} hrs/promoción
+                  </div>
+                </div>
+                <Award className="w-8 h-8 text-amber-500/20" />
+              </div>
+
+              <div className="bg-emerald-500/5 dark:bg-emerald-500/10 p-4 rounded-xl border border-emerald-500/25 flex justify-between items-center">
                 <div>
                   <span className="text-xxs font-bold text-emerald-600/70 dark:text-emerald-450 uppercase tracking-wider">Costo de Nómina Consolidado</span>
                   <div className="text-xl font-black text-emerald-600 dark:text-emerald-450 mt-1 font-mono">
@@ -955,7 +1157,8 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-850 text-gray-700 dark:text-gray-300 uppercase text-xxs font-bold tracking-wider border-b border-gray-100 dark:border-gray-750">
                     <th className="py-3 px-4">Asesor</th>
-                    <th className="py-3 px-4 text-center">Horas Netas del Mes</th>
+                    <th className="py-3 px-4 text-center">Progreso Trial</th>
+                    <th className="py-3 px-4 text-center">Horas en Período</th>
                     <th className="py-3 px-4 text-center">Valor Hora</th>
                     <th className="py-3 px-4">Bonos Aplicados</th>
                     <th className="py-3 px-4 text-right">Total a Pagar</th>
@@ -964,116 +1167,159 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-750">
-                  {payrollList.map(agent => (
-                    <tr
-                      key={agent.agent_id}
-                      className="hover:bg-gray-50/50 dark:hover:bg-gray-750/30 text-gray-900 dark:text-gray-100 transition-colors"
-                    >
-                      {/* Name / Info */}
-                      <td className="py-4 px-4">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-xs text-gray-800 dark:text-gray-200">
-                            {agent.fullname}
-                            {agent.role === 'trial' && (
-                              <span className="ml-2 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-450 px-1.5 py-0.5 rounded-full text-xxs font-extrabold uppercase">
-                                En Prueba
+                  {payrollList.map(agent => {
+                    const isTrial = agent.role === 'trial';
+                    const trialHist = agent.total_hist_trial || 0;
+                    const trialPct = Math.min(100, (trialHist / trialHoursTarget) * 100);
+
+                    return (
+                      <tr
+                        key={agent.agent_id}
+                        className="hover:bg-gray-50/50 dark:hover:bg-gray-750/30 text-gray-900 dark:text-gray-100 transition-colors"
+                      >
+                        {/* Name / Info */}
+                        <td className="py-4 px-4">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-xs text-gray-800 dark:text-gray-200">
+                              {agent.fullname}
+                              {isTrial && (
+                                <span className="ml-2 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-450 px-1.5 py-0.5 rounded-full text-xxs font-extrabold uppercase">
+                                  En Prueba
+                                </span>
+                              )}
+                            </span>
+                            <span className="text-xxs text-gray-500 font-mono mt-0.5">{agent.email}</span>
+                            {isEsteban ? (
+                              <select
+                                value={agent.role}
+                                onChange={(e) => handleUpdateAgentRole(agent.agent_id, e.target.value)}
+                                className="mt-1 text-xxs font-bold uppercase bg-gray-50 dark:bg-gray-700 dark:text-white border dark:border-gray-600 rounded px-1 py-0.5 w-24 outline-none"
+                              >
+                                <option value="agent">Asesor</option>
+                                <option value="trial">En Prueba</option>
+                                <option value="supervisor">Supervisor</option>
+                                <option value="admin">Admin</option>
+                              </select>
+                            ) : (
+                              <span className="text-xxs font-bold text-brand-primary uppercase tracking-wider mt-1">{agent.role}</span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Progreso Trial */}
+                        <td className="py-4 px-4 text-center">
+                          {isTrial ? (
+                            <div className="flex flex-col items-center gap-1 max-w-[120px] mx-auto">
+                              <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
+                                <div
+                                  className="bg-amber-500 h-full rounded-full transition-all duration-500"
+                                  style={{ width: `${trialPct}%` }}
+                                />
+                              </div>
+                              <span className="text-[10px] text-gray-500 dark:text-gray-400 font-mono font-bold">
+                                {trialHist.toFixed(1)} / {trialHoursTarget} hrs ({trialPct.toFixed(0)}%)
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xxs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-lg">
+                              <CheckCircle className="w-3 h-3" /> Graduado Agent
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Hours */}
+                        <td className="py-4 px-4 text-center font-mono font-bold">
+                          <div className="flex flex-col items-center">
+                            <span>{agent.total_hours.toFixed(1)} hrs</span>
+                            {isTrial && agent.trial_hours !== undefined && (
+                              <span className="text-[9px] text-gray-400 font-sans">
+                                ({agent.trial_hours.toFixed(1)}h trial + {(agent.normal_hours || 0).toFixed(1)}h agent)
                               </span>
                             )}
+                          </div>
+                        </td>
+
+                        {/* Rate */}
+                        <td className="py-4 px-4 text-center font-mono text-xs">
+                          ${agent.hourly_rate.toLocaleString('es-CO')} / h
+                        </td>
+
+                        {/* Bonuses List */}
+                        <td className="py-4 px-4">
+                          <div className="flex flex-col gap-1.5 max-w-[200px]">
+                            {agent.bonuses.length === 0 ? (
+                              <span className="text-xxs text-gray-400 italic">Sin bonos</span>
+                            ) : (
+                              agent.bonuses.map(b => (
+                                <div key={b.id} className="flex items-center justify-between bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-lg px-2 py-1 text-xxs text-emerald-800 dark:text-emerald-300">
+                                  <span>{b.reason} (+${b.amount})</span>
+                                  {agent.status !== 'paid' && (
+                                    <button
+                                      onClick={() => handleDeleteBonus(b.id)}
+                                      className="text-red-500 hover:text-red-700 ml-1.5"
+                                      title="Eliminar bono"
+                                    >
+                                      ✕
+                                    </button>
+                                  )}
+                                </div>
+                              ))
+                            )}
+                            {agent.status !== 'paid' && (
+                              <button
+                                type="button"
+                                onClick={() => { setBonusAgent(agent); setBonusModalOpen(true); }}
+                                className="text-xxs font-bold text-emerald-700 dark:text-emerald-450 hover:underline flex items-center mt-1"
+                              >
+                                <Gift className="w-3 h-3 mr-1" /> + Agregar Bono
+                              </button>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Total to pay */}
+                        <td className="py-4 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          ${Math.round(agent.total_payment).toLocaleString('es-CO')}
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-4 px-4 text-center">
+                          <span className={`px-2 py-0.5 rounded-lg text-xxs font-extrabold uppercase ${
+                            agent.status === 'paid'
+                              ? 'bg-emerald-500/10 text-emerald-500'
+                              : 'bg-amber-500/10 text-amber-500'
+                          }`}>
+                            {agent.status === 'paid' ? 'CERRADO / PAGADO' : 'BORRADOR'}
                           </span>
-                          <span className="text-xxs text-gray-500 font-mono mt-0.5">{agent.email}</span>
-                          {isEsteban ? (
-                            <select
-                              value={agent.role}
-                              onChange={(e) => handleUpdateAgentRole(agent.agent_id, e.target.value)}
-                              className="mt-1 text-xxs font-bold uppercase bg-gray-50 dark:bg-gray-700 dark:text-white border dark:border-gray-600 rounded px-1 py-0.5 w-24 outline-none"
-                            >
-                              <option value="agent">Asesor</option>
-                              <option value="trial">En Prueba</option>
-                              <option value="supervisor">Supervisor</option>
-                              <option value="admin">Admin</option>
-                            </select>
-                          ) : (
-                            <span className="text-xxs font-bold text-brand-primary uppercase tracking-wider mt-1">{agent.role}</span>
-                          )}
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Hours */}
-                      <td className="py-4 px-4 text-center font-mono font-bold">
-                        {agent.total_hours.toFixed(1)} hrs
-                      </td>
+                        {/* Actions */}
+                        <td className="py-4 px-4 text-center">
+                          <div className="flex flex-col gap-1.5 items-center">
+                            {agent.status !== 'paid' ? (
+                              <button
+                                onClick={() => handleClosePayroll(agent)}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xxs px-2.5 py-1.5 rounded-lg transition-all"
+                              >
+                                Cerrar Nómina
+                              </button>
+                            ) : (
+                              <span className="text-xxs text-gray-400 italic flex items-center justify-center gap-1">
+                                <CheckCircle className="w-3 h-3 text-emerald-500" /> Archivado
+                              </span>
+                            )}
 
-                      {/* Rate */}
-                      <td className="py-4 px-4 text-center font-mono text-xs">
-                        ${agent.hourly_rate.toLocaleString('es-CO')} / h
-                      </td>
-
-                      {/* Bonuses List */}
-                      <td className="py-4 px-4">
-                        <div className="flex flex-col gap-1.5 max-w-[200px]">
-                          {agent.bonuses.length === 0 ? (
-                            <span className="text-xxs text-gray-400 italic">Sin bonos</span>
-                          ) : (
-                            agent.bonuses.map(b => (
-                              <div key={b.id} className="flex items-center justify-between bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-lg px-2 py-1 text-xxs text-emerald-800 dark:text-emerald-300">
-                                <span>{b.reason} (+${b.amount})</span>
-                                {agent.status !== 'paid' && (
-                                  <button
-                                    onClick={() => handleDeleteBonus(b.id)}
-                                    className="text-red-500 hover:text-red-700 ml-1.5"
-                                    title="Eliminar bono"
-                                  >
-                                    ✕
-                                  </button>
-                                )}
-                              </div>
-                            ))
-                          )}
-                          {agent.status !== 'paid' && (
                             <button
-                              type="button"
-                              onClick={() => { setBonusAgent(agent); setBonusModalOpen(true); }}
-                              className="text-xxs font-bold text-emerald-700 dark:text-emerald-450 hover:underline flex items-center mt-1"
+                              onClick={() => handleOpenStubModal(agent)}
+                              className="flex items-center gap-1 text-xxs font-bold text-brand-primary hover:underline"
                             >
-                              <Gift className="w-3 h-3 mr-1" /> + Agregar Bono
+                              <FileText className="w-3 h-3" /> Ver Desprendible
                             </button>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Total to pay */}
-                      <td className="py-4 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                        ${Math.round(agent.total_payment).toLocaleString('es-CO')}
-                      </td>
-
-                      {/* Status */}
-                      <td className="py-4 px-4 text-center">
-                        <span className={`px-2 py-0.5 rounded-lg text-xxs font-extrabold uppercase ${
-                          agent.status === 'paid'
-                            ? 'bg-emerald-500/10 text-emerald-500'
-                            : 'bg-amber-500/10 text-amber-500'
-                        }`}>
-                          {agent.status === 'paid' ? 'CERRADO / PAGADO' : 'BORRADOR'}
-                        </span>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-4 px-4 text-center">
-                        {agent.status !== 'paid' ? (
-                          <button
-                            onClick={() => handleClosePayroll(agent)}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xxs px-2.5 py-1.5 rounded-lg transition-all"
-                          >
-                            Cerrar Nómina
-                          </button>
-                        ) : (
-                          <span className="text-xxs text-gray-400 italic flex items-center justify-center gap-1">
-                            <CheckCircle className="w-3 h-3 text-emerald-500" /> Archivado
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1296,6 +1542,237 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
               >
                 <Save className="w-4 h-4 mr-1.5" />
                 {bonusSaving ? 'Guardando...' : 'Asignar Bono'}
+              </button>
+            </div>
+          </div>
+        </div>
+      {/* Pay Stub Modal (Desprendible de Pago) */}
+      {stubModalOpen && selectedStubAgent && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white dark:bg-gray-850 rounded-2xl max-w-2xl w-full border dark:border-gray-700 shadow-2xl p-6 relative print:p-0 print:border-none print:shadow-none print:bg-white print:text-black">
+            <button
+              onClick={() => { setStubModalOpen(false); setSelectedStubAgent(null); }}
+              className="absolute top-4 right-4 p-1.5 hover:bg-gray-150 dark:hover:bg-gray-700 rounded-lg text-gray-400 dark:text-gray-300 print:hidden"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Header del Desprendible */}
+            <div className="border-b dark:border-gray-700 pb-4 mb-4 text-center print:border-b-2 print:border-black">
+              <div className="flex justify-center items-center gap-2 mb-1">
+                <span className="text-xl font-black text-brand-primary tracking-wider uppercase">SHEERIT PLATFORM</span>
+              </div>
+              <h3 className="text-lg font-bold text-gray-800 dark:text-white uppercase tracking-wide">
+                COMPROBANTE Y DESPRENDIBLE DE NÓMINA
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Liquidación de Servicios de Soporte al Cliente
+              </p>
+            </div>
+
+            {/* Datos del Asesor y Período */}
+            <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-800 p-4 rounded-xl mb-4 border dark:border-gray-700 text-xs print:bg-gray-100 print:text-black">
+              <div>
+                <span className="text-xxs font-bold text-gray-400 uppercase">Colaborador / Asesor:</span>
+                <p className="font-bold text-gray-800 dark:text-white text-sm">{selectedStubAgent.fullname}</p>
+                <p className="text-gray-500 font-mono text-xxs">{selectedStubAgent.email}</p>
+              </div>
+              <div>
+                <span className="text-xxs font-bold text-gray-400 uppercase">Período de Liquidación:</span>
+                <p className="font-bold text-brand-primary text-sm">
+                  {selectedStubAgent.start_date && selectedStubAgent.end_date
+                    ? `Del ${selectedStubAgent.start_date} al ${selectedStubAgent.end_date}`
+                    : `Mes ${selectedMonth}`}
+                </p>
+                <p className="text-xxs font-extrabold uppercase mt-0.5 text-amber-600 dark:text-amber-450">
+                  Rol: {selectedStubAgent.role}
+                </p>
+              </div>
+            </div>
+
+            {/* Desglose de Conceptos */}
+            <div className="border rounded-xl overflow-hidden mb-4 dark:border-gray-700 print:border-black">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 uppercase text-xxs font-bold tracking-wider border-b dark:border-gray-700">
+                    <th className="py-2.5 px-4">Concepto</th>
+                    <th className="py-2.5 px-4 text-center">Horas</th>
+                    <th className="py-2.5 px-4 text-center">Tarifa Unit.</th>
+                    <th className="py-2.5 px-4 text-right">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-750 font-mono">
+                  {/* Trial Hours row if trial hours exist */}
+                  {(selectedStubAgent.trial_hours || 0) > 0 && (
+                    <tr>
+                      <td className="py-3 px-4 font-sans font-semibold">Horas de Prueba (Trial)</td>
+                      <td className="py-3 px-4 text-center">{selectedStubAgent.trial_hours?.toFixed(1)} hrs</td>
+                      <td className="py-3 px-4 text-center">${(selectedStubAgent.trial_hourly_rate || 5000).toLocaleString('es-CO')}</td>
+                      <td className="py-3 px-4 text-right font-bold">
+                        ${Math.round((selectedStubAgent.trial_hours || 0) * (selectedStubAgent.trial_hourly_rate || 5000)).toLocaleString('es-CO')}
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* Normal Agent Hours row */}
+                  {(selectedStubAgent.normal_hours || selectedStubAgent.total_hours) > 0 && (
+                    <tr>
+                      <td className="py-3 px-4 font-sans font-semibold">Horas Asesor Regular (Agent)</td>
+                      <td className="py-3 px-4 text-center">{(selectedStubAgent.normal_hours || selectedStubAgent.total_hours).toFixed(1)} hrs</td>
+                      <td className="py-3 px-4 text-center">${selectedStubAgent.hourly_rate.toLocaleString('es-CO')}</td>
+                      <td className="py-3 px-4 text-right font-bold">
+                        ${Math.round((selectedStubAgent.normal_hours || selectedStubAgent.total_hours) * selectedStubAgent.hourly_rate).toLocaleString('es-CO')}
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* Bonuses rows */}
+                  {selectedStubAgent.bonuses && selectedStubAgent.bonuses.length > 0 && (
+                    selectedStubAgent.bonuses.map(b => (
+                      <tr key={b.id} className="bg-emerald-50/20 dark:bg-emerald-950/10">
+                        <td className="py-2 px-4 font-sans text-emerald-700 dark:text-emerald-300">
+                          Bono: {b.reason}
+                        </td>
+                        <td className="py-2 px-4 text-center text-gray-400">-</td>
+                        <td className="py-2 px-4 text-center text-gray-400">-</td>
+                        <td className="py-2 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                          +${parseFloat(b.amount as any).toLocaleString('es-CO')}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+
+                  {/* Total Row */}
+                  <tr className="bg-gray-50 dark:bg-gray-800 text-sm font-bold border-t-2 dark:border-gray-700">
+                    <td colSpan={3} className="py-3 px-4 text-right font-sans uppercase">Total Neto a Pagar:</td>
+                    <td className="py-3 px-4 text-right text-emerald-600 dark:text-emerald-400 font-mono text-base">
+                      ${Math.round(selectedStubAgent.total_payment).toLocaleString('es-CO')}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Note / Status */}
+            <div className="flex justify-between items-center text-xxs text-gray-400 mb-6 print:mb-2">
+              <span className="font-mono">Estado: {selectedStubAgent.status === 'paid' ? 'ARCHIVADO / CERRADO' : 'BORRADOR DE LIQUIDACIÓN'}</span>
+              <span>Generado automáticamente por Sheerit Platform</span>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 print:hidden pt-4 border-t dark:border-gray-700">
+              <button
+                type="button"
+                onClick={() => { setStubModalOpen(false); setSelectedStubAgent(null); }}
+                className="px-4 py-2 border rounded-xl hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-300 text-xs font-bold transition-all"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                onClick={handlePrintStub}
+                className="bg-brand-primary hover:bg-brand-dark text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center transition-all"
+              >
+                <Printer className="w-4 h-4 mr-1.5" /> Imprimir / Guardar PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payroll History Modal */}
+      {historyModalOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white dark:bg-gray-850 rounded-2xl max-w-4xl w-full border dark:border-gray-700 shadow-2xl p-6 relative max-h-[85vh] flex flex-col">
+            <button
+              onClick={() => setHistoryModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 hover:bg-gray-150 dark:hover:bg-gray-700 rounded-lg text-gray-400 dark:text-gray-300"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-1 flex items-center gap-2">
+              <History className="text-brand-primary" /> Historial de Nóminas Archivadas y Desprendibles
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+              Consulta todas las liquidaciones y cierres de nómina efectuados anteriormente.
+            </p>
+
+            {historyLoading ? (
+              <div className="text-center py-12 text-gray-500">Cargando historial de desprendibles...</div>
+            ) : payrollHistory.length === 0 ? (
+              <div className="text-center py-12 text-gray-400 italic">No hay cierres de nómina archivados aún.</div>
+            ) : (
+              <div className="overflow-y-auto flex-1 border rounded-xl dark:border-gray-750">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 uppercase text-xxs font-bold tracking-wider border-b dark:border-gray-750 sticky top-0">
+                      <th className="py-3 px-4">Asesor</th>
+                      <th className="py-3 px-4">Período / Rango</th>
+                      <th className="py-3 px-4 text-center">Horas Pagadas</th>
+                      <th className="py-3 px-4 text-right">Total Liquidado</th>
+                      <th className="py-3 px-4 text-center">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-750 font-mono">
+                    {payrollHistory.map(rec => (
+                      <tr key={rec.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-750/30">
+                        <td className="py-3 px-4 font-sans">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-800 dark:text-gray-200">{rec.fullname}</span>
+                            <span className="text-xxs text-gray-400 font-mono">{rec.email}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 font-sans">
+                          <span className="font-semibold text-brand-primary">
+                            {rec.start_date && rec.end_date ? `${rec.start_date} al ${rec.end_date}` : rec.payroll_month}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center font-bold">
+                          {Number(rec.total_hours).toFixed(1)} hrs
+                        </td>
+                        <td className="py-3 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                          ${Math.round(Number(rec.total_payment)).toLocaleString('es-CO')}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <button
+                            onClick={() => {
+                              setSelectedStubAgent({
+                                agent_id: rec.agent_id,
+                                fullname: rec.fullname,
+                                email: rec.email,
+                                role: rec.current_role || 'agent',
+                                start_date: rec.start_date,
+                                end_date: rec.end_date,
+                                total_hours: Number(rec.total_hours),
+                                trial_hours: Number(rec.trial_hours || 0),
+                                normal_hours: Number(rec.normal_hours || rec.total_hours),
+                                hourly_rate: Number(rec.hourly_rate),
+                                bonuses: [],
+                                total_bonuses: Number(rec.total_bonuses),
+                                total_payment: Number(rec.total_payment),
+                                status: 'paid'
+                              });
+                              setStubModalOpen(true);
+                            }}
+                            className="flex items-center gap-1 mx-auto text-xxs font-bold text-brand-primary hover:underline bg-brand-primary/10 px-2 py-1 rounded-lg"
+                          >
+                            <FileText className="w-3 h-3" /> Ver Desprendible
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="flex justify-end mt-4 pt-3 border-t dark:border-gray-700">
+              <button
+                onClick={() => setHistoryModalOpen(false)}
+                className="px-4 py-2 border rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300"
+              >
+                Cerrar
               </button>
             </div>
           </div>
