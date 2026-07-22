@@ -2871,17 +2871,25 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     {/* Agent Select */}
                     <div className="flex flex-col gap-0.5">
                       <label className="text-[9px] font-bold text-gray-400 uppercase">Asignado a</label>
-                      <input
-                        type="text"
+                      <select
                         value={activeHeavyTicket.assigned_agent || ''}
-                        placeholder="Sin asignar"
-                        onBlur={(e) => handleUpdateHeavyTicket({ assigned_agent: e.target.value || null })}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setActiveHeavyTicket((prev: any) => prev ? ({ ...prev, assigned_agent: val }) : null);
+                          handleUpdateHeavyTicket({ assigned_agent: val || null });
                         }}
-                        className="text-xs font-semibold rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1.5 focus:outline-none focus:ring-1 focus:ring-brand-primary w-28 text-gray-800 dark:text-white"
-                      />
+                        className="text-xs font-semibold rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1.5 focus:outline-none focus:ring-1 focus:ring-brand-primary text-gray-800 dark:text-white cursor-pointer"
+                      >
+                        <option value="">👤 Sin asignar (Equipo)</option>
+                        <option value="Esteban">👤 Esteban</option>
+                        <option value="Esclepiades">👤 Esclepiades</option>
+                        <option value="Camilo">👤 Camilo</option>
+                        <option value="Carol">👤 Carol</option>
+                        <option value="Juliana">👤 Juliana</option>
+                        <option value="Katherine">👤 Katherine</option>
+                        {activeHeavyTicket.assigned_agent && !['Esteban', 'Esclepiades', 'Camilo', 'Carol', 'Juliana', 'Katherine'].includes(activeHeavyTicket.assigned_agent) && (
+                          <option value={activeHeavyTicket.assigned_agent}>👤 {activeHeavyTicket.assigned_agent}</option>
+                        )}
+                      </select>
                     </div>
 
                     {/* Delete Action */}
@@ -3674,15 +3682,21 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
                 <div>
                   <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
-                    Asignar Asesor
+                    Asignar a Asesor / Equipo
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Ej. Katherine"
+                  <select
                     value={newHeavyAgent}
                     onChange={(e) => setNewHeavyAgent(e.target.value)}
-                    className="w-full p-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-750 text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary font-semibold"
-                  />
+                    className="w-full p-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-750 text-gray-950 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary font-semibold cursor-pointer"
+                  >
+                    <option value="">👤 Sin asignar (General del Equipo)</option>
+                    <option value="Esteban">👤 Esteban</option>
+                    <option value="Esclepiades">👤 Esclepiades</option>
+                    <option value="Camilo">👤 Camilo</option>
+                    <option value="Carol">👤 Carol</option>
+                    <option value="Juliana">👤 Juliana</option>
+                    <option value="Katherine">👤 Katherine</option>
+                  </select>
                 </div>
               </div>
 
