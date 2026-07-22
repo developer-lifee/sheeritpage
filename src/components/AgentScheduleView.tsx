@@ -1648,7 +1648,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                 <div>
                   <span className="text-xxs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Total Horas Acumuladas</span>
                   <div className="text-xl font-black text-gray-800 dark:text-white mt-1 font-mono">
-                    {payrollList.reduce((sum, agent) => sum + Number(agent.total_hours || 0), 0).toFixed(1)} hrs
+                    {payrollList.filter(a => !a.exclude_from_payroll).reduce((sum, agent) => sum + Number(agent.total_hours || 0), 0).toFixed(1)} hrs
                   </div>
                 </div>
                 <Clock className="w-8 h-8 text-brand-primary/20" />
@@ -1668,7 +1668,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                 <div>
                   <span className="text-xxs font-bold text-emerald-600/70 dark:text-emerald-450 uppercase tracking-wider">Costo de Nómina Consolidado</span>
                   <div className="text-xl font-black text-emerald-600 dark:text-emerald-450 mt-1 font-mono">
-                    ${Math.round(payrollList.reduce((sum, agent) => sum + Number(agent.total_payment || 0), 0)).toLocaleString('es-CO')}
+                    ${Math.round(payrollList.filter(a => !a.exclude_from_payroll).reduce((sum, agent) => sum + Number(agent.total_payment || 0), 0)).toLocaleString('es-CO')}
                   </div>
                 </div>
                 <DollarSign className="w-8 h-8 text-emerald-500/20" />
