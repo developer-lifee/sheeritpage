@@ -166,6 +166,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
 }) => {
   // Check if current user is Esteban
   const isEsteban = agentEmail.trim().toLowerCase() === 'estebanavila182@outlook.com';
+  const isAdminOrSupervisor = isEsteban || role === 'admin' || role === 'supervisor';
 
   const [internalActiveMainTab, internalSetActiveMainTab] = useState<'calendar' | 'payroll'>('calendar');
   const activeMainTab = externalActiveMainTab !== undefined ? externalActiveMainTab : internalActiveMainTab;
@@ -982,128 +983,237 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
               Cargando cuadrante de colaboradores...
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-750">
-              <table className="w-full text-left border-collapse text-sm">
-                <thead>
-                  <tr className="bg-gray-50 dark:bg-gray-850 text-gray-700 dark:text-gray-300 uppercase text-xxs font-bold tracking-wider border-b border-gray-100 dark:border-gray-750">
-                    <th className="py-3.5 px-4 min-w-[170px]">Colaborador</th>
-                    {DAYS_OF_WEEK.map(day => (
-                      <th key={day.value} className="py-3.5 px-4 text-center font-bold">
-                        <div className="flex flex-col items-center">
-                          <span>{day.label}</span>
-                          {!isTemplateMode && (
-                            <span className="text-[10px] text-gray-400 font-normal mt-0.5">
-                              ({getDayDateLabel(currentWeekDate, day.value)})
-                            </span>
-                          )}
-                        </div>
-                      </th>
-                    ))}
-                    <th className="py-3.5 px-4 text-center font-bold min-w-[150px]">Costo Semanal / Horas</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-750">
-                  {agents.map(agent => {
-                    const agentSlots = allSchedules.filter((s: any) => s.email.toLowerCase() === agent.email.toLowerCase());
-                    const totalWeeklyHours = agentSlots.reduce((acc, slot) => acc + calculateSlotHours(slot), 0);
-                    const isEditableRow = role === 'admin' || agent.email.toLowerCase() === agentEmail.toLowerCase();
-                    const estimatedPay = totalWeeklyHours * hourlyRate;
-
-                    return (
-                      <tr
-                        key={agent.id}
-                        className="hover:bg-gray-50/30 dark:hover:bg-gray-750/20 text-gray-900 dark:text-gray-100 transition-colors"
-                      >
-                        {/* Collaborador Info */}
-                        <td className="py-4 px-4">
-                          <div className="flex flex-col">
-                            <span className="font-bold flex items-center gap-1.5 text-xs text-gray-800 dark:text-gray-200">
-                              <User className="w-3.5 h-3.5 text-gray-400" />
-                              {agent.fullname}
-                              {!isEditableRow && <Lock className="w-3 h-3 text-gray-400" title="Solo lectura" />}
-                            </span>
-                            <span className="text-xxs text-gray-400 dark:text-gray-500 mt-0.5 font-mono">{agent.email}</span>
-                            <span className="text-xxs font-extrabold text-brand-primary uppercase tracking-wider mt-1">{agent.role}</span>
-                            {agent.exclude_from_payroll && (
-                              <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-extrabold text-amber-700 dark:text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 w-fit">
-                                🚫 Sueldo Excluido ($0)
+            <>
+              {/* DESKTOP TABLE VIEW (md:block) */}
+              <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-750">
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-850 text-gray-700 dark:text-gray-300 uppercase text-xxs font-bold tracking-wider border-b border-gray-100 dark:border-gray-750">
+                      <th className="py-3.5 px-4 min-w-[170px]">Colaborador</th>
+                      {DAYS_OF_WEEK.map(day => (
+                        <th key={day.value} className="py-3.5 px-4 text-center font-bold">
+                          <div className="flex flex-col items-center">
+                            <span>{day.label}</span>
+                            {!isTemplateMode && (
+                              <span className="text-[10px] text-gray-400 font-normal mt-0.5">
+                                ({getDayDateLabel(currentWeekDate, day.value)})
                               </span>
                             )}
                           </div>
-                        </td>
+                        </th>
+                      ))}
+                      <th className="py-3.5 px-4 text-center font-bold min-w-[150px]">Costo Semanal / Horas</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-750">
+                    {agents.map(agent => {
+                      const agentSlots = allSchedules.filter((s: any) => s.email.toLowerCase() === agent.email.toLowerCase());
+                      const totalWeeklyHours = agentSlots.reduce((acc, slot) => acc + calculateSlotHours(slot), 0);
+                      const isEditableRow = role === 'admin' || agent.email.toLowerCase() === agentEmail.toLowerCase();
+                      const estimatedPay = totalWeeklyHours * hourlyRate;
 
-                        {/* Week Days */}
-                        {DAYS_OF_WEEK.map(day => {
-                          const slots = getAgentSlotsForDay(agent.email, day.value);
-                          
-                          return (
-                            <td
-                              key={day.value}
-                              onClick={() => handleCellClick(agent, day)}
-                              className={`py-3 px-2 text-center align-middle transition-all ${
-                                isEditableRow
-                                  ? 'cursor-pointer hover:bg-brand-primary/5 dark:hover:bg-brand-primary/10'
-                                  : 'cursor-not-allowed opacity-90'
-                              }`}
-                            >
-                              {slots.length === 0 ? (
-                                <span className="text-gray-350 dark:text-gray-600 italic text-xxs font-light hover:text-brand-primary">
-                                  {isEditableRow ? '+ Libre' : 'Libre'}
+                      return (
+                        <tr
+                          key={agent.id}
+                          className="hover:bg-gray-50/30 dark:hover:bg-gray-750/20 text-gray-900 dark:text-gray-100 transition-colors"
+                        >
+                          {/* Collaborador Info */}
+                          <td className="py-4 px-4">
+                            <div className="flex flex-col">
+                              <span className="font-bold flex items-center gap-1.5 text-xs text-gray-800 dark:text-gray-200">
+                                <User className="w-3.5 h-3.5 text-gray-400" />
+                                {agent.fullname}
+                                {!isEditableRow && <Lock className="w-3 h-3 text-gray-400" title="Solo lectura" />}
+                              </span>
+                              <span className="text-xxs text-gray-400 dark:text-gray-500 mt-0.5 font-mono">{agent.email}</span>
+                              <span className="text-xxs font-extrabold text-brand-primary uppercase tracking-wider mt-1">{agent.role}</span>
+                              {agent.exclude_from_payroll && (
+                                <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-extrabold text-amber-700 dark:text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 w-fit">
+                                  🚫 Sueldo Excluido ($0)
                                 </span>
-                              ) : (
-                                <div className="flex flex-col gap-1 items-center">
-                                  {slots.map((s: any, idx: number) => (
-                                    <span
-                                      key={idx}
-                                      className="inline-flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-xxs font-semibold bg-brand-primary/10 text-brand-primary border border-brand-primary/20 dark:bg-brand-primary/20 dark:text-brand-light font-mono min-w-[90px]"
-                                    >
-                                      <span className="flex items-center gap-1">
-                                        <Clock className="w-2.5 h-2.5" />
-                                        {s.start_time.substring(0, 5)} - {s.end_time.substring(0, 5)}
-                                      </span>
-                                      {s.break_type && s.break_type !== 'none' && (
-                                        <span className="text-[9px] text-gray-500 dark:text-gray-400 mt-0.5 font-sans flex items-center gap-0.5">
-                                          {s.break_type === 'lunch_60' ? '🍱 Almuerzo' : '☕ Break'}: {s.break_start.substring(0, 5)}
-                                        </span>
-                                      )}
-                                    </span>
-                                  ))}
-                                </div>
                               )}
-                            </td>
-                          );
-                        })}
+                            </div>
+                          </td>
 
-                        {/* Cost & Hours Info */}
-                        <td className="py-4 px-4 text-center align-middle font-mono font-bold text-sm text-brand-primary">
-                          <div className="flex flex-col items-center gap-1">
-                            <span className={`px-2.5 py-1 rounded-xl text-xs font-bold ${
-                              totalWeeklyHours > (agent.max_weekly_hours || 40)
-                                ? 'bg-red-500/10 text-red-500'
-                                : 'bg-brand-primary/5 text-brand-primary'
-                            }`}>
-                              {totalWeeklyHours.toFixed(1)} / {(agent.max_weekly_hours || 40).toFixed(0)} hrs
+                          {/* Week Days */}
+                          {DAYS_OF_WEEK.map(day => {
+                            const slots = getAgentSlotsForDay(agent.email, day.value);
+                            
+                            return (
+                              <td
+                                key={day.value}
+                                onClick={() => handleCellClick(agent, day)}
+                                className={`py-3 px-2 text-center align-middle transition-all ${
+                                  isEditableRow
+                                    ? 'cursor-pointer hover:bg-brand-primary/5 dark:hover:bg-brand-primary/10'
+                                    : 'cursor-not-allowed opacity-90'
+                                }`}
+                              >
+                                {slots.length === 0 ? (
+                                  <span className="text-gray-350 dark:text-gray-600 italic text-xxs font-light hover:text-brand-primary">
+                                    {isEditableRow ? '+ Libre' : 'Libre'}
+                                  </span>
+                                ) : (
+                                  <div className="flex flex-col gap-1 items-center">
+                                    {slots.map((s: any, idx: number) => (
+                                      <span
+                                        key={idx}
+                                        className="inline-flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-xxs font-semibold bg-brand-primary/10 text-brand-primary border border-brand-primary/20 dark:bg-brand-primary/20 dark:text-brand-light font-mono min-w-[90px]"
+                                      >
+                                        <span className="flex items-center gap-1">
+                                          <Clock className="w-2.5 h-2.5" />
+                                          {s.start_time.substring(0, 5)} - {s.end_time.substring(0, 5)}
+                                        </span>
+                                        {s.break_type && s.break_type !== 'none' && (
+                                          <span className="text-[9px] text-gray-500 dark:text-gray-400 mt-0.5 font-sans flex items-center gap-0.5">
+                                            {s.break_type === 'lunch_60' ? '🍱 Almuerzo' : '☕ Break'}: {s.break_start.substring(0, 5)}
+                                          </span>
+                                        )}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </td>
+                            );
+                          })}
+
+                          {/* Cost & Hours Info */}
+                          <td className="py-4 px-4 text-center align-middle font-mono font-bold text-sm text-brand-primary">
+                            <div className="flex flex-col items-center gap-1">
+                              <span className={`px-2.5 py-1 rounded-xl text-xs font-bold ${
+                                totalWeeklyHours > (agent.max_weekly_hours || 40)
+                                  ? 'bg-red-500/10 text-red-500'
+                                  : 'bg-brand-primary/5 text-brand-primary'
+                              }`}>
+                                {totalWeeklyHours.toFixed(1)} / {(agent.max_weekly_hours || 40).toFixed(0)} hrs
+                              </span>
+                              {allowOvertime && (
+                                <span className="text-[9px] text-emerald-600 dark:text-emerald-450 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded-lg mt-0.5">
+                                  Extras permitidas
+                                </span>
+                              )}
+                              <span className="text-[11px] text-gray-500 dark:text-gray-400 font-sans font-normal mt-1">
+                                {agent.exclude_from_payroll ? (
+                                  <span className="text-gray-400 font-bold">Est: $0 (Excluido)</span>
+                                ) : (
+                                  `Est: $${estimatedPay.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`
+                                )}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* MOBILE CARDS VIEW (block md:hidden) */}
+              <div className="block md:hidden space-y-4">
+                {agents.map(agent => {
+                  const agentSlots = allSchedules.filter((s: any) => s.email.toLowerCase() === agent.email.toLowerCase());
+                  const totalWeeklyHours = agentSlots.reduce((acc, slot) => acc + calculateSlotHours(slot), 0);
+                  const isEditableRow = role === 'admin' || agent.email.toLowerCase() === agentEmail.toLowerCase();
+                  const estimatedPay = totalWeeklyHours * hourlyRate;
+
+                  return (
+                    <div
+                      key={agent.id}
+                      className="bg-white dark:bg-gray-850 p-4 rounded-2xl border dark:border-gray-750 shadow-sm flex flex-col gap-3"
+                    >
+                      {/* Agent Header */}
+                      <div className="flex justify-between items-start border-b dark:border-gray-750 pb-3">
+                        <div className="flex flex-col">
+                          <span className="font-bold flex items-center gap-1.5 text-sm text-gray-900 dark:text-white">
+                            <User className="w-4 h-4 text-brand-primary" />
+                            {agent.fullname}
+                            {!isEditableRow && <Lock className="w-3.5 h-3.5 text-gray-400" title="Solo lectura" />}
+                          </span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 font-mono">{agent.email}</span>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] font-extrabold text-brand-primary uppercase tracking-wider bg-brand-primary/10 px-2 py-0.5 rounded-md">
+                              {agent.role}
                             </span>
-                            {allowOvertime && (
-                              <span className="text-[9px] text-emerald-600 dark:text-emerald-450 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded-lg mt-0.5">
-                                Extras permitidas
+                            {agent.exclude_from_payroll && (
+                              <span className="text-[10px] font-extrabold text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                                🚫 Sueldo Excluido
                               </span>
                             )}
-                            <span className="text-[11px] text-gray-500 dark:text-gray-400 font-sans font-normal mt-1">
-                              {agent.exclude_from_payroll ? (
-                                <span className="text-gray-400 font-bold">Est: $0 (Excluido)</span>
-                              ) : (
-                                `Est: $${estimatedPay.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`
-                              )}
-                            </span>
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </div>
+
+                        {/* Totals */}
+                        <div className="flex flex-col items-end text-right">
+                          <span className="text-xs font-black text-brand-primary font-mono bg-brand-primary/10 px-2.5 py-1 rounded-xl">
+                            {totalWeeklyHours.toFixed(1)} / {(agent.max_weekly_hours || 40).toFixed(0)}h
+                          </span>
+                          <span className="text-xxs text-gray-500 dark:text-gray-400 font-sans mt-1">
+                            {agent.exclude_from_payroll ? (
+                              <span className="text-gray-400 font-bold">$0 (Excluido)</span>
+                            ) : (
+                              `Est: $${estimatedPay.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Days Grid in Mobile Card */}
+                      <div className="grid grid-cols-1 gap-2">
+                        <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">
+                          Días de la Semana (Toca para editar):
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {DAYS_OF_WEEK.map(day => {
+                            const slots = getAgentSlotsForDay(agent.email, day.value);
+                            return (
+                              <div
+                                key={day.value}
+                                onClick={() => handleCellClick(agent, day)}
+                                className={`p-2.5 rounded-xl border flex items-center justify-between transition-all ${
+                                  isEditableRow
+                                    ? 'cursor-pointer active:scale-98 bg-gray-50 hover:bg-brand-primary/5 dark:bg-gray-800 dark:hover:bg-gray-750 border-gray-200 dark:border-gray-700'
+                                    : 'cursor-not-allowed opacity-90 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold text-gray-700 dark:text-gray-300 w-16">
+                                    {day.label}:
+                                  </span>
+                                  {!isTemplateMode && (
+                                    <span className="text-[10px] text-gray-400 font-mono">
+                                      {getDayDateLabel(currentWeekDate, day.value)}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div>
+                                  {slots.length === 0 ? (
+                                    <span className="text-xxs text-gray-400 italic">
+                                      {isEditableRow ? '+ Asignar' : 'Libre'}
+                                    </span>
+                                  ) : (
+                                    <div className="flex flex-col items-end gap-0.5">
+                                      {slots.map((s: any, idx: number) => (
+                                        <span
+                                          key={idx}
+                                          className="text-xxs font-mono font-bold text-brand-primary bg-brand-primary/10 px-2 py-0.5 rounded-lg border border-brand-primary/20"
+                                        >
+                                          {s.start_time.substring(0, 5)} - {s.end_time.substring(0, 5)}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </>
       ) : (

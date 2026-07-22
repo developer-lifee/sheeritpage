@@ -1914,7 +1914,9 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         <div className={isFullscreen ? "grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0 border dark:border-gray-850 rounded-2xl overflow-hidden bg-gray-50/20 dark:bg-gray-900/10" : "grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[600px] h-[calc(100vh-250px)] border dark:border-gray-850 rounded-2xl overflow-hidden bg-gray-50/20 dark:bg-gray-900/10"}>
           
           {/* LEFT COLUMN: Collapsible Categories (col-span-5) */}
-          <div className="lg:col-span-5 border-r dark:border-gray-850 flex flex-col h-full bg-white dark:bg-gray-900 overflow-hidden">
+          <div className={`lg:col-span-5 border-r dark:border-gray-850 flex flex-col h-full bg-white dark:bg-gray-900 overflow-hidden ${
+            activeChatTicket || activeHeavyTicket ? 'hidden lg:flex' : 'flex w-full'
+          }`}>
             {/* Search Box */}
             <div className="p-4 border-b dark:border-gray-850 bg-gray-50/50 dark:bg-gray-900/50 flex gap-2">
               <div className="relative shadow-sm rounded-xl flex-grow">
@@ -2226,21 +2228,36 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
           </div>
 
           {/* RIGHT COLUMN: Chat Conversation & Details (col-span-7) */}
-          <div className="lg:col-span-7 flex flex-col h-full bg-white dark:bg-gray-900 overflow-hidden">
+          <div className={`lg:col-span-7 flex flex-col h-full bg-white dark:bg-gray-900 overflow-hidden ${
+            activeChatTicket || activeHeavyTicket ? 'flex w-full' : 'hidden lg:flex'
+          }`}>
             {activeChatTicket ? (
               <div className="flex flex-col h-full relative overflow-hidden">
                 {/* Chat Panel top bar */}
                 <div className="p-4 bg-gray-50 dark:bg-gray-950 border-b dark:border-gray-850 flex flex-wrap justify-between items-center gap-3">
-                  <div>
-                    <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-1.5">
-                      {activeChatTicket.nombre} 
-                      {activeChatTicket.queuePosition !== undefined && activeChatTicket.queuePosition !== null && (
-                        <span className="bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-305 text-[9px] font-extrabold px-1.5 py-0.2 rounded border">
-                          Turno #{activeChatTicket.queuePosition}
-                        </span>
-                      )}
-                    </h3>
-                    <div className="flex items-center gap-2 mt-0.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveChatTicket(null);
+                        setActiveHeavyTicket(null);
+                      }}
+                      className="lg:hidden p-1.5 text-brand-primary font-bold text-xs flex items-center gap-1 bg-brand-primary/10 hover:bg-brand-primary/20 rounded-xl border border-brand-primary/20 transition-all shrink-0 active:scale-95"
+                      title="Volver a la lista de tickets"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      <span>Volver</span>
+                    </button>
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-1.5 truncate">
+                        {activeChatTicket.nombre} 
+                        {activeChatTicket.queuePosition !== undefined && activeChatTicket.queuePosition !== null && (
+                          <span className="bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-305 text-[9px] font-extrabold px-1.5 py-0.2 rounded border">
+                            Turno #{activeChatTicket.queuePosition}
+                          </span>
+                        )}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-xs text-gray-450 font-mono">+{cleanPhone(activeChatTicket.phone)}</span>
                       <button
                         type="button"
@@ -2267,6 +2284,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                       )}
                     </div>
                   </div>
+                </div>
 
                   {/* Top Bar actions */}
                   <div className="flex items-center gap-1.5">
@@ -2787,15 +2805,28 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
               <div className="flex flex-col h-full relative overflow-hidden bg-gray-50/20 dark:bg-gray-900/10">
                 {/* Heavy Ticket Header */}
                 <div className="p-5 bg-white dark:bg-gray-950 border-b dark:border-gray-850 flex flex-wrap justify-between items-center gap-4 shadow-sm">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-brand-primary/10 text-brand-primary rounded-full border border-brand-primary/20">
-                        LABOR / TKT PESADO #{activeHeavyTicket.id}
-                      </span>
-                      <span className="text-[10px] font-medium text-gray-400">
-                        Creado el: {new Date(activeHeavyTicket.created_at).toLocaleString('es-ES')}
-                      </span>
-                    </div>
+                  <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveChatTicket(null);
+                        setActiveHeavyTicket(null);
+                      }}
+                      className="lg:hidden p-1.5 text-brand-primary font-bold text-xs flex items-center gap-1 bg-brand-primary/10 hover:bg-brand-primary/20 rounded-xl border border-brand-primary/20 transition-all shrink-0 mt-0.5 active:scale-95"
+                      title="Volver a la lista de labores"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      <span>Volver</span>
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-brand-primary/10 text-brand-primary rounded-full border border-brand-primary/20">
+                          LABOR / TKT PESADO #{activeHeavyTicket.id}
+                        </span>
+                        <span className="text-[10px] font-medium text-gray-400">
+                          Creado el: {new Date(activeHeavyTicket.created_at).toLocaleString('es-ES')}
+                        </span>
+                      </div>
                     <h3 className="font-extrabold text-lg text-gray-900 dark:text-white truncate">
                       {activeHeavyTicket.title}
                     </h3>
@@ -2803,6 +2834,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                       {activeHeavyTicket.description || 'Sin descripción detallada.'}
                     </p>
                   </div>
+                </div>
 
                   {/* Settings dropdowns */}
                   <div className="flex flex-wrap items-center gap-2 shrink-0">
