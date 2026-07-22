@@ -1027,63 +1027,67 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
 
       {activeMainTab === 'calendar' ? (
         <>
-          {/* VISTA CALENDARIO */}
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+          {/* VISTA CALENDARIO - BARRA SUPERIOR FIJA (STICKY) */}
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 mb-4 sticky top-0 z-30 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md pb-3 pt-2 border-b dark:border-gray-700 -mx-6 px-6 transition-all shadow-xs">
             <div>
-              <h2 className="text-xl font-bold flex items-center dark:text-white">
+              <h2 className="text-lg sm:text-xl font-extrabold flex items-center dark:text-white">
                 <Calendar className="mr-2 text-brand-primary" /> Horarios de Trabajo de Asesores
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Revisa y agenda las franjas horarias y almuerzos. Haz clic en las celdas para modificar tu horario o el de tu equipo.
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 hidden sm:block">
+                Revisa y agenda las franjas horarias y almuerzos. Haz clic o arrastra celdas para modificar horarios.
               </p>
             </div>
 
-            {/* Paginador de semanas */}
-            <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-850 p-1.5 rounded-xl border dark:border-gray-700 w-full lg:w-auto justify-between lg:justify-start">
-              <button
-                onClick={handlePrevWeek}
-                className="p-1.5 hover:bg-white dark:hover:bg-gray-750 rounded-lg transition-all dark:text-gray-300"
-                title="Semana anterior"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300 px-3 min-w-[200px] text-center">
-                {getFormattedWeekLabel()}
-              </span>
+            {/* Paginador de semanas STICKY y RESPONSIVO */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-gray-50 dark:bg-gray-850 p-2 rounded-2xl border dark:border-gray-700 w-full lg:w-auto shadow-xs">
+              <div className="flex items-center justify-between gap-1 w-full sm:w-auto flex-grow">
+                <button
+                  onClick={handlePrevWeek}
+                  className="p-2 hover:bg-white dark:hover:bg-gray-750 rounded-xl transition-all dark:text-gray-300 border dark:border-gray-700 sm:border-0"
+                  title="Semana anterior"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                
+                <span className="text-xs font-black text-gray-800 dark:text-gray-100 px-2 min-w-[160px] text-center font-sans tracking-tight">
+                  {getFormattedWeekLabel()}
+                </span>
 
-              <button
-                onClick={handleNextWeek}
-                className="p-1.5 hover:bg-white dark:hover:bg-gray-750 rounded-lg transition-all dark:text-gray-300"
-                title="Semana siguiente"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+                <button
+                  onClick={handleNextWeek}
+                  className="p-2 hover:bg-white dark:hover:bg-gray-750 rounded-xl transition-all dark:text-gray-300 border dark:border-gray-700 sm:border-0"
+                  title="Semana siguiente"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
 
-              <div className="h-4 w-[1px] bg-gray-200 dark:bg-gray-700 mx-1"></div>
+              <div className="hidden sm:block h-5 w-[1px] bg-gray-200 dark:bg-gray-700 mx-1"></div>
 
-              <button
-                onClick={handleCurrentWeek}
-                className={`px-2.5 py-1 text-xs font-extrabold rounded-lg transition-all ${
-                  !isTemplateMode && formatDateYMD(currentWeekDate) === formatDateYMD(getMondayOfDate(new Date()))
-                    ? 'bg-brand-primary text-white'
-                    : 'hover:bg-white dark:hover:bg-gray-750 text-gray-600 dark:text-gray-300'
-                }`}
-              >
-                Esta Semana
-              </button>
-              
-              <button
-                onClick={handleTemplateMode}
-                className={`px-2.5 py-1 text-xs font-extrabold rounded-lg transition-all ${
-                  isTemplateMode
-                    ? 'bg-brand-primary text-white'
-                    : 'hover:bg-white dark:hover:bg-gray-750 text-gray-600 dark:text-gray-300'
-                }`}
-                title="Editar la plantilla base recurrente"
-              >
-                Plantilla Base
-              </button>
+              <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                <button
+                  onClick={handleCurrentWeek}
+                  className={`flex-1 sm:flex-initial px-3 py-1.5 text-xs font-extrabold rounded-xl transition-all text-center ${
+                    !isTemplateMode && formatDateYMD(currentWeekDate) === formatDateYMD(getMondayOfDate(new Date()))
+                      ? 'bg-brand-primary text-white shadow-sm'
+                      : 'bg-white dark:bg-gray-750 text-gray-700 dark:text-gray-300 border dark:border-gray-700'
+                  }`}
+                >
+                  Esta Semana
+                </button>
+                
+                <button
+                  onClick={handleTemplateMode}
+                  className={`flex-1 sm:flex-initial px-3 py-1.5 text-xs font-extrabold rounded-xl transition-all text-center ${
+                    isTemplateMode
+                      ? 'bg-brand-primary text-white shadow-sm'
+                      : 'bg-white dark:bg-gray-750 text-gray-700 dark:text-gray-300 border dark:border-gray-700'
+                  }`}
+                  title="Editar la plantilla base recurrente"
+                >
+                  Plantilla Base
+                </button>
+              </div>
             </div>
           </div>
 
@@ -2010,21 +2014,21 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
             )}
 
             {/* Modal Actions */}
-            <div className="flex justify-between items-center mt-6 pt-4 border-t dark:border-gray-700">
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-6 pt-4 border-t dark:border-gray-700">
               <button
                 type="button"
                 onClick={handleAddSlot}
                 disabled={modalLoading || modalSaving}
-                className="flex items-center text-xs font-bold text-brand-primary hover:text-brand-dark px-3 py-2 rounded-xl border border-brand-primary/20 hover:border-brand-primary/50 transition-colors"
+                className="flex items-center justify-center text-xs font-bold text-brand-primary hover:text-brand-dark px-3 py-2.5 rounded-xl border border-brand-primary/20 hover:border-brand-primary/50 transition-colors w-full sm:w-auto"
               >
                 <Plus className="w-4 h-4 mr-1.5" /> Añadir Franja (9h def)
               </button>
 
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => { setEditingAgent(null); setEditingDay(null); }}
-                  className="px-4 py-2 border rounded-xl hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-300 text-xs font-bold transition-all"
+                  className="flex-1 sm:flex-initial px-4 py-2.5 border rounded-xl hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-300 text-xs font-bold transition-all text-center"
                 >
                   Cancelar
                 </button>
@@ -2032,7 +2036,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                   type="button"
                   onClick={handleSaveModal}
                   disabled={modalLoading || modalSaving}
-                  className="bg-brand-primary hover:bg-brand-dark text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center transition-all disabled:opacity-50"
+                  className="flex-1 sm:flex-initial bg-brand-primary hover:bg-brand-dark text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center transition-all disabled:opacity-50 shadow-md"
                 >
                   <Save className="w-4 h-4 mr-1.5" />
                   {modalSaving ? 'Guardando...' : 'Guardar'}
