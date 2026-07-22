@@ -305,12 +305,14 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
       const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
-        setPayrollList(data.payroll);
+        setPayrollList(Array.isArray(data.payroll) ? data.payroll : []);
       } else {
+        setPayrollList([]);
         setError(data.message || 'Error al cargar los datos de nómina.');
       }
     } catch (err) {
       console.error('Error fetching payroll:', err);
+      setPayrollList([]);
       setError('Error al conectar para obtener los reportes de nómina.');
     } finally {
       setPayrollLoading(false);
@@ -324,10 +326,13 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
       const res = await fetch(`${apiUrl}/api/admin/payroll/history`);
       const data = await res.json();
       if (data.success) {
-        setPayrollHistory(data.history);
+        setPayrollHistory(Array.isArray(data.history) ? data.history : []);
+      } else {
+        setPayrollHistory([]);
       }
     } catch (err) {
       console.error('Error fetching payroll history:', err);
+      setPayrollHistory([]);
     } finally {
       setHistoryLoading(false);
     }
@@ -1362,10 +1367,10 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                         {/* Hours */}
                         <td className="py-4 px-4 text-center font-mono font-bold">
                           <div className="flex flex-col items-center">
-                            <span>{agent.total_hours.toFixed(1)} hrs</span>
+                            <span>{(Number(agent.total_hours) || 0).toFixed(1)} hrs</span>
                             {isTrial && agent.trial_hours !== undefined && (
                               <span className="text-[9px] text-gray-400 font-sans">
-                                ({agent.trial_hours.toFixed(1)}h trial + {(agent.normal_hours || 0).toFixed(1)}h agent)
+                                ({(Number(agent.trial_hours) || 0).toFixed(1)}h trial + {(Number(agent.normal_hours) || 0).toFixed(1)}h agent)
                               </span>
                             )}
                           </div>
@@ -1376,17 +1381,17 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                           {agent.exclude_from_payroll ? (
                             <span className="text-gray-400 italic text-[11px]">Sin Sueldo</span>
                           ) : (
-                            `$${agent.hourly_rate.toLocaleString('es-CO')} / h`
+                            `$${(Number(agent.hourly_rate) || 0).toLocaleString('es-CO')} / h`
                           )}
                         </td>
 
                         {/* Bonuses List */}
                         <td className="py-4 px-4">
                           <div className="flex flex-col gap-1.5 max-w-[200px]">
-                            {agent.bonuses.length === 0 ? (
+                            {(!agent.bonuses || agent.bonuses.length === 0) ? (
                               <span className="text-xxs text-gray-400 italic">Sin bonos</span>
                             ) : (
-                              agent.bonuses.map(b => (
+                              (agent.bonuses || []).map(b => (
                                 <div key={b.id} className="flex items-center justify-between bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-lg px-2 py-1 text-xxs text-emerald-800 dark:text-emerald-300">
                                   <span>{b.reason} (+${b.amount})</span>
                                   {agent.status !== 'paid' && (
@@ -1420,7 +1425,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                               $0 <span className="text-[10px] bg-gray-200 dark:bg-gray-750 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded ml-1 font-bold">Excluido</span>
                             </span>
                           ) : (
-                            `$${Math.round(agent.total_payment).toLocaleString('es-CO')}`
+                            `$${Math.round(Number(agent.total_payment) || 0).toLocaleString('es-CO')}`
                           )}
                         </td>
 
