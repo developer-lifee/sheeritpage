@@ -37,6 +37,7 @@ interface PayrollAgent {
   bonuses: Array<{ id: number; amount: number; reason: string; bonus_month: string }>;
   total_bonuses: number;
   total_payment: number;
+  exclude_from_payroll?: boolean;
   status: 'draft' | 'paid';
 }
 
@@ -736,6 +737,30 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
     }
   };
 
+  const handleTogglePayrollExclusion = async (agentId: number, currentExclude: boolean) => {
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/agents/toggle-payroll`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent_id: agentId,
+          exclude_from_payroll: !currentExclude
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccess(data.message);
+        fetchPayrollData();
+      } else {
+        setError(data.message || 'Error al actualizar exclusión de nómina.');
+      }
+    } catch (err) {
+      console.error('Error toggling payroll exclusion:', err);
+      setError('Error al actualizar exclusión de nómina.');
+    }
+  };
+
   const handleOpenStubModal = (agent: PayrollAgent) => {
     setSelectedStubAgent(agent);
     setStubModalOpen(true);
@@ -1204,6 +1229,24 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                             ) : (
                               <span className="text-xxs font-bold text-brand-primary uppercase tracking-wider mt-1">{agent.role}</span>
                             )}
+                            {isEsteban && (
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePayrollExclusion(agent.agent_id, !!agent.exclude_from_payroll)}
+                                className={`mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded transition-all border ${
+                                  agent.exclude_from_payroll
+                                    ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:bg-emerald-500/10 hover:text-emerald-600'
+                                    : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-red-500/10 hover:text-red-500'
+                                }`}
+                                title={agent.exclude_from_payroll ? "Haz clic para volver a contar el sueldo de esta persona" : "Haz clic para no contar el sueldo de esta persona en el reporte"}
+                              >
+                                {agent.exclude_from_payroll ? (
+                                  <>🚫 Excluido de Nómina ($0)</>
+                                ) : (
+                                  <>💰 Contar en Nómina</>
+                                )}
+                              </button>
+                            )}
                           </div>
                         </td>
 
@@ -1242,7 +1285,11 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
 
                         {/* Rate */}
                         <td className="py-4 px-4 text-center font-mono text-xs">
-                          ${agent.hourly_rate.toLocaleString('es-CO')} / h
+                          {agent.exclude_from_payroll ? (
+                            <span className="text-gray-400 italic text-[11px]">Sin Sueldo</span>
+                          ) : (
+                            `$${agent.hourly_rate.toLocaleString('es-CO')} / h`
+                          )}
                         </td>
 
                         {/* Bonuses List */}
@@ -1280,7 +1327,13 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
 
                         {/* Total to pay */}
                         <td className="py-4 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                          ${Math.round(agent.total_payment).toLocaleString('es-CO')}
+                          {agent.exclude_from_payroll ? (
+                            <span className="text-gray-400 font-sans text-xs italic">
+                              $0 <span className="text-[10px] bg-gray-200 dark:bg-gray-750 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded ml-1 font-bold">Excluido</span>
+                            </span>
+                          ) : (
+                            `$${Math.round(agent.total_payment).toLocaleString('es-CO')}`
+                          )}
                         </td>
 
                         {/* Status */}
