@@ -8,6 +8,7 @@ interface Agent {
   email: string;
   role: string;
   status: string;
+  exclude_from_payroll?: boolean;
   max_weekly_hours?: number;
 }
 
@@ -1018,6 +1019,11 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                             </span>
                             <span className="text-xxs text-gray-400 dark:text-gray-500 mt-0.5 font-mono">{agent.email}</span>
                             <span className="text-xxs font-extrabold text-brand-primary uppercase tracking-wider mt-1">{agent.role}</span>
+                            {agent.exclude_from_payroll && (
+                              <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-extrabold text-amber-700 dark:text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 w-fit">
+                                🚫 Sueldo Excluido ($0)
+                              </span>
+                            )}
                           </div>
                         </td>
 
@@ -1079,7 +1085,11 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                               </span>
                             )}
                             <span className="text-[11px] text-gray-500 dark:text-gray-400 font-sans font-normal mt-1">
-                              Est: ${estimatedPay.toLocaleString('es-CO', { maximumFractionDigits: 0 })}
+                              {agent.exclude_from_payroll ? (
+                                <span className="text-gray-400 font-bold">Est: $0 (Excluido)</span>
+                              ) : (
+                                `Est: $${estimatedPay.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`
+                              )}
                             </span>
                           </div>
                         </td>
@@ -1427,11 +1437,30 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
 
                         {/* Actions */}
                         <td className="py-4 px-4 text-center">
-                          <div className="flex flex-col gap-1.5 items-center">
+                          <div className="flex flex-col gap-1.5 items-center min-w-[130px]">
+                            {isAdminOrSupervisor && (
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePayrollExclusion(agent.agent_id, !!agent.exclude_from_payroll)}
+                                className={`w-full flex items-center justify-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg transition-all border ${
+                                  agent.exclude_from_payroll
+                                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100'
+                                    : 'bg-amber-50/70 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/50 hover:bg-red-500/10 hover:text-red-500'
+                                }`}
+                                title={agent.exclude_from_payroll ? "Haz clic para volver a contar el sueldo de esta persona" : "Haz clic para no contar el sueldo de esta persona en el reporte"}
+                              >
+                                {agent.exclude_from_payroll ? (
+                                  <>💰 Incluir en Nómina</>
+                                ) : (
+                                  <>🚫 Excluir de Nómina ($0)</>
+                                )}
+                              </button>
+                            )}
+
                             {agent.status !== 'paid' ? (
                               <button
                                 onClick={() => handleClosePayroll(agent)}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xxs px-2.5 py-1.5 rounded-lg transition-all"
+                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xxs px-2.5 py-1.5 rounded-lg transition-all"
                               >
                                 Cerrar Nómina
                               </button>
@@ -1443,7 +1472,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
 
                             <button
                               onClick={() => handleOpenStubModal(agent)}
-                              className="flex items-center gap-1 text-xxs font-bold text-brand-primary hover:underline"
+                              className="flex items-center gap-1 text-xxs font-bold text-brand-primary hover:underline mt-0.5"
                             >
                               <FileText className="w-3 h-3" /> Ver Desprendible
                             </button>
