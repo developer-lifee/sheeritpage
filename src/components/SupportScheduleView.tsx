@@ -249,60 +249,14 @@ export const SupportScheduleView: React.FC = () => {
             </div>
           </div>
 
-          {/* Schedules configure section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Weekdays */}
-            <div className="bg-gray-50/50 dark:bg-gray-850 p-5 rounded-2xl border dark:border-gray-750">
-              <h4 className="font-bold text-sm text-gray-700 dark:text-gray-300 mb-4 flex items-center">
-                <Clock className="w-4 h-4 mr-1.5 text-brand-primary" /> Lunes a Viernes
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-semibold text-gray-400 mb-1">Hora de Inicio</label>
-                  <input
-                    type="time"
-                    value={config.weekday_start}
-                    onChange={(e) => handleInputChange('weekday_start', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-gray-400 mb-1">Hora de Cierre</label>
-                  <input
-                    type="time"
-                    value={config.weekday_end}
-                    onChange={(e) => handleInputChange('weekday_end', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Weekend */}
-            <div className="bg-gray-50/50 dark:bg-gray-850 p-5 rounded-2xl border dark:border-gray-750">
-              <h4 className="font-bold text-sm text-gray-700 dark:text-gray-300 mb-4 flex items-center">
-                <Clock className="w-4 h-4 mr-1.5 text-brand-primary" /> Sábados y Domingos
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-semibold text-gray-400 mb-1">Hora de Inicio</label>
-                  <input
-                    type="time"
-                    value={config.weekend_start}
-                    onChange={(e) => handleInputChange('weekend_start', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-gray-400 mb-1">Hora de Cierre</label>
-                  <input
-                    type="time"
-                    value={config.weekend_end}
-                    onChange={(e) => handleInputChange('weekend_end', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white text-sm"
-                  />
-                </div>
-              </div>
+          {/* Dynamic Schedule Notice */}
+          <div className="bg-brand-primary/10 border border-brand-primary/20 text-brand-primary rounded-2xl p-5 flex items-center gap-3.5">
+            <Clock className="w-6 h-6 text-brand-primary flex-shrink-0" />
+            <div>
+              <h4 className="font-bold text-sm">Horario de Atención Dinámico por Turnos de Asesores</h4>
+              <p className="text-xs text-brand-primary/90 mt-0.5 font-normal leading-relaxed">
+                El canal de WhatsApp determina la atención humana de forma 100% dinámica en función de los turnos y franjas horarias asignadas a los asesores en la tabla cuadrante.
+              </p>
             </div>
           </div>
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, User, Plus, Trash2, Save, RefreshCw, AlertTriangle, CheckCircle, Calendar, Users, X, ChevronLeft, ChevronRight, Lock, DollarSign, Gift, Settings, ShieldAlert, FileText, Printer, Award, History } from 'lucide-react';
+import { Clock, User, Plus, Trash2, Save, RefreshCw, AlertTriangle, CheckCircle, Calendar, Users, X, ChevronLeft, ChevronRight, Lock, DollarSign, Gift, Settings, ShieldAlert, FileText, Printer, Award, History, Copy, Zap, Info } from 'lucide-react';
 
 interface Agent {
   id: number;
@@ -603,6 +603,73 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
     }
   };
 
+  const handleReplicateCurrentSlotsToWeek = async (mode: 'all' | 'workdays') => {
+    if (!editingAgent || !editingDay || editingSlots.length === 0) return;
+    setModalSaving(true);
+    setModalError('');
+
+    const targetDays = mode === 'workdays' ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5, 6, 0];
+    const apiUrl = getApiUrl();
+    const weekStart = getWeekStartParam();
+
+    try {
+      const resSchedule = await fetch(`${apiUrl}/api/admin/agents/schedule?email=${encodeURIComponent(editingAgent.email)}&week_start=${weekStart}`);
+      const dataSchedule = await resSchedule.json();
+
+      let currentSlots: ScheduleSlot[] = [];
+      if (dataSchedule.success) {
+        currentSlots = dataSchedule.schedule.map((s: any) => ({
+          day_of_week: s.day_of_week,
+          start_time: s.start_time.substring(0, 5),
+          end_time: s.end_time.substring(0, 5),
+          break_type: s.break_type || 'none',
+          break_start: s.break_start ? s.break_start.substring(0, 5) : ''
+        }));
+      }
+
+      const filtered = currentSlots.filter(s => !targetDays.includes(s.day_of_week));
+      const replicated: ScheduleSlot[] = [];
+
+      for (const dayVal of targetDays) {
+        for (const slot of editingSlots) {
+          replicated.push({
+            ...slot,
+            day_of_week: dayVal
+          });
+        }
+      }
+
+      const mergedSchedule = [...filtered, ...replicated];
+
+      const resSave = await fetch(`${apiUrl}/api/admin/agents/schedule/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: editingAgent.email,
+          schedule: mergedSchedule,
+          week_start: weekStart,
+          requester_email: agentEmail
+        })
+      });
+
+      const dataSave = await resSave.json();
+      if (dataSave.success) {
+        setSuccess(`Turnos replicados exitosamente para ${editingAgent.fullname}.`);
+        setEditingAgent(null);
+        setEditingDay(null);
+        fetchAllSchedules();
+        fetchPayrollData();
+      } else {
+        setModalError(dataSave.message || 'Error al replicar turnos.');
+      }
+    } catch (err) {
+      console.error('Error replicating slots:', err);
+      setModalError('Error al replicar turnos.');
+    } finally {
+      setModalSaving(false);
+    }
+  };
+
   // Save Config (Only for Esteban)
   const handleSaveAdminConfig = async () => {
     if (!isEsteban) return;
@@ -891,6 +958,17 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                 Plantilla Base
               </button>
             </div>
+          </div>
+
+          {/* Banner de Rango Permitido */}
+          <div className="bg-brand-primary/10 border border-brand-primary/20 text-brand-primary rounded-xl p-3 flex items-center justify-between gap-2 text-xs font-bold mb-4">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-brand-primary flex-shrink-0" />
+              <span>📌 Franja laboral permitida para asignación de turnos: <strong className="font-mono bg-brand-primary/15 px-1.5 py-0.5 rounded">{shiftStartLimit}</strong> a <strong className="font-mono bg-brand-primary/15 px-1.5 py-0.5 rounded">{shiftEndLimit}</strong>.</span>
+            </div>
+            <span className="text-[11px] text-gray-500 font-normal hidden md:inline">
+              (Máximo 12.0h netas diarias)
+            </span>
           </div>
 
           {loading ? (
@@ -1408,100 +1486,131 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
             {modalLoading ? (
               <div className="text-center py-8 text-gray-500">Cargando turnos actuales...</div>
             ) : (
-              <div className="flex flex-col gap-4 max-h-[300px] overflow-y-auto pr-1">
-                {editingSlots.length === 0 ? (
-                  <div className="text-center py-8 border border-dashed dark:border-gray-700 rounded-xl text-gray-400 dark:text-gray-500 italic text-sm">
-                    Sin turnos asignados (Día libre)
-                  </div>
-                ) : (
-                  editingSlots.map((slot, index) => {
-                    return (
-                      <div
-                        key={index}
-                        className="bg-gray-50 dark:bg-gray-850 p-4 rounded-xl border dark:border-gray-700 flex flex-col gap-3 relative animate-fadeIn"
-                      >
-                        {/* Horario de la Franja */}
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-gray-600 dark:text-gray-400 min-w-[50px]">Franja:</span>
-                          <input
-                            type="time"
-                            value={slot.start_time}
-                            onChange={(e) => handleSlotChange(index, 'start_time', e.target.value)}
-                            className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
-                          />
-                          <span className="text-xs text-gray-400">a</span>
-                          <input
-                            type="time"
-                            value={slot.end_time}
-                            onChange={(e) => handleSlotChange(index, 'end_time', e.target.value)}
-                            className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
-                          />
+              <>
+                <div className="flex flex-col gap-4 max-h-[300px] overflow-y-auto pr-1">
+                  {editingSlots.length === 0 ? (
+                    <div className="text-center py-8 border border-dashed dark:border-gray-700 rounded-xl text-gray-400 dark:text-gray-500 italic text-sm">
+                      Sin turnos asignados (Día libre)
+                    </div>
+                  ) : (
+                    editingSlots.map((slot, index) => {
+                      return (
+                        <div
+                          key={index}
+                          className="bg-gray-50 dark:bg-gray-850 p-4 rounded-xl border dark:border-gray-700 flex flex-col gap-3 relative animate-fadeIn"
+                        >
+                          {/* Horario de la Franja */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-gray-600 dark:text-gray-400 min-w-[50px]">Franja:</span>
+                            <input
+                              type="time"
+                              value={slot.start_time}
+                              onChange={(e) => handleSlotChange(index, 'start_time', e.target.value)}
+                              className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
+                            />
+                            <span className="text-xs text-gray-400">a</span>
+                            <input
+                              type="time"
+                              value={slot.end_time}
+                              onChange={(e) => handleSlotChange(index, 'end_time', e.target.value)}
+                              className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
+                            />
 
-                          <span className="text-xxs font-bold text-brand-primary bg-brand-primary/5 px-2 py-1 rounded ml-auto">
-                            {calculateSlotHours(slot).toFixed(1)} hrs netas
-                          </span>
-                        </div>
+                            <span className="text-xxs font-bold text-brand-primary bg-brand-primary/5 px-2 py-1 rounded ml-auto">
+                              {calculateSlotHours(slot).toFixed(1)} hrs netas
+                            </span>
+                          </div>
 
-                        {/* Tipo de Break */}
-                        <div className="flex items-center gap-3 w-full">
-                          <span className="text-xs font-bold text-gray-600 dark:text-gray-400 min-w-[50px]">Descanso:</span>
-                          {(() => {
-                            const [sh, sm] = slot.start_time.split(':').map(Number);
-                            const [eh, em] = slot.end_time.split(':').map(Number);
-                            const durationHours = (eh * 60 + em - (sh * 60 + sm)) / 60;
-                            const needsBreak = durationHours >= 4;
-                            
-                            if (!needsBreak) {
+                          {/* Tipo de Break */}
+                          <div className="flex items-center gap-3 w-full">
+                            <span className="text-xs font-bold text-gray-600 dark:text-gray-400 min-w-[50px]">Descanso:</span>
+                            {(() => {
+                              const [sh, sm] = slot.start_time.split(':').map(Number);
+                              const [eh, em] = slot.end_time.split(':').map(Number);
+                              const durationHours = (eh * 60 + em - (sh * 60 + sm)) / 60;
+                              const needsBreak = durationHours >= 4;
+                              
+                              if (!needsBreak) {
+                                return (
+                                  <span className="text-xxs text-gray-450 italic">
+                                    No requiere descanso (turno menor a 4 horas)
+                                  </span>
+                                );
+                              }
+                              
                               return (
-                                <span className="text-xxs text-gray-450 italic">
-                                  No requiere descanso (turno menor a 4 horas)
-                                </span>
+                                <>
+                                  <select
+                                    value={slot.break_type || 'none'}
+                                    onChange={(e) => handleSlotChange(index, 'break_type', e.target.value)}
+                                    className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
+                                  >
+                                    {durationHours < 5 && <option value="none">Sin descanso</option>}
+                                    <option value="break_30">Break (30 min)</option>
+                                    <option value="lunch_60">Almuerzo (1 hora)</option>
+                                  </select>
+
+                                  {/* Inicio del Break */}
+                                  {slot.break_type && slot.break_type !== 'none' && (
+                                    <div className="flex items-center gap-1.5 animate-fadeIn">
+                                      <span className="text-xxs font-bold text-gray-500">Hora:</span>
+                                      <input
+                                        type="time"
+                                        value={slot.break_start || ''}
+                                        onChange={(e) => handleSlotChange(index, 'break_start', e.target.value)}
+                                        className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
+                                      />
+                                    </div>
+                                  )}
+                                </>
                               );
-                            }
-                            
-                            return (
-                              <>
-                                <select
-                                  value={slot.break_type || 'none'}
-                                  onChange={(e) => handleSlotChange(index, 'break_type', e.target.value)}
-                                  className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
-                                >
-                                  {durationHours < 5 && <option value="none">Sin descanso</option>}
-                                  <option value="break_30">Break (30 min)</option>
-                                  <option value="lunch_60">Almuerzo (1 hora)</option>
-                                </select>
+                            })()}
 
-                                {/* Inicio del Break */}
-                                {slot.break_type && slot.break_type !== 'none' && (
-                                  <div className="flex items-center gap-1.5 animate-fadeIn">
-                                    <span className="text-xxs font-bold text-gray-500">Hora:</span>
-                                    <input
-                                      type="time"
-                                      value={slot.break_start || ''}
-                                      onChange={(e) => handleSlotChange(index, 'break_start', e.target.value)}
-                                      className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
-                                    />
-                                  </div>
-                                )}
-                              </>
-                            );
-                          })()}
-
-                          {/* Delete Slot Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveSlot(index)}
-                            className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-colors ml-auto"
-                            title="Eliminar franja"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                            {/* Delete Slot Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSlot(index)}
+                              className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-colors ml-auto"
+                              title="Eliminar franja"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Quick Replicate Bar */}
+                {editingSlots.length > 0 && (
+                  <div className="mt-4 p-3 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-xl flex flex-col gap-2 animate-fadeIn">
+                    <span className="text-xxs font-extrabold uppercase text-amber-800 dark:text-amber-300 flex items-center gap-1">
+                      <Zap className="w-3.5 h-3.5 text-amber-500" /> Copiar / Replicar Franjas Rápido:
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleReplicateCurrentSlotsToWeek('workdays')}
+                        disabled={modalLoading || modalSaving}
+                        className="flex items-center gap-1 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xxs px-2.5 py-1.5 rounded-lg shadow-sm transition-all disabled:opacity-50"
+                        title="Copiar estas franjas a Lunes, Martes, Miércoles, Jueves y Viernes"
+                      >
+                        <Zap className="w-3 h-3" /> Replicar a Lunes - Viernes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleReplicateCurrentSlotsToWeek('all')}
+                        disabled={modalLoading || modalSaving}
+                        className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xxs px-2.5 py-1.5 rounded-lg shadow-sm transition-all disabled:opacity-50"
+                        title="Copiar estas franjas a los 7 días de la semana"
+                      >
+                        <Copy className="w-3 h-3" /> Replicar a Toda la Semana (Lun-Dom)
+                      </button>
+                    </div>
+                  </div>
                 )}
-              </div>
+              </>
             )}
 
             {/* Modal Actions */}
@@ -1600,6 +1709,8 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
       {/* Pay Stub Modal (Desprendible de Pago) */}
       {stubModalOpen && selectedStubAgent && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
