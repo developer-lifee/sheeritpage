@@ -782,7 +782,16 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
 
   // Close Payroll Period (Only for Esteban)
   const handleClosePayroll = async (agent: PayrollAgent) => {
-    const periodDesc = selectedPeriodMode === 'range' ? `período ${startDate} al ${endDate}` : `mes ${selectedMonth}`;
+    let sDate = startDate;
+    let eDate = endDate;
+    if (selectedPeriodMode === 'month') {
+      const [yr, mo] = selectedMonth.split('-').map(Number);
+      const lastDay = new Date(yr, mo, 0).getDate();
+      sDate = `${selectedMonth}-01`;
+      eDate = `${selectedMonth}-${String(lastDay).padStart(2, '0')}`;
+    }
+
+    const periodDesc = selectedPeriodMode === 'range' ? `período ${sDate} al ${eDate}` : `mes ${selectedMonth}`;
     if (!window.confirm(`¿Seguro de cerrar/pagar la nómina de ${agent.fullname} para el ${periodDesc}? Esto archivará las horas pagadas y generará el desprendible.`)) return;
     const apiUrl = getApiUrl();
     try {
@@ -792,26 +801,22 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         body: JSON.stringify({
           email: agent.email,
           payroll_month: selectedMonth,
-          start_date: startDate,
-          end_date: endDate,
+          start_date: sDate,
+          end_date: eDate,
           total_hours: agent.total_hours,
           trial_hours: agent.trial_hours || 0,
           normal_hours: agent.normal_hours || agent.total_hours,
           hourly_rate: agent.hourly_rate,
           total_bonuses: agent.total_bonuses,
           total_payment: agent.total_payment,
-          period_label: `Período ${startDate} al ${endDate}`,
+          period_label: `Período ${sDate} al ${eDate}`,
           status: 'paid'
         })
       });
       const data = await res.json();
       if (data.success) {
-        if (data.promoted) {
-          alert(`🎉 ¡EXCELENTE! ${agent.fullname} ha sido promovido automáticamente a AGENT tras completar las ${trialHoursTarget} horas de prueba.`);
-        } else {
-          alert(`✅ ${data.message || 'Nómina cerrada correctamente.'}`);
-          setSuccess(data.message || 'Nómina cerrada correctamente.');
-        }
+        setSuccess(data.message || 'Nómina cerrada correctamente.');
+        alert(`✅ ${data.message || 'Nómina archivada y cerrada correctamente.'}`);
         fetchPayrollData();
       } else {
         alert(`❌ Error al cerrar nómina: ${data.message || data.error || 'Ocurrió un problema en el servidor.'}`);
