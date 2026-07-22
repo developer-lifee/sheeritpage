@@ -1755,16 +1755,23 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                         {/* Progreso Trial */}
                         <td className="py-4 px-4 text-center">
                           {isTrial ? (
-                            <div className="flex flex-col items-center gap-1 max-w-[120px] mx-auto">
+                            <div className="flex flex-col items-center gap-1 max-w-[130px] mx-auto">
                               <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
                                 <div
-                                  className="bg-amber-500 h-full rounded-full transition-all duration-500"
+                                  className={`h-full rounded-full transition-all duration-500 ${
+                                    trialPct >= 100 ? 'bg-emerald-500' : 'bg-amber-500'
+                                  }`}
                                   style={{ width: `${trialPct}%` }}
                                 />
                               </div>
                               <span className="text-[10px] text-gray-500 dark:text-gray-400 font-mono font-bold">
                                 {trialHist.toFixed(1)} / {trialHoursTarget} hrs ({trialPct.toFixed(0)}%)
                               </span>
+                              {trialPct >= 100 && (
+                                <span className="text-[9px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded-md mt-0.5 animate-pulse">
+                                  🎉 Meta 80h alcanzada
+                                </span>
+                              )}
                             </div>
                           ) : (
                             <span className="inline-flex items-center gap-1 text-xxs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-lg">
