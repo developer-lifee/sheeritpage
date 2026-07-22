@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, User, Plus, Trash2, Save, RefreshCw, AlertTriangle, CheckCircle, Calendar, Users, X, ChevronLeft, ChevronRight, Lock, DollarSign, Gift, Settings, ShieldAlert, FileText, Printer, Award, History, Copy, Zap, Info } from 'lucide-react';
+import { Clock, User, Plus, Trash2, Save, RefreshCw, AlertTriangle, CheckCircle, Calendar, Users, X, ChevronLeft, ChevronRight, Lock, DollarSign, Gift, Settings, ShieldAlert, FileText, Printer, Award, History, Copy, Zap, Info, Unlock } from 'lucide-react';
 
 interface Agent {
   id: number;
@@ -824,6 +824,44 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
     } catch (err: any) {
       console.error('Error closing payroll:', err);
       alert(`❌ Error de conexión al cerrar nómina: ${err.message || 'Error inesperado'}`);
+    }
+  };
+
+  // Re-open / Cancel Closed Payroll (Admin Only)
+  const handleReopenPayroll = async (agent: PayrollAgent) => {
+    let sDate = startDate;
+    let eDate = endDate;
+    if (selectedPeriodMode === 'month') {
+      const [yr, mo] = selectedMonth.split('-').map(Number);
+      const lastDay = new Date(yr, mo, 0).getDate();
+      sDate = `${selectedMonth}-01`;
+      eDate = `${selectedMonth}-${String(lastDay).padStart(2, '0')}`;
+    }
+
+    if (!window.confirm(`¿Seguro de reabrir la nómina de ${agent.fullname}? Esto cambiará su estado a BORRADOR para que puedas corregir horas, bonos o estatus.`)) return;
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/payroll/reopen`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent_id: agent.agent_id,
+          payroll_month: selectedMonth,
+          start_date: sDate,
+          end_date: eDate
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccess(data.message || 'Nómina reabierta correctamente.');
+        alert(`🔓 ${data.message || 'Nómina reabierta correctamente.'}`);
+        fetchPayrollData();
+      } else {
+        alert(`❌ Error al reabrir nómina: ${data.message || data.error}`);
+      }
+    } catch (err: any) {
+      console.error('Error reopening payroll:', err);
+      alert(`❌ Error de conexión al reabrir nómina: ${err.message}`);
     }
   };
 
@@ -1836,14 +1874,26 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                             {agent.status !== 'paid' ? (
                               <button
                                 onClick={() => handleClosePayroll(agent)}
-                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xxs px-2.5 py-1.5 rounded-lg transition-all"
+                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xxs px-2.5 py-1.5 rounded-lg transition-all shadow-xs flex items-center justify-center gap-1"
                               >
-                                Cerrar Nómina
+                                <CheckCircle className="w-3 h-3" /> Cerrar Nómina
                               </button>
                             ) : (
-                              <span className="text-xxs text-gray-400 italic flex items-center justify-center gap-1">
-                                <CheckCircle className="w-3 h-3 text-emerald-500" /> Archivado
-                              </span>
+                              <div className="flex flex-col items-center gap-1 w-full">
+                                <span className="text-xxs text-emerald-600 dark:text-emerald-400 font-bold flex items-center justify-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-md w-full">
+                                  <CheckCircle className="w-3 h-3 text-emerald-500" /> Archivado / Pagado
+                                </span>
+                                {isAdminOrSupervisor && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleReopenPayroll(agent)}
+                                    className="w-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold text-xxs px-2 py-1 rounded-lg transition-all flex items-center justify-center gap-1"
+                                    title="Reabrir nómina para hacer correcciones en horas o bonos"
+                                  >
+                                    <Unlock className="w-3 h-3" /> Reabrir Nómina
+                                  </button>
+                                )}
+                              </div>
                             )}
 
                             <button
@@ -2305,30 +2355,62 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                           ${Math.round(Number(rec.total_payment)).toLocaleString('es-CO')}
                         </td>
                         <td className="py-3 px-4 text-center">
-                          <button
-                            onClick={() => {
-                              setSelectedStubAgent({
-                                agent_id: rec.agent_id,
-                                fullname: rec.fullname,
-                                email: rec.email,
-                                role: rec.current_role || 'agent',
-                                start_date: rec.start_date,
-                                end_date: rec.end_date,
-                                total_hours: Number(rec.total_hours),
-                                trial_hours: Number(rec.trial_hours || 0),
-                                normal_hours: Number(rec.normal_hours || rec.total_hours),
-                                hourly_rate: Number(rec.hourly_rate),
-                                bonuses: [],
-                                total_bonuses: Number(rec.total_bonuses),
-                                total_payment: Number(rec.total_payment),
-                                status: 'paid'
-                              });
-                              setStubModalOpen(true);
-                            }}
-                            className="flex items-center gap-1 mx-auto text-xxs font-bold text-brand-primary hover:underline bg-brand-primary/10 px-2 py-1 rounded-lg"
-                          >
-                            <FileText className="w-3 h-3" /> Ver Desprendible
-                          </button>
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => {
+                                setSelectedStubAgent({
+                                  agent_id: rec.agent_id,
+                                  fullname: rec.fullname,
+                                  email: rec.email,
+                                  role: rec.current_role || 'agent',
+                                  start_date: rec.start_date,
+                                  end_date: rec.end_date,
+                                  total_hours: Number(rec.total_hours),
+                                  trial_hours: Number(rec.trial_hours || 0),
+                                  normal_hours: Number(rec.normal_hours || rec.total_hours),
+                                  hourly_rate: Number(rec.hourly_rate),
+                                  bonuses: [],
+                                  total_bonuses: Number(rec.total_bonuses),
+                                  total_payment: Number(rec.total_payment),
+                                  status: 'paid'
+                                });
+                                setStubModalOpen(true);
+                              }}
+                              className="flex items-center gap-1 text-xxs font-bold text-brand-primary hover:underline bg-brand-primary/10 px-2 py-1 rounded-lg"
+                            >
+                              <FileText className="w-3 h-3" /> Ver Desprendible
+                            </button>
+                            {isAdminOrSupervisor && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (!window.confirm(`¿Seguro de reabrir/cancelar este cierre de nómina de ${rec.fullname}?`)) return;
+                                  const apiUrl = getApiUrl();
+                                  try {
+                                    const res = await fetch(`${apiUrl}/api/admin/payroll/reopen`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ id: rec.id })
+                                    });
+                                    const data = await res.json();
+                                    if (data.success) {
+                                      alert(`🔓 ${data.message}`);
+                                      fetchPayrollHistory();
+                                      fetchPayrollData();
+                                    } else {
+                                      alert(`❌ Error al reabrir nómina: ${data.message || data.error}`);
+                                    }
+                                  } catch (err: any) {
+                                    alert(`❌ Error de conexión: ${err.message}`);
+                                  }
+                                }}
+                                className="flex items-center gap-1 text-xxs font-bold text-amber-700 dark:text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-2 py-1 rounded-lg transition-all"
+                                title="Reabrir/eliminar este registro cerrado para hacer correcciones"
+                              >
+                                <Unlock className="w-3 h-3" /> Reabrir
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
