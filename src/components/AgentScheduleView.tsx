@@ -231,6 +231,13 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
   const [payrollHistory, setPayrollHistory] = useState<PayrollHistoryRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState<boolean>(false);
 
+  // Drag & Drop + Copy/Paste States
+  const [selectedCell, setSelectedCell] = useState<{ email: string; dayValue: number; dayLabel: string } | null>(null);
+  const [copiedSlots, setCopiedSlots] = useState<{ slots: ScheduleSlot[]; sourceName: string; sourceDayLabel: string } | null>(null);
+  const [copyToast, setCopyToast] = useState<string | null>(null);
+  const [draggedSlotsData, setDraggedSlotsData] = useState<{ slots: ScheduleSlot[]; sourceEmail: string; sourceDay: number } | null>(null);
+  const [dragOverCell, setDragOverCell] = useState<{ email: string; dayValue: number } | null>(null);
+
   const getWeekStartParam = () => {
     return isTemplateMode ? 'default' : formatDateYMD(currentWeekDate);
   };
@@ -802,12 +809,16 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         if (data.promoted) {
           alert(`🎉 ¡EXCELENTE! ${agent.fullname} ha sido promovido automáticamente a AGENT tras completar las ${trialHoursTarget} horas de prueba.`);
         } else {
+          alert(`✅ ${data.message || 'Nómina cerrada correctamente.'}`);
           setSuccess(data.message || 'Nómina cerrada correctamente.');
         }
         fetchPayrollData();
+      } else {
+        alert(`❌ Error al cerrar nómina: ${data.message || data.error || 'Ocurrió un problema en el servidor.'}`);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error closing payroll:', err);
+      alert(`❌ Error de conexión al cerrar nómina: ${err.message || 'Error inesperado'}`);
     }
   };
 
@@ -847,6 +858,115 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
   const getAgentSlotsForDay = (agentEmail: string, dayValue: number) => {
     return allSchedules.filter((s: any) => s.email.toLowerCase() === agentEmail.toLowerCase() && s.day_of_week === dayValue);
   };
+
+  const executePasteSlots = async (
+    targetEmail: string,
+    targetDayValue: number,
+    slotsToPaste: ScheduleSlot[],
+    agentNameLabel: string,
+    dayLabel: string
+  ) => {
+    const apiUrl = getApiUrl();
+    const weekStart = getWeekStartParam();
+    
+    try {
+      const resSchedule = await fetch(`${apiUrl}/api/admin/agents/schedule?email=${encodeURIComponent(targetEmail)}&week_start=${weekStart}`);
+      const dataSchedule = await resSchedule.json();
+      
+      let fullSchedule: ScheduleSlot[] = [];
+      if (dataSchedule.success && Array.isArray(dataSchedule.schedule)) {
+        fullSchedule = dataSchedule.schedule
+          .filter((s: any) => s.day_of_week !== targetDayValue)
+          .map((s: any) => ({
+            day_of_week: s.day_of_week,
+            start_time: s.start_time.substring(0, 5),
+            end_time: s.end_time.substring(0, 5),
+            break_type: s.break_type || 'none',
+            break_start: s.break_start ? s.break_start.substring(0, 5) : ''
+          }));
+      }
+
+      const cleanSlots = slotsToPaste.map(s => ({
+        day_of_week: targetDayValue,
+        start_time: s.start_time.substring(0, 5),
+        end_time: s.end_time.substring(0, 5),
+        break_type: s.break_type || 'none',
+        break_start: s.break_start ? s.break_start.substring(0, 5) : ''
+      }));
+
+      const mergedSchedule = [...fullSchedule, ...cleanSlots];
+
+      const resSave = await fetch(`${apiUrl}/api/admin/agents/schedule/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: targetEmail,
+          schedule: mergedSchedule,
+          week_start: weekStart,
+          requester_email: agentEmail,
+          day_of_week: targetDayValue
+        })
+      });
+      
+      const dataSave = await resSave.json();
+      if (dataSave.success) {
+        setCopyToast(`⚡ ¡Franja pegada con éxito en ${dayLabel} para ${agentNameLabel}!`);
+        setTimeout(() => setCopyToast(null), 3500);
+        fetchAllSchedules();
+        fetchPayrollData();
+      } else {
+        alert(dataSave.message || 'Error al pegar franja.');
+      }
+    } catch (err: any) {
+      console.error('Error pasting slot:', err);
+      alert('Error de conexión al pegar la franja.');
+    }
+  };
+
+  // Keyboard Copy (Ctrl+C / Cmd+C) & Paste (Ctrl+V / Cmd+V) Listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+      
+      // Ctrl+C / Cmd+C
+      if (isCmdOrCtrl && e.key.toLowerCase() === 'c') {
+        if (selectedCell) {
+          const slots = getAgentSlotsForDay(selectedCell.email, selectedCell.dayValue);
+          if (slots.length > 0) {
+            const agentObj = agents.find(a => a.email.toLowerCase() === selectedCell.email.toLowerCase());
+            const agentName = agentObj ? agentObj.fullname : selectedCell.email;
+            setCopiedSlots({
+              slots,
+              sourceName: agentName,
+              sourceDayLabel: selectedCell.dayLabel
+            });
+            setCopyToast(`📋 Franja de ${selectedCell.dayLabel} (${slots.map(s => `${s.start_time.substring(0, 5)}-${s.end_time.substring(0, 5)}`).join(', ')}) copiada. Selecciona otro día y presiona Ctrl+V.`);
+            setTimeout(() => setCopyToast(null), 4000);
+          } else {
+            setCopyToast(`⚠️ El día ${selectedCell.dayLabel} está libre. No hay franjas para copiar.`);
+            setTimeout(() => setCopyToast(null), 3000);
+          }
+        }
+      }
+      
+      // Ctrl+V / Cmd+V
+      if (isCmdOrCtrl && e.key.toLowerCase() === 'v') {
+        if (selectedCell && copiedSlots) {
+          const targetAgent = agents.find(a => a.email.toLowerCase() === selectedCell.email.toLowerCase());
+          const isEditable = role === 'admin' || selectedCell.email.toLowerCase() === agentEmail.toLowerCase();
+          if (isEditable && targetAgent) {
+            executePasteSlots(selectedCell.email, selectedCell.dayValue, copiedSlots.slots, targetAgent.fullname, selectedCell.dayLabel);
+          } else if (!isEditable) {
+            setCopyToast('⚠️ Solo puedes modificar tu propio horario.');
+            setTimeout(() => setCopyToast(null), 3000);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedCell, copiedSlots, agents, role, agentEmail]);
 
   const getFormattedWeekLabel = () => {
     if (isTemplateMode) return 'Plantilla / Horario Base';
@@ -978,6 +1098,68 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
             </span>
           </div>
 
+          {/* Toast & Toolbar de Arrastre / Copiar / Pegar */}
+          {copyToast && (
+            <div className="bg-emerald-600 text-white font-bold text-xs p-3 rounded-xl mb-4 shadow-lg flex items-center justify-between animate-fadeIn">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-amber-300 animate-bounce" />
+                <span>{copyToast}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCopyToast(null)}
+                className="text-white/80 hover:text-white font-mono text-xs ml-2"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {selectedCell && (
+            <div className="bg-brand-primary/10 border border-brand-primary/30 p-2.5 rounded-xl mb-4 flex flex-wrap items-center justify-between gap-2 text-xs animate-fadeIn">
+              <div className="flex items-center gap-2 font-bold text-brand-primary">
+                <Calendar className="w-4 h-4" />
+                <span>Celda seleccionada: <strong>{selectedCell.dayLabel}</strong> ({agents.find(a => a.email.toLowerCase() === selectedCell.email.toLowerCase())?.fullname || selectedCell.email})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const slots = getAgentSlotsForDay(selectedCell.email, selectedCell.dayValue);
+                    if (slots.length > 0) {
+                      const agentObj = agents.find(a => a.email.toLowerCase() === selectedCell.email.toLowerCase());
+                      setCopiedSlots({
+                        slots,
+                        sourceName: agentObj ? agentObj.fullname : selectedCell.email,
+                        sourceDayLabel: selectedCell.dayLabel
+                      });
+                      setCopyToast(`📋 Franja de ${selectedCell.dayLabel} copiada. Selecciona otro día y presiona Ctrl+V o pulsa "Pegar Franja"`);
+                    } else {
+                      setCopyToast(`⚠️ El día ${selectedCell.dayLabel} no tiene turnos.`);
+                    }
+                  }}
+                  className="bg-brand-primary text-white font-bold px-2.5 py-1 rounded-lg hover:bg-brand-dark transition-all flex items-center gap-1 text-xxs active:scale-95 shadow-sm"
+                >
+                  <Copy className="w-3 h-3" /> Copiar Franja (Ctrl+C)
+                </button>
+                {copiedSlots && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const targetAgent = agents.find(a => a.email.toLowerCase() === selectedCell.email.toLowerCase());
+                      if (targetAgent) {
+                        executePasteSlots(selectedCell.email, selectedCell.dayValue, copiedSlots.slots, targetAgent.fullname, selectedCell.dayLabel);
+                      }
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 text-xxs active:scale-95 shadow-sm"
+                  >
+                    <Zap className="w-3 h-3" /> Pegar Franja Copiada (Ctrl+V)
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {loading ? (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400 font-light">
               Cargando cuadrante de colaboradores...
@@ -1038,18 +1220,47 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                           {/* Week Days */}
                           {DAYS_OF_WEEK.map(day => {
                             const slots = getAgentSlotsForDay(agent.email, day.value);
-                            
+                            const isSelected = selectedCell?.email.toLowerCase() === agent.email.toLowerCase() && selectedCell?.dayValue === day.value;
+                            const isDragOver = dragOverCell?.email.toLowerCase() === agent.email.toLowerCase() && dragOverCell?.dayValue === day.value;
+
                             return (
                               <td
                                 key={day.value}
-                                onClick={() => handleCellClick(agent, day)}
-                                className={`py-3 px-2 text-center align-middle transition-all ${
-                                  isEditableRow
+                                onClick={() => {
+                                  setSelectedCell({ email: agent.email, dayValue: day.value, dayLabel: day.label });
+                                }}
+                                onDoubleClick={() => handleCellClick(agent, day)}
+                                onDragOver={(e) => {
+                                  if (isEditableRow) {
+                                    e.preventDefault();
+                                    setDragOverCell({ email: agent.email, dayValue: day.value });
+                                  }
+                                }}
+                                onDragLeave={() => setDragOverCell(null)}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  setDragOverCell(null);
+                                  if (isEditableRow && draggedSlotsData) {
+                                    executePasteSlots(agent.email, day.value, draggedSlotsData.slots, agent.fullname, day.label);
+                                  }
+                                }}
+                                className={`py-3 px-2 text-center align-middle transition-all relative ${
+                                  isDragOver
+                                    ? 'bg-emerald-500/20 border-2 border-dashed border-emerald-500 scale-102 shadow-lg'
+                                    : isSelected
+                                    ? 'ring-2 ring-brand-primary bg-brand-primary/10'
+                                    : isEditableRow
                                     ? 'cursor-pointer hover:bg-brand-primary/5 dark:hover:bg-brand-primary/10'
                                     : 'cursor-not-allowed opacity-90'
                                 }`}
+                                title={isEditableRow ? "Un toque: Seleccionar (Ctrl+C / Ctrl+V) | Arrastrar franja | Doble clic: Editar" : "Solo lectura"}
                               >
-                                {slots.length === 0 ? (
+                                {isDragOver ? (
+                                  <div className="text-emerald-700 dark:text-emerald-300 font-bold text-xxs flex flex-col items-center gap-0.5 animate-pulse">
+                                    <Zap className="w-4 h-4 text-emerald-500" />
+                                    <span>Soltar aquí</span>
+                                  </div>
+                                ) : slots.length === 0 ? (
                                   <span className="text-gray-350 dark:text-gray-600 italic text-xxs font-light hover:text-brand-primary">
                                     {isEditableRow ? '+ Libre' : 'Libre'}
                                   </span>
@@ -1058,7 +1269,14 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                                     {slots.map((s: any, idx: number) => (
                                       <span
                                         key={idx}
-                                        className="inline-flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-xxs font-semibold bg-brand-primary/10 text-brand-primary border border-brand-primary/20 dark:bg-brand-primary/20 dark:text-brand-light font-mono min-w-[90px]"
+                                        draggable={isEditableRow}
+                                        onDragStart={(e) => {
+                                          e.stopPropagation();
+                                          e.dataTransfer.setData('text/plain', JSON.stringify(slots));
+                                          setDraggedSlotsData({ slots, sourceEmail: agent.email, sourceDay: day.value });
+                                        }}
+                                        className="inline-flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-xxs font-semibold bg-brand-primary/10 text-brand-primary border border-brand-primary/20 dark:bg-brand-primary/20 dark:text-brand-light font-mono min-w-[90px] cursor-grab active:cursor-grabbing hover:shadow-md transition-all"
+                                        title="Mantén presionado y arrastra para copiar a otro día"
                                       >
                                         <span className="flex items-center gap-1">
                                           <Clock className="w-2.5 h-2.5" />
@@ -1160,17 +1378,41 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                       {/* Days Grid in Mobile Card */}
                       <div className="grid grid-cols-1 gap-2">
                         <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">
-                          Días de la Semana (Toca para editar):
+                          Días de la Semana (Toca para editar / arrastrar / Ctrl+C/V):
                         </span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {DAYS_OF_WEEK.map(day => {
                             const slots = getAgentSlotsForDay(agent.email, day.value);
+                            const isSelected = selectedCell?.email.toLowerCase() === agent.email.toLowerCase() && selectedCell?.dayValue === day.value;
+                            const isDragOver = dragOverCell?.email.toLowerCase() === agent.email.toLowerCase() && dragOverCell?.dayValue === day.value;
+
                             return (
                               <div
                                 key={day.value}
-                                onClick={() => handleCellClick(agent, day)}
+                                onClick={() => {
+                                  setSelectedCell({ email: agent.email, dayValue: day.value, dayLabel: day.label });
+                                }}
+                                onDoubleClick={() => handleCellClick(agent, day)}
+                                onDragOver={(e) => {
+                                  if (isEditableRow) {
+                                    e.preventDefault();
+                                    setDragOverCell({ email: agent.email, dayValue: day.value });
+                                  }
+                                }}
+                                onDragLeave={() => setDragOverCell(null)}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  setDragOverCell(null);
+                                  if (isEditableRow && draggedSlotsData) {
+                                    executePasteSlots(agent.email, day.value, draggedSlotsData.slots, agent.fullname, day.label);
+                                  }
+                                }}
                                 className={`p-2.5 rounded-xl border flex items-center justify-between transition-all ${
-                                  isEditableRow
+                                  isDragOver
+                                    ? 'bg-emerald-500/20 border-2 border-dashed border-emerald-500'
+                                    : isSelected
+                                    ? 'ring-2 ring-brand-primary bg-brand-primary/10 border-brand-primary'
+                                    : isEditableRow
                                     ? 'cursor-pointer active:scale-98 bg-gray-50 hover:bg-brand-primary/5 dark:bg-gray-800 dark:hover:bg-gray-750 border-gray-200 dark:border-gray-700'
                                     : 'cursor-not-allowed opacity-90 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
                                 }`}
@@ -1187,7 +1429,11 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                                 </div>
 
                                 <div>
-                                  {slots.length === 0 ? (
+                                  {isDragOver ? (
+                                    <span className="text-xxs font-bold text-emerald-600 dark:text-emerald-300 animate-pulse">
+                                      📥 Soltar aquí
+                                    </span>
+                                  ) : slots.length === 0 ? (
                                     <span className="text-xxs text-gray-400 italic">
                                       {isEditableRow ? '+ Asignar' : 'Libre'}
                                     </span>
@@ -1196,7 +1442,13 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                                       {slots.map((s: any, idx: number) => (
                                         <span
                                           key={idx}
-                                          className="text-xxs font-mono font-bold text-brand-primary bg-brand-primary/10 px-2 py-0.5 rounded-lg border border-brand-primary/20"
+                                          draggable={isEditableRow}
+                                          onDragStart={(e) => {
+                                            e.stopPropagation();
+                                            e.dataTransfer.setData('text/plain', JSON.stringify(slots));
+                                            setDraggedSlotsData({ slots, sourceEmail: agent.email, sourceDay: day.value });
+                                          }}
+                                          className="text-xxs font-mono font-bold text-brand-primary bg-brand-primary/10 px-2 py-0.5 rounded-lg border border-brand-primary/20 cursor-grab active:cursor-grabbing"
                                         >
                                           {s.start_time.substring(0, 5)} - {s.end_time.substring(0, 5)}
                                         </span>
