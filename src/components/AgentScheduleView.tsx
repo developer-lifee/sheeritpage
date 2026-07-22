@@ -1103,7 +1103,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
               <span>📌 Franja laboral permitida para asignación de turnos: <strong className="font-mono bg-brand-primary/15 px-1.5 py-0.5 rounded">{shiftStartLimit}</strong> a <strong className="font-mono bg-brand-primary/15 px-1.5 py-0.5 rounded">{shiftEndLimit}</strong>.</span>
             </div>
             <span className="text-[11px] text-gray-500 font-normal hidden md:inline">
-              (Máximo 12.0h netas diarias)
+              (Máximo {maxHoursLimit.toFixed(1)}h netas diarias)
             </span>
           </div>
 
