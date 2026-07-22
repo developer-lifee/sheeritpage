@@ -590,6 +590,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         setEditingAgent(null);
         setEditingDay(null);
         fetchAllSchedules();
+        fetchPayrollData();
       } else {
         setModalError(dataSave.message || 'Error al guardar.');
       }
