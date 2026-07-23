@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
+import { useWhatsAppContact } from '../hooks/useWhatsAppContact';
 
 export const RayTracingSupportPage: React.FC = () => {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const { getWaLink } = useWhatsAppContact();
 
   const SUPPORT_EMAIL = 'estebanavila182@outlook.com';
-  const WHATSAPP_NUMBER = '573107946794';
 
   const faqItems = [
     {
@@ -135,7 +136,7 @@ export const RayTracingSupportPage: React.FC = () => {
 
             {/* WhatsApp Card */}
             <a
-              href={`https://wa.me/${WHATSAPP_NUMBER}?text=Hola%2C%20necesito%20ayuda%20con%20Ray%20Tracing%20Game`}
+              href={getWaLink('Hola, necesito ayuda con Ray Tracing Game')}
               target="_blank"
               rel="noopener noreferrer"
               className="group block"

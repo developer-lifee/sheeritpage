@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useWhatsAppContact } from '../hooks/useWhatsAppContact';
 
 // Generar los pasos posibles para el slider
 const generateSteps = () => {
@@ -52,13 +53,14 @@ export function InvestmentCard() {
     return benefits;
   };
 
+  const { getWaLink } = useWhatsAppContact();
+
   const handleOpenWhatsApp = () => {
     let message = `Hola, estoy interesado en comprar participación de la franquicia de cafe por un monto de ${formatPrice(totalAmount)}.`;
     if (totalAmount >= 1000000) {
       message += ` Vi que esto corresponde al ${equityPercentage.toFixed(2)}% de equity.`;
     }
-    const url = `https://api.whatsapp.com/send?phone=573107946794&text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    window.open(getWaLink(message), '_blank');
   };
 
   const handleOpenWhatsAppSheerit = () => {
@@ -66,9 +68,7 @@ export function InvestmentCard() {
     if (totalAmount >= 1000000) {
       message += ` Corresponde al ${equityPercentage.toFixed(2)}% de equity.`;
     }
-    // Number of Sheerit (from PlatformCard)
-    const url = `https://api.whatsapp.com/send?phone=573107946794&text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    window.open(getWaLink(message), '_blank');
   };
 
   const isBroken = totalAmount >= 10000000;

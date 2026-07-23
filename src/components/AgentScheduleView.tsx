@@ -185,6 +185,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
   const [maxHoursLimit, setMaxHoursLimit] = useState<number>(10);
   const [shiftStartLimit, setShiftStartLimit] = useState<string>('08:00');
   const [shiftEndLimit, setShiftEndLimit] = useState<string>('22:00');
+  const [whatsappContactNumber, setWhatsappContactNumber] = useState<string>('573118587974');
   const [updatingConfig, setUpdatingConfig] = useState(false);
   
   // Week Pager State
@@ -274,6 +275,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         setMaxHoursLimit(Number(data.max_hours_limit || 10));
         setShiftStartLimit(data.shift_start_limit || '08:00');
         setShiftEndLimit(data.shift_end_limit || '22:00');
+        setWhatsappContactNumber(data.whatsapp_contact_number || '573118587974');
       }
     } catch (err) {
       console.error('Error fetching support schedule config:', err);
@@ -705,7 +707,8 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         trial_hours_target: trialHoursTarget,
         max_hours_limit: maxHoursLimit,
         shift_start_limit: shiftStartLimit,
-        shift_end_limit: shiftEndLimit
+        shift_end_limit: shiftEndLimit,
+        whatsapp_contact_number: whatsappContactNumber
       };
 
       // 3. Save
@@ -1916,6 +1919,81 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Configuración Global del Sistema (Solo Esteban) */}
+          {isEsteban && (
+            <div className="mt-8 bg-white dark:bg-gray-800 p-6 rounded-2xl border dark:border-gray-700 shadow-xs">
+              <h3 className="text-base font-extrabold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                <Settings className="w-5 h-5 text-brand-primary" /> Configuración Global del Sitio y Tarifas
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">
+                Configura el número oficial de WhatsApp que reciben los clientes en el sitio web y las tarifas de nómina.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {/* Número WhatsApp Contacto */}
+                <div className="bg-gray-50 dark:bg-gray-850 p-4 rounded-xl border dark:border-gray-700">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-200 mb-1">
+                    📱 WhatsApp Oficial de Contacto (Web)
+                  </label>
+                  <input
+                    type="text"
+                    value={whatsappContactNumber}
+                    onChange={(e) => setWhatsappContactNumber(e.target.value)}
+                    placeholder="Ej. 573118587974"
+                    className="w-full p-2.5 text-xs font-mono font-bold rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1.5 leading-relaxed">
+                    Número al cual dirigirán los botones flotantes de WhatsApp, enlaces de ofertas y pie de página de Sheerit.
+                  </p>
+                </div>
+
+                {/* Valor Hora Normal */}
+                <div className="bg-gray-50 dark:bg-gray-850 p-4 rounded-xl border dark:border-gray-700">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-200 mb-1">
+                    💵 Valor Hora Agente Oficial (COP)
+                  </label>
+                  <input
+                    type="number"
+                    value={hourlyRate}
+                    onChange={(e) => setHourlyRate(Number(e.target.value))}
+                    className="w-full p-2.5 text-xs font-mono font-bold rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1.5">
+                    Tarifa por hora para asesores graduados ($8,333/h).
+                  </p>
+                </div>
+
+                {/* Valor Hora Prueba */}
+                <div className="bg-gray-50 dark:bg-gray-850 p-4 rounded-xl border dark:border-gray-700">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-200 mb-1">
+                    🌱 Valor Hora Período de Prueba (COP)
+                  </label>
+                  <input
+                    type="number"
+                    value={trialHourlyRate}
+                    onChange={(e) => setTrialHourlyRate(Number(e.target.value))}
+                    className="w-full p-2.5 text-xs font-mono font-bold rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1.5">
+                    Tarifa por hora para los primeros 80h de prueba ($4,000/h).
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 flex justify-end">
+                <button
+                  type="button"
+                  disabled={updatingConfig}
+                  onClick={handleSaveAdminConfig}
+                  className="px-5 py-2.5 bg-brand-primary hover:bg-brand-dark text-white font-bold text-xs rounded-xl shadow-xs transition-all disabled:opacity-50 flex items-center gap-2 active:scale-95 cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  {updatingConfig ? 'Guardando Ajustes...' : '💾 Guardar Configuración Global'}
+                </button>
+              </div>
             </div>
           )}
         </>

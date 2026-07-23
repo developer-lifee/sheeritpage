@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useWhatsAppContact } from '../hooks/useWhatsAppContact';
 interface Step {
   text: string;
 }
@@ -39,7 +40,7 @@ export function SupportSection() {
       .catch(err => console.error('Error loading support data:', err));
   }, []);
 
-  const WHATSAPP_NUMBER = "573107946794"; // From previous WhatsAppButton component
+  const { getWaLink } = useWhatsAppContact();
 
   const handleIssueSelect = (issue: Issue) => {
     setSelectedIssue(issue);
@@ -47,8 +48,7 @@ export function SupportSection() {
 
   const handleContactSupport = () => {
     if (selectedIssue) {
-      const message = encodeURIComponent(selectedIssue.whatsappMessage);
-      window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank');
+      window.open(getWaLink(selectedIssue.whatsappMessage), '_blank');
     }
   };
 

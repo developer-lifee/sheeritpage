@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useComboCart } from '../hooks/useComboCart';
+import { useWhatsAppContact } from '../hooks/useWhatsAppContact';
 import { X, ShoppingCart } from 'lucide-react';
 import { CustomerFormModal } from './CustomerFormModal';
 import { calculatePSEFee } from '../utils/fees';
@@ -167,14 +168,15 @@ export function ComboMenu() {
     setShowCustomerForm(true);
   };
 
+  const { getWaLink } = useWhatsAppContact();
+
   const handleWhatsAppClick = () => {
     const total = calculateTotal();
     const selectedPlanNames = getSelectedPlanNamesFlattened();
     const mesStr = duration === '1' ? '1 mes' : `${duration} meses`;
     const message = `Hola, estoy interesado en el siguiente combo por ${mesStr}: ${selectedPlanNames.join(', ')}. Precio total: ${formatPrice(total)}`;
-    const encodedMessage = encodeURIComponent(message);
     try {
-      window.open(`https://api.whatsapp.com/send?phone=573107946794&text=${encodedMessage}`, '_blank');
+      window.open(getWaLink(message), '_blank');
     } catch (err) {
       console.error('No se pudo abrir WhatsApp', err);
     }

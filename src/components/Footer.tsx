@@ -1,8 +1,10 @@
 import React from 'react';
 import { Facebook, Instagram, Linkedin, FileText } from 'lucide-react';
 import { TikTok } from './icons/TikTok';
+import { useWhatsAppContact } from '../hooks/useWhatsAppContact';
 
 export function Footer() {
+  const { getFormattedPhone } = useWhatsAppContact();
   return (
     <footer className="bg-brand-primary dark:bg-gray-800 text-white py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -68,7 +70,7 @@ export function Footer() {
           <div>
             <h4 className="text-lg font-semibold mb-4">Contacto</h4>
             <ul className="space-y-2 text-white/80">
-              <li>WhatsApp: +57 3107946794</li>
+              <li>WhatsApp: {getFormattedPhone()}</li>
               <li>Horario Automático: 24/7</li>
               <li>Horario Humano: 10:00 AM - 6:00 PM</li>
             </ul>

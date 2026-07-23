@@ -1,6 +1,8 @@
 import React from 'react';
+import { useWhatsAppContact } from '../hooks/useWhatsAppContact';
 
 export const RayTracingPrivacyPage: React.FC = () => {
+  const { getWaLink, getFormattedPhone } = useWhatsAppContact();
   const lastUpdated = '14 de julio de 2026';
 
   return (
@@ -144,7 +146,7 @@ export const RayTracingPrivacyPage: React.FC = () => {
                   </p>
                   <p className="text-sm">
                     <span className="text-gray-500">💬 WhatsApp:</span>{' '}
-                    <a href="https://wa.me/573107946794" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 font-mono">+57 310 794 6794</a>
+                    <a href={getWaLink()} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 font-mono">{getFormattedPhone()}</a>
                   </p>
                 </div>
               </div>
