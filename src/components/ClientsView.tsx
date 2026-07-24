@@ -229,11 +229,14 @@ export const ClientsView: React.FC = () => {
 
     const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-    const sendSingle = async (phone: string, type: 'custom' | 'credentials' | 'payment', messageText?: string) => {
+    const sendSingle = async (phone: string, type: 'custom' | 'credentials' | 'payment', messageText?: string, platformFilter?: string) => {
         const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
         const body: any = { phone, type, password: 'admin123' };
         if (type === 'custom') {
             body.message = messageText;
+        }
+        if (platformFilter) {
+            body.platform = platformFilter;
         }
         const res = await fetch(`${apiUrl}/api/admin/actions/send-info`, {
             method: 'POST',
@@ -297,7 +300,7 @@ export const ClientsView: React.FC = () => {
                         .replace(/{Vencimiento}/g, formatExcelDate(client.deben || client.vencimiento));
                 }
 
-                const res = await sendSingle(phone, messageType, finalMessage);
+                const res = await sendSingle(phone, messageType, finalMessage, filterService || client.Streaming);
                 
                 if (res.success) {
                     successCount++;
