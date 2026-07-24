@@ -20,6 +20,49 @@ function formatExcelDate(excelDate: any): string {
     return str;
 }
 
+function formatServiceDetails(client: any): string {
+    if (!client) return '';
+    const streaming = (client.Streaming || client.Plataforma || 'Servicio').toString().trim();
+    const streamingUpper = streaming.toUpperCase();
+    const streamingLower = streaming.toLowerCase();
+
+    const accountEmail = (client.correo || client.Correo || client.account_email || '').toString().trim();
+    const password = (client.contraseña || client.Contraseña || client.password || client.clave || client.Clave || '').toString().trim();
+    const pin = (client["pin perfil"] || client.pin || client.pin_perfil || '').toString().trim();
+    const customerMail = (client["customer mail"] || client.customerMail || client["Customer Mail"] || '').toString().trim();
+
+    const isFamilyOrInvitation = streamingLower.includes('youtube') ||
+        streamingLower.includes('apple') ||
+        streamingLower.includes('spotify familiar') ||
+        streamingLower.includes('extra');
+
+    let lines = [streamingUpper];
+
+    if (isFamilyOrInvitation) {
+        if (customerMail) {
+            lines.push(`📧 Correo registrado: ${customerMail}`);
+            lines.push(`📌 Estado: Acceso por invitación / perfil propio`);
+        } else if (accountEmail) {
+            lines.push(`📧 Correo: ${accountEmail}`);
+            if (password && password !== 'N/A') {
+                lines.push(`🔑 Contraseña: ${password}`);
+            }
+        }
+    } else {
+        if (accountEmail) {
+            lines.push(`📧 Correo: ${accountEmail}`);
+        }
+        if (password && password !== 'N/A') {
+            lines.push(`🔑 Contraseña: ${password}`);
+        }
+        if (pin) {
+            lines.push(`📍 Pin Perfil: ${pin}`);
+        }
+    }
+
+    return lines.join('\n');
+}
+
 const getDaysRemaining = (excelDate: any) => {
     if (!excelDate) return 999;
     const str = excelDate.toString().trim();
@@ -247,7 +290,10 @@ export const ClientsView: React.FC = () => {
                 if (messageType === 'custom') {
                     finalMessage = finalMessage
                         .replace(/{Nombre}/g, clientName)
-                        .replace(/{Servicio}/g, client.Streaming || '')
+                        .replace(/{Servicio}/g, formatServiceDetails(client))
+                        .replace(/{Correo}/g, client.correo || client.Correo || client.account_email || client["customer mail"] || client.customerMail || '')
+                        .replace(/{Contraseña}/g, client.contraseña || client.Contraseña || client.password || client.clave || '(Acceso por invitación/perfil propio)')
+                        .replace(/{Pin}/g, client["pin perfil"] || client.pin || client.pin_perfil || '')
                         .replace(/{Vencimiento}/g, formatExcelDate(client.deben || client.vencimiento));
                 }
 
@@ -585,7 +631,9 @@ export const ClientsView: React.FC = () => {
                                     <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide self-center mr-1">Insertar:</span>
                                     {[
                                         { label: '👤 Nombre', value: '{Nombre}', color: 'from-violet-500 to-purple-600' },
-                                        { label: '📺 Servicio', value: '{Servicio}', color: 'from-blue-500 to-cyan-600' },
+                                        { label: '📺 Servicio Completo', value: '{Servicio}', color: 'from-blue-500 to-cyan-600' },
+                                        { label: '📧 Correo', value: '{Correo}', color: 'from-emerald-500 to-teal-600' },
+                                        { label: '🔑 Contraseña', value: '{Contraseña}', color: 'from-pink-500 to-rose-600' },
                                         { label: '📅 Vencimiento', value: '{Vencimiento}', color: 'from-orange-500 to-amber-600' },
                                     ].map(chip => (
                                         <button

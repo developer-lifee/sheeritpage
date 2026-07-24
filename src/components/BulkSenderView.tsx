@@ -36,6 +36,49 @@ Puedes renovar realizando tu transferencia usando nuestra *Llave Bre-V:* \`00873
 
 Una vez realizado, envíanos el comprobante por este medio. ¡Gracias!`;
 
+function formatServiceDetails(client: any): string {
+  if (!client) return '';
+  const streaming = (client.Streaming || client.Plataforma || 'Servicio').toString().trim();
+  const streamingUpper = streaming.toUpperCase();
+  const streamingLower = streaming.toLowerCase();
+
+  const accountEmail = (client.correo || client.Correo || client.account_email || '').toString().trim();
+  const password = (client.contraseña || client.Contraseña || client.password || client.clave || client.Clave || '').toString().trim();
+  const pin = (client["pin perfil"] || client.pin || client.pin_perfil || '').toString().trim();
+  const customerMail = (client["customer mail"] || client.customerMail || client["Customer Mail"] || '').toString().trim();
+
+  const isFamilyOrInvitation = streamingLower.includes('youtube') ||
+    streamingLower.includes('apple') ||
+    streamingLower.includes('spotify familiar') ||
+    streamingLower.includes('extra');
+
+  let lines = [streamingUpper];
+
+  if (isFamilyOrInvitation) {
+    if (customerMail) {
+      lines.push(`📧 Correo registrado: ${customerMail}`);
+      lines.push(`📌 Estado: Acceso por invitación / perfil propio`);
+    } else if (accountEmail) {
+      lines.push(`📧 Correo: ${accountEmail}`);
+      if (password && password !== 'N/A') {
+        lines.push(`🔑 Contraseña: ${password}`);
+      }
+    }
+  } else {
+    if (accountEmail) {
+      lines.push(`📧 Correo: ${accountEmail}`);
+    }
+    if (password && password !== 'N/A') {
+      lines.push(`🔑 Contraseña: ${password}`);
+    }
+    if (pin) {
+      lines.push(`📍 Pin Perfil: ${pin}`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
 export const BulkSenderView: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'clients' | 'groups'>('clients');
   const [clients, setClients] = useState<Client[]>([]);
@@ -286,8 +329,8 @@ export const BulkSenderView: React.FC = () => {
 
         const finalMessage = customMessage
           .replace(/{Nombre}/g, clientName)
-          .replace(/{Servicio}/g, client.Streaming || 'N/A')
-          .replace(/{Correo}/g, client.correo || 'N/A')
+          .replace(/{Servicio}/g, formatServiceDetails(client))
+          .replace(/{Correo}/g, client.correo || client.Correo || client["customer mail"] || client.customerMail || 'N/A')
           .replace(/{Contraseña}/g, pass)
           .replace(/{Perfil}/g, client.Nombre || 'N/A')
           .replace(/{Vencimiento}/g, venc);
