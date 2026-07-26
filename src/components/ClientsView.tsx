@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle } from 'lucide-react';
+import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle, Calendar } from 'lucide-react';
 
 function formatExcelDate(excelDate: any): string {
     if (!excelDate) return '-';
@@ -120,6 +120,48 @@ export const ClientsView: React.FC = () => {
         notes: string;
     } | null>(null);
     const [savingNotes, setSavingNotes] = useState(false);
+
+    // Expiration date editing state
+    const [editingDateClient, setEditingDateClient] = useState<{ rowKey: string; rowNumber?: number; phone: string; streaming: string; date: string } | null>(null);
+    const [isSavingDate, setIsSavingDate] = useState(false);
+
+    const saveNewExpirationDate = async (clientRow: any) => {
+        if (!editingDateClient || !editingDateClient.date) return;
+        setIsSavingDate(true);
+        try {
+            const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+            const res = await fetch(`${apiUrl}/api/admin/client/update-expiration`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    rowNumber: editingDateClient.rowNumber || clientRow._rowNumber,
+                    phone: editingDateClient.phone,
+                    streaming: editingDateClient.streaming,
+                    newDate: editingDateClient.date,
+                    password: 'admin123'
+                })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                setClients(prev => prev.map(c => {
+                    const cPhone = (c.numero || c.Numero || '').toString().replace(/\D/g, '');
+                    if (cPhone === editingDateClient.phone && c.Streaming === editingDateClient.streaming) {
+                        return { ...c, deben: editingDateClient.date, vencimiento: editingDateClient.date };
+                    }
+                    return c;
+                }));
+                setEditingDateClient(null);
+                alert("✅ Fecha de vencimiento actualizada correctamente.");
+            } else {
+                alert(`❌ Error actualizando vencimiento: ${data.message || data.error}`);
+            }
+        } catch (err: any) {
+            alert(`❌ Error de red: ${err.message}`);
+        } finally {
+            setIsSavingDate(false);
+        }
+    };
 
     // Ref for closing popovers on click outside
     const popoverRef = useRef<HTMLDivElement>(null);
@@ -959,14 +1001,65 @@ export const ClientsView: React.FC = () => {
                                                 </td>
                                                 <td data-label="Cuenta / Correo" className="py-3.5 px-4 text-sm text-gray-500 dark:text-gray-400 break-all">{c.correo || '-'}</td>
                                                 <td data-label="Vencimiento" className="py-3.5 px-4 text-sm font-mono dark:text-gray-300">
-                                                    <div className="flex flex-col">
-                                                        <span className="font-semibold">{formatExcelDate(c.deben || c.vencimiento)}</span>
-                                                        {statusText && (
-                                                            <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full mt-1.5 font-bold w-fit ${badgeBg} ${badgeColor}`}>
-                                                                {statusText}
-                                                            </span>
-                                                        )}
-                                                    </div>
+                                                     {editingDateClient && editingDateClient.rowKey === `${phone}_${c.Streaming}_${i}` ? (
+                                                         <div className="flex flex-col gap-1.5 p-2 bg-purple-50 dark:bg-purple-900/30 rounded-xl border border-purple-300 dark:border-purple-700 animate-fadeIn">
+                                                             <label className="text-[10px] font-bold text-purple-700 dark:text-purple-300 uppercase">Editar Vencimiento:</label>
+                                                             <input
+                                                                 type="date"
+                                                                 value={editingDateClient.date}
+                                                                 onChange={(e) => setEditingDateClient({ ...editingDateClient, date: e.target.value })}
+                                                                 className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                             />
+                                                             <div className="flex gap-1.5 mt-1">
+                                                                 <button
+                                                                     disabled={isSavingDate}
+                                                                     onClick={() => saveNewExpirationDate(c)}
+                                                                     className="flex-1 py-1 px-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1 disabled:opacity-50"
+                                                                 >
+                                                                     {isSavingDate ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                                                                     <span>Guardar</span>
+                                                                 </button>
+                                                                 <button
+                                                                     disabled={isSavingDate}
+                                                                     onClick={() => setEditingDateClient(null)}
+                                                                     className="py-1 px-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-700 dark:text-gray-200 rounded-lg text-xs font-bold transition-all"
+                                                                 >
+                                                                     <X className="w-3 h-3" />
+                                                                 </button>
+                                                             </div>
+                                                         </div>
+                                                     ) : (
+                                                         <div className="flex flex-col group/venc relative">
+                                                             <div className="flex items-center gap-1.5">
+                                                                 <span className="font-semibold">{formatExcelDate(c.deben || c.vencimiento)}</span>
+                                                                 <button
+                                                                     onClick={() => {
+                                                                         const currentDateStr = formatExcelDate(c.deben || c.vencimiento);
+                                                                         let dateForPicker = currentDateStr;
+                                                                         if (!currentDateStr || currentDateStr === '-' || !currentDateStr.includes('-')) {
+                                                                             dateForPicker = new Date().toISOString().split('T')[0];
+                                                                         }
+                                                                         setEditingDateClient({
+                                                                             rowKey: `${phone}_${c.Streaming}_${i}`,
+                                                                             rowNumber: c._rowNumber,
+                                                                             phone,
+                                                                             streaming: c.Streaming || '',
+                                                                             date: dateForPicker
+                                                                         });
+                                                                     }}
+                                                                     className="p-1 text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 opacity-60 hover:opacity-100 transition-all rounded-md hover:bg-purple-50 dark:hover:bg-purple-900/30 cursor-pointer"
+                                                                     title="Editar fecha de vencimiento a tu gusto"
+                                                                 >
+                                                                     <Calendar className="w-3.5 h-3.5" />
+                                                                 </button>
+                                                             </div>
+                                                             {statusText && (
+                                                                 <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full mt-1.5 font-bold w-fit ${badgeBg} ${badgeColor}`}>
+                                                                     {statusText}
+                                                                 </span>
+                                                             )}
+                                                         </div>
+                                                     )}
                                                 </td>
                                                 <td data-label="Acciones" className="py-3.5 px-4 text-sm text-center">
                                                     <div className="flex gap-2 justify-center">
