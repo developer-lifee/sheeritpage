@@ -49,14 +49,45 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
   const pseFee = currentPrice ? calculatePSEFee(currentPrice) : 0;
   const totalWithPSE = currentPrice + pseFee;
 
-  const isPersonalEmail = [
-    name, 
-    currentPlanName, 
-    ...currentCharacteristics
-  ].some(str => {
-    const lower = (str || '').toLowerCase();
-    return ['youtube', 'apple', 'microsoft', 'office', 'correo propio', 'tu correo', 'invitacion', 'invitación', 'familiar', 'family', 'owner', 'proporcionado', 'personal', 'individual'].some(k => lower.includes(k));
-  });
+  const checkIsPersonalEmail = () => {
+    const combinedPlanText = [
+      currentPlanName,
+      ...currentCharacteristics
+    ].join(' ').toLowerCase();
+
+    // 1. Negative override: If plan text mentions shared account / sheerit account / account provided by us
+    const isExplicitlyShared = [
+      'compartida', 
+      'nuestro correo', 
+      'proporcionada por nosotros', 
+      'proporcionado por nosotros', 
+      'login compartido',
+      'correo de sheerit',
+      'pantalla'
+    ].some(kw => combinedPlanText.includes(kw));
+
+    if (isExplicitlyShared && !combinedPlanText.includes('tu correo') && !combinedPlanText.includes('correo propio') && !combinedPlanText.includes('tu propia cuenta')) {
+      return false;
+    }
+
+    // 2. Positive check: Check plan text and platform name for personal email indicators
+    const isPersonal = [
+      'tu correo', 
+      'correo propio', 
+      'tu cuenta', 
+      'tu propio correo', 
+      'mismo apple id', 
+      'invitacion', 
+      'invitación', 
+      'familiar', 
+      'family', 
+      'owner'
+    ].some(kw => combinedPlanText.includes(kw) || (name.toLowerCase().includes('youtube') && !isExplicitlyShared));
+
+    return isPersonal;
+  };
+
+  const isPersonalEmail = checkIsPersonalEmail();
 
   return (
     <div 
