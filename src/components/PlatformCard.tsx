@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useComboCart } from '../hooks/useComboCart';
 
-interface Plan { id: number; name: string; price: number; characteristics: string[]; }
+interface Plan { id: number; name: string; price: number; characteristics: string[]; isPersonalEmail?: boolean; }
 interface PlatformCardProps {
   id: number;
   name: string;
@@ -10,6 +10,7 @@ interface PlatformCardProps {
   price?: number;
   characteristics?: string[];
   plans?: Plan[];
+  isPersonalEmail?: boolean;
 }
 
 export function PlatformCard({ id, name, image, price, characteristics, plans }: PlatformCardProps) {
@@ -87,7 +88,9 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
     return isPersonal;
   };
 
-  const isPersonalEmail = checkIsPersonalEmail();
+  const isPersonalEmail = activePlan && activePlan.isPersonalEmail !== undefined
+    ? activePlan.isPersonalEmail
+    : checkIsPersonalEmail();
 
   return (
     <div 
