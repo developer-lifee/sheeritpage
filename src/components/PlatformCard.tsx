@@ -62,7 +62,7 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
     <div 
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="relative overflow-hidden rounded-2xl shadow-lg w-full max-w-sm bg-white dark:bg-gray-800 flex flex-col justify-between transition-all duration-300 hover:shadow-xl border border-gray-100 dark:border-gray-700 h-[575px]"
+      className="relative overflow-hidden rounded-2xl shadow-lg w-full max-w-sm bg-white dark:bg-gray-800 flex flex-col justify-between transition-all duration-300 hover:shadow-xl border border-gray-100 dark:border-gray-700 min-h-[580px] h-full"
     >
       {/* Type Badge (Correo Personal vs Correo Sheerit) */}
       <div className="absolute top-3 right-3 z-20">
@@ -79,11 +79,17 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
         )}
       </div>
 
-      <div className="relative h-32 bg-cover bg-center bg-gray-200 dark:bg-gray-700 flex-shrink-0" style={{ backgroundImage: image ? `url(${image})` : 'none' }}>
-        <div className="absolute inset-0 bg-black/40"></div>
+      {/* Header Banner Background */}
+      <div className="relative h-32 bg-slate-900 flex-shrink-0 overflow-hidden">
+        <div 
+          className="absolute inset-0 bg-cover bg-center opacity-30 blur-sm scale-110" 
+          style={{ backgroundImage: image ? `url(${image})` : 'none' }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/40 to-transparent" />
       </div>
+
       <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-10">
-        <img src={image} alt={name} className="w-16 h-16 object-cover rounded-full border-4 border-white dark:border-gray-800 shadow-md" />
+        <img src={image} alt={name} className="w-16 h-16 object-cover rounded-full border-4 border-white dark:border-gray-800 shadow-md bg-white" />
       </div>
 
       <div className="p-4 pt-10 flex flex-col flex-grow justify-between">
