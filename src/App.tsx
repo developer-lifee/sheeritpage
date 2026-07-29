@@ -246,6 +246,21 @@ function AppContent() {
     const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
     const deviceType = getDeviceType();
 
+    // Detección e inicio de validación inmediata al retornar de la pasarela Bold / PSE
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectedOrderId = urlParams.get('orderId') || urlParams.get('order_id') || urlParams.get('bold-order-id') || urlParams.get('reference');
+
+    if (redirectedOrderId) {
+      fetch(`${apiUrl}/api/bold/check-status/${redirectedOrderId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.status === 'APPROVED') {
+            console.log(`[Redirection Validation] ✅ Orden ${redirectedOrderId} aprobada y procesada al instante.`);
+          }
+        })
+        .catch(err => console.error("Error al validar orden por redirección:", err));
+    }
+
     fetch(`${apiUrl}/api/public/track-visit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
