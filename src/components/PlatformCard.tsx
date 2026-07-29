@@ -62,7 +62,7 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
     <div 
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="relative overflow-hidden rounded-2xl shadow-lg w-full max-w-sm bg-white dark:bg-gray-800 flex flex-col justify-between transition-all duration-300 hover:shadow-xl border border-gray-100 dark:border-gray-700 h-[530px]"
+      className="relative overflow-hidden rounded-2xl shadow-lg w-full max-w-sm bg-white dark:bg-gray-800 flex flex-col justify-between transition-all duration-300 hover:shadow-xl border border-gray-100 dark:border-gray-700 h-[575px]"
     >
       {/* Type Badge (Correo Personal vs Correo Sheerit) */}
       <div className="absolute top-3 right-3 z-20">
