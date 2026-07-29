@@ -101,9 +101,12 @@ export const WebSalesView: React.FC = () => {
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return 'N/A';
     try {
-      const date = new Date(dateStr);
+      let parsedStr = dateStr;
+      if (typeof dateStr === 'string' && dateStr.includes(' ') && !dateStr.includes('T')) {
+        parsedStr = dateStr.replace(' ', 'T') + '-05:00';
+      }
+      const date = new Date(parsedStr);
       return date.toLocaleString('es-CO', {
-        timeZone: 'America/Bogota',
         year: 'numeric',
         month: 'short',
         day: 'numeric',
