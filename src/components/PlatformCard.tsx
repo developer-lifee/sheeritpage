@@ -49,20 +49,57 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
   const pseFee = currentPrice ? calculatePSEFee(currentPrice) : 0;
   const totalWithPSE = currentPrice + pseFee;
 
+  const isPersonalEmail = [
+    name, 
+    currentPlanName, 
+    ...currentCharacteristics
+  ].some(str => {
+    const lower = (str || '').toLowerCase();
+    return ['youtube', 'apple', 'microsoft', 'office', 'correo propio', 'tu correo', 'invitacion', 'invitación', 'familiar', 'family', 'owner', 'proporcionado', 'personal', 'individual'].some(k => lower.includes(k));
+  });
+
   return (
     <div 
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className="relative overflow-hidden rounded-xl shadow-lg w-full max-w-sm bg-white dark:bg-gray-800 flex flex-col transition-all duration-300 hover:shadow-xl border border-gray-100 dark:border-gray-700"
     >
+      {/* Type Badge (Correo Personal vs Correo Sheerit) */}
+      <div className="absolute top-3 right-3 z-20">
+        {isPersonalEmail ? (
+          <span className="bg-emerald-600/95 backdrop-blur-md text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-lg border border-emerald-400/40 flex items-center gap-1 tracking-tight">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-200 animate-pulse"></span>
+            ✉️ En Tu Correo Personal
+          </span>
+        ) : (
+          <span className="bg-indigo-600/95 backdrop-blur-md text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-lg border border-indigo-400/40 flex items-center gap-1 tracking-tight">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-200"></span>
+            🔑 Perfil (Correo Sheerit)
+          </span>
+        )}
+      </div>
+
       <div className="relative h-32 bg-cover bg-center bg-gray-200 dark:bg-gray-700" style={{ backgroundImage: image ? `url(${image})` : 'none' }}>
         <div className="absolute inset-0 bg-black/40"></div>
       </div>
       <div className="absolute top-8 left-1/2 transform -translate-x-1/2">
-        <img src={image} alt={name} className="w-16 h-16 object-cover rounded-full border-4 border-white dark:border-gray-800" />
+        <img src={image} alt={name} className="w-16 h-16 object-cover rounded-full border-4 border-white dark:border-gray-800 shadow-md" />
       </div>
       <div className="p-4 pt-10 flex flex-col flex-grow">
-        <h3 className="text-xl font-bold mb-2 text-center dark:text-white">{name}</h3>
+        <h3 className="text-xl font-bold mb-1 text-center dark:text-white">{name}</h3>
+
+        {/* Informative Sub-tag */}
+        <div className="flex justify-center mb-3">
+          {isPersonalEmail ? (
+            <span className="inline-flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[11px] font-extrabold px-2.5 py-0.5 rounded-lg border border-emerald-200 dark:border-emerald-800">
+              ✉️ Se activa en tu correo personal
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-[11px] font-extrabold px-2.5 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800">
+              🔑 Se entrega correo y clave asignados
+            </span>
+          )}
+        </div>
 
         {/* Plan navigation (only if multiple plans exist) */}
         {sortedPlans.length > 1 && (
@@ -97,7 +134,7 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
           </div>
         )}
 
-        <div className="text-center mb-4">
+        <div className="text-center mb-3">
           <p className="text-2xl font-bold text-brand-primary dark:text-brand-light transition-all duration-300">
             {formatPrice(currentPrice)}/mes
           </p>
