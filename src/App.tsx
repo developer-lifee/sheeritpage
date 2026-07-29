@@ -256,6 +256,11 @@ function AppContent() {
         .then(data => {
           if (data.success && data.status === 'APPROVED') {
             console.log(`[Redirection Validation] ✅ Orden ${redirectedOrderId} aprobada y procesada al instante.`);
+            if (data.sale && data.sale.whatsapp) {
+              const tel = data.sale.whatsapp.replace(/\D/g, '');
+              window.history.replaceState(null, '', `/?tel=${tel}`);
+              setCurrentView('verificar');
+            }
           }
         })
         .catch(err => console.error("Error al validar orden por redirección:", err));
