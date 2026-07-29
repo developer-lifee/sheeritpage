@@ -62,7 +62,7 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
     <div 
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="relative overflow-hidden rounded-xl shadow-lg w-full max-w-sm bg-white dark:bg-gray-800 flex flex-col transition-all duration-300 hover:shadow-xl border border-gray-100 dark:border-gray-700"
+      className="relative overflow-hidden rounded-2xl shadow-lg w-full max-w-sm bg-white dark:bg-gray-800 flex flex-col justify-between transition-all duration-300 hover:shadow-xl border border-gray-100 dark:border-gray-700 h-[530px]"
     >
       {/* Type Badge (Correo Personal vs Correo Sheerit) */}
       <div className="absolute top-3 right-3 z-20">
@@ -79,90 +79,95 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
         )}
       </div>
 
-      <div className="relative h-32 bg-cover bg-center bg-gray-200 dark:bg-gray-700" style={{ backgroundImage: image ? `url(${image})` : 'none' }}>
+      <div className="relative h-32 bg-cover bg-center bg-gray-200 dark:bg-gray-700 flex-shrink-0" style={{ backgroundImage: image ? `url(${image})` : 'none' }}>
         <div className="absolute inset-0 bg-black/40"></div>
       </div>
-      <div className="absolute top-8 left-1/2 transform -translate-x-1/2">
+      <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-10">
         <img src={image} alt={name} className="w-16 h-16 object-cover rounded-full border-4 border-white dark:border-gray-800 shadow-md" />
       </div>
-      <div className="p-4 pt-10 flex flex-col flex-grow">
-        <h3 className="text-xl font-bold mb-1 text-center dark:text-white">{name}</h3>
 
-        {/* Informative Sub-tag */}
-        <div className="flex justify-center mb-3">
-          {isPersonalEmail ? (
-            <span className="inline-flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[11px] font-extrabold px-2.5 py-0.5 rounded-lg border border-emerald-200 dark:border-emerald-800">
-              ✉️ Se activa en tu correo personal
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-[11px] font-extrabold px-2.5 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800">
-              🔑 Se entrega correo y clave asignados
-            </span>
-          )}
-        </div>
+      <div className="p-4 pt-10 flex flex-col flex-grow justify-between">
+        <div>
+          <h3 className="text-xl font-bold mb-1 text-center dark:text-white line-clamp-1">{name}</h3>
 
-        {/* Plan navigation (only if multiple plans exist) */}
-        {sortedPlans.length > 1 && (
-          <div className="flex items-center justify-between mb-3 bg-gray-50 dark:bg-gray-700/50 py-1.5 px-2 rounded-lg">
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                setActivePlanIndex((prev) => (prev - 1 + sortedPlans.length) % sortedPlans.length);
-              }}
-              className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 transition-colors"
-              title="Plan anterior"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded text-brand-primary dark:text-brand-light text-center line-clamp-1 max-w-[150px]">
-              {currentPlanName}
-            </span>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                setActivePlanIndex((prev) => (prev + 1) % sortedPlans.length);
-              }}
-              className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 transition-colors"
-              title="Siguiente plan"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
+          {/* Informative Sub-tag */}
+          <div className="flex justify-center mb-2">
+            {isPersonalEmail ? (
+              <span className="inline-flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[11px] font-extrabold px-2.5 py-0.5 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                ✉️ Se activa en tu correo personal
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-[11px] font-extrabold px-2.5 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800">
+                🔑 Se entrega correo y clave asignados
+              </span>
+            )}
           </div>
-        )}
 
-        <div className="text-center mb-3">
-          <p className="text-2xl font-bold text-brand-primary dark:text-brand-light transition-all duration-300">
-            {formatPrice(currentPrice)}/mes
-          </p>
+          {/* Plan navigation slot (fixed height) */}
+          <div className="h-8 mb-2 flex items-center justify-center">
+            {sortedPlans.length > 1 && (
+              <div className="w-full flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 py-1 px-2 rounded-lg">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActivePlanIndex((prev) => (prev - 1 + sortedPlans.length) % sortedPlans.length);
+                  }}
+                  className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded text-brand-primary dark:text-brand-light text-center line-clamp-1 max-w-[160px]">
+                  {currentPlanName}
+                </span>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActivePlanIndex((prev) => (prev + 1) % sortedPlans.length);
+                  }}
+                  className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Price display */}
+          <div className="text-center mb-2">
+            <p className="text-2xl font-bold text-brand-primary dark:text-brand-light transition-all duration-300">
+              {formatPrice(currentPrice)}/mes
+            </p>
+          </div>
+
+          {/* Characteristics list container with fixed height */}
+          <div key={activePlanIndex} className="h-[135px] overflow-y-auto space-y-1 text-gray-600 dark:text-gray-300 pr-1 scrollbar-thin">
+            <ul className="space-y-1">
+              {currentCharacteristics.map((feature, index) => (
+                <li key={index} className="flex items-start text-xs">
+                  <svg className="w-3.5 h-3.5 mr-1.5 text-green-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L8.414 15 4 10.586l1.414-1.414L8.414 12l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="leading-tight">{feature}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
-        {/* Characteristics list */}
-        <div key={activePlanIndex} className="flex-grow flex flex-col justify-between transition-opacity duration-300">
-          <ul className="mb-4 space-y-1 text-gray-600 dark:text-gray-300 flex-grow">
-            {currentCharacteristics.map((feature, index) => (
-              <li key={index} className="flex items-center">
-                <svg className="w-4 h-4 mr-2 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L8.414 15 4 10.586l1.414-1.414L8.414 12l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                <span className="text-sm">{feature}</span>
-              </li>
-            ))}
-          </ul>
-
-          <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+        {/* Bottom Section: PSE Fee + Dots + Button */}
+        <div>
+          <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-2 text-center">
             <p>Pagando por PSE aprox: <strong>{formatPrice(totalWithPSE)}</strong></p>
-            <p className="opacity-70">Incluye comisión estimada</p>
+            <p className="opacity-70 text-[9.5px]">Incluye comisión estimada</p>
           </div>
-        </div>
 
-        {/* Carousel indicators dots */}
-        {sortedPlans.length > 1 && (
-          <div className="flex justify-center gap-1.5 mb-4">
-            {sortedPlans.map((_, idx) => (
+          {/* Carousel indicators dots slot */}
+          <div className="h-3 flex justify-center items-center gap-1.5 mb-3">
+            {sortedPlans.length > 1 && sortedPlans.map((_, idx) => (
               <button
                 key={idx}
                 onClick={(e) => {
@@ -178,20 +183,20 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
               />
             ))}
           </div>
-        )}
 
-        <button
-          onClick={() => {
-            addToCombo(currentId);
-            setIsComboOpen(true);
-          }}
-          className="w-full mt-auto py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-lg transition-colors text-sm flex items-center justify-center gap-1 shadow-sm"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          Agregar
-        </button>
+          <button
+            onClick={() => {
+              addToCombo(currentId);
+              setIsComboOpen(true);
+            }}
+            className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors text-sm flex items-center justify-center gap-1.5 shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Agregar al Combo
+          </button>
+        </div>
       </div>
     </div>
   );
