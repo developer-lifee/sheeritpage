@@ -251,7 +251,8 @@ function AppContent() {
     const redirectedOrderId = urlParams.get('orderId') || urlParams.get('order_id') || urlParams.get('bold-order-id') || urlParams.get('reference');
 
     if (redirectedOrderId) {
-      fetch(`${apiUrl}/api/bold/check-status/${redirectedOrderId}`)
+      const paymentParam = urlParams.get('payment') || urlParams.get('status') || 'success';
+      fetch(`${apiUrl}/api/bold/check-status/${redirectedOrderId}?payment=${paymentParam}`)
         .then(res => res.json())
         .then(data => {
           if (data.success && data.status === 'APPROVED') {

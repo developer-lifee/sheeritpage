@@ -2287,7 +2287,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 </div>
 
                   {/* Top Bar actions */}
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2 sm:mt-0">
                     <button
                       onClick={() => handleSyncChatMessages()}
                       disabled={syncingChat}
@@ -2341,16 +2341,15 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                         {(activeChatTicket.waitingHumanMode || 'bot') === 'bot' ? 'Modo: Bot' : 'Modo: Asesor'}
                       </span>
                     </button>
-                    {(activeChatTicket.waitingHumanMode || 'bot') === 'advisor' && (
-                      <button
-                        onClick={() => handleForceBotReply(activeChatTicket.phone)}
-                        className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1 active:scale-95 animate-fadeIn"
-                        title="Fuerza al bot a responder de inmediato al último mensaje del cliente"
-                      >
-                        <Bot className="w-3.5 h-3.5" />
-                        <span>Forzar Respuesta Bot</span>
-                      </button>
-                    )}
+                    
+                    <button
+                      onClick={() => handleForceBotReply(activeChatTicket.phone)}
+                      className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1 active:scale-95 animate-fadeIn"
+                      title="Fuerza al bot a responder de inmediato al último mensaje del cliente"
+                    >
+                      <Bot className="w-3.5 h-3.5" />
+                      <span>Forzar Bot</span>
+                    </button>
                   </div>
                 </div>
 
