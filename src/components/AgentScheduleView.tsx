@@ -284,10 +284,14 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
 
   const handleTerminateAgent = async (agent: Agent) => {
     const isTerminated = agent.status === 'inactive';
-    const actionText = isTerminated ? 'reactivar el contrato de' : 'dar por terminado el contrato de';
-    if (!window.confirm(`¿Estás seguro de que deseas ${actionText} ${agent.fullname}?`)) {
-      return;
-    }
+    const promptLabel = isTerminated
+      ? `Motivo o nota para reactivar el contrato de ${agent.fullname}:`
+      : `Ingresa el motivo o descripción de la terminación de contrato para ${agent.fullname}:`;
+    
+    const defaultReason = isTerminated ? 'Reactivación de contrato laboral' : 'Fin de período de servicio / contrato';
+    const reasonInput = window.prompt(promptLabel, defaultReason);
+    
+    if (reasonInput === null) return;
 
     try {
       const newStatus = isTerminated ? 'active' : 'inactive';
@@ -296,7 +300,9 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           agent_id: agent.id,
-          status: newStatus
+          status: newStatus,
+          reason: reasonInput,
+          performed_by: agentEmail || 'admin'
         })
       });
       const data = await res.json();
@@ -308,6 +314,33 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
       }
     } catch (err: any) {
       setError(err.message || 'Error de conexión');
+    }
+  };
+
+  // Contract History Modal States
+  const [contractHistoryModalOpen, setContractHistoryModalOpen] = useState(false);
+  const [contractHistoryAgent, setContractHistoryAgent] = useState<Agent | null>(null);
+  const [contractHistoryList, setContractHistoryList] = useState<any[]>([]);
+  const [contractHistoryLoading, setContractHistoryLoading] = useState(false);
+
+  const handleOpenContractHistory = async (agent: Agent) => {
+    setContractHistoryAgent(agent);
+    setContractHistoryModalOpen(true);
+    setContractHistoryLoading(true);
+
+    try {
+      const res = await fetch(`/api/admin/agents/${agent.id}/contract-history`);
+      const data = await res.json();
+      if (data.success) {
+        setContractHistoryList(data.history || []);
+      } else {
+        setContractHistoryList([]);
+      }
+    } catch (err) {
+      console.error("Error cargando historial de contrato:", err);
+      setContractHistoryList([]);
+    } finally {
+      setContractHistoryLoading(false);
     }
   };
   const [historyModalOpen, setHistoryModalOpen] = useState<boolean>(false);
@@ -1397,17 +1430,27 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                                 )}
                               </div>
                               {role === 'admin' && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleTerminateAgent(agent)}
-                                  className={`mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded border transition-all w-fit ${
-                                    agent.status === 'inactive'
-                                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/20'
-                                      : 'bg-red-500/10 text-red-600 border-red-500/30 hover:bg-red-500/20'
-                                  }`}
-                                >
-                                  {agent.status === 'inactive' ? '🔄 Reactivar Contrato' : '❌ Terminación de Contrato'}
-                                </button>
+                                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTerminateAgent(agent)}
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded border transition-all ${
+                                      agent.status === 'inactive'
+                                        ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/20'
+                                        : 'bg-red-500/10 text-red-600 border-red-500/30 hover:bg-red-500/20'
+                                    }`}
+                                  >
+                                    {agent.status === 'inactive' ? '🔄 Reactivar' : '❌ Terminar Contrato'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenContractHistory(agent)}
+                                    className="text-[10px] font-bold px-2 py-0.5 rounded border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+                                    title="Ver historial de cambios de contrato y reactivaciones"
+                                  >
+                                    📜 Historial
+                                  </button>
+                                </div>
                               )}
                             </div>
                           </td>
@@ -2787,6 +2830,76 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Modal Historial de Auditoría de Contrato */}
+      {contractHistoryModalOpen && contractHistoryAgent && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white dark:bg-gray-850 rounded-2xl max-w-lg w-full border dark:border-gray-700 shadow-2xl p-6 relative max-h-[85vh] flex flex-col">
+            <button
+              onClick={() => setContractHistoryModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-400"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-2 border-b dark:border-gray-700 pb-3">
+              <History className="w-5 h-5 text-brand-primary" />
+              <div>
+                <h3 className="text-base font-extrabold text-gray-800 dark:text-white">
+                  Historial de Contrato y Cambios
+                </h3>
+                <p className="text-xs text-gray-500 font-mono">Colaborador: {contractHistoryAgent.fullname} ({contractHistoryAgent.email})</p>
+              </div>
+            </div>
+
+            {contractHistoryLoading ? (
+              <div className="text-center py-12 text-gray-400 text-xs">Cargando historial de contrato...</div>
+            ) : contractHistoryList.length === 0 ? (
+              <div className="text-center py-12 text-gray-400 italic text-xs">
+                No hay registros de terminaciones o reactivaciones previas para este colaborador.
+              </div>
+            ) : (
+              <div className="overflow-y-auto flex-1 pr-1 my-3 space-y-3">
+                {contractHistoryList.map((rec) => (
+                  <div
+                    key={rec.id}
+                    className="p-3.5 rounded-xl border dark:border-gray-750 bg-gray-50 dark:bg-gray-800/80 text-xs flex flex-col gap-1.5 shadow-xs"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className={`font-extrabold text-xs px-2 py-0.5 rounded border ${
+                        rec.action === 'terminated'
+                          ? 'bg-red-500/10 text-red-600 border-red-500/20'
+                          : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                      }`}>
+                        {rec.action === 'terminated' ? '🔴 Terminación de Contrato' : '🟢 Reactivación de Contrato'}
+                      </span>
+                      <span className="font-mono text-[11px] text-gray-400">
+                        {new Date(rec.created_at).toLocaleString('es-CO')}
+                      </span>
+                    </div>
+                    <div className="text-gray-800 dark:text-gray-200 mt-1 font-sans">
+                      <strong className="text-gray-500 dark:text-gray-400">Motivo / Descripción:</strong>{' '}
+                      <span className="italic">{rec.reason || 'Sin descripción especificada'}</span>
+                    </div>
+                    <div className="text-[10px] text-gray-400 font-mono mt-0.5">
+                      Registrado por: <strong>{rec.performed_by}</strong>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex justify-end pt-3 border-t dark:border-gray-700">
+              <button
+                type="button"
+                onClick={() => setContractHistoryModalOpen(false)}
+                className="px-4 py-2 border rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}
