@@ -2306,27 +2306,35 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                     <th className="py-2.5 px-4 text-right">Subtotal</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-750 font-mono">
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-750 font-mono text-gray-900 dark:text-slate-100">
                   {/* Trial Hours row if trial hours exist */}
                   {(selectedStubAgent.trial_hours || 0) > 0 && (
-                    <tr>
-                      <td className="py-3 px-4 font-sans font-semibold">Horas de Prueba (Trial)</td>
-                      <td className="py-3 px-4 text-center">{selectedStubAgent.trial_hours?.toFixed(1)} hrs</td>
-                      <td className="py-3 px-4 text-center">${(selectedStubAgent.trial_hourly_rate || 5000).toLocaleString('es-CO')}</td>
-                      <td className="py-3 px-4 text-right font-bold">
-                        ${Math.round((selectedStubAgent.trial_hours || 0) * (selectedStubAgent.trial_hourly_rate || 5000)).toLocaleString('es-CO')}
+                    <tr className="text-gray-900 dark:text-slate-100">
+                      <td className="py-3 px-4 font-sans font-semibold text-gray-900 dark:text-slate-100">Horas de Prueba (Trial)</td>
+                      <td className="py-3 px-4 text-center font-bold text-gray-900 dark:text-slate-100">{selectedStubAgent.trial_hours?.toFixed(1)} hrs</td>
+                      <td className="py-3 px-4 text-center text-gray-900 dark:text-slate-100">${(selectedStubAgent.trial_hourly_rate || 4000).toLocaleString('es-CO')}</td>
+                      <td className="py-3 px-4 text-right font-bold text-gray-900 dark:text-white">
+                        ${Math.round((selectedStubAgent.trial_hours || 0) * (selectedStubAgent.trial_hourly_rate || 4000)).toLocaleString('es-CO')}
                       </td>
                     </tr>
                   )}
 
                   {/* Normal Agent Hours row */}
-                  {(selectedStubAgent.normal_hours || selectedStubAgent.total_hours) > 0 && (
-                    <tr>
-                      <td className="py-3 px-4 font-sans font-semibold">Horas Asesor Regular (Agent)</td>
-                      <td className="py-3 px-4 text-center">{(selectedStubAgent.normal_hours || selectedStubAgent.total_hours).toFixed(1)} hrs</td>
-                      <td className="py-3 px-4 text-center">${selectedStubAgent.hourly_rate.toLocaleString('es-CO')}</td>
-                      <td className="py-3 px-4 text-right font-bold">
-                        ${Math.round((selectedStubAgent.normal_hours || selectedStubAgent.total_hours) * selectedStubAgent.hourly_rate).toLocaleString('es-CO')}
+                  {(selectedStubAgent.normal_hours || ((selectedStubAgent.trial_hours || 0) === 0 && selectedStubAgent.total_hours)) > 0 && (
+                    <tr className="text-gray-900 dark:text-slate-100">
+                      <td className="py-3 px-4 font-sans font-semibold text-gray-900 dark:text-slate-100">Horas Asesor Regular (Agent)</td>
+                      <td className="py-3 px-4 text-center font-bold text-gray-900 dark:text-slate-100">
+                        {((selectedStubAgent.trial_hours || 0) > 0 ? selectedStubAgent.normal_hours : (selectedStubAgent.normal_hours || selectedStubAgent.total_hours)).toFixed(1)} hrs
+                      </td>
+                      <td className="py-3 px-4 text-center text-gray-900 dark:text-slate-100">
+                        ${(selectedStubAgent.normal_hourly_rate || (selectedStubAgent.hourly_rate && selectedStubAgent.hourly_rate > 6000 ? selectedStubAgent.hourly_rate : 8333)).toLocaleString('es-CO')}
+                      </td>
+                      <td className="py-3 px-4 text-right font-bold text-gray-900 dark:text-white">
+                        ${Math.round(
+                          (selectedStubAgent.trial_hours || 0) > 0
+                            ? (selectedStubAgent.normal_hours * (selectedStubAgent.normal_hourly_rate || (selectedStubAgent.hourly_rate && selectedStubAgent.hourly_rate > 6000 ? selectedStubAgent.hourly_rate : 8333)))
+                            : ((selectedStubAgent.normal_hours || selectedStubAgent.total_hours) * (selectedStubAgent.hourly_rate || 8333))
+                        ).toLocaleString('es-CO')}
                       </td>
                     </tr>
                   )}
@@ -2334,12 +2342,12 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                   {/* Bonuses rows */}
                   {selectedStubAgent.bonuses && selectedStubAgent.bonuses.length > 0 && (
                     selectedStubAgent.bonuses.map(b => (
-                      <tr key={b.id} className="bg-emerald-50/20 dark:bg-emerald-950/10">
-                        <td className="py-2 px-4 font-sans text-emerald-700 dark:text-emerald-300">
+                      <tr key={b.id} className="bg-emerald-50/20 dark:bg-emerald-950/20 text-gray-900 dark:text-slate-100">
+                        <td className="py-2 px-4 font-sans text-emerald-700 dark:text-emerald-300 font-semibold">
                           Bono: {b.reason}
                         </td>
-                        <td className="py-2 px-4 text-center text-gray-400">-</td>
-                        <td className="py-2 px-4 text-center text-gray-400">-</td>
+                        <td className="py-2 px-4 text-center text-gray-400 dark:text-gray-400">-</td>
+                        <td className="py-2 px-4 text-center text-gray-400 dark:text-gray-400">-</td>
                         <td className="py-2 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400">
                           +${parseFloat(b.amount as any).toLocaleString('es-CO')}
                         </td>
@@ -2348,9 +2356,9 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                   )}
 
                   {/* Total Row */}
-                  <tr className="bg-gray-50 dark:bg-gray-800 text-sm font-bold border-t-2 dark:border-gray-700">
-                    <td colSpan={3} className="py-3 px-4 text-right font-sans uppercase">Total Neto a Pagar:</td>
-                    <td className="py-3 px-4 text-right text-emerald-600 dark:text-emerald-400 font-mono text-base">
+                  <tr className="bg-gray-50 dark:bg-gray-800 text-sm font-bold border-t-2 dark:border-gray-700 text-gray-900 dark:text-white">
+                    <td colSpan={3} className="py-3 px-4 text-right font-sans uppercase text-gray-800 dark:text-slate-200">Total Neto a Pagar:</td>
+                    <td className="py-3 px-4 text-right text-emerald-600 dark:text-emerald-400 font-mono text-base font-black">
                       ${Math.round(selectedStubAgent.total_payment).toLocaleString('es-CO')}
                     </td>
                   </tr>
