@@ -228,6 +228,88 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
   // Pay Stub & History Modals State
   const [stubModalOpen, setStubModalOpen] = useState<boolean>(false);
   const [selectedStubAgent, setSelectedStubAgent] = useState<PayrollAgent | null>(null);
+
+  // Agent Employee Management Modal State
+  const [agentModalOpen, setAgentModalOpen] = useState(false);
+  const [agentForm, setAgentForm] = useState({
+    id: undefined as number | undefined,
+    fullname: '',
+    email: '',
+    password: '',
+    role: 'agent',
+    status: 'active',
+    exclude_from_payroll: false
+  });
+  const [agentFormSaving, setAgentFormSaving] = useState(false);
+  const [agentFormError, setAgentFormError] = useState('');
+
+  const handleSaveAgentForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!agentForm.fullname || !agentForm.email) {
+      setAgentFormError('Nombre completo y correo son obligatorios.');
+      return;
+    }
+    setAgentFormSaving(true);
+    setAgentFormError('');
+
+    try {
+      const res = await fetch('/api/admin/agents/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: agentForm.id,
+          fullname: agentForm.fullname,
+          email: agentForm.email,
+          password: agentForm.password,
+          role: agentForm.role,
+          status: agentForm.status,
+          exclude_from_payroll: agentForm.exclude_from_payroll
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccess(data.message || 'Empleado guardado correctamente.');
+        setAgentModalOpen(false);
+        setAgentForm({ id: undefined, fullname: '', email: '', password: '', role: 'agent', status: 'active', exclude_from_payroll: false });
+        fetchData();
+      } else {
+        setAgentFormError(data.message || data.error || 'Error al guardar el empleado.');
+      }
+    } catch (err: any) {
+      setAgentFormError(err.message || 'Error de conexión');
+    } finally {
+      setAgentFormSaving(false);
+    }
+  };
+
+  const handleTerminateAgent = async (agent: Agent) => {
+    const isTerminated = agent.status === 'inactive';
+    const actionText = isTerminated ? 'reactivar el contrato de' : 'dar por terminado el contrato de';
+    if (!window.confirm(`¿Estás seguro de que deseas ${actionText} ${agent.fullname}?`)) {
+      return;
+    }
+
+    try {
+      const newStatus = isTerminated ? 'active' : 'inactive';
+      const res = await fetch('/api/admin/agents/terminate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent_id: agent.id,
+          status: newStatus
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccess(data.message);
+        fetchData();
+      } else {
+        setError(data.message || 'Error al actualizar el contrato.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Error de conexión');
+    }
+  };
   const [historyModalOpen, setHistoryModalOpen] = useState<boolean>(false);
   const [payrollHistory, setPayrollHistory] = useState<PayrollHistoryRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState<boolean>(false);
@@ -1133,6 +1215,21 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                 >
                   Plantilla Base
                 </button>
+
+                {role === 'admin' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAgentForm({ id: undefined, fullname: '', email: '', password: '', role: 'agent', status: 'active', exclude_from_payroll: false });
+                      setAgentFormError('');
+                      setAgentModalOpen(true);
+                    }}
+                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-brand-primary hover:bg-brand-secondary text-white text-xs font-extrabold rounded-xl transition-all shadow-sm flex-1 sm:flex-initial"
+                    title="Crear un nuevo asesor / colaborador"
+                  >
+                    <Plus className="w-4 h-4" /> Crear Empleado
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1252,17 +1349,65 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                           {/* Collaborador Info */}
                           <td className="py-4 px-4">
                             <div className="flex flex-col">
-                              <span className="font-bold flex items-center gap-1.5 text-xs text-gray-800 dark:text-gray-200">
-                                <User className="w-3.5 h-3.5 text-gray-400" />
-                                {agent.fullname}
-                                {!isEditableRow && <Lock className="w-3 h-3 text-gray-400" title="Solo lectura" />}
-                              </span>
-                              <span className="text-xxs text-gray-400 dark:text-gray-500 mt-0.5 font-mono">{agent.email}</span>
-                              <span className="text-xxs font-extrabold text-brand-primary uppercase tracking-wider mt-1">{agent.role}</span>
-                              {agent.exclude_from_payroll && (
-                                <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-extrabold text-amber-700 dark:text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 w-fit">
-                                  🚫 Sueldo Excluido ($0)
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold flex items-center gap-1.5 text-xs text-gray-800 dark:text-gray-200">
+                                  <User className="w-3.5 h-3.5 text-gray-400" />
+                                  {agent.fullname}
+                                  {!isEditableRow && <Lock className="w-3 h-3 text-gray-400" title="Solo lectura" />}
                                 </span>
+                                {role === 'admin' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setAgentForm({
+                                        id: agent.id,
+                                        fullname: agent.fullname,
+                                        email: agent.email,
+                                        password: '',
+                                        role: agent.role,
+                                        status: agent.status || 'active',
+                                        exclude_from_payroll: !!agent.exclude_from_payroll
+                                      });
+                                      setAgentFormError('');
+                                      setAgentModalOpen(true);
+                                    }}
+                                    className="text-xxs text-brand-primary hover:underline font-bold"
+                                    title="Editar datos / Contraseña"
+                                  >
+                                    ✏️ Editar
+                                  </button>
+                                )}
+                              </div>
+                              <span className="text-xxs text-gray-400 dark:text-gray-500 mt-0.5 font-mono">{agent.email}</span>
+                              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                <span className="text-xxs font-extrabold text-brand-primary uppercase tracking-wider">{agent.role}</span>
+                                {agent.status === 'inactive' ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-red-700 dark:text-red-300 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20">
+                                    🔴 Contrato Terminado / Inactivo
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                                    🟢 Activo
+                                  </span>
+                                )}
+                                {agent.exclude_from_payroll && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-amber-700 dark:text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                                    🚫 Sueldo Excluido
+                                  </span>
+                                )}
+                              </div>
+                              {role === 'admin' && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleTerminateAgent(agent)}
+                                  className={`mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded border transition-all w-fit ${
+                                    agent.status === 'inactive'
+                                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/20'
+                                      : 'bg-red-500/10 text-red-600 border-red-500/30 hover:bg-red-500/20'
+                                  }`}
+                                >
+                                  {agent.status === 'inactive' ? '🔄 Reactivar Contrato' : '❌ Terminación de Contrato'}
+                                </button>
                               )}
                             </div>
                           </td>
@@ -2520,6 +2665,128 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                 Cerrar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Modal Crear / Editar Empleado */}
+      {agentModalOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white dark:bg-gray-850 rounded-2xl max-w-md w-full border dark:border-gray-700 shadow-2xl p-6 relative">
+            <button
+              onClick={() => setAgentModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-400"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-4 border-b dark:border-gray-700 pb-3">
+              <User className="w-5 h-5 text-brand-primary" />
+              <h3 className="text-base font-extrabold text-gray-800 dark:text-white">
+                {agentForm.id ? 'Editar Empleado / Colaborador' : '➕ Crear Nuevo Empleado'}
+              </h3>
+            </div>
+
+            {agentFormError && (
+              <div className="bg-red-500/10 text-red-600 border border-red-500/20 p-2.5 rounded-xl mb-4 text-xs font-bold">
+                {agentFormError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveAgentForm} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">Nombre Completo *</label>
+                <input
+                  type="text"
+                  required
+                  value={agentForm.fullname}
+                  onChange={e => setAgentForm({ ...agentForm, fullname: e.target.value })}
+                  placeholder="ej: Esclepiades Katherine"
+                  className="w-full p-2.5 border dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">Correo Electrónico *</label>
+                <input
+                  type="email"
+                  required
+                  value={agentForm.email}
+                  onChange={e => setAgentForm({ ...agentForm, email: e.target.value })}
+                  placeholder="ej: katherine@outlook.es"
+                  className="w-full p-2.5 border dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">
+                  {agentForm.id ? 'Nueva Contraseña (dejar en blanco para no cambiar)' : 'Contraseña de Acceso *'}
+                </label>
+                <input
+                  type="password"
+                  required={!agentForm.id}
+                  value={agentForm.password}
+                  onChange={e => setAgentForm({ ...agentForm, password: e.target.value })}
+                  placeholder="••••••••"
+                  className="w-full p-2.5 border dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">Rol de Acceso</label>
+                  <select
+                    value={agentForm.role}
+                    onChange={e => setAgentForm({ ...agentForm, role: e.target.value })}
+                    className="w-full p-2.5 border dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
+                  >
+                    <option value="agent">Asesor (Agent)</option>
+                    <option value="trial">Asesor en Prueba (Trial)</option>
+                    <option value="admin">Administrador (Admin)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">Estado de Contrato</label>
+                  <select
+                    value={agentForm.status}
+                    onChange={e => setAgentForm({ ...agentForm, status: e.target.value })}
+                    className="w-full p-2.5 border dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white font-bold"
+                  >
+                    <option value="active">🟢 Activo</option>
+                    <option value="inactive">🔴 Terminación de Contrato / Inactivo</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <label className="flex items-center gap-2 cursor-pointer text-gray-800 dark:text-gray-200 font-bold">
+                  <input
+                    type="checkbox"
+                    checked={agentForm.exclude_from_payroll}
+                    onChange={e => setAgentForm({ ...agentForm, exclude_from_payroll: e.target.checked })}
+                    className="w-4 h-4 text-brand-primary rounded"
+                  />
+                  <span>🚫 Excluir de Nómina y Labores ($0 sueldo)</span>
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => setAgentModalOpen(false)}
+                  className="px-4 py-2 border rounded-xl text-gray-600 dark:text-gray-300 font-bold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={agentFormSaving}
+                  className="px-4 py-2 bg-brand-primary hover:bg-brand-secondary text-white font-extrabold rounded-xl shadow-sm"
+                >
+                  {agentFormSaving ? 'Guardando...' : 'Guardar Empleado'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
