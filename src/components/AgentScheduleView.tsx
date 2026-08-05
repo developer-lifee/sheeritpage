@@ -279,8 +279,10 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         setSuccess(data.message || 'Empleado guardado correctamente.');
         setAgentModalOpen(false);
         setAgentForm({ id: undefined, fullname: '', email: '', password: '', role: 'agent', status: 'active', exclude_from_payroll: false });
-        fetchData();
-        fetchPayroll();
+        fetchAgents();
+        fetchAllSchedules();
+        fetchPayrollData();
+        fetchPayrollHistory();
       } else {
         setAgentFormError(data.message || data.error || 'Error al guardar el empleado.');
       }
@@ -320,8 +322,10 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
       const data = await res.json();
       if (data.success) {
         setSuccess(data.message);
-        fetchData();
-        fetchPayroll();
+        fetchAgents();
+        fetchAllSchedules();
+        fetchPayrollData();
+        fetchPayrollHistory();
       } else {
         setError(data.message || 'Error al actualizar el contrato.');
       }
