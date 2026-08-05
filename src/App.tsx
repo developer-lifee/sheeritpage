@@ -41,35 +41,76 @@ const AUTHORIZED_ADVISORS: { [email: string]: string } = {
   'esclepiades@hotmail.com': 'Esclepiades',
   'camco08@hotmail.com': 'Camilo',
   'estebanavila182@outlook.com': 'Esteban',
-  'carolcubillos03@outlook.es': 'Carol Cubillos'
+  'carolcubillos03@outlook.es': 'Carol Cubillos',
+  'yaristizabal948@gmail.com': 'melissa'
 };
 
 function AdminLoginOnApp({ onSuccess }: { onSuccess: () => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     const cleanEmail = email.trim().toLowerCase();
     const cleanPass = password.trim().toLowerCase();
 
-    if (!AUTHORIZED_ADVISORS[cleanEmail]) {
-      setError('El correo ingresado no corresponde a un asesor autorizado.');
-      return;
-    }
+    try {
+      const apiUrl = window.location.hostname.includes('sheerit.com.co')
+        ? 'https://bot.sheerit.com.co'
+        : `http://${window.location.hostname}:3000`;
+      
+      const res = await fetch(`${apiUrl}/api/admin/agents`);
+      const data = await res.json();
+      
+      let agentObj = null;
+      if (data.success && Array.isArray(data.agents)) {
+        agentObj = data.agents.find((a: any) => a.email && a.email.trim().toLowerCase() === cleanEmail);
+      }
 
-    if (cleanPass !== 'admin123') {
-      setError('Contraseña incorrecta.');
-      return;
-    }
+      const fallbackName = AUTHORIZED_ADVISORS[cleanEmail];
+      
+      if (!agentObj && !fallbackName) {
+        setError('El correo ingresado no corresponde a un asesor autorizado.');
+        setLoading(false);
+        return;
+      }
 
-    // Guardar credenciales
-    localStorage.setItem('ticket_agent_email', cleanEmail);
-    localStorage.setItem('ticket_agent_name', AUTHORIZED_ADVISORS[cleanEmail]);
-    localStorage.setItem('ticket_agent_password', cleanPass);
-    onSuccess();
+      if (agentObj && agentObj.status === 'inactive') {
+        setError('Este contrato se encuentra terminado/inactivo. Contacta al administrador.');
+        setLoading(false);
+        return;
+      }
+
+      if (cleanPass !== 'admin123') {
+        setError('Contraseña incorrecta.');
+        setLoading(false);
+        return;
+      }
+
+      const agentName = agentObj ? agentObj.fullname : (fallbackName || cleanEmail.split('@')[0]);
+      localStorage.setItem('ticket_agent_email', cleanEmail);
+      localStorage.setItem('ticket_agent_name', agentName);
+      localStorage.setItem('ticket_agent_password', cleanPass);
+      onSuccess();
+    } catch (err) {
+      const fallbackName = AUTHORIZED_ADVISORS[cleanEmail];
+      if (!fallbackName) {
+        setError('El correo ingresado no corresponde a un asesor autorizado.');
+      } else if (cleanPass !== 'admin123') {
+        setError('Contraseña incorrecta.');
+      } else {
+        localStorage.setItem('ticket_agent_email', cleanEmail);
+        localStorage.setItem('ticket_agent_name', fallbackName);
+        localStorage.setItem('ticket_agent_password', cleanPass);
+        onSuccess();
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -115,17 +156,18 @@ function AdminLoginOnApp({ onSuccess }: { onSuccess: () => void }) {
           </div>
 
           {error && (
-            <div className="flex items-start bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-300 p-3 rounded-xl border border-red-100 dark:border-red-900/30 gap-2">
-              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <p className="text-xs font-medium">{error}</p>
+            <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-xs font-medium flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
           <button
             type="submit"
-            className="w-full bg-brand-primary hover:bg-brand-dark text-white font-bold py-3 rounded-xl transition-all shadow-md active:scale-98 text-sm"
+            disabled={loading}
+            className="w-full py-3 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50"
           >
-            Ingresar al Panel
+            {loading ? 'Verificando...' : 'Ingresar al Panel'}
           </button>
         </form>
       </div>
@@ -150,12 +192,13 @@ function AppContent() {
     const email = localStorage.getItem('ticket_agent_email') || '';
     const pass = localStorage.getItem('ticket_agent_password') || '';
     const cleanEmail = email.trim().toLowerCase();
-    const hasValidEmail = !!AUTHORIZED_ADVISORS[cleanEmail];
+    const hasValidEmail = !!cleanEmail;
     const hasValidPass = pass.toLowerCase() === 'admin123';
     
     if (hasValidEmail && hasValidPass) {
       if (!localStorage.getItem('ticket_agent_name')) {
-        localStorage.setItem('ticket_agent_name', AUTHORIZED_ADVISORS[cleanEmail]);
+        const fallbackName = AUTHORIZED_ADVISORS[cleanEmail] || cleanEmail.split('@')[0];
+        localStorage.setItem('ticket_agent_name', fallbackName);
       }
       return true;
     }
