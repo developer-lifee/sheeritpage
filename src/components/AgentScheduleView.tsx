@@ -25,6 +25,7 @@ interface PayrollAgent {
   fullname: string;
   email: string;
   role: string;
+  contract_status?: string;
   start_date?: string;
   end_date?: string;
   total_hours: number;
@@ -253,7 +254,8 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
     setAgentFormError('');
 
     try {
-      const res = await fetch('/api/admin/agents/save', {
+      const apiUrl = getApiUrl();
+      const res = await fetch(`${apiUrl}/api/admin/agents/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -272,6 +274,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         setAgentModalOpen(false);
         setAgentForm({ id: undefined, fullname: '', email: '', password: '', role: 'agent', status: 'active', exclude_from_payroll: false });
         fetchData();
+        fetchPayroll();
       } else {
         setAgentFormError(data.message || data.error || 'Error al guardar el empleado.');
       }
@@ -282,8 +285,10 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
     }
   };
 
-  const handleTerminateAgent = async (agent: Agent) => {
-    const isTerminated = agent.status === 'inactive';
+  const handleTerminateAgent = async (agent: { id: number; fullname: string; email?: string; status?: string }) => {
+    const existingAgent = agents.find(a => a.id === agent.id);
+    const currentStatus = existingAgent?.status || agent.status || 'active';
+    const isTerminated = currentStatus === 'inactive';
     const promptLabel = isTerminated
       ? `Motivo o nota para reactivar el contrato de ${agent.fullname}:`
       : `Ingresa el motivo o descripción de la terminación de contrato para ${agent.fullname}:`;
@@ -294,8 +299,9 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
     if (reasonInput === null) return;
 
     try {
+      const apiUrl = getApiUrl();
       const newStatus = isTerminated ? 'active' : 'inactive';
-      const res = await fetch('/api/admin/agents/terminate', {
+      const res = await fetch(`${apiUrl}/api/admin/agents/terminate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -309,6 +315,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
       if (data.success) {
         setSuccess(data.message);
         fetchData();
+        fetchPayroll();
       } else {
         setError(data.message || 'Error al actualizar el contrato.');
       }
@@ -323,13 +330,14 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
   const [contractHistoryList, setContractHistoryList] = useState<any[]>([]);
   const [contractHistoryLoading, setContractHistoryLoading] = useState(false);
 
-  const handleOpenContractHistory = async (agent: Agent) => {
-    setContractHistoryAgent(agent);
+  const handleOpenContractHistory = async (agent: { id: number; fullname: string; email?: string }) => {
+    setContractHistoryAgent(agent as Agent);
     setContractHistoryModalOpen(true);
     setContractHistoryLoading(true);
 
     try {
-      const res = await fetch(`/api/admin/agents/${agent.id}/contract-history`);
+      const apiUrl = getApiUrl();
+      const res = await fetch(`${apiUrl}/api/admin/agents/${agent.id}/contract-history`);
       const data = await res.json();
       if (data.success) {
         setContractHistoryList(data.history || []);
@@ -1249,20 +1257,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                   Plantilla Base
                 </button>
 
-                {role === 'admin' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAgentForm({ id: undefined, fullname: '', email: '', password: '', role: 'agent', status: 'active', exclude_from_payroll: false });
-                      setAgentFormError('');
-                      setAgentModalOpen(true);
-                    }}
-                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-brand-primary hover:bg-brand-secondary text-white text-xs font-extrabold rounded-xl transition-all shadow-sm flex-1 sm:flex-initial"
-                    title="Crear un nuevo asesor / colaborador"
-                  >
-                    <Plus className="w-4 h-4" /> Crear Empleado
-                  </button>
-                )}
+                {/* Crear empleado trasladado a Nómina de Pagos */}
               </div>
             </div>
           </div>
@@ -1429,29 +1424,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                                   </span>
                                 )}
                               </div>
-                              {role === 'admin' && (
-                                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleTerminateAgent(agent)}
-                                    className={`text-[10px] font-bold px-2 py-0.5 rounded border transition-all ${
-                                      agent.status === 'inactive'
-                                        ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/20'
-                                        : 'bg-red-500/10 text-red-600 border-red-500/30 hover:bg-red-500/20'
-                                    }`}
-                                  >
-                                    {agent.status === 'inactive' ? '🔄 Reactivar' : '❌ Terminar Contrato'}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenContractHistory(agent)}
-                                    className="text-[10px] font-bold px-2 py-0.5 rounded border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
-                                    title="Ver historial de cambios de contrato y reactivaciones"
-                                  >
-                                    📜 Historial
-                                  </button>
-                                </div>
-                              )}
+                              {/* Terminar Contrato y Historial se trasladaron a la vista de Nómina y Pagos */}
                             </div>
                           </td>
 
@@ -1721,6 +1694,20 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
 
             {/* Selector de Período y Modal Historial */}
             <div className="flex flex-wrap items-center gap-3">
+              {role === 'admin' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAgentForm({ id: undefined, fullname: '', email: '', password: '', role: 'agent', status: 'active', exclude_from_payroll: false });
+                    setAgentFormError('');
+                    setAgentModalOpen(true);
+                  }}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 bg-brand-primary hover:bg-brand-secondary text-white text-xs font-extrabold rounded-xl transition-all shadow-sm"
+                  title="Crear un nuevo asesor / colaborador"
+                >
+                  <Plus className="w-4 h-4" /> Crear Empleado
+                </button>
+              )}
               <button
                 onClick={() => { fetchPayrollHistory(); setHistoryModalOpen(true); }}
                 className="flex items-center gap-1.5 px-3 py-2 border rounded-xl dark:bg-gray-800 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
@@ -2100,6 +2087,33 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                             >
                               <FileText className="w-3 h-3" /> Ver Desprendible
                             </button>
+
+                            {role === 'admin' && (
+                              <div className="flex flex-col gap-1 w-full mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const contractStatus = agent.contract_status || (agents.find(a => a.id === agent.agent_id)?.status);
+                                    handleTerminateAgent({ id: agent.agent_id, fullname: agent.fullname, email: agent.email, status: contractStatus });
+                                  }}
+                                  className={`w-full text-[10px] font-bold px-2 py-1 rounded-lg border transition-all ${
+                                    (agent.contract_status || (agents.find(a => a.id === agent.agent_id)?.status)) === 'inactive'
+                                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/20'
+                                      : 'bg-red-500/10 text-red-600 border-red-500/30 hover:bg-red-500/20'
+                                  }`}
+                                >
+                                  {(agent.contract_status || (agents.find(a => a.id === agent.agent_id)?.status)) === 'inactive' ? '🔄 Reactivar' : '❌ Terminar Contrato'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenContractHistory({ id: agent.agent_id, fullname: agent.fullname, email: agent.email })}
+                                  className="w-full text-[10px] font-bold px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+                                  title="Ver historial de cambios de contrato y reactivaciones"
+                                >
+                                  📜 Historial Contrato
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </td>
                       </tr>
