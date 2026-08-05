@@ -237,7 +237,10 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [sendingMsg, setSendingMsg] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, messageId: string, messageBody: string, isFromMe: boolean } | null>(null);
-  const [editingMessage, setEditingMessage] = useState<{ id: string, body: string } | null>(null);
+  const activeChatTicketRef = useRef(activeChatTicket);
+  useEffect(() => {
+    activeChatTicketRef.current = activeChatTicket;
+  }, [activeChatTicket]);
 
   // Create ticket states
   const [showCreateTicketModal, setShowCreateTicketModal] = useState(false);
@@ -543,7 +546,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     fetchChatMessages(false); // Carga inicial no silenciosa para mostrar el spinner de carga
     const interval = setInterval(() => fetchChatMessages(true), 4000); // Polling silencioso
     return () => clearInterval(interval);
-  }, [activeChatTicket?.phone]);
+  }, [activeChatTicket?.userId]);
 
   // Check which accounts of the active ticket have RPA recipes configured
   useEffect(() => {
@@ -575,14 +578,14 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     };
 
     checkRpaRecipes();
-  }, [activeChatTicket?.phone]);
+  }, [activeChatTicket?.userId]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
     const container = chatContainerRef.current;
     if (!container) return;
     
-    const currentPhone = activeChatTicket?.phone || '';
+    const currentPhone = activeChatTicket?.userId || '';
     const isNewChat = currentPhone !== lastActivePhoneRef.current;
     const isCloseToBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
     
@@ -590,22 +593,28 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       container.scrollTo({ top: container.scrollHeight, behavior: isNewChat ? 'auto' : 'smooth' });
       lastActivePhoneRef.current = currentPhone;
     }
-  }, [chatMessages, activeChatTicket?.phone]);
+  }, [chatMessages, activeChatTicket?.userId]);
 
   const fetchChatMessages = async (isSilent = false) => {
     if (!activeChatTicket) return;
+    const targetUserId = activeChatTicket.userId;
     if (!isSilent) setLoadingChat(true);
     const apiUrl = getApiUrl();
     try {
-      const res = await fetch(`${apiUrl}/api/admin/chat-messages?phone=${activeChatTicket.userId}`);
+      const res = await fetch(`${apiUrl}/api/admin/chat-messages?phone=${targetUserId}`);
       if (res.ok) {
         const data = await res.json();
-        setChatMessages(data);
+        // Verificar que el usuario no haya cambiado de chat mientras se completaba la petición
+        if (activeChatTicketRef.current?.userId === targetUserId) {
+          setChatMessages(data);
+        }
       }
     } catch (e) {
       console.error("Error fetching chat messages:", e);
     } finally {
-      if (!isSilent) setLoadingChat(false);
+      if (!isSilent && activeChatTicketRef.current?.userId === targetUserId) {
+        setLoadingChat(false);
+      }
     }
   };
 
