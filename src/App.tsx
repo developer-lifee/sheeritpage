@@ -206,6 +206,32 @@ function AppContent() {
   });
 
   useEffect(() => {
+    // Validar en segundo plano si la cuenta almacenada localmente fue desactivada/terminada
+    const checkActiveSession = async () => {
+      const email = localStorage.getItem('ticket_agent_email');
+      if (!email) return;
+      try {
+        const apiUrl = window.location.hostname.includes('sheerit.com.co')
+          ? 'https://bot.sheerit.com.co'
+          : `http://${window.location.hostname}:3000`;
+        const res = await fetch(`${apiUrl}/api/admin/agents`);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.agents)) {
+          const found = data.agents.find((a: any) => a.email && a.email.trim().toLowerCase() === email.trim().toLowerCase());
+          if (found && found.status === 'inactive') {
+            // Contrato terminado: forzar cierre de sesión inmediato
+            localStorage.removeItem('ticket_agent_email');
+            localStorage.removeItem('ticket_agent_name');
+            localStorage.removeItem('ticket_agent_password');
+            setIsAdminAuth(false);
+          }
+        }
+      } catch (e) {}
+    };
+    checkActiveSession();
+  }, []);
+
+  useEffect(() => {
     // Handle initial route
     const rawPath = window.location.pathname;
     const path = rawPath === '/' ? '/' : rawPath.replace(/\/$/, '');

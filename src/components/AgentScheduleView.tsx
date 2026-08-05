@@ -334,11 +334,34 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
     }
   };
 
-  // Contract History Modal States
+  // Contract History Modal
   const [contractHistoryModalOpen, setContractHistoryModalOpen] = useState(false);
-  const [contractHistoryAgent, setContractHistoryAgent] = useState<Agent | null>(null);
+  const [contractHistoryAgent, setContractHistoryAgent] = useState<{ id: number; fullname: string; email: string } | null>(null);
   const [contractHistoryList, setContractHistoryList] = useState<any[]>([]);
   const [contractHistoryLoading, setContractHistoryLoading] = useState(false);
+
+  // Modal Logs de Sistema / Auditoría
+  const [systemLogsModalOpen, setSystemLogsModalOpen] = useState(false);
+  const [systemLogsList, setSystemLogsList] = useState<any[]>([]);
+  const [systemLogsLoading, setSystemLogsLoading] = useState(false);
+
+  const fetchSystemLogs = async () => {
+    setSystemLogsLoading(true);
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/logs?limit=150`);
+      const data = await res.json();
+      if (data.success) {
+        setSystemLogsList(Array.isArray(data.logs) ? data.logs : []);
+      } else {
+        setSystemLogsList([]);
+      }
+    } catch (e) {
+      setSystemLogsList([]);
+    } finally {
+      setSystemLogsLoading(false);
+    }
+  };
 
   const handleOpenContractHistory = async (agent: { id: number; fullname: string; email?: string }) => {
     setContractHistoryAgent(agent as Agent);
@@ -1725,6 +1748,16 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                 <History className="w-4 h-4 text-brand-primary" /> Historial de Desprendibles
               </button>
 
+              {role === 'admin' && (
+                <button
+                  onClick={() => { fetchSystemLogs(); setSystemLogsModalOpen(true); }}
+                  className="flex items-center gap-1.5 px-3 py-2 border border-purple-200 dark:border-purple-900/50 bg-purple-50/50 dark:bg-purple-950/30 rounded-xl text-xs font-bold text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors"
+                  title="Ver registro de auditoría de actividad de empleados"
+                >
+                  <Activity className="w-4 h-4 text-purple-600 dark:text-purple-400" /> Logs de Sistema
+                </button>
+              )}
+
               <div className="flex items-center bg-gray-100 dark:bg-gray-850 p-1 rounded-xl border dark:border-gray-700 text-xs">
                 <button
                   onClick={() => setSelectedPeriodMode('month')}
@@ -2920,6 +2953,74 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                 type="button"
                 onClick={() => setContractHistoryModalOpen(false)}
                 className="px-4 py-2 border rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Auditoría de Logs de Sistema */}
+      {systemLogsModalOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white dark:bg-gray-850 rounded-2xl max-w-2xl w-full border dark:border-gray-700 shadow-2xl p-6 relative max-h-[85vh] flex flex-col">
+            <button
+              onClick={() => setSystemLogsModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-400"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2.5 mb-3 border-b dark:border-gray-700 pb-3">
+              <Activity className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              <div>
+                <h3 className="text-base font-extrabold text-gray-800 dark:text-white">
+                  Auditoría y Logs de Actividad del Sistema
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Registro de acciones de colaboradores y eventos clave del panel.
+                </p>
+              </div>
+            </div>
+
+            {systemLogsLoading ? (
+              <div className="text-center py-12 text-gray-400 text-xs">Cargando registros de auditoría...</div>
+            ) : systemLogsList.length === 0 ? (
+              <div className="text-center py-12 text-gray-400 italic text-xs">
+                No hay registros de auditoría almacenados en el sistema.
+              </div>
+            ) : (
+              <div className="overflow-y-auto flex-1 pr-1 my-3 space-y-2.5">
+                {systemLogsList.map((log) => (
+                  <div
+                    key={log.id}
+                    className="p-3.5 rounded-xl border dark:border-gray-750 bg-gray-50 dark:bg-gray-800/80 text-xs flex flex-col gap-1 shadow-xs"
+                  >
+                    <div className="flex justify-between items-center flex-wrap gap-1">
+                      <span className="font-extrabold text-xs text-purple-700 dark:text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
+                        {log.action_type || 'ACCION'}
+                      </span>
+                      <span className="font-mono text-[11px] text-gray-400">
+                        {new Date(log.created_at).toLocaleString('es-CO')}
+                      </span>
+                    </div>
+                    <p className="text-gray-800 dark:text-gray-200 mt-1 font-medium text-xs">
+                      {log.description}
+                    </p>
+                    <div className="text-[10px] text-gray-400 font-mono mt-1 flex justify-between">
+                      <span>Asesor: <strong>{log.agent_name || log.agent_email}</strong> ({log.agent_email})</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex justify-end pt-3 border-t dark:border-gray-700">
+              <button
+                type="button"
+                onClick={() => setSystemLogsModalOpen(false)}
+                className="px-4 py-2 border rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 Cerrar
               </button>
