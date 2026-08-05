@@ -117,6 +117,12 @@ const getDayDateLabel = (mondayDate: Date, dayOfWeek: number) => {
   return d.toLocaleDateString('es-ES', options);
 };
 
+const sanitizeTimeForInput = (t?: string) => {
+  if (!t) return '';
+  if (t === '24:00') return '23:59';
+  return t;
+};
+
 const generateTimeOptions = () => {
   const options = [];
   for (let h = 0; h < 24; h++) {
@@ -2246,14 +2252,14 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                             <span className="text-xs font-bold text-gray-600 dark:text-gray-400 min-w-[50px]">Franja:</span>
                             <input
                               type="time"
-                              value={slot.start_time}
+                              value={sanitizeTimeForInput(slot.start_time)}
                               onChange={(e) => handleSlotChange(index, 'start_time', e.target.value)}
                               className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
                             />
                             <span className="text-xs text-gray-400">a</span>
                             <input
                               type="time"
-                              value={slot.end_time}
+                              value={sanitizeTimeForInput(slot.end_time)}
                               onChange={(e) => handleSlotChange(index, 'end_time', e.target.value)}
                               className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
                             />
@@ -2298,7 +2304,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                                       <span className="text-xxs font-bold text-gray-500">Hora:</span>
                                       <input
                                         type="time"
-                                        value={slot.break_start || ''}
+                                        value={sanitizeTimeForInput(slot.break_start)}
                                         onChange={(e) => handleSlotChange(index, 'break_start', e.target.value)}
                                         className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
                                       />
