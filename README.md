@@ -25,7 +25,13 @@ Este repositorio contiene la aplicación Frontend para el panel de administraci�
 - **Generador de Puppeteer**: Permite arrastrar y subir los instructivos PDF de Scribe.
 - **Integración con IA**: El sistema backend traduce la guía Scribe mediante Gemini y la transforma en una receta JSON interactiva para interactuar con paneles de proveedores terceros de streaming (Netflix, Disney+, etc.) a nivel de navegador.
 
-### 5. 📧 Correos y Cuentas 2FA
+### 5. ⚡ Auditoría de Sistema, Seguridad e Historial de Contratos
+- **Cierre de Sesión Automático por Inactividad**: Validación en tiempo real contra la base de datos MariaDB. Si un colaborador con contrato terminado/inactivo intenta acceder o mantener una sesión guardada, la aplicación destruye inmediatamente las credenciales locales y bloquea el acceso.
+- **Autenticación Dinámica de Asesores**: Validación instantánea contra la API de colaboradores registrados en MariaDB, eliminando la necesidad de listas estáticas en código.
+- **Modulo de Logs de Auditoría (`system_activity_logs`)**: Modal de administración con registro cronológico de las acciones del sistema y eventos clave realizados por cada colaborador (con timestamps e identificación de asesor).
+- **Optimización de Cambio de Chat en Vivo**: Limpieza instantánea del estado de mensajes y resolución de condiciones de carrera al cambiar de conversación, garantizando una transición fluida y sin retrasos.
+
+### 6. 📧 Correos y Cuentas 2FA
 - **Gestión de Gmails**: Vista unificada para autorizar, guardar y eliminar bandejas de correo que el bot inspecciona para verificar transferencias.
 - **OTP / Google Authenticator**: Módulo interactivo que despliega en tiempo real los códigos 2FA activos de ChatGPT y Amazon Prime junto con un contador de segundos restantes antes de su expiración.
 
