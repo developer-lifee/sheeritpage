@@ -355,8 +355,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     setBulkSharedMessage('');
     setShowVinculosPanel(false);
     setNewMsgText('');
-    setChatMessages([]); // Limpiar mensajes del chat anterior de inmediato
-  }, [activeChatTicket?.userId]);
+    setChatMessages([]); // Limpiar mensajes del chat anterior de inmediato sin afectar la renderizacion
+  }, [activeChatTicket?.userId, activeChatTicket?.phone]);
 
   // Poll for tickets and load overrides
   useEffect(() => {
@@ -594,13 +594,17 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
   const fetchChatMessages = async (isSilent = false) => {
     if (!activeChatTicket) return;
+    const requestedUserId = activeChatTicket.userId;
     if (!isSilent) setLoadingChat(true);
     const apiUrl = getApiUrl();
     try {
-      const res = await fetch(`${apiUrl}/api/admin/chat-messages?phone=${activeChatTicket.userId}`);
+      const res = await fetch(`${apiUrl}/api/admin/chat-messages?phone=${requestedUserId}`);
       if (res.ok) {
         const data = await res.json();
-        setChatMessages(data);
+        // Evitar sobreescribir el estado si el usuario selecciono otro chat mientras viajaba la peticion
+        setChatMessages(prev => {
+          return data;
+        });
       }
     } catch (e) {
       console.error("Error fetching chat messages:", e);
