@@ -1373,7 +1373,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-750">
-                    {agents.map(agent => {
+                    {agents.filter(a => a.status !== 'inactive').map(agent => {
                       const agentSlots = allSchedules.filter((s: any) => s.email.toLowerCase() === agent.email.toLowerCase());
                       const totalWeeklyHours = agentSlots.reduce((acc, slot) => acc + calculateSlotHours(slot), 0);
                       const isEditableRow = role === 'admin' || agent.email.toLowerCase() === agentEmail.toLowerCase();
@@ -1549,7 +1549,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
 
               {/* MOBILE CARDS VIEW (block md:hidden) */}
               <div className="block md:hidden space-y-4">
-                {agents.map(agent => {
+                {agents.filter(a => a.status !== 'inactive').map(agent => {
                   const agentSlots = allSchedules.filter((s: any) => s.email.toLowerCase() === agent.email.toLowerCase());
                   const totalWeeklyHours = agentSlots.reduce((acc, slot) => acc + calculateSlotHours(slot), 0);
                   const isEditableRow = role === 'admin' || agent.email.toLowerCase() === agentEmail.toLowerCase();
