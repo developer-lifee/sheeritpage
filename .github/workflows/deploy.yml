@@ -25,16 +25,11 @@ jobs:
         run: npm run build
 
       - name: 📂 Sync build folder via FTP
-        uses: nick-fields/retry@v3
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          timeout_minutes: 5
-          max_attempts: 5
-          retry_wait_seconds: 10
-          action: SamKirkland/FTP-Deploy-Action@v4.3.5
-          with: |
-            local-dir: dist/
-            server: ftps4.us.freehostia.com
-            username: estavi0
-            password: ${{ secrets.FTP_PASSWORD }}
-            server-dir: sheerit.com.co/
-            security-mode: loose
+          local-dir: dist/
+          server: ftps4.us.freehostia.com
+          username: estavi0
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: sheerit.com.co/
+          security-mode: loose
