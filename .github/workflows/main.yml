@@ -14,7 +14,7 @@ jobs:
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: 📦 Install dependencies
         run: npm install
@@ -23,11 +23,16 @@ jobs:
         run: npm run build
 
       - name: 📂 Sync build folder via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: nick-fields/retry@v3
         with:
-          local-dir: dist/
-          server: ftps4.us.freehostia.com
-          username: estavi0
-          password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: sheerit.com.co/
-          security-mode: loose
+          timeout_minutes: 5
+          max_attempts: 5
+          retry_wait_seconds: 10
+          action: SamKirkland/FTP-Deploy-Action@v4.3.5
+          with: |
+            local-dir: dist/
+            server: ftps4.us.freehostia.com
+            username: estavi0
+            password: ${{ secrets.FTP_PASSWORD }}
+            server-dir: sheerit.com.co/
+            security-mode: loose
