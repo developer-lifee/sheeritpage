@@ -3,6 +3,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: deploy-sheeritpage
+  cancel-in-progress: true
+
 jobs:
   web-deploy:
     name: 🚀 Deploy website
