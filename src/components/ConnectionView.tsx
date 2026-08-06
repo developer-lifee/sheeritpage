@@ -19,9 +19,9 @@ export default function ConnectionView() {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const API_BASE = window.location.hostname.includes('sheerit.com.co')
-    ? 'https://bot.sheerit.com.co'
-    : `http://${window.location.hostname}:3000`;
+  const API_BASE = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+    ? 'http://localhost:3000'
+    : 'https://bot.sheerit.com.co';
 
   useEffect(() => {
     // Connect to SSE stream

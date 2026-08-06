@@ -21,9 +21,9 @@ export default function ClientLoginView() {
   const [accounts, setAccounts] = useState<ClientAccount[]>([]);
   const [showPass, setShowPass] = useState<Record<number, boolean>>({});
 
-  const API_BASE = window.location.hostname.includes('sheerit.com.co')
-    ? 'https://bot.sheerit.com.co'
-    : `http://${window.location.hostname}:3000`;
+  const API_BASE = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+    ? 'http://localhost:3000'
+    : 'https://bot.sheerit.com.co';
 
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();

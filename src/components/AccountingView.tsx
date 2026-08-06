@@ -90,9 +90,9 @@ export function AccountingView() {
   });
 
   const getApiUrl = () => {
-    return window.location.hostname.includes('sheerit.com.co')
-      ? 'https://bot.sheerit.com.co'
-      : `http://${window.location.hostname}:3000`;
+    return (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+      ? 'http://localhost:3000'
+      : 'https://bot.sheerit.com.co';
   };
 
   const adminPassword = localStorage.getItem('ticket_agent_password') || 'admin123';
