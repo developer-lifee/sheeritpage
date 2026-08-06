@@ -1,11 +1,9 @@
+name: 🚀 Production Deploy
+
 on:
   push:
     branches:
       - main
-
-concurrency:
-  group: deploy-sheeritpage
-  cancel-in-progress: true
 
 jobs:
   web-deploy:
