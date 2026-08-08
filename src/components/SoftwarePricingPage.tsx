@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { Shield, Sparkles, Server, Clock, Code, Award, CheckCircle2, MessageSquare, ArrowRight, Database, Settings, Zap, ArrowLeftRight, Check, ChevronLeft, ChevronRight, Laptop } from 'lucide-react';
+import { Shield, Sparkles, Server, Clock, Code, Award, CheckCircle2, MessageSquare, ArrowRight, Database, Settings, Zap, ArrowLeftRight, Check, ChevronLeft, ChevronRight, Laptop, Globe } from 'lucide-react';
 
 export function SoftwarePricingPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const handleContactWhatsApp = (planType: string) => {
-    const message = `Hola Sheerit! Estoy interesado en sus servicios de desarrollo de software y automatización (Opción: ${planType}). Me gustaría agendar una asesoría para mi proyecto.`;
+    const message = `Hola Sheerit! Estoy interesado en sus servicios de desarrollo de software, páginas web y automatización (Opción: ${planType}). Me gustaría agendar una asesoría para mi proyecto.`;
     const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/57314615670?text=${encodedMessage}`, '_blank');
+    window.open(`https://wa.me/573107946794?text=${encodedMessage}`, '_blank');
   };
 
   const cases = [
@@ -246,18 +246,90 @@ export function SoftwarePricingPage() {
 
       {/* Pricing Comparison Section */}
       <section id="pricing-comparison" className="py-16 md:py-24 bg-gray-50 dark:bg-gray-900/50">
-        <div className="max-w-6xl mx-auto px-4">
+        <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-extrabold text-gray-950 dark:text-white">
-              Dos Esquemas de Negocio para Tu Elección
+              Opciones de Desarrollo & Esquemas de Negocio
             </h2>
-            <p className="text-sm md:text-base text-gray-500 dark:text-gray-400 mt-2 max-w-2xl mx-auto">
-              Elige el modelo que mejor se alinee con tu estrategia financiera: pagar solo por el uso mensual de la plataforma o capitalizar la propiedad de tu software.
+            <p className="text-sm md:text-base text-gray-500 dark:text-gray-400 mt-2 max-w-3xl mx-auto">
+              Elige el modelo que mejor se alinee con tu estrategia: desde páginas web a medida ultra económicas por año, hasta plataformas SaaS y licenciamiento de software propio.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
-            {/* Opción 1: SaaS Suscripción Mensual */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+            {/* Opción 1: Construcción Web Básica (Anual) */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border-2 border-brand-primary/40 hover:border-brand-primary transition-all duration-300 flex flex-col justify-between transform hover:-translate-y-1 relative overflow-hidden">
+              <div className="absolute top-0 right-0 bg-brand-primary text-white text-[10px] font-bold px-4 py-1 rounded-bl-xl uppercase tracking-wider">
+                Recomendado para PYMEs
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <span className="px-3 py-1 text-xs font-extrabold tracking-wider text-brand-primary dark:text-brand-light bg-brand-primary/10 dark:bg-brand-primary/25 rounded-full uppercase">
+                      Desarrollo Web / Anual
+                    </span>
+                    <h3 className="text-2xl font-black text-gray-900 dark:text-white mt-3">Construcción Web Básica</h3>
+                  </div>
+                  <div className="p-3 bg-brand-primary/10 rounded-2xl text-brand-primary">
+                    <Globe className="w-8 h-8" />
+                  </div>
+                </div>
+
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
+                  Desarrollamos tu página o sitio web a medida con un costo por año súper económico. Todo listo para proyectar tu empresa en internet con control total.
+                </p>
+
+                <div className="mb-8">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-gray-500 dark:text-gray-400 text-sm font-bold">Desde</span>
+                    <span className="text-4xl font-black text-gray-950 dark:text-white">$150.000 COP</span>
+                    <span className="text-gray-500 dark:text-gray-400 text-sm">/ año</span>
+                  </div>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
+                    *Incluye Dominio .com.co + Hosting + Accesos directos
+                  </p>
+                </div>
+
+                <hr className="border-gray-150 dark:border-gray-700 my-6" />
+
+                <ul className="space-y-4 mb-8">
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" />
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
+                      <strong>Dominio .com.co Incluido:</strong> Registro oficial de tu dominio propio por 1 año.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" />
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
+                      <strong>Hosting / Alojamiento Web:</strong> Servidor rápido y seguro incluido por 1 año.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" />
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
+                      <strong>Entrega de Accesos Totales:</strong> Te entregamos credenciales de hosting y dominio (100% tuyo).
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" />
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
+                      <strong>Diseño a Medida & WhatsApp:</strong> Diseño adaptado a móviles con enlace y botón directo a tu WhatsApp.
+                    </span>
+                  </li>
+                </ul>
+              </div>
+
+              <button
+                onClick={() => handleContactWhatsApp('Construcción Web Básica ($150k/año)')}
+                className="w-full py-4 px-6 bg-brand-primary hover:bg-brand-dark text-white font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2"
+              >
+                Solicitar Página Web <MessageSquare className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Opción 2: SaaS Suscripción Mensual */}
             <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border-2 border-transparent hover:border-emerald-500/30 transition-all duration-300 flex flex-col justify-between transform hover:-translate-y-1">
               <div>
                 <div className="flex items-center justify-between mb-6">
@@ -325,21 +397,17 @@ export function SoftwarePricingPage() {
               </button>
             </div>
 
-            {/* Opción 2: Desarrollo a Medida / Licencia de Propiedad */}
-            <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border-2 border-brand-primary/30 hover:border-brand-primary/60 transition-all duration-300 flex flex-col justify-between transform hover:-translate-y-1 relative overflow-hidden">
-              <div className="absolute top-0 right-0 bg-brand-primary text-white text-[10px] font-bold px-4 py-1 rounded-bl-xl uppercase tracking-wider">
-                Recomendado para Empresas
-              </div>
-              
+            {/* Opción 3: Desarrollo a Medida / Licencia de Propiedad */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border-2 border-purple-500/30 hover:border-purple-500/60 transition-all duration-300 flex flex-col justify-between transform hover:-translate-y-1 relative overflow-hidden">
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <span className="px-3 py-1 text-xs font-extrabold tracking-wider text-brand-primary dark:text-brand-light bg-brand-primary/10 dark:bg-brand-primary/25 rounded-full uppercase">
+                    <span className="px-3 py-1 text-xs font-extrabold tracking-wider text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-950/40 rounded-full uppercase">
                       Software Propio / A Medida
                     </span>
                     <h3 className="text-2xl font-black text-gray-900 dark:text-white mt-3">Licencia de Propiedad</h3>
                   </div>
-                  <div className="p-3 bg-brand-primary/10 rounded-2xl text-brand-primary">
+                  <div className="p-3 bg-purple-500/10 rounded-2xl text-purple-500">
                     <Code className="w-8 h-8" />
                   </div>
                 </div>
@@ -365,25 +433,25 @@ export function SoftwarePricingPage() {
 
                 <ul className="space-y-4 mb-8">
                   <li className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
                     <span className="text-sm text-gray-600 dark:text-gray-300">
                       <strong>Propiedad Intelectual:</strong> El sistema se construye bajo especificaciones de su empresa y es un activo de su propiedad.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
                     <span className="text-sm text-gray-600 dark:text-gray-300">
                       <strong>Personalización total:</strong> Ajustes exactos en el diseño, flujo de validación y formatos de exportación de tu banco y contabilidad.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <Laptop className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" />
+                    <Laptop className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
                     <span className="text-sm text-gray-600 dark:text-gray-300">
                       <strong>Servidor Propio Opcional:</strong> Si lo deseas, instalamos el sistema en tus propios servidores (AWS, VPS, etc.). Una vez entregado, eres 100% autónomo y no pagas mensualidad.
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
                     <span className="text-sm text-gray-600 dark:text-gray-300">
                       <strong>Mantenimiento opcional:</strong> Si prefieres que nosotros administremos la nube, solo pagas el consumo mínimo de servidor.
                     </span>
@@ -393,7 +461,7 @@ export function SoftwarePricingPage() {
 
               <button
                 onClick={() => handleContactWhatsApp('Desarrollo a Medida')}
-                className="w-full py-4 px-6 bg-brand-primary hover:bg-brand-dark text-white font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2"
+                className="w-full py-4 px-6 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2"
               >
                 Solicitar Software Propio <MessageSquare className="w-4 h-4" />
               </button>
@@ -409,11 +477,18 @@ export function SoftwarePricingPage() {
             Preguntas Frecuentes
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-            Resuelve tus dudas rápidas sobre el funcionamiento de nuestra plataforma.
+            Resuelve tus dudas rápidas sobre el funcionamiento de nuestras soluciones.
           </p>
         </div>
 
         <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-150 dark:border-gray-700">
+            <h3 className="font-bold text-gray-900 dark:text-white mb-2">¿Qué incluye el plan de Construcción Web Básica de $150.000/año?</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Incluye el diseño y construcción a medida de tu sitio web (landing page o sitio corporativo), el registro de tu propio dominio .com.co por 1 año completo, hospedaje/hosting en servidor rápido por 1 año, botón directo a WhatsApp y la entrega total de accesos al hosting y dominio sin ataduras.
+            </p>
+          </div>
+
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-150 dark:border-gray-700">
             <h3 className="font-bold text-gray-900 dark:text-white mb-2">¿Cómo se realiza el levantamiento de requerimientos?</h3>
             <p className="text-sm text-gray-600 dark:text-gray-300">
