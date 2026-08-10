@@ -75,6 +75,8 @@ export const calculateSlotHours = (slot: { start_time: string; end_time: string;
     hours = Math.max(0, hours - 0.5);
   } else if (slot.break_type === 'lunch_60') {
     hours = Math.max(0, hours - 1.0);
+  } else if (slot.break_type === 'lunch_120') {
+    hours = Math.max(0, hours - 2.0);
   }
   return hours;
 };
@@ -140,7 +142,7 @@ const getBreakStartOptions = (startTime: string, endTime: string, breakType: str
   const [eh, em] = endTime.split(':').map(Number);
   const startMin = sh * 60 + sm;
   const endMin = eh * 60 + em;
-  const duration = breakType === 'break_30' ? 30 : 60;
+  const duration = breakType === 'break_30' ? 30 : (breakType === 'lunch_120' ? 120 : 60);
   
   // Care for mental health: break must start at least 90 minutes after start_time
   // and must end at least 90 minutes before end_time.
@@ -637,7 +639,12 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         const durationHours = (eh * 60 + em - (sh * 60 + sm)) / 60;
         
         // Enforce mental health break logic on time change
-        if (durationHours >= 5 && updated.break_type === 'none') {
+        if (updated.start_time === '10:00' && updated.end_time === '22:00') {
+          updated.break_type = 'lunch_120';
+          updated.break_start = '15:00';
+        } else if (durationHours >= 11 && (updated.break_type === 'none' || updated.break_type === 'lunch_60')) {
+          updated.break_type = 'lunch_120';
+        } else if (durationHours >= 5 && updated.break_type === 'none') {
           updated.break_type = 'lunch_60';
         } else if (durationHours < 4) {
           updated.break_type = 'none';
@@ -649,7 +656,11 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
             updated.break_start = '';
           } else {
             const options = getBreakStartOptions(updated.start_time, updated.end_time, updated.break_type || 'lunch_60');
-            updated.break_start = options.length > 0 ? options[0] : '';
+            if (updated.start_time === '10:00' && updated.end_time === '22:00' && updated.break_type === 'lunch_120') {
+              updated.break_start = '15:00';
+            } else {
+              updated.break_start = options.length > 0 ? options[0] : '';
+            }
           }
         }
         return updated;
@@ -675,8 +686,14 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
           setModalError('Debes seleccionar la hora del break/almuerzo.');
           return;
         }
-        if (slot.break_start <= slot.start_time || slot.break_start >= slot.end_time) {
-          setModalError(`La hora del break debe estar dentro de la franja (${slot.start_time} - ${slot.end_time}).`);
+        const [bsh, bsm] = slot.break_start.split(':').map(Number);
+        const breakStartMin = bsh * 60 + bsm;
+        const breakDuration = slot.break_type === 'break_30' ? 30 : (slot.break_type === 'lunch_120' ? 120 : 60);
+        const breakEndMin = breakStartMin + breakDuration;
+        const endMin = eh * 60 + em;
+
+        if (slot.break_start <= slot.start_time || breakEndMin > endMin) {
+          setModalError(`El descanso de ${breakDuration} min debe estar contenido completamente dentro de la franja (${slot.start_time} - ${slot.end_time}).`);
           return;
         }
       }
@@ -715,6 +732,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
           let breakMin = 0;
           if (slot.break_type === 'break_30') breakMin = 30;
           else if (slot.break_type === 'lunch_60') breakMin = 60;
+          else if (slot.break_type === 'lunch_120') breakMin = 120;
           
           dailyNetMinutes += Math.max(0, diff - breakMin);
         }
@@ -2333,6 +2351,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                                     {durationHours < 5 && <option value="none">Sin descanso</option>}
                                     <option value="break_30">Break (30 min)</option>
                                     <option value="lunch_60">Almuerzo (1 hora)</option>
+                                    <option value="lunch_120">Descanso largo (2 horas)</option>
                                   </select>
 
                                   {/* Inicio del Break */}
