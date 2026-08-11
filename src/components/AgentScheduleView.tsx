@@ -256,6 +256,17 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
 
     return { dayLabel: dayObj.label, targetDateYMD, results };
   };
+
+  // Helper: Restricción de 15 Días Máximo de Anticipación para Equidad
+  const isDateBeyond15DaysLimit = (targetDate: Date) => {
+    if (isTemplateMode) return false;
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const target = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+    const diffMs = target.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    return diffDays > 15;
+  };
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -650,6 +661,18 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
     const isAdmin = role === 'admin';
     if (!isAdmin && !isSelf) return;
 
+    // Check 15-day forward scheduling limit for non-admin/supervisors
+    if (!isAdminOrSupervisor) {
+      const cellDate = new Date(currentWeekDate);
+      const offset = day.value === 0 ? 6 : day.value - 1;
+      cellDate.setDate(cellDate.getDate() + offset);
+      if (isDateBeyond15DaysLimit(cellDate)) {
+        setCopyToast(`⚠️ Restricción de Equidad: No es posible programar turnos con más de 15 días de anticipación (Fecha intentada: ${formatDateYMD(cellDate)}).`);
+        setTimeout(() => setCopyToast(null), 5000);
+        return;
+      }
+    }
+
     setEditingAgent(agent);
     setEditingDay(day);
     setModalError('');
@@ -744,6 +767,18 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
 
   const handleSaveModal = async () => {
     if (!editingAgent || !editingDay) return;
+
+    // Check 15-day limit on save
+    if (!isAdminOrSupervisor && editingDay) {
+      const targetDate = new Date(currentWeekDate);
+      const offset = editingDay.value === 0 ? 6 : editingDay.value - 1;
+      targetDate.setDate(targetDate.getDate() + offset);
+      if (isDateBeyond15DaysLimit(targetDate)) {
+        setModalError(`⚠️ Restricción de Equidad: No es posible guardar turnos con más de 15 días de anticipación (${formatDateYMD(targetDate)}).`);
+        setModalSaving(false);
+        return;
+      }
+    }
 
     // Validate editing slots
     for (const slot of editingSlots) {
@@ -1159,6 +1194,17 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
     agentNameLabel: string,
     dayLabel: string
   ) => {
+    if (!isAdminOrSupervisor) {
+      const targetDate = new Date(currentWeekDate);
+      const offset = targetDayValue === 0 ? 6 : targetDayValue - 1;
+      targetDate.setDate(targetDate.getDate() + offset);
+      if (isDateBeyond15DaysLimit(targetDate)) {
+        setCopyToast(`⚠️ Restricción de Equidad: No es posible pegar turnos a más de 15 días en el futuro (${formatDateYMD(targetDate)}).`);
+        setTimeout(() => setCopyToast(null), 5000);
+        return;
+      }
+    }
+
     const apiUrl = getApiUrl();
     const weekStart = getWeekStartParam();
     
@@ -1393,6 +1439,17 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                 {/* Crear empleado trasladado a Nómina de Pagos */}
               </div>
             </div>
+          </div>
+
+          {/* Banner de Regla de Equidad (15 días máx) */}
+          <div className="bg-purple-500/10 border border-purple-500/25 text-purple-800 dark:text-purple-300 rounded-xl p-3 flex items-center justify-between text-xs font-bold mb-4">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+              <span>⚖️ <strong>Regla de Equidad Activa:</strong> La programación de turnos está limitada a un máximo de <strong>15 días de anticipación</strong> hacia el futuro para prevenir el acaparamiento mensual.</span>
+            </div>
+            <span className="text-[11px] text-purple-600/80 dark:text-purple-400 font-mono hidden md:inline">
+              (Admins y Supervisores exentos)
+            </span>
           </div>
 
           {/* Banner de Rango Permitido */}
