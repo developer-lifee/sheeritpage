@@ -165,13 +165,17 @@ interface AgentScheduleViewProps {
   role: string;
   activeMainTab?: 'calendar' | 'payroll';
   setActiveMainTab?: (tab: 'calendar' | 'payroll') => void;
+  externalQueryDate?: string;
+  onClearExternalQueryDate?: () => void;
 }
 
 export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
   agentEmail,
   role,
   activeMainTab: externalActiveMainTab,
-  setActiveMainTab: externalSetActiveMainTab
+  setActiveMainTab: externalSetActiveMainTab,
+  externalQueryDate,
+  onClearExternalQueryDate
 }) => {
   // Check if current user is Esteban
   const isEsteban = agentEmail.trim().toLowerCase() === 'estebanavila182@outlook.com';
@@ -183,6 +187,75 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
   const [agents, setAgents] = useState<Agent[]>([]);
   const [allSchedules, setAllSchedules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Single-Day Date Query Modal State ("¿Quién estuvo el X día?")
+  const [dateQueryModalOpen, setDateQueryModalOpen] = useState(false);
+  const [queryDateStr, setQueryDateStr] = useState<string>('2026-07-15');
+  const [queryIncludeTerminated, setQueryIncludeTerminated] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (externalQueryDate) {
+      setQueryDateStr(externalQueryDate);
+      setDateQueryModalOpen(true);
+      if (onClearExternalQueryDate) {
+        onClearExternalQueryDate();
+      }
+    }
+  }, [externalQueryDate]);
+
+  const getAgentsStatusForDate = (targetDateYMD: string) => {
+    if (!targetDateYMD) return { dayLabel: '', targetDateYMD: '', results: [] };
+    const parts = targetDateYMD.split('-').map(Number);
+    const targetDate = new Date(parts[0], parts[1] - 1, parts[2]);
+    const dayOfWeek = targetDate.getDay(); // 0-6 (0=Domingo, 1=Lunes...)
+    const dayObj = DAYS_OF_WEEK.find(d => d.value === dayOfWeek) || { label: 'Día', value: dayOfWeek };
+
+    const results = agents.map(agent => {
+      const emailLower = agent.email.toLowerCase();
+      const isCurrentlyInactive = agent.status === 'inactive';
+      
+      let statusType: 'active' | 'terminated_later' | 'inactive' = 'active';
+      let statusLabel = '✅ Contrato Activo';
+      let statusBadgeClass = 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30';
+
+      if (isCurrentlyInactive) {
+        statusType = 'terminated_later';
+        statusLabel = '⚠️ Contrato Finalizado Posteriormente (Presente en la fecha)';
+        statusBadgeClass = 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40 shadow-xs';
+      }
+
+      // Find slots assigned for this day_of_week
+      const slots = allSchedules.filter((s: any) => s.email.toLowerCase() === emailLower && s.day_of_week === dayOfWeek);
+      
+      let totalNetHours = 0;
+      slots.forEach(slot => {
+        totalNetHours += calculateSlotHours(slot);
+      });
+
+      const isTrial = agent.role === 'trial';
+      const rate = isTrial ? trialHourlyRate : hourlyRate;
+      const dailyEstEarnings = agent.exclude_from_payroll ? 0 : totalNetHours * rate;
+
+      return {
+        agent,
+        statusType,
+        statusLabel,
+        statusBadgeClass,
+        slots,
+        totalNetHours,
+        rate,
+        dailyEstEarnings,
+        dayLabel: dayObj.label
+      };
+    }).filter(item => {
+      if (!queryIncludeTerminated && item.statusType === 'terminated_later') {
+        return false;
+      }
+      return true;
+    });
+
+    return { dayLabel: dayObj.label, targetDateYMD, results };
+  };
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -1308,6 +1381,15 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                   Plantilla Base
                 </button>
 
+                <button
+                  onClick={() => setDateQueryModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-black rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md transition-all active:scale-95 whitespace-nowrap"
+                  title="Consultar quién estuvo laborando en una fecha específica (incluyendo contratos terminados)"
+                >
+                  <Calendar className="w-3.5 h-3.5 text-purple-200" />
+                  <span>🔍 ¿Quién estuvo ese día?</span>
+                </button>
+
                 {/* Crear empleado trasladado a Nómina de Pagos */}
               </div>
             </div>
@@ -1798,6 +1880,15 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                   Cierre por Fecha Corte
                 </button>
               </div>
+
+              <button
+                onClick={() => setDateQueryModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md transition-all active:scale-95 whitespace-nowrap"
+                title="Consultar personal activo y turnos por fecha histórica"
+              >
+                <Calendar className="w-3.5 h-3.5 text-purple-200" />
+                <span>🔍 ¿Quién estuvo ese día?</span>
+              </button>
 
               {selectedPeriodMode === 'month' ? (
                 <div className="flex items-center gap-2">
@@ -3039,6 +3130,202 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
               <button
                 type="button"
                 onClick={() => setSystemLogsModalOpen(false)}
+                className="px-4 py-2 border rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Consulta de Horarios & Personal por Fecha Histórica */}
+      {dateQueryModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white dark:bg-gray-850 rounded-2xl max-w-3xl w-full border dark:border-gray-700 shadow-2xl p-6 relative max-h-[90vh] flex flex-col">
+            <button
+              onClick={() => setDateQueryModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-400 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4 border-b dark:border-gray-700 pb-3">
+              <div className="p-2.5 bg-purple-500/10 rounded-xl text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                <Calendar className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                  Buscador de Horarios & Personal por Fecha Histórica
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Consulta quién estuvo programado en un día específico, incluyendo contratos que finalizaron posteriormente.
+                </p>
+              </div>
+            </div>
+
+            {/* Controles de Selección de Fecha y Filtros */}
+            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border dark:border-gray-700 mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Fecha a Consultar:</label>
+                <input
+                  type="date"
+                  value={queryDateStr}
+                  onChange={(e) => setQueryDateStr(e.target.value)}
+                  className="px-3 py-1.5 border rounded-xl dark:bg-gray-850 dark:border-gray-600 text-xs font-mono font-bold dark:text-white"
+                />
+              </div>
+
+              {/* Atajos de Fechas */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  onClick={() => setQueryDateStr('2026-07-15')}
+                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
+                    queryDateStr === '2026-07-15'
+                      ? 'bg-purple-600 text-white shadow-xs'
+                      : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border dark:border-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  15 de Julio
+                </button>
+                <button
+                  onClick={() => {
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    setQueryDateStr(formatDateYMD(yesterday));
+                  }}
+                  className="px-2.5 py-1 text-xs font-bold bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border dark:border-gray-600 rounded-lg hover:bg-gray-100 transition-all"
+                >
+                  Ayer
+                </button>
+                <button
+                  onClick={() => setQueryDateStr(formatDateYMD(new Date()))}
+                  className="px-2.5 py-1 text-xs font-bold bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border dark:border-gray-600 rounded-lg hover:bg-gray-100 transition-all"
+                >
+                  Hoy
+                </button>
+              </div>
+
+              <div className="w-full pt-2 border-t dark:border-gray-700 flex items-center justify-between text-xs">
+                <label className="flex items-center gap-2 cursor-pointer font-semibold text-gray-700 dark:text-gray-300">
+                  <input
+                    type="checkbox"
+                    checked={queryIncludeTerminated}
+                    onChange={(e) => setQueryIncludeTerminated(e.target.checked)}
+                    className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                  />
+                  <span>Mostrar colaboradores con contratos finalizados posteriormente</span>
+                </label>
+
+                <span className="text-[11px] text-gray-400 font-mono">
+                  Día de la semana: <strong className="text-purple-600 dark:text-purple-400 uppercase font-bold">{getAgentsStatusForDate(queryDateStr).dayLabel}</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Tarjetas de Resumen Diario */}
+            {(() => {
+              const data = getAgentsStatusForDate(queryDateStr);
+              const totalActiveCount = data.results.length;
+              const totalHoursDay = data.results.reduce((sum, r) => sum + r.totalNetHours, 0);
+              const totalCostDay = data.results.reduce((sum, r) => sum + r.dailyEstEarnings, 0);
+
+              return (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                    <div className="bg-purple-500/5 dark:bg-purple-500/10 p-3 rounded-xl border border-purple-500/20 flex justify-between items-center">
+                      <div>
+                        <span className="text-[10px] font-extrabold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Personal Programado</span>
+                        <div className="text-lg font-black text-gray-900 dark:text-white mt-0.5">{totalActiveCount} colaboradores</div>
+                      </div>
+                      <Users className="w-7 h-7 text-purple-500/20" />
+                    </div>
+
+                    <div className="bg-blue-500/5 dark:bg-blue-500/10 p-3 rounded-xl border border-blue-500/20 flex justify-between items-center">
+                      <div>
+                        <span className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Horas Programadas</span>
+                        <div className="text-lg font-black text-gray-900 dark:text-white mt-0.5 font-mono">{totalHoursDay.toFixed(1)} hrs</div>
+                      </div>
+                      <Clock className="w-7 h-7 text-blue-500/20" />
+                    </div>
+
+                    <div className="bg-emerald-500/5 dark:bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20 flex justify-between items-center">
+                      <div>
+                        <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Costo Est. Día</span>
+                        <div className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-0.5 font-mono">${Math.round(totalCostDay).toLocaleString('es-CO')}</div>
+                      </div>
+                      <DollarSign className="w-7 h-7 text-emerald-500/20" />
+                    </div>
+                  </div>
+
+                  {/* Tabla de Resultados por Agente */}
+                  <div className="overflow-y-auto flex-1 border border-gray-200 dark:border-gray-700 rounded-xl">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 uppercase text-[10px] font-bold tracking-wider border-b border-gray-200 dark:border-gray-700 sticky top-0">
+                          <th className="py-2.5 px-3">Asesor / Empleado</th>
+                          <th className="py-2.5 px-3 text-center">Estado del Contrato</th>
+                          <th className="py-2.5 px-3">Turno Programado</th>
+                          <th className="py-2.5 px-3 text-center">Horas Netas</th>
+                          <th className="py-2.5 px-3 text-right">Pago Proyectado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-gray-750">
+                        {data.results.map((res) => (
+                          <tr key={res.agent.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors">
+                            <td className="py-3 px-3">
+                              <div className="flex flex-col">
+                                <span className="font-bold text-gray-900 dark:text-white text-xs">{res.agent.fullname}</span>
+                                <span className="text-[10px] text-gray-500 font-mono">{res.agent.email}</span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 text-center">
+                              <span className={`px-2 py-1 rounded-md text-[10px] font-extrabold border ${res.statusBadgeClass}`}>
+                                {res.statusLabel}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3">
+                              {res.slots.length === 0 ? (
+                                <span className="text-gray-400 italic text-[11px]">Día Libre / Sin turno</span>
+                              ) : (
+                                <div className="flex flex-col gap-1">
+                                  {res.slots.map((s: any, sIdx: number) => (
+                                    <div key={sIdx} className="flex items-center gap-1.5 font-mono text-[11px] text-gray-800 dark:text-gray-200">
+                                      <Clock className="w-3 h-3 text-indigo-500" />
+                                      <span>{s.start_time.substring(0, 5)} - {s.end_time.substring(0, 5)}</span>
+                                      {s.break_type && s.break_type !== 'none' && (
+                                        <span className="text-[9px] bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-1 py-0.2 rounded font-sans">
+                                          {s.break_type === 'break_30' ? 'Desc. 30m' : s.break_type === 'lunch_60' ? 'Alm. 60m' : 'Alm. 120m'}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 text-center font-mono font-bold text-gray-900 dark:text-white">
+                              {res.totalNetHours > 0 ? `${res.totalNetHours.toFixed(1)} hrs` : '0 hrs'}
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                              {res.agent.exclude_from_payroll ? (
+                                <span className="text-gray-400 italic font-sans text-[11px]">$0 (Excluido)</span>
+                              ) : (
+                                `$${Math.round(res.dailyEstEarnings).toLocaleString('es-CO')}`
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              );
+            })()}
+
+            <div className="flex justify-end gap-2 pt-4 border-t dark:border-gray-700 mt-3">
+              <button
+                type="button"
+                onClick={() => setDateQueryModalOpen(false)}
                 className="px-4 py-2 border rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 Cerrar

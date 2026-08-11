@@ -21,6 +21,7 @@ import PromptsConfigView from './PromptsConfigView';
 import RpaAutomatorView from './RpaAutomatorView';
 import { WebSalesView } from './WebSalesView';
 import { AccountingView } from './AccountingView';
+import { AIPanelAssistant } from './AIPanelAssistant';
 
 interface Step {
   text: string;
@@ -76,6 +77,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
   const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'payments' | 'streaming' | 'policies' | 'whatsapp' | 'prompts' | 'rpa' | 'web_sales' | 'accounting'>('tickets');
   const [activePaymentsSubTab, setActivePaymentsSubTab] = useState<'calendar' | 'payroll'>('calendar');
   const [searchQuery, setSearchQuery] = useState('');
+  const [externalQueryDate, setExternalQueryDate] = useState<string | undefined>(undefined);
 
 
   // Platforms to recycle logos from
@@ -411,6 +413,8 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           role={role} 
           activeMainTab={activePaymentsSubTab} 
           setActiveMainTab={setActivePaymentsSubTab} 
+          externalQueryDate={externalQueryDate}
+          onClearExternalQueryDate={() => setExternalQueryDate(undefined)}
         />
         {activePaymentsSubTab === 'payroll' && (
           <>
@@ -600,6 +604,18 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           Agregar Nueva Plataforma
         </button>
       </div>
+
+      {/* Asistente IA omnipresente (DeepSeek & Gemini) */}
+      <AIPanelAssistant
+        activeTab={activeTab}
+        agentEmail={agentEmail}
+        agentName={agentName}
+        onNavigateTab={(tab) => setActiveTab(tab)}
+        onOpenDateQuery={(dateStr) => {
+          setActiveTab('payments');
+          setExternalQueryDate(dateStr || '2026-07-15');
+        }}
+      />
     </div>
   );
 }
