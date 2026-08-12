@@ -13,6 +13,26 @@ const cleanPhone = (phone: string): string => {
   return phone.replace(/@(lid|c\.us)/g, '').replace(/^\+/, '');
 };
 
+// Helper: Identificar si es un LID de privacidad de WhatsApp
+const isLidNumber = (phoneStr: string): boolean => {
+  if (!phoneStr) return false;
+  const raw = phoneStr.toLowerCase();
+  if (raw.includes('@lid')) return true;
+  const clean = raw.replace(/[^0-9]/g, '');
+  return clean.length >= 14 && (clean.startsWith('120') || clean.startsWith('239') || clean.startsWith('994') || clean.startsWith('180'));
+};
+
+// Helper: Formatear teléfono o identificador LID para la interfaz
+const formatPhoneDisplay = (phone: string): string => {
+  if (!phone) return '';
+  const cleaned = phone.replace(/@(lid|c\.us)/g, '').replace(/^\+/, '').trim();
+  if (!cleaned) return '';
+  if (isLidNumber(phone) || isLidNumber(cleaned)) {
+    return `ID Privado (LID): ${cleaned}`;
+  }
+  return `+${cleaned}`;
+};
+
 interface Ticket {
   userId: string;
   phone: string;
@@ -1741,7 +1761,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
             <span className="font-bold text-xs text-gray-800 dark:text-white block truncate" title={t.nombre}>
               {t.nombre || 'Cliente WhatsApp'}
             </span>
-            <span className="text-[10px] text-gray-450 font-mono">+{cleanPhone(t.phone)}</span>
+            <span className="text-[10px] text-gray-450 font-mono">{formatPhoneDisplay(t.phone)}</span>
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
             <span className="text-[9px] text-gray-400 font-mono">
@@ -2262,7 +2282,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                         )}
                       </h3>
                       <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-gray-450 font-mono">+{cleanPhone(activeChatTicket.phone)}</span>
+                      <span className="text-xs text-gray-450 font-mono">{formatPhoneDisplay(activeChatTicket.phone)}</span>
                       <button
                         type="button"
                         onClick={() => fetchClientProfile(activeChatTicket.phone)}
@@ -3206,7 +3226,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                           >
                             <div>
                               <span className="font-bold text-gray-800 dark:text-white block">{t.nombre}</span>
-                              <span className="text-[10px] text-gray-400 font-mono">+{cleanPhone(t.phone)}</span>
+                              <span className="text-[10px] text-gray-400 font-mono">{formatPhoneDisplay(t.phone)}</span>
                             </div>
                             <div className="text-right">
                               <span className="text-[10px] font-semibold bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded capitalize">

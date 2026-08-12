@@ -192,6 +192,8 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
   const [dateQueryModalOpen, setDateQueryModalOpen] = useState(false);
   const [queryDateStr, setQueryDateStr] = useState<string>('2026-07-15');
   const [queryIncludeTerminated, setQueryIncludeTerminated] = useState<boolean>(true);
+  const [queryDateSchedules, setQueryDateSchedules] = useState<any[]>([]);
+  const [queryDateSchedulesLoading, setQueryDateSchedulesLoading] = useState(false);
 
   useEffect(() => {
     if (externalQueryDate) {
@@ -203,12 +205,44 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
     }
   }, [externalQueryDate]);
 
+  useEffect(() => {
+    if (!dateQueryModalOpen || !queryDateStr) return;
+
+    const parts = queryDateStr.split('-').map(Number);
+    const targetDate = new Date(parts[0], parts[1] - 1, parts[2]);
+    const mondayDate = getMondayOfDate(targetDate);
+    const targetWeekStart = formatDateYMD(mondayDate);
+
+    const fetchQueryDateSchedules = async () => {
+      setQueryDateSchedulesLoading(true);
+      const apiUrl = getApiUrl();
+      try {
+        const res = await fetch(`${apiUrl}/api/admin/agents/schedules/all?week_start=${targetWeekStart}`);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.schedules)) {
+          setQueryDateSchedules(data.schedules);
+        } else {
+          setQueryDateSchedules([]);
+        }
+      } catch (err) {
+        console.error("Error fetching schedules for query date:", err);
+        setQueryDateSchedules([]);
+      } finally {
+        setQueryDateSchedulesLoading(false);
+      }
+    };
+
+    fetchQueryDateSchedules();
+  }, [dateQueryModalOpen, queryDateStr]);
+
   const getAgentsStatusForDate = (targetDateYMD: string) => {
     if (!targetDateYMD) return { dayLabel: '', targetDateYMD: '', results: [] };
     const parts = targetDateYMD.split('-').map(Number);
     const targetDate = new Date(parts[0], parts[1] - 1, parts[2]);
     const dayOfWeek = targetDate.getDay(); // 0-6 (0=Domingo, 1=Lunes...)
     const dayObj = DAYS_OF_WEEK.find(d => d.value === dayOfWeek) || { label: 'Día', value: dayOfWeek };
+
+    const activeSchedulePool = queryDateSchedules.length > 0 ? queryDateSchedules : allSchedules;
 
     const results = agents.map(agent => {
       const emailLower = agent.email.toLowerCase();
@@ -224,8 +258,8 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         statusBadgeClass = 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40 shadow-xs';
       }
 
-      // Find slots assigned for this day_of_week
-      const slots = allSchedules.filter((s: any) => s.email.toLowerCase() === emailLower && s.day_of_week === dayOfWeek);
+      // Find slots assigned for this day_of_week from the specific target week's schedule
+      const slots = activeSchedulePool.filter((s: any) => s.email.toLowerCase() === emailLower && s.day_of_week === dayOfWeek);
       
       let totalNetHours = 0;
       slots.forEach(slot => {
