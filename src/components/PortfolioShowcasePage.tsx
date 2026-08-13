@@ -42,6 +42,7 @@ interface Project {
   tags: string[];
   features: string[];
   liveUrl?: string;
+  githubUrl?: string;
   fallbackGradient: string;
   icon: React.ElementType;
   metrics?: { label: string; value: string }[];
@@ -64,6 +65,7 @@ const PROJECTS: Project[] = [
       'Diseño 100% responsivo adaptable a celulares y tablets'
     ],
     liveUrl: 'https://sheerit.com.co',
+    githubUrl: 'https://github.com/developer-lifee/sheeritpage',
     fallbackGradient: 'from-purple-600 via-brand-primary to-indigo-900',
     icon: ShoppingBag,
     firstCommitDate: 'Marzo 2024',
@@ -87,6 +89,7 @@ const PROJECTS: Project[] = [
       'Gráficos e indicadores clave de efectividad de equipo'
     ],
     liveUrl: 'https://github.com/developer-lifee/furdemy2',
+    githubUrl: 'https://github.com/developer-lifee/furdemy2',
     fallbackGradient: 'from-blue-800 via-indigo-900 to-slate-950',
     icon: Trophy,
     firstCommitDate: '08 de Abril, 2024',
@@ -109,7 +112,8 @@ const PROJECTS: Project[] = [
       'Autenticación social integrada con Google y Apple Login',
       'Soporte multi-idioma con i18next'
     ],
-    liveUrl: 'https://github.com/developer-lifee/react-app',
+    liveUrl: 'https://developer-lifee.github.io/react-app/',
+    githubUrl: 'https://github.com/developer-lifee/react-app',
     fallbackGradient: 'from-blue-700 via-sky-800 to-slate-950',
     icon: FileText,
     firstCommitDate: '13 de Septiembre, 2024',
@@ -132,8 +136,9 @@ const PROJECTS: Project[] = [
       'Módulo de planificación de alimentación semanal, quincenal y mensual',
       'Carrito de compras dinámico con inicio de sesión y registro de usuarios'
     ],
-    liveUrl: 'https://github.com/developer-lifee/pickfost.com.co',
-    fallbackGradient: 'from-amber-600 via-orange-700 to-slate-950',
+    liveUrl: 'https://developer-lifee.github.io/pickfost.com.co/',
+    githubUrl: 'https://github.com/developer-lifee/pickfost.com.co',
+    fallbackGradient: 'from-red-700 via-red-900 to-slate-950',
     icon: Utensils,
     firstCommitDate: '01 de Octubre, 2024',
     metrics: [
@@ -155,7 +160,8 @@ const PROJECTS: Project[] = [
       'Integración con pasarela de pago digital y Nequi',
       'Confirmación automática de boleta y comprobantes'
     ],
-    liveUrl: 'https://github.com/developer-lifee/rifa.sheerit.com.co',
+    liveUrl: 'https://developer-lifee.github.io/rifa-sheerit/',
+    githubUrl: 'https://github.com/developer-lifee/rifa-sheerit',
     fallbackGradient: 'from-purple-700 via-violet-800 to-slate-950',
     icon: Ticket,
     firstCommitDate: '13 de Octubre, 2024',
@@ -178,7 +184,8 @@ const PROJECTS: Project[] = [
       'Supervisión de ejecuciones de bots de WhatsApp en vivo',
       'Asistente conversacional omnipresente para consultas rápidas'
     ],
-    liveUrl: 'https://www.sheerit.com.co/aiuda/admin',
+    liveUrl: 'https://sheerit.com.co/aiuda/admin',
+    githubUrl: 'https://github.com/developer-lifee/sheeritpage',
     fallbackGradient: 'from-emerald-600 via-teal-700 to-slate-900',
     icon: Bot,
     firstCommitDate: '23 de Mayo, 2025',
@@ -201,7 +208,8 @@ const PROJECTS: Project[] = [
       'Carrito de compras y pasarela de pedidos rápida',
       'Optimizado para dispositivos móviles y experiencia boutique'
     ],
-    liveUrl: 'https://github.com/developer-lifee/v0-cafe-website',
+    liveUrl: 'https://developer-lifee.github.io/v0-cafe-website/',
+    githubUrl: 'https://github.com/developer-lifee/v0-cafe-website',
     fallbackGradient: 'from-amber-700 via-amber-900 to-slate-950',
     icon: Coffee,
     firstCommitDate: '10 de Diciembre, 2025',
@@ -224,7 +232,8 @@ const PROJECTS: Project[] = [
       'Control de áreas comunes, accesos y paquetería',
       'Cero riesgo laboral directo para administradores de edificios'
     ],
-    liveUrl: 'https://github.com/developer-lifee/consergeria-website',
+    liveUrl: 'https://developer-lifee.github.io/consergeria-website/',
+    githubUrl: 'https://github.com/developer-lifee/consergeria-website',
     fallbackGradient: 'from-blue-600 via-indigo-700 to-slate-900',
     icon: Building2,
     firstCommitDate: '17 de Febrero, 2026',
@@ -1163,24 +1172,36 @@ export const PortfolioShowcasePage: React.FC = () => {
                       ))}
                     </div>
 
-                    <div className="flex items-center justify-between text-xs pt-1">
+                    <div className="flex items-center justify-between text-xs pt-1 flex-wrap gap-2">
                       <span className="text-indigo-400 font-semibold group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                        <span>{isSelected ? '▶️ Viendo en pantalla' : 'Probar este proyecto'}</span>
+                        <span>{isSelected ? '▶️ Viendo demo en marco' : 'Probar demo'}</span>
                         <ChevronRight className="w-4 h-4" />
                       </span>
 
-                      {project.liveUrl && (
-                        <a
-                          href={project.liveUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-slate-400 hover:text-white flex items-center gap-1 underline font-medium"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          <span>Abrir Enlace</span>
-                        </a>
-                      )}
+                      <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                        {project.liveUrl && (
+                          <a
+                            href={project.liveUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-bold bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-800/60 transition-colors"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>Visitar sitio</span>
+                          </a>
+                        )}
+
+                        {project.githubUrl && (
+                          <a
+                            href={project.githubUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-slate-400 hover:text-white flex items-center gap-1 font-medium bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 transition-colors"
+                          >
+                            <span>GitHub</span>
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
