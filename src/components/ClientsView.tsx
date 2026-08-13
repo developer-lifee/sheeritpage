@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle, Calendar } from 'lucide-react';
+import { isDemoMode } from '../utils/demoMode';
 
 function formatExcelDate(excelDate: any): string {
     if (!excelDate) return '-';
@@ -199,6 +200,16 @@ export const ClientsView: React.FC = () => {
     const [actionErrorMessage, setActionErrorMessage] = useState<{[key: string]: string}>({});
 
     useEffect(() => {
+        if (isDemoMode()) {
+            setClients([
+                { rowNumber: 1, Nombre: 'Carlos', Apellido: 'Mendoza (Demo)', numero: '573001234567', Streaming: 'Netflix Ultra HD', correo: 'demo.cliente1@sheerit.com', deben: '2026-08-25', status: 'Activo' },
+                { rowNumber: 2, Nombre: 'Mariana', Apellido: 'Gómez (Demo)', numero: '573109876543', Streaming: 'Disney+ Premium', correo: 'disney.demo@sheerit.com', deben: '2026-08-28', status: 'Activo' },
+                { rowNumber: 3, Nombre: 'Javier', Apellido: 'Ríos (Empresarial Demo)', numero: '573201122334', Streaming: 'Spotify Family', correo: 'music.demo@sheerit.com', deben: '2026-09-01', status: 'Activo' },
+                { rowNumber: 4, Nombre: 'Diana', Apellido: 'Marcela (Demo)', numero: '573155544332', Streaming: 'Max (HBO)', correo: 'hbo.demo@sheerit.com', deben: '2026-08-22', status: 'Por Vencer' }
+            ]);
+            setLoading(false);
+            return;
+        }
         const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
         fetch(`${apiUrl}/api/admin/clients`)
             .then(res => res.json())
