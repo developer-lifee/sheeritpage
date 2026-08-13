@@ -15,6 +15,7 @@ import { SoftwarePricingPage } from './components/SoftwarePricingPage';
 import { RayTracingSupportPage } from './components/RayTracingSupportPage';
 import { RayTracingPrivacyPage } from './components/RayTracingPrivacyPage';
 import PortfolioShowcasePage from './components/PortfolioShowcasePage';
+import ErrorBoundary from './components/ErrorBoundary';
 import ClientLoginView from './components/ClientLoginView';
 import { useDarkMode } from './hooks/useDarkMode';
 import { Search, ShoppingCart, Lock, AlertCircle, Globe } from 'lucide-react';
@@ -586,7 +587,9 @@ function AppContent() {
       )}
 
       {currentView === 'portafolio' && (
-        <PortfolioShowcasePage />
+        <ErrorBoundary fallbackTitle="Portafolio de Desarrollos">
+          <PortfolioShowcasePage />
+        </ErrorBoundary>
       )}
 
       {currentView === 'admin' && (

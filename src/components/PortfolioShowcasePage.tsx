@@ -140,14 +140,19 @@ export const PortfolioShowcasePage: React.FC = () => {
     ? PROJECTS 
     : PROJECTS.filter(p => p.category === selectedCategory);
 
+  const currentProject = activeProject || PROJECTS[0];
+  const IconComp = currentProject?.icon || Building2;
+
   const handleNextProject = () => {
-    const currentIndex = filteredProjects.findIndex(p => p.id === activeProject.id);
+    if (!filteredProjects || filteredProjects.length === 0) return;
+    const currentIndex = filteredProjects.findIndex(p => p.id === currentProject.id);
     const nextIndex = (currentIndex + 1) % filteredProjects.length;
     setActiveProject(filteredProjects[nextIndex]);
   };
 
   const handlePrevProject = () => {
-    const currentIndex = filteredProjects.findIndex(p => p.id === activeProject.id);
+    if (!filteredProjects || filteredProjects.length === 0) return;
+    const currentIndex = filteredProjects.findIndex(p => p.id === currentProject.id);
     const prevIndex = (currentIndex - 1 + filteredProjects.length) % filteredProjects.length;
     setActiveProject(filteredProjects[prevIndex]);
   };
@@ -167,6 +172,11 @@ export const PortfolioShowcasePage: React.FC = () => {
         return 'w-full h-[620px] rounded-2xl border border-slate-700/80 shadow-2xl';
     }
   };
+
+  // Evitar loops recursivos de iframe si la URL es el mismo sitio sheerit.com.co
+  const isSameOriginProject = currentProject.liveUrl && (
+    currentProject.liveUrl.includes('sheerit.com.co') && typeof window !== 'undefined' && window.location.hostname.includes('sheerit.com.co')
+  );
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 py-10 px-4 sm:px-6 lg:px-8 font-sans">
@@ -333,31 +343,31 @@ export const PortfolioShowcasePage: React.FC = () => {
 
               {/* Contenido Visual Interactivo / Fallback de Presentación */}
               <div className="flex-1 bg-slate-900 relative flex flex-col overflow-hidden">
-                {activeProject.liveUrl ? (
+                {currentProject.liveUrl && !isSameOriginProject ? (
                   <iframe
                     key={iframeKey}
-                    src={activeProject.liveUrl}
-                    title={activeProject.title}
+                    src={currentProject.liveUrl}
+                    title={currentProject.title}
                     className="w-full h-full border-0 bg-white"
                     sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                     loading="lazy"
                   />
                 ) : (
-                  <div className={`flex-1 bg-gradient-to-br ${activeProject.fallbackGradient} p-8 flex flex-col justify-between text-white relative overflow-hidden`}>
+                  <div className={`flex-1 bg-gradient-to-br ${currentProject.fallbackGradient} p-8 flex flex-col justify-between text-white relative overflow-hidden`}>
                     <div className="absolute -right-10 -bottom-10 opacity-15">
-                      <activeProject.icon className="w-80 h-80 text-white" />
+                      <IconComp className="w-80 h-80 text-white" />
                     </div>
 
                     <div className="space-y-4 relative z-10">
                       <span className="px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold">
-                        {activeProject.categoryLabel}
+                        {currentProject.categoryLabel}
                       </span>
-                      <h2 className="text-3xl font-extrabold">{activeProject.title}</h2>
-                      <p className="text-slate-200 text-sm max-w-lg leading-relaxed">{activeProject.description}</p>
+                      <h2 className="text-3xl font-extrabold">{currentProject.title}</h2>
+                      <p className="text-slate-200 text-sm max-w-lg leading-relaxed">{currentProject.description}</p>
                     </div>
 
                     <div className="relative z-10 flex flex-wrap gap-2 pt-4">
-                      {activeProject.features.map((feat, fIdx) => (
+                      {currentProject.features.map((feat, fIdx) => (
                         <div key={fIdx} className="flex items-center gap-2 bg-slate-950/60 px-3 py-1.5 rounded-xl border border-white/10 text-xs">
                           <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
                           <span>{feat}</span>
