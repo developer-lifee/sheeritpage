@@ -19,6 +19,7 @@ import {
   ShoppingBag, 
   Dices, 
   Bot, 
+  Package,
   ChevronLeft,
   ChevronRight,
   Filter
@@ -55,12 +56,33 @@ const PROJECTS: Project[] = [
       'Panel responsivo adaptable a celulares y tablets para conserjes',
       'Módulo de comunicados generales e incidencias'
     ],
-    liveUrl: 'https://consergeria-website.vercel.app',
     fallbackGradient: 'from-blue-600 via-indigo-700 to-slate-900',
     icon: Building2,
     metrics: [
       { label: 'Tiempo de Carga', value: '< 0.8s' },
       { label: 'Diseño Mobile', value: '100% Responsivo' }
+    ]
+  },
+  {
+    id: 'pickfost',
+    title: 'Pickfost Colombia',
+    subtitle: 'Plataforma Web de Logística & Envíos Nacionales',
+    category: 'webapp',
+    categoryLabel: 'Plataforma Logística',
+    description: 'Sistema web de mensajería, seguimiento de paquetes en tiempo real, cotización automática de guías y despacho de envíos a nivel nacional.',
+    tags: ['React', 'Node.js', 'Tailwind CSS', 'Tracking API', 'TypeScript'],
+    features: [
+      'Cotizador de tarifas y cálculo de fletes en vivo',
+      'Seguimiento en tiempo real con número de guía',
+      'Panel de despacho responsivo para conductores y clientes',
+      'Integración con plataformas de mensajería urbana y nacional'
+    ],
+    liveUrl: 'https://pickfost.com.co',
+    fallbackGradient: 'from-blue-700 via-indigo-800 to-slate-950',
+    icon: Package,
+    metrics: [
+      { label: 'Envíos', value: 'Rastreo en vivo' },
+      { label: 'Cálculo', value: 'Tarifario Automático' }
     ]
   },
   {
