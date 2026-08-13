@@ -22,7 +22,14 @@ import {
   Package,
   ChevronLeft,
   ChevronRight,
-  Filter
+  Filter,
+  Search,
+  Check,
+  Plus,
+  Clock,
+  Shield,
+  Calendar,
+  Users
 } from 'lucide-react';
 
 interface Project {
@@ -42,6 +49,28 @@ interface Project {
 }
 
 const PROJECTS: Project[] = [
+  {
+    id: 'sheerit-store',
+    title: 'Sheerit Store - E-Commerce de Licencias',
+    subtitle: 'Plataforma de Venta de Entretenimiento & Streaming',
+    category: 'ecommerce',
+    categoryLabel: 'E-Commerce & Digital',
+    description: 'Tienda virtual con catálogo interactivo de suscripciones, carrito de compras dinámico, comprobación de verificación de hogar y pagos automatizados.',
+    tags: ['React', 'Vite', 'Tailwind CSS', 'WhatsApp API', 'Nequi / Bancolombia'],
+    features: [
+      'Catálogo de combos y planes con actualización en vivo',
+      'Sistema de verificación de cuenta y hogar inteligente',
+      'Carrito de compras dinámico con cálculo inmediato',
+      'Integración fluida con WhatsApp para confirmación'
+    ],
+    liveUrl: 'https://sheerit.com.co',
+    fallbackGradient: 'from-purple-600 via-brand-primary to-indigo-900',
+    icon: ShoppingBag,
+    metrics: [
+      { label: 'Transacciones', value: 'Automatizadas' },
+      { label: 'UX / UI', value: 'Glassmorphism Premium' }
+    ]
+  },
   {
     id: 'consergeria',
     title: 'Conserjería Digital & Gestión de Edificios',
@@ -83,28 +112,6 @@ const PROJECTS: Project[] = [
     metrics: [
       { label: 'Envíos', value: 'Rastreo en vivo' },
       { label: 'Cálculo', value: 'Tarifario Automático' }
-    ]
-  },
-  {
-    id: 'sheerit-store',
-    title: 'Sheerit Store - E-Commerce de Licencias',
-    subtitle: 'Plataforma de Venta de Entretenimiento & Streaming',
-    category: 'ecommerce',
-    categoryLabel: 'E-Commerce & Digital',
-    description: 'Tienda virtual con catálogo interactivo de suscripciones, carrito de compras dinámico, comprobación de verificación de hogar y pagos automatizados.',
-    tags: ['React', 'Vite', 'Tailwind CSS', 'WhatsApp API', 'Nequi / Bancolombia'],
-    features: [
-      'Catálogo de combos y planes con actualización en vivo',
-      'Sistema de verificación de cuenta y hogar inteligente',
-      'Carrito de compras dinámico con cálculo inmediato',
-      'Integración fluida con WhatsApp para confirmación'
-    ],
-    liveUrl: 'https://sheerit.com.co',
-    fallbackGradient: 'from-purple-600 via-brand-primary to-indigo-900',
-    icon: ShoppingBag,
-    metrics: [
-      { label: 'Transacciones', value: 'Automatizadas' },
-      { label: 'UX / UI', value: 'Glassmorphism Premium' }
     ]
   },
   {
@@ -153,6 +160,222 @@ const PROJECTS: Project[] = [
   }
 ];
 
+// Componente Interactivo de Previsualización Real de Sheerit Store
+const SheeritStorePreview: React.FC = () => {
+  const [addedItems, setAddedItems] = useState<number[]>([]);
+
+  const toggleItem = (id: number) => {
+    setAddedItems(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  };
+
+  const platforms = [
+    { id: 1, name: 'Netflix Ultra HD 4K', price: '$13.000', badge: 'Popular', plan: 'Pantalla Completa Ultra HD', color: 'from-red-600 to-slate-900', img: '🎬' },
+    { id: 2, name: 'Disney+ Premium + Star+', price: '$10.000', badge: 'Espn En Vivo', plan: 'Multi-perfil 4K', color: 'from-blue-600 to-slate-900', img: '🏰' },
+    { id: 3, name: 'Max / HBO Max VIP', price: '$9.000', badge: 'Estrenos Cine', plan: '3 Dispositivos Simultáneos', color: 'from-purple-600 to-slate-900', img: '⚡' },
+    { id: 4, name: 'Spotify Premium', price: '$8.500', badge: 'Sin Anuncios', plan: 'Cuenta Personal', color: 'from-emerald-600 to-slate-900', img: '🎧' },
+    { id: 5, name: 'Canva Pro + Office 365', price: '$12.000', badge: 'IA Pro', plan: 'Acceso Completo 1 Año', color: 'from-cyan-600 to-slate-900', img: '🎨' },
+    { id: 6, name: 'Xbox Game Pass Ultimate', price: '$22.000', badge: 'Multiplataforma', plan: 'Consola + PC Cloud', color: 'from-green-600 to-slate-900', img: '🎮' }
+  ];
+
+  return (
+    <div className="flex-1 bg-slate-900 text-slate-100 p-4 sm:p-6 overflow-y-auto space-y-6 scrollbar-thin scrollbar-thumb-slate-700">
+      {/* Sheerit Brand Header */}
+      <div className="bg-gradient-to-r from-brand-primary via-purple-700 to-indigo-900 p-5 rounded-2xl shadow-xl flex flex-wrap items-center justify-between gap-4 border border-purple-500/30">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-extrabold text-white tracking-wider">SHEERIT</span>
+            <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border border-emerald-500/30">
+              Oficial Store
+            </span>
+          </div>
+          <p className="text-xs text-purple-200">Democratizando el acceso a tus plataformas al precio justo</p>
+        </div>
+
+        <div className="flex items-center gap-2 bg-slate-950/60 px-3 py-2 rounded-xl border border-white/10 text-xs">
+          <ShoppingCart className="w-4 h-4 text-emerald-400" />
+          <span className="font-bold">Combo ({addedItems.length} seleccionadas)</span>
+        </div>
+      </div>
+
+      {/* Prominent Search & Hero */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-white flex items-center gap-2">
+            <span>Busca y arma tu combinación ideal</span>
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+          </h3>
+          <span className="text-xs text-indigo-400 font-semibold">Descuento automático activo</span>
+        </div>
+
+        <div className="relative">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            readOnly
+            value="Buscar Netflix, Disney+, Spotify..."
+            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-300 pointer-events-none"
+          />
+        </div>
+      </div>
+
+      {/* Platform Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+        {platforms.map(p => {
+          const isAdded = addedItems.includes(p.id);
+          return (
+            <div key={p.id} className="bg-slate-950/80 rounded-xl p-3.5 border border-slate-800/80 hover:border-indigo-500/50 transition-all flex flex-col justify-between space-y-3">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl">{p.img}</span>
+                  <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    {p.badge}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs text-white">{p.name}</h4>
+                  <p className="text-[11px] text-slate-400">{p.plan}</p>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-slate-500 block">Desde</span>
+                  <span className="font-extrabold text-xs text-emerald-400">{p.price}</span>
+                </div>
+
+                <button
+                  onClick={() => toggleItem(p.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                    isAdded
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow'
+                  }`}
+                >
+                  {isAdded ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                  <span>{isAdded ? 'Agregado' : 'Agregar'}</span>
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// Componente Interactivo de Previsualización Real de Conserjería Digital
+const ConsergeriaPreview: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'access' | 'booking' | 'notice'>('access');
+
+  return (
+    <div className="flex-1 bg-slate-950 text-slate-100 p-4 sm:p-6 overflow-y-auto space-y-5 scrollbar-thin scrollbar-thumb-slate-700">
+      {/* Header Conserjería */}
+      <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl border border-blue-500/30">
+            <Building2 className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-sm text-white">Torres de la Castellana - Conserjería Digital</h3>
+            <p className="text-xs text-slate-400">Sistema de Gestión de Propiedad Horizontal & Acceso</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+          <span className="text-xs text-emerald-400 font-semibold">Guardia Activo</span>
+        </div>
+      </div>
+
+      {/* Metric Cards */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-center">
+          <span className="text-xs text-slate-400 block">Residentes</span>
+          <span className="text-base font-extrabold text-white">142 Activos</span>
+        </div>
+        <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-center">
+          <span className="text-xs text-slate-400 block">Visitas Hoy</span>
+          <span className="text-base font-extrabold text-blue-400">8 Registros</span>
+        </div>
+        <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-center">
+          <span className="text-xs text-slate-400 block">Zonas Reservadas</span>
+          <span className="text-base font-extrabold text-emerald-400">3 Salones</span>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-800 pb-2 text-xs">
+        <button
+          onClick={() => setActiveTab('access')}
+          className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+            activeTab === 'access' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          🚪 Control de Accesos
+        </button>
+        <button
+          onClick={() => setActiveTab('booking')}
+          className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+            activeTab === 'booking' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          📅 Reserva Zonas Comunes
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 text-xs space-y-3">
+        {activeTab === 'access' ? (
+          <>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <span className="font-bold text-white">Registro de Entrada Reciente</span>
+              <span className="text-[10px] text-slate-400">Hoy 15:42</span>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                <div>
+                  <span className="font-bold text-white block">Apto 402 - Entregas Rápidas</span>
+                  <span className="text-[11px] text-slate-400">Domiciliario Paquetería</span>
+                </div>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">
+                  Ingreso Autorizado
+                </span>
+              </div>
+              <div className="flex items-center justify-between bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                <div>
+                  <span className="font-bold text-white block">Apto 101 - Visita Familiar</span>
+                  <span className="text-[11px] text-slate-400">Carlos Gómez (Visitante)</span>
+                </div>
+                <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded border border-blue-500/30">
+                  En Propiedad
+                </span>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <span className="font-bold text-white">Próximas Reservaciones</span>
+              <span className="text-[10px] text-slate-400">Calendario Activo</span>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                <div>
+                  <span className="font-bold text-white block">Salón Social Principal</span>
+                  <span className="text-[11px] text-slate-400">Sábado 15 Ago | 18:00 - 23:00</span>
+                </div>
+                <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30">
+                  Apto 305
+                </span>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export const PortfolioShowcasePage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [activeProject, setActiveProject] = useState<Project>(PROJECTS[0]);
@@ -196,7 +419,6 @@ export const PortfolioShowcasePage: React.FC = () => {
     }
   };
 
-  // Evitar loops recursivos de iframe si la URL es el mismo sitio sheerit.com.co
   const isSameOriginProject = currentProject.liveUrl && (
     currentProject.liveUrl.includes('sheerit.com.co') && typeof window !== 'undefined' && window.location.hostname.includes('sheerit.com.co')
   );
@@ -262,7 +484,7 @@ export const PortfolioShowcasePage: React.FC = () => {
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <span className="text-[10px] text-slate-400 font-mono px-1 font-bold">
-                  {filteredProjects.findIndex(p => p.id === activeProject.id) + 1}/{filteredProjects.length}
+                  {filteredProjects.findIndex(p => p.id === currentProject.id) + 1}/{filteredProjects.length}
                 </span>
                 <button
                   onClick={handleNextProject}
@@ -274,16 +496,16 @@ export const PortfolioShowcasePage: React.FC = () => {
               </div>
 
               <div className="p-2.5 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400">
-                <activeProject.icon className="w-5 h-5" />
+                <IconComp className="w-5 h-5" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <span>{activeProject.title}</span>
+                  <span>{currentProject.title}</span>
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                    {activeProject.categoryLabel}
+                    {currentProject.categoryLabel}
                   </span>
                 </h3>
-                <p className="text-xs text-slate-400">{activeProject.subtitle}</p>
+                <p className="text-xs text-slate-400">{currentProject.subtitle}</p>
               </div>
             </div>
 
@@ -332,9 +554,9 @@ export const PortfolioShowcasePage: React.FC = () => {
                 <RefreshCw className="w-4 h-4" />
               </button>
 
-              {activeProject.liveUrl && (
+              {currentProject.liveUrl && (
                 <a
-                  href={activeProject.liveUrl}
+                  href={currentProject.liveUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition-all flex items-center gap-1.5 shadow"
@@ -360,13 +582,17 @@ export const PortfolioShowcasePage: React.FC = () => {
 
                 <div className="flex-1 bg-slate-950 text-slate-400 text-[11px] font-mono px-3 py-1 rounded-lg border border-slate-800 flex items-center gap-2 truncate">
                   <Globe className="w-3 h-3 text-indigo-400 shrink-0" />
-                  <span className="truncate">{activeProject.liveUrl || 'https://demo.sheerit.com.co'}</span>
+                  <span className="truncate">{currentProject.liveUrl || 'https://demo.sheerit.com.co'}</span>
                 </div>
               </div>
 
-              {/* Contenido Visual Interactivo / Fallback de Presentación */}
+              {/* Contenido Visual Interactivo / Componentes de Presentación Real */}
               <div className="flex-1 bg-slate-900 relative flex flex-col overflow-hidden">
-                {currentProject.liveUrl && !isSameOriginProject ? (
+                {currentProject.id === 'sheerit-store' ? (
+                  <SheeritStorePreview />
+                ) : currentProject.id === 'consergeria' ? (
+                  <ConsergeriaPreview />
+                ) : currentProject.liveUrl && !isSameOriginProject ? (
                   <iframe
                     key={iframeKey}
                     src={currentProject.liveUrl}
@@ -415,7 +641,7 @@ export const PortfolioShowcasePage: React.FC = () => {
 
             <div className="text-center hidden sm:block">
               <span className="text-xs text-slate-400">
-                Viendo <strong className="text-white">{activeProject.title}</strong>
+                Viendo <strong className="text-white">{currentProject.title}</strong>
               </span>
             </div>
 
@@ -442,7 +668,7 @@ export const PortfolioShowcasePage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {filteredProjects.map((project) => {
               const IconComp = project.icon;
-              const isSelected = activeProject.id === project.id;
+              const isSelected = currentProject.id === project.id;
 
               return (
                 <div
