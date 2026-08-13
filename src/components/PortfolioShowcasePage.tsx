@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Laptop, 
   Smartphone, 
@@ -30,7 +30,10 @@ import {
   Shield,
   Calendar,
   Users,
-  ShoppingCart
+  ShoppingCart,
+  Truck,
+  MapPin,
+  Box
 } from 'lucide-react';
 
 interface Project {
@@ -59,7 +62,7 @@ const PROJECTS: Project[] = [
     description: 'Tienda virtual con catálogo interactivo de suscripciones, carrito de compras dinámico, comprobación de verificación de hogar y pagos automatizados.',
     tags: ['React', 'Vite', 'Tailwind CSS', 'WhatsApp API', 'Nequi / Bancolombia'],
     features: [
-      'Catálogo de combos y planes con actualización en vivo',
+      'Catálogo de combos y planes con actualización en vivo desde API',
       'Sistema de verificación de cuenta y hogar inteligente',
       'Carrito de compras dinámico con cálculo inmediato',
       'Integración fluida con WhatsApp para confirmación'
@@ -107,7 +110,6 @@ const PROJECTS: Project[] = [
       'Panel de despacho responsivo para conductores y clientes',
       'Integración con plataformas de mensajería urbana y nacional'
     ],
-    liveUrl: 'https://pickfost.com.co',
     fallbackGradient: 'from-blue-700 via-indigo-800 to-slate-950',
     icon: Package,
     metrics: [
@@ -161,30 +163,54 @@ const PROJECTS: Project[] = [
   }
 ];
 
-// Componente Interactivo de Previsualización Real de Sheerit Store
+// Componente Interactivo que carga los datos REALES del catálogo de Sheerit Store
 const SheeritStorePreview: React.FC = () => {
   const [addedItems, setAddedItems] = useState<number[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [apiPlatforms, setApiPlatforms] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('https://bot.sheerit.com.co/api/public/platforms')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setApiPlatforms(data);
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
 
   const toggleItem = (id: number) => {
     setAddedItems(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
   };
 
-  const platforms = [
-    { id: 1, name: 'Netflix Ultra HD 4K', price: '$13.000', badge: 'Popular', plan: 'Pantalla Completa Ultra HD', color: 'from-red-600 to-slate-900', img: '🎬' },
-    { id: 2, name: 'Disney+ Premium + Star+', price: '$10.000', badge: 'Espn En Vivo', plan: 'Multi-perfil 4K', color: 'from-blue-600 to-slate-900', img: '🏰' },
-    { id: 3, name: 'Max / HBO Max VIP', price: '$9.000', badge: 'Estrenos Cine', plan: '3 Dispositivos Simultáneos', color: 'from-purple-600 to-slate-900', img: '⚡' },
-    { id: 4, name: 'Spotify Premium', price: '$8.500', badge: 'Sin Anuncios', plan: 'Cuenta Personal', color: 'from-emerald-600 to-slate-900', img: '🎧' },
-    { id: 5, name: 'Canva Pro + Office 365', price: '$12.000', badge: 'IA Pro', plan: 'Acceso Completo 1 Año', color: 'from-cyan-600 to-slate-900', img: '🎨' },
-    { id: 6, name: 'Xbox Game Pass Ultimate', price: '$22.000', badge: 'Multiplataforma', plan: 'Consola + PC Cloud', color: 'from-green-600 to-slate-900', img: '🎮' }
+  const defaultPlatforms = [
+    { id: 1, name: 'Netflix', image: 'https://th.bing.com/th/id/R.64d5f8b96325d2be917f9ab402e92b99?rik=1BawFvPFPBGxrg&pid=ImgRaw&r=0', price: 13000, characteristics: ['Cuenta estable 4K Ultra HD', 'Perfil exclusivo con PIN', 'Entrega en tiempo real'] },
+    { id: 2, name: 'Disney+ / Star+', image: 'https://th.bing.com/th/id/OIP.4yJ3iM0NnQW4P4Fq2f1s0gHaHa?pid=ImgDet&rs=1', price: 10000, characteristics: ['Deportes ESPN en vivo', 'Calidad 4K Ultra HD', 'Multi-dispositivo'] },
+    { id: 3, name: 'Max / HBO Max', image: 'https://th.bing.com/th/id/OIP.vH7K0qG2tZ3b7lq-N2vNsgHaHa?pid=ImgDet&rs=1', price: 9000, characteristics: ['Estrenos de cine en vivo', '3 Dispositivos simultáneos', 'Calidad 4K'] },
+    { id: 4, name: 'Spotify Premium', image: 'https://th.bing.com/th/id/R.b4e6a0d31c03e33f3e1f57e841ef94d6?rik=uYn1GzQzL8q4gA&pid=ImgRaw&r=0', price: 8500, characteristics: ['Música sin anuncios', 'Descarga offline', 'Calidad de audio alta'] },
+    { id: 5, name: 'Canva Pro', image: 'https://th.bing.com/th/id/OIP.7xW1L9Q9q6T5nK0e2z1w4gHaHa?pid=ImgDet&rs=1', price: 12000, characteristics: ['Generador IA Pro', 'Plantillas ilimitadas', 'Kit de marca'] }
   ];
 
+  const platformsList = apiPlatforms.length > 0 ? apiPlatforms : defaultPlatforms;
+
+  const filtered = platformsList.filter(p => 
+    p.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const formatPrice = (val: number) => {
+    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val);
+  };
+
   return (
-    <div className="flex-1 bg-slate-900 text-slate-100 p-4 sm:p-6 overflow-y-auto space-y-6 scrollbar-thin scrollbar-thumb-slate-700">
-      {/* Sheerit Brand Header */}
-      <div className="bg-gradient-to-r from-brand-primary via-purple-700 to-indigo-900 p-5 rounded-2xl shadow-xl flex flex-wrap items-center justify-between gap-4 border border-purple-500/30">
+    <div className="flex-1 bg-slate-900 text-slate-100 p-4 sm:p-6 overflow-y-auto space-y-5 scrollbar-thin scrollbar-thumb-slate-700">
+      {/* Sheerit Real Store Banner */}
+      <div className="bg-gradient-to-r from-purple-700 via-indigo-800 to-slate-950 p-5 rounded-2xl shadow-xl flex flex-wrap items-center justify-between gap-4 border border-purple-500/30">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="text-xl font-extrabold text-white tracking-wider">SHEERIT</span>
+            <span className="text-xl font-extrabold text-white tracking-wider">SHEERIT STORE</span>
             <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border border-emerald-500/30">
               Oficial Store
             </span>
@@ -192,81 +218,187 @@ const SheeritStorePreview: React.FC = () => {
           <p className="text-xs text-purple-200">Democratizando el acceso a tus plataformas al precio justo</p>
         </div>
 
-        <div className="flex items-center gap-2 bg-slate-950/60 px-3 py-2 rounded-xl border border-white/10 text-xs">
+        <div className="flex items-center gap-2 bg-slate-950/80 px-3 py-2 rounded-xl border border-white/10 text-xs">
           <ShoppingCart className="w-4 h-4 text-emerald-400" />
           <span className="font-bold">Combo ({addedItems.length} seleccionadas)</span>
         </div>
       </div>
 
-      {/* Prominent Search & Hero */}
-      <div className="space-y-3">
+      {/* Search Input */}
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <span>Busca y arma tu combinación ideal</span>
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+          <h3 className="text-xs font-bold text-white flex items-center gap-2">
+            <span>Busca y arma tu combinación ideal 🔍</span>
           </h3>
-          <span className="text-xs text-indigo-400 font-semibold">Descuento automático activo</span>
+          <span className="text-[11px] text-indigo-400 font-semibold">Descuento por combo activo</span>
         </div>
 
         <div className="relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            readOnly
-            value="Buscar Netflix, Disney+, Spotify..."
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-300 pointer-events-none"
+            placeholder="Buscar Netflix, Disney+, Spotify, Canva..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
           />
         </div>
       </div>
 
-      {/* Platform Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-        {platforms.map(p => {
-          const isAdded = addedItems.includes(p.id);
-          return (
-            <div key={p.id} className="bg-slate-950/80 rounded-xl p-3.5 border border-slate-800/80 hover:border-indigo-500/50 transition-all flex flex-col justify-between space-y-3">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl">{p.img}</span>
-                  <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                    {p.badge}
-                  </span>
-                </div>
-                <div>
-                  <h4 className="font-bold text-xs text-white">{p.name}</h4>
-                  <p className="text-[11px] text-slate-400">{p.plan}</p>
-                </div>
-              </div>
+      {/* Real Platforms Grid with Real Logos */}
+      {loading ? (
+        <div className="text-center py-8 text-xs text-slate-400">Cargando catálogo real de Sheerit Store...</div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          {filtered.map((platform: any) => {
+            const isAdded = addedItems.includes(platform.id);
+            const currentPrice = platform.price || (platform.plans && platform.plans[0]?.price) || 12000;
+            const chars = platform.characteristics || (platform.plans && platform.plans[0]?.characteristics) || [];
 
-              <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-slate-500 block">Desde</span>
-                  <span className="font-extrabold text-xs text-emerald-400">{p.price}</span>
+            return (
+              <div key={platform.id} className="bg-slate-950/90 rounded-xl p-3.5 border border-slate-800 hover:border-purple-500/50 transition-all flex flex-col justify-between space-y-3 shadow-lg">
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-3">
+                    {platform.image ? (
+                      <img 
+                        src={platform.image} 
+                        alt={platform.name} 
+                        className="w-10 h-10 object-cover rounded-xl border border-slate-700 shrink-0" 
+                        onError={(e: any) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-xl bg-purple-600/30 border border-purple-500/40 flex items-center justify-center text-lg shrink-0">
+                        🎬
+                      </div>
+                    )}
+                    <div>
+                      <h4 className="font-bold text-xs text-white">{platform.name}</h4>
+                      <span className="text-[10px] text-emerald-400 font-extrabold">{formatPrice(currentPrice)}</span>
+                    </div>
+                  </div>
+
+                  {chars.length > 0 && (
+                    <div className="space-y-1">
+                      {chars.slice(0, 2).map((char: string, cIdx: number) => (
+                        <div key={cIdx} className="flex items-center gap-1.5 text-[10px] text-slate-300">
+                          <Check className="w-3 h-3 text-emerald-400 shrink-0" />
+                          <span className="truncate">{char}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <button
-                  onClick={() => toggleItem(p.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                  onClick={() => toggleItem(platform.id)}
+                  className={`w-full py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                     isAdded
                       ? 'bg-emerald-600 text-white'
-                      : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow'
+                      : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow'
                   }`}
                 >
                   {isAdded ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                  <span>{isAdded ? 'Agregado' : 'Agregar'}</span>
+                  <span>{isAdded ? 'Agregado al Combo' : 'Agregar al Combo'}</span>
                 </button>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Componente Interactivo de Previsualización de Pickfost Colombia
+const PickfostPreview: React.FC = () => {
+  const [guideNumber, setGuideNumber] = useState('PK-84920194');
+  const [trackingResult, setTrackingResult] = useState<any>({
+    guide: 'PK-84920194',
+    status: 'En Tránsito',
+    origin: 'Bogotá D.C.',
+    destination: 'Medellín, Ant.',
+    carrier: 'Pickfost Express',
+    estimated: 'Hoy 17:30 PM',
+    history: [
+      { step: 'Recolectado en bodega origen', time: '08:00 AM' },
+      { step: 'En ruta nacional (Vehículo #402)', time: '11:15 AM' },
+      { step: 'Arribo a centro de distribución', time: '14:30 PM' }
+    ]
+  });
+
+  return (
+    <div className="flex-1 bg-slate-950 text-slate-100 p-4 sm:p-6 overflow-y-auto space-y-5 scrollbar-thin scrollbar-thumb-slate-700">
+      {/* Pickfost Header */}
+      <div className="bg-gradient-to-r from-blue-700 via-indigo-900 to-slate-950 p-5 rounded-2xl border border-blue-500/30 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-blue-500/20 text-blue-300 rounded-xl border border-blue-400/30">
+            <Truck className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="font-extrabold text-base text-white tracking-wide">PICKFOST COLOMBIA</h3>
+            <p className="text-xs text-blue-200">Plataforma Logística & Gestión de Envíos Nacionales</p>
+          </div>
+        </div>
+
+        <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>Red Logística Activa</span>
+        </span>
       </div>
+
+      {/* Rastrear Guía */}
+      <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
+        <span className="font-bold text-xs text-white block">📦 Rastreo de Guía de Envío</span>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={guideNumber}
+            onChange={(e) => setGuideNumber(e.target.value)}
+            className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+          />
+          <button className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition-all shadow">
+            Rastrear
+          </button>
+        </div>
+      </div>
+
+      {/* Detalle del Envío */}
+      {trackingResult && (
+        <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-4 text-xs">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div>
+              <span className="text-slate-400 text-[11px] block">Guía #{trackingResult.guide}</span>
+              <span className="font-bold text-white text-sm">{trackingResult.origin} ➔ {trackingResult.destination}</span>
+            </div>
+            <span className="px-2.5 py-1 bg-blue-500/20 text-blue-300 font-extrabold rounded-lg border border-blue-500/30">
+              {trackingResult.status}
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            <span className="font-bold text-slate-300 text-[11px] block">Historial de Trazabilidad:</span>
+            {trackingResult.history.map((item: any, idx: number) => (
+              <div key={idx} className="flex items-center justify-between bg-slate-950 p-2.5 rounded-lg border border-slate-800/80">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span className="text-slate-200">{item.step}</span>
+                </div>
+                <span className="text-[10px] text-slate-400">{item.time}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 // Componente Interactivo de Previsualización Real de Conserjería Digital
 const ConsergeriaPreview: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'access' | 'booking' | 'notice'>('access');
+  const [activeTab, setActiveTab] = useState<'access' | 'booking'>('access');
 
   return (
     <div className="flex-1 bg-slate-950 text-slate-100 p-4 sm:p-6 overflow-y-auto space-y-5 scrollbar-thin scrollbar-thumb-slate-700">
@@ -593,6 +725,8 @@ export const PortfolioShowcasePage: React.FC = () => {
                   <SheeritStorePreview />
                 ) : currentProject.id === 'consergeria' ? (
                   <ConsergeriaPreview />
+                ) : currentProject.id === 'pickfost' ? (
+                  <PickfostPreview />
                 ) : currentProject.liveUrl && !isSameOriginProject ? (
                   <iframe
                     key={iframeKey}
