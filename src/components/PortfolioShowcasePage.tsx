@@ -27,7 +27,9 @@ import {
   Utensils,
   Star,
   Shield,
-  FileText
+  FileText,
+  Ticket,
+  Trophy
 } from 'lucide-react';
 
 interface Project {
@@ -69,6 +71,28 @@ const PROJECTS: Project[] = [
     ]
   },
   {
+    id: 'rifa-sheerit',
+    title: 'Rifa Sheerit - Boletería & Cuadrícula Digital',
+    subtitle: 'Sistema Web de Selección de Números & Pagos',
+    category: 'ecommerce',
+    categoryLabel: 'E-Commerce & Boletería',
+    description: 'Sistema web para la venta interactiva de boletas y rifas digitales. Cuadrícula dinámica de números con estado en tiempo real (disponible / reservado), pasarela de pagos integrada y confirmación automática.',
+    tags: ['PHP', 'MySQL', 'JavaScript', 'jQuery', 'AJAX', 'Wompi / Nequi'],
+    features: [
+      'Cuadrícula interactiva de 100 números con cálculo dinámico',
+      'Estado en tiempo real de números disponibles y reservados',
+      'Integración con pasarela de pago digital y Nequi',
+      'Confirmación automática de boleta y comprobantes'
+    ],
+    liveUrl: 'https://github.com/developer-lifee/rifa.sheerit.com.co',
+    fallbackGradient: 'from-purple-700 via-violet-800 to-slate-950',
+    icon: Ticket,
+    metrics: [
+      { label: 'Cuadrícula', value: '100 Números Dinámicos' },
+      { label: 'Integración', value: 'Pasarela de Pagos Wompi' }
+    ]
+  },
+  {
     id: 'pickfost',
     title: 'Pickfost - Comida Sabrosa & Domicilios',
     subtitle: 'Plataforma Web de Menú Digital, Pedidos & Domicilios',
@@ -88,6 +112,28 @@ const PROJECTS: Project[] = [
     metrics: [
       { label: 'Menú Digital', value: 'Catálogo Interactivo' },
       { label: 'Envíos', value: 'Domicilios Rápidos' }
+    ]
+  },
+  {
+    id: 'furdemy',
+    title: 'ED-Fútbol / Furdemy - Estadísticas Deportivas',
+    subtitle: 'Plataforma de Análisis de Rendimiento & Matrices NumPy',
+    category: 'webapp',
+    categoryLabel: 'App Web & Análisis',
+    description: 'Aplicación web para el ingreso, análisis de rendimiento y cálculo matricial de estadísticas futbolísticas de equipos y jugadores. Generación de gráficos interactivos e informes PDF exportables.',
+    tags: ['Python', 'Flask', 'NumPy', 'HTML5', 'JavaScript', 'ReportLab PDF'],
+    features: [
+      'Cálculo matricial de estadísticas avanzadas con Python NumPy',
+      'Formularios de ingreso y tablas de rendimiento por jugador',
+      'Generador automático de informes de rendimiento en PDF',
+      'Gráficos e indicadores clave de efectividad de equipo'
+    ],
+    liveUrl: 'https://github.com/developer-lifee/furdemy2',
+    fallbackGradient: 'from-blue-800 via-indigo-900 to-slate-950',
+    icon: Trophy,
+    metrics: [
+      { label: 'Motor', value: 'Python & NumPy' },
+      { label: 'Reportes', value: 'Exportación PDF' }
     ]
   },
   {
@@ -179,6 +225,224 @@ const PROJECTS: Project[] = [
     ]
   }
 ];
+
+// HTML interactivo de la Rifa Sheerit (rifa.sheerit.com.co)
+const RIFA_AUTHENTIC_HTML = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rifa Sheerit - Selección de Números</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 0; }
+    .rifa-header { background: #1e293b; border-bottom: 2px solid #a855f7; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 8px; max-height: 280px; overflow-y: auto; padding: 12px; background: #1e293b; border-radius: 16px; border: 1px solid #334155; }
+    .grid-item { padding: 8px 0; text-align: center; font-weight: 800; font-size: 13px; border-radius: 10px; cursor: pointer; user-select: none; transition: all 0.15s; }
+    .grid-item.disponible { background: #334155; color: #f8fafc; border: 1px solid #475569; }
+    .grid-item.disponible:hover { background: #475569; border-color: #a855f7; }
+    .grid-item.selected { background: #a855f7; color: #ffffff; border-color: #c084fc; box-shadow: 0 0 10px rgba(168, 85, 247, 0.4); }
+    .grid-item.reservado { background: #1e1b4b; color: #64748b; border: 1px solid #1e293b; cursor: not-allowed; opacity: 0.5; }
+    .btn-purchase { background: linear-gradient(135deg, #a855f7, #7c3aed); color: white; font-weight: 800; padding: 10px 20px; border-radius: 12px; border: none; width: 100%; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header class="rifa-header">
+    <div class="d-flex align-items-center gap-2">
+      <i class="fa-solid fa-ticket text-purple" style="font-size:22px; color:#c084fc;"></i>
+      <span style="font-weight:900; font-size:18px; color:#ffffff;">RIFA SHEERIT DIGITAL</span>
+    </div>
+    <span class="badge bg-purple" style="background:#a855f7; padding:6px 12px; font-size:11px;">$20.000 COP / Boleta</span>
+  </header>
+
+  <div class="container my-4">
+    <div class="text-center mb-3">
+      <h4 class="fw-bold text-white mb-1">Selecciona tus Números Afortunados 🎟️</h4>
+      <p class="text-slate-400 small mb-0" style="color:#94a3b8;">Haz clic en los números disponibles para armar tu paquete de boletas.</p>
+    </div>
+
+    <div class="grid-container mb-4" id="raffle-grid"></div>
+
+    <div class="p-3 bg-slate-900 rounded-3 border border-slate-800 d-flex align-items-center justify-content-between gap-3">
+      <div>
+        <span class="text-slate-400 small d-block" style="color:#94a3b8;">Boletas Seleccionadas: <strong id="selected-count" class="text-white">0</strong></span>
+        <h5 class="fw-bold mb-0" style="color:#c084fc;">Total: $<span id="total-price">0</span> COP</h5>
+      </div>
+      <button class="btn-purchase" onclick="buyRaffle()"><i class="fa-solid fa-credit-card"></i> Comprar Boletas</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    const gridEl = document.getElementById('raffle-grid');
+    let selected = [];
+    const price = 20000;
+
+    for (let i = 1; i <= 100; i++) {
+      const numStr = i < 10 ? '0' + i : '' + i;
+      const isReserved = (i % 7 === 0 || i % 13 === 0);
+      const item = document.createElement('div');
+      item.className = 'grid-item ' + (isReserved ? 'reservado' : 'disponible');
+      item.innerText = numStr;
+      if (!isReserved) {
+        item.onclick = function() {
+          if (item.classList.contains('selected')) {
+            item.classList.remove('selected');
+            selected = selected.filter(n => n !== numStr);
+          } else {
+            item.classList.add('selected');
+            selected.push(numStr);
+          }
+          document.getElementById('selected-count').innerText = selected.length;
+          document.getElementById('total-price').innerText = (selected.length * price).toLocaleString('es-CO');
+        };
+      }
+      gridEl.appendChild(item);
+    }
+
+    function buyRaffle() {
+      if (selected.length === 0) {
+        Swal.fire('Selecciona tus números', 'Por favor selecciona al menos un número para proceder con la compra.', 'warning');
+        return;
+      }
+      Swal.fire({
+        title: '🚀 Confirmar Compra de Boletas',
+        html: '<p>Números: <strong>' + selected.join(', ') + '</strong></p>' +
+              '<h4 style="color:#a855f7;">Total a Pagar: $' + (selected.length * price).toLocaleString('es-CO') + ' COP</h4>',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Pagar por Nequi / Wompi',
+        confirmButtonColor: '#a855f7'
+      }).then(res => {
+        if (res.isConfirmed) {
+          Swal.fire('¡Pago Generado!', 'Tus números han sido reservados con éxito.', 'success');
+        }
+      });
+    }
+  </script>
+</body>
+</html>
+`;
+
+// HTML interactivo de ED-Fútbol / Furdemy (furdemy2)
+const FURDEMY_AUTHENTIC_HTML = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Furdemy / ED-Fútbol - Estadísticas Deportivas</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0b132b; color: #ffffff; margin: 0; padding: 0; }
+    .furdemy-header { background: #1c2541; border-bottom: 2px solid #3a86ff; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .card-stat { background: #1c2541; border: 1px solid #3a86ff33; border-radius: 16px; padding: 18px; text-align: center; }
+    .stat-number { font-size: 24px; font-weight: 900; color: #3a86ff; }
+    .table-furdemy { background: #1c2541; color: #ffffff; border-radius: 12px; overflow: hidden; }
+    .table-furdemy th { background: #0b132b; color: #3a86ff; font-weight: 800; border-color: #3a86ff33; }
+    .table-furdemy td { border-color: #3a86ff22; }
+    .btn-pdf { background: #3a86ff; color: white; font-weight: 800; border-radius: 10px; padding: 8px 18px; border: none; }
+  </style>
+</head>
+<body>
+  <header class="furdemy-header">
+    <div class="d-flex align-items-center gap-2">
+      <i class="fa-solid fa-trophy text-warning" style="font-size:22px;"></i>
+      <span style="font-weight:900; font-size:18px; letter-spacing:0.5px;">ED-FÚTBOL / FURDEMY</span>
+    </div>
+    <span class="badge bg-primary" style="padding:6px 12px; font-size:11px;"><i class="fa-solid fa-chart-line"></i> Análisis Matricial NumPy</span>
+  </header>
+
+  <div class="container my-4">
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+      <div>
+        <h4 class="fw-bold mb-1">Plataforma de Análisis & Estadísticas Deportivas ⚽</h4>
+        <p class="small mb-0" style="color:#8d99ae !important;">Procesamiento matricial con Python & NumPy y generación de informes PDF.</p>
+      </div>
+      <button class="btn-pdf" onclick="exportPDF()"><i class="fa-solid fa-file-pdf"></i> Exportar PDF</button>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-12 col-md-4">
+        <div class="card-stat">
+          <div class="stat-number">88.4%</div>
+          <div class="small" style="color:#8d99ae !important;">Efectividad de Pases (Matriz)</div>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="card-stat">
+          <div class="stat-number text-success">3.2</div>
+          <div class="small" style="color:#8d99ae !important;">Goles Esperados (xG) / Partido</div>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="card-stat">
+          <div class="stat-number text-warning">14.6</div>
+          <div class="small" style="color:#8d99ae !important;">Recuperaciones por Encuentro</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-furdemy align-middle">
+        <thead>
+          <tr>
+            <th>Jugador</th>
+            <th>Posición</th>
+            <th>PJ</th>
+            <th>Goles</th>
+            <th>Asistencias</th>
+            <th>Matriz de Rendimiento</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Carlos Valderrama (Demo)</strong></td>
+            <td>Mediocampista</td>
+            <td>12</td>
+            <td>5</td>
+            <td>14</td>
+            <td><span class="badge bg-success">Excelente (0.94)</span></td>
+          </tr>
+          <tr>
+            <td><strong>Radamel Falcao (Demo)</strong></td>
+            <td>Delantero Centro</td>
+            <td>10</td>
+            <td>11</td>
+            <td>2</td>
+            <td><span class="badge bg-primary">Alto (0.88)</span></td>
+          </tr>
+          <tr>
+            <td><strong>James Rodríguez (Demo)</strong></td>
+            <td>Volante Creativo</td>
+            <td>14</td>
+            <td>8</td>
+            <td>10</td>
+            <td><span class="badge bg-success">Excelente (0.96)</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    function exportPDF() {
+      Swal.fire({
+        title: '📄 Generando Informe PDF...',
+        text: 'Procesando matrices con NumPy y compilando reporte con ReportLab.',
+        icon: 'info',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    }
+  </script>
+</body>
+</html>
+`;
 
 // Código HTML/CSS 100% auténtico renderizado con las imágenes REALES del repositorio pickfost.com.co
 const PICKFOST_AUTHENTIC_HTML = `
@@ -786,6 +1050,20 @@ export const PortfolioShowcasePage: React.FC = () => {
                     key={iframeKey}
                     src="/aiuda/admin"
                     title="Sheerit Software Admin Panel Live"
+                    className="w-full h-full border-0 bg-white"
+                  />
+                ) : currentProject.id === 'rifa-sheerit' ? (
+                  <iframe
+                    key={iframeKey}
+                    srcDoc={RIFA_AUTHENTIC_HTML}
+                    title="Rifa Sheerit Digital"
+                    className="w-full h-full border-0 bg-white"
+                  />
+                ) : currentProject.id === 'furdemy' ? (
+                  <iframe
+                    key={iframeKey}
+                    srcDoc={FURDEMY_AUTHENTIC_HTML}
+                    title="ED-Fútbol / Furdemy"
                     className="w-full h-full border-0 bg-white"
                   />
                 ) : currentProject.id === 'pickfost' ? (
