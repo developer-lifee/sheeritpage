@@ -45,6 +45,7 @@ interface Project {
   fallbackGradient: string;
   icon: React.ElementType;
   metrics?: { label: string; value: string }[];
+  firstCommitDate: string;
 }
 
 const PROJECTS: Project[] = [
@@ -65,53 +66,10 @@ const PROJECTS: Project[] = [
     liveUrl: 'https://sheerit.com.co',
     fallbackGradient: 'from-purple-600 via-brand-primary to-indigo-900',
     icon: ShoppingBag,
+    firstCommitDate: 'Marzo 2024',
     metrics: [
       { label: 'Transacciones', value: 'Automatizadas' },
       { label: 'UX / UI', value: 'Glassmorphism Premium' }
-    ]
-  },
-  {
-    id: 'rifa-sheerit',
-    title: 'Rifa Sheerit - Boletería & Cuadrícula Digital',
-    subtitle: 'Sistema Web de Selección de Números & Pagos',
-    category: 'ecommerce',
-    categoryLabel: 'E-Commerce & Boletería',
-    description: 'Sistema web para la venta interactiva de boletas y rifas digitales. Cuadrícula dinámica de números con estado en tiempo real (disponible / reservado), pasarela de pagos integrada y confirmación automática.',
-    tags: ['PHP', 'MySQL', 'JavaScript', 'jQuery', 'AJAX', 'Wompi / Nequi'],
-    features: [
-      'Cuadrícula interactiva de 100 números con cálculo dinámico',
-      'Estado en tiempo real de números disponibles y reservados',
-      'Integración con pasarela de pago digital y Nequi',
-      'Confirmación automática de boleta y comprobantes'
-    ],
-    liveUrl: 'https://github.com/developer-lifee/rifa.sheerit.com.co',
-    fallbackGradient: 'from-purple-700 via-violet-800 to-slate-950',
-    icon: Ticket,
-    metrics: [
-      { label: 'Cuadrícula', value: '100 Números Dinámicos' },
-      { label: 'Integración', value: 'Pasarela de Pagos Wompi' }
-    ]
-  },
-  {
-    id: 'pickfost',
-    title: 'Pickfost - Comida Sabrosa & Domicilios',
-    subtitle: 'Plataforma Web de Menú Digital, Pedidos & Domicilios',
-    category: 'ecommerce',
-    categoryLabel: 'E-Commerce & Gastronomía',
-    description: 'Plataforma web promocional y tienda de domicilios gastronómicos con catálogo interactivo de platillos, carrito de compras y planificador de alimentación semanal.',
-    tags: ['HTML5', 'MDBootstrap', 'JavaScript', 'CSS3', 'SweetAlert2'],
-    features: [
-      'Menú virtual interactivo con catálogo de Salchipapas, Mazorcadas y Hamburguesas',
-      'Sistema de pedidos a domicilio con múltiples puntos de distribución',
-      'Módulo de planificación de alimentación semanal, quincenal y mensual',
-      'Carrito de compras dinámico con inicio de sesión y registro de usuarios'
-    ],
-    liveUrl: 'https://github.com/developer-lifee/pickfost.com.co',
-    fallbackGradient: 'from-amber-600 via-orange-700 to-slate-950',
-    icon: Utensils,
-    metrics: [
-      { label: 'Menú Digital', value: 'Catálogo Interactivo' },
-      { label: 'Envíos', value: 'Domicilios Rápidos' }
     ]
   },
   {
@@ -131,6 +89,7 @@ const PROJECTS: Project[] = [
     liveUrl: 'https://github.com/developer-lifee/furdemy2',
     fallbackGradient: 'from-blue-800 via-indigo-900 to-slate-950',
     icon: Trophy,
+    firstCommitDate: '08 de Abril, 2024',
     metrics: [
       { label: 'Motor', value: 'Python & NumPy' },
       { label: 'Reportes', value: 'Exportación PDF' }
@@ -153,9 +112,79 @@ const PROJECTS: Project[] = [
     liveUrl: 'https://github.com/developer-lifee/react-app',
     fallbackGradient: 'from-blue-700 via-sky-800 to-slate-950',
     icon: FileText,
+    firstCommitDate: '13 de Septiembre, 2024',
     metrics: [
       { label: 'Especialidad', value: 'Derecho Migratorio' },
       { label: 'Autenticación', value: 'Google & Apple OAuth' }
+    ]
+  },
+  {
+    id: 'pickfost',
+    title: 'Pickfost - Comida Sabrosa & Domicilios',
+    subtitle: 'Plataforma Web de Menú Digital, Pedidos & Domicilios',
+    category: 'ecommerce',
+    categoryLabel: 'E-Commerce & Gastronomía',
+    description: 'Plataforma web promocional y tienda de domicilios gastronómicos con catálogo interactivo de platillos, carrito de compras y planificador de alimentación semanal.',
+    tags: ['HTML5', 'Tailwind CSS', 'Lucide Icons', 'JavaScript', 'SweetAlert2'],
+    features: [
+      'Menú virtual interactivo con catálogo de Salchipapas, Mazorcadas y Hamburguesas',
+      'Sistema de pedidos a domicilio con múltiples puntos de distribución',
+      'Módulo de planificación de alimentación semanal, quincenal y mensual',
+      'Carrito de compras dinámico con inicio de sesión y registro de usuarios'
+    ],
+    liveUrl: 'https://github.com/developer-lifee/pickfost.com.co',
+    fallbackGradient: 'from-amber-600 via-orange-700 to-slate-950',
+    icon: Utensils,
+    firstCommitDate: '01 de Octubre, 2024',
+    metrics: [
+      { label: 'Menú Digital', value: 'Catálogo Interactivo' },
+      { label: 'Envíos', value: 'Domicilios Rápidos' }
+    ]
+  },
+  {
+    id: 'rifa-sheerit',
+    title: 'Rifa Sheerit - Boletería & Cuadrícula Digital',
+    subtitle: 'Sistema Web de Selección de Números & Pagos',
+    category: 'ecommerce',
+    categoryLabel: 'E-Commerce & Boletería',
+    description: 'Sistema web para la venta interactiva de boletas y rifas digitales. Cuadrícula dinámica de números con estado en tiempo real (disponible / reservado), pasarela de pagos integrada y confirmación automática.',
+    tags: ['PHP', 'MySQL', 'JavaScript', 'jQuery', 'AJAX', 'Wompi / Nequi'],
+    features: [
+      'Cuadrícula interactiva de 100 números con cálculo dinámico',
+      'Estado en tiempo real de números disponibles y reservados',
+      'Integración con pasarela de pago digital y Nequi',
+      'Confirmación automática de boleta y comprobantes'
+    ],
+    liveUrl: 'https://github.com/developer-lifee/rifa.sheerit.com.co',
+    fallbackGradient: 'from-purple-700 via-violet-800 to-slate-950',
+    icon: Ticket,
+    firstCommitDate: '13 de Octubre, 2024',
+    metrics: [
+      { label: 'Cuadrícula', value: '100 Números Dinámicos' },
+      { label: 'Integración', value: 'Pasarela de Pagos Wompi' }
+    ]
+  },
+  {
+    id: 'sheerit-saas',
+    title: 'Sheerit Software - Panel SaaS & RPA',
+    subtitle: 'Sistema de Gestión Administrativa & Bots Inteligentes',
+    category: 'saas',
+    categoryLabel: 'Plataforma SaaS & Bot',
+    description: 'Suite empresarial de control operativo con gestión de cuadrantes de turnos, cálculo de nómina en tiempo real, ejecutor RPA y Asistente IA integrados.',
+    tags: ['React', 'TypeScript', 'Express.js', 'MySQL', 'AI Assistant', 'RPA'],
+    features: [
+      'Gestor de horarios y restricción de equidad de turnos',
+      'Buscador histórico por fecha con retención de contratos pasados',
+      'Supervisión de ejecuciones de bots de WhatsApp en vivo',
+      'Asistente conversacional omnipresente para consultas rápidas'
+    ],
+    liveUrl: 'https://www.sheerit.com.co/aiuda/admin',
+    fallbackGradient: 'from-emerald-600 via-teal-700 to-slate-900',
+    icon: Bot,
+    firstCommitDate: '23 de Mayo, 2025',
+    metrics: [
+      { label: 'Ahorro de Tiempo', value: '95% Operativo' },
+      { label: 'Automatización', value: 'Bots RPA Ininterrumpidos' }
     ]
   },
   {
@@ -175,6 +204,7 @@ const PROJECTS: Project[] = [
     liveUrl: 'https://github.com/developer-lifee/v0-cafe-website',
     fallbackGradient: 'from-amber-700 via-amber-900 to-slate-950',
     icon: Coffee,
+    firstCommitDate: '10 de Diciembre, 2025',
     metrics: [
       { label: 'Producto', value: 'Café de Origen' },
       { label: 'Espacio', value: 'Coworking Innovador' }
@@ -197,31 +227,10 @@ const PROJECTS: Project[] = [
     liveUrl: 'https://github.com/developer-lifee/consergeria-website',
     fallbackGradient: 'from-blue-600 via-indigo-700 to-slate-900',
     icon: Building2,
+    firstCommitDate: '17 de Febrero, 2026',
     metrics: [
       { label: 'Legalidad', value: '100% Certificado' },
       { label: 'Cobertura', value: '24/7 Continua' }
-    ]
-  },
-  {
-    id: 'sheerit-saas',
-    title: 'Sheerit Software - Panel SaaS & RPA',
-    subtitle: 'Sistema de Gestión Administrativa & Bots Inteligentes',
-    category: 'saas',
-    categoryLabel: 'Plataforma SaaS & Bot',
-    description: 'Suite empresarial de control operativo con gestión de cuadrantes de turnos, cálculo de nómina en tiempo real, ejecutor RPA y Asistente IA integrados.',
-    tags: ['React', 'TypeScript', 'Express.js', 'MySQL', 'AI Assistant', 'RPA'],
-    features: [
-      'Gestor de horarios y restricción de equidad de turnos',
-      'Buscador histórico por fecha con retención de contratos pasados',
-      'Supervisión de ejecuciones de bots de WhatsApp en vivo',
-      'Asistente conversacional omnipresente para consultas rápidas'
-    ],
-    liveUrl: 'https://www.sheerit.com.co/aiuda/admin',
-    fallbackGradient: 'from-emerald-600 via-teal-700 to-slate-900',
-    icon: Bot,
-    metrics: [
-      { label: 'Ahorro de Tiempo', value: '95% Operativo' },
-      { label: 'Automatización', value: 'Bots RPA Ininterrumpidos' }
     ]
   }
 ];
@@ -1188,6 +1197,11 @@ export const PortfolioShowcasePage: React.FC = () => {
                             {project.title}
                           </h3>
                           <p className="text-xs text-slate-400">{project.subtitle}</p>
+                          
+                          {/* Badge de Primer Commit / Fecha Histórica */}
+                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 mt-1.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-bold">
+                            <span>📅 Primer Commit: {project.firstCommitDate}</span>
+                          </div>
                         </div>
                       </div>
 
