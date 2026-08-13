@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Hero } from './Hero';
+import { Features } from './Features';
+import { ReviewsSection } from './ReviewsSection';
+import { PlatformCard } from './PlatformCard';
 import { 
   Laptop, 
   Smartphone, 
@@ -166,11 +170,10 @@ const PROJECTS: Project[] = [
   }
 ];
 
-// Componente Interactivo que carga los datos REALES del catálogo de Sheerit Store
+// Componente que renderiza LA PÁGINA REAL DE SHEERIT STORE (Hero + Buscador + Cards + Features + Reviews)
 const SheeritStorePreview: React.FC = () => {
-  const [addedItems, setAddedItems] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [apiPlatforms, setApiPlatforms] = useState<any[]>([]);
+  const [platforms, setPlatforms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -178,139 +181,66 @@ const SheeritStorePreview: React.FC = () => {
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
-          setApiPlatforms(data);
+          setPlatforms(data);
         }
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
 
-  const toggleItem = (id: number) => {
-    setAddedItems(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
-  };
-
-  const defaultPlatforms = [
-    { id: 1, name: 'Netflix', image: 'https://th.bing.com/th/id/R.64d5f8b96325d2be917f9ab402e92b99?rik=1BawFvPFPBGxrg&pid=ImgRaw&r=0', price: 13000, characteristics: ['Cuenta estable 4K Ultra HD', 'Perfil exclusivo con PIN', 'Entrega en tiempo real'] },
-    { id: 2, name: 'Disney+ / Star+', image: 'https://th.bing.com/th/id/OIP.4yJ3iM0NnQW4P4Fq2f1s0gHaHa?pid=ImgDet&rs=1', price: 10000, characteristics: ['Deportes ESPN en vivo', 'Calidad 4K Ultra HD', 'Multi-dispositivo'] },
-    { id: 3, name: 'Max / HBO Max', image: 'https://th.bing.com/th/id/OIP.vH7K0qG2tZ3b7lq-N2vNsgHaHa?pid=ImgDet&rs=1', price: 9000, characteristics: ['Estrenos de cine en vivo', '3 Dispositivos simultáneos', 'Calidad 4K'] },
-    { id: 4, name: 'Spotify Premium', image: 'https://th.bing.com/th/id/R.b4e6a0d31c03e33f3e1f57e841ef94d6?rik=uYn1GzQzL8q4gA&pid=ImgRaw&r=0', price: 8500, characteristics: ['Música sin anuncios', 'Descarga offline', 'Calidad de audio alta'] },
-    { id: 5, name: 'Canva Pro', image: 'https://th.bing.com/th/id/OIP.7xW1L9Q9q6T5nK0e2z1w4gHaHa?pid=ImgDet&rs=1', price: 12000, characteristics: ['Generador IA Pro', 'Plantillas ilimitadas', 'Kit de marca'] }
-  ];
-
-  const platformsList = apiPlatforms.length > 0 ? apiPlatforms : defaultPlatforms;
-
-  const filtered = platformsList.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredPlatforms = platforms.filter((platform: any) =>
+    platform.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const formatPrice = (val: number) => {
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val);
-  };
-
   return (
-    <div className="flex-1 bg-slate-900 text-slate-100 p-4 sm:p-6 overflow-y-auto space-y-5 scrollbar-thin scrollbar-thumb-slate-700">
-      {/* Sheerit Real Store Banner */}
-      <div className="bg-gradient-to-r from-purple-700 via-indigo-800 to-slate-950 p-5 rounded-2xl shadow-xl flex flex-wrap items-center justify-between gap-4 border border-purple-500/30">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-extrabold text-white tracking-wider">SHEERIT STORE</span>
-            <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border border-emerald-500/30">
-              Oficial Store
-            </span>
+    <div className="flex-1 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700">
+      {/* Componente Hero Real de Sheerit */}
+      <Hero onRandomCombo={() => {}} />
+
+      {/* Catálogo Real de Plataformas de Sheerit */}
+      <main id="platforms-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="flex flex-col items-center mb-12">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mb-4 text-center">
+            Busca y arma tu combinación ideal 🔍
+          </h2>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-6 text-center max-w-lg">
+            Agrega cuantas plataformas quieras. Recuerda que a mayor cantidad de plataformas o mayor tiempo contratado, ¡tu descuento automático aumenta!
+          </p>
+
+          <div className="relative w-full max-w-md shadow-md rounded-xl">
+            <Search className="h-5 w-5 absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar Netflix, Disney+, Canva..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
           </div>
-          <p className="text-xs text-purple-200">Democratizando el acceso a tus plataformas al precio justo</p>
         </div>
 
-        <div className="flex items-center gap-2 bg-slate-950/80 px-3 py-2 rounded-xl border border-white/10 text-xs">
-          <ShoppingCart className="w-4 h-4 text-emerald-400" />
-          <span className="font-bold">Combo ({addedItems.length} seleccionadas)</span>
-        </div>
-      </div>
+        {loading ? (
+          <div className="text-center py-10 text-gray-400 text-sm">Cargando catálogo real de Sheerit Store...</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredPlatforms.map((platform: any) => (
+              <PlatformCard
+                key={platform.id}
+                id={platform.id}
+                name={platform.name}
+                image={platform.image}
+                price={platform.price}
+                characteristics={platform.characteristics}
+                plans={platform.plans}
+              />
+            ))}
+          </div>
+        )}
+      </main>
 
-      {/* Search Input */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold text-white flex items-center gap-2">
-            <span>Busca y arma tu combinación ideal 🔍</span>
-          </h3>
-          <span className="text-[11px] text-indigo-400 font-semibold">Descuento por combo activo</span>
-        </div>
-
-        <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Buscar Netflix, Disney+, Spotify, Canva..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-          />
-        </div>
-      </div>
-
-      {/* Real Platforms Grid with Real Logos */}
-      {loading ? (
-        <div className="text-center py-8 text-xs text-slate-400">Cargando catálogo real de Sheerit Store...</div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          {filtered.map((platform: any) => {
-            const isAdded = addedItems.includes(platform.id);
-            const currentPrice = platform.price || (platform.plans && platform.plans[0]?.price) || 12000;
-            const chars = platform.characteristics || (platform.plans && platform.plans[0]?.characteristics) || [];
-
-            return (
-              <div key={platform.id} className="bg-slate-950/90 rounded-xl p-3.5 border border-slate-800 hover:border-purple-500/50 transition-all flex flex-col justify-between space-y-3 shadow-lg">
-                <div className="space-y-2.5">
-                  <div className="flex items-center gap-3">
-                    {platform.image ? (
-                      <img 
-                        src={platform.image} 
-                        alt={platform.name} 
-                        className="w-10 h-10 object-cover rounded-xl border border-slate-700 shrink-0" 
-                        onError={(e: any) => {
-                          e.target.onerror = null;
-                          e.target.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80';
-                        }}
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-xl bg-purple-600/30 border border-purple-500/40 flex items-center justify-center text-lg shrink-0">
-                        🎬
-                      </div>
-                    )}
-                    <div>
-                      <h4 className="font-bold text-xs text-white">{platform.name}</h4>
-                      <span className="text-[10px] text-emerald-400 font-extrabold">{formatPrice(currentPrice)}</span>
-                    </div>
-                  </div>
-
-                  {chars.length > 0 && (
-                    <div className="space-y-1">
-                      {chars.slice(0, 2).map((char: string, cIdx: number) => (
-                        <div key={cIdx} className="flex items-center gap-1.5 text-[10px] text-slate-300">
-                          <Check className="w-3 h-3 text-emerald-400 shrink-0" />
-                          <span className="truncate">{char}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  onClick={() => toggleItem(platform.id)}
-                  className={`w-full py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    isAdded
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow'
-                  }`}
-                >
-                  {isAdded ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                  <span>{isAdded ? 'Agregado al Combo' : 'Agregar al Combo'}</span>
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {/* Componentes Reales Features & Reviews */}
+      <Features />
+      <ReviewsSection />
     </div>
   );
 };
