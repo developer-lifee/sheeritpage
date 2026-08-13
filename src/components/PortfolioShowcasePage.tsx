@@ -172,7 +172,7 @@ const PROJECTS: Project[] = [
       'Carrito de compras y pasarela de pedidos rápida',
       'Optimizado para dispositivos móviles y experiencia boutique'
     ],
-    liveUrl: 'https://scratchup.com.co',
+    liveUrl: 'https://github.com/developer-lifee/v0-cafe-website',
     fallbackGradient: 'from-amber-700 via-amber-900 to-slate-950',
     icon: Coffee,
     metrics: [
