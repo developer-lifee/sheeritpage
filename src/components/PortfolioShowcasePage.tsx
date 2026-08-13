@@ -235,6 +235,122 @@ const PROJECTS: Project[] = [
   }
 ];
 
+const PICKFOST_AUTHENTIC_HTML = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pickfost | Comida Sabrosa & Domicilios</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { red: '#991b1b', darkred: '#7f1d1d', deepred: '#450a0a' }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style> body { font-family: 'Plus Jakarta Sans', sans-serif; } </style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 antialiased">
+  <div class="bg-gradient-to-r from-red-950 via-red-900 to-red-950 text-red-100 text-xs font-extrabold py-2 px-4 text-center flex items-center justify-center gap-2 border-b border-red-950/40">
+    <i data-lucide="flame" class="w-4 h-4 text-red-500 fill-current"></i>
+    <span>¡BIENVENIDO A PICKFOST! Domicilios calientes y crujientes en Bogotá</span>
+  </div>
+
+  <header class="sticky top-0 z-50 bg-zinc-950/90 backdrop-blur-md border-b border-red-950/60">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-2">
+        <img src="/pickfost/pickfost.png" alt="Pickfost Logo" class="h-10 w-auto object-contain" />
+        <span class="text-lg font-extrabold tracking-tight text-red-700">PICKFOST</span>
+      </a>
+      <a href="https://wa.me/573118587975" target="_blank" class="bg-red-900 hover:bg-red-800 text-white font-extrabold text-xs px-3.5 py-2 rounded-lg flex items-center gap-1.5 border border-red-800/40">
+        <i data-lucide="phone-call" class="w-3.5 h-3.5"></i>
+        <span>WhatsApp</span>
+      </a>
+    </div>
+  </header>
+
+  <section class="py-10 bg-gradient-to-b from-red-950/40 via-zinc-950 to-zinc-950 border-b border-red-950/40">
+    <div class="max-w-7xl mx-auto px-4 grid md:grid-cols-2 gap-8 items-center">
+      <div class="space-y-4">
+        <span class="inline-block px-3 py-1 rounded-full bg-red-950/60 border border-red-900/40 text-red-400 text-xs font-extrabold">
+          Comida del pueblo y para el pueblo sabrosa
+        </span>
+        <h1 class="text-3xl font-black text-white leading-tight">
+          Los mejores platillos <br />
+          <span class="bg-gradient-to-r from-red-500 via-red-600 to-red-700 bg-clip-text text-transparent">al alcance de tu bolsillo</span>
+        </h1>
+        <p class="text-zinc-300 text-xs sm:text-sm leading-relaxed">
+          Hamburguesas gigantes, mazorcadas desgranadas y salchipapas salvajes. Sabor colombiano auténtico con entregas calientes hasta la puerta de tu casa.
+        </p>
+        <div class="flex gap-3 pt-2">
+          <a href="#platillos" class="bg-red-900 hover:bg-red-800 text-white font-extrabold text-xs px-5 py-3 rounded-xl flex items-center gap-2 border border-red-800/40">
+            <i data-lucide="utensils" class="w-4 h-4"></i> Ver Menú
+          </a>
+        </div>
+      </div>
+      <div class="rounded-2xl overflow-hidden border border-red-950/40 shadow-xl relative">
+        <img src="/pickfost/banner_1.webp" alt="Pickfost Banner" class="w-full h-56 object-cover" />
+        <div class="absolute bottom-3 left-3 right-3 bg-zinc-900/95 backdrop-blur-md p-3 rounded-xl border border-red-950 flex items-center justify-between">
+          <span class="text-xs font-bold text-white">Super Mazorcada Especial</span>
+          <span class="text-sm font-extrabold text-red-500">$22.000</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="platillos" class="py-10 bg-zinc-950">
+    <div class="max-w-7xl mx-auto px-4">
+      <h2 class="text-2xl font-black text-white text-center mb-8">Nuestros Platillos Más Populares</h2>
+      <div class="grid sm:grid-cols-3 gap-6">
+        <div class="bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800">
+          <img src="/pickfost/salchipapas.jfif" alt="Salchipapas" class="w-full h-40 object-cover" />
+          <div class="p-4 space-y-2">
+            <div class="flex justify-between items-center">
+              <h3 class="font-extrabold text-white text-sm">Salchipapas</h3>
+              <span class="text-xs font-bold text-red-500">$6k-$26k</span>
+            </div>
+            <p class="text-zinc-400 text-xs">Papas crujientes, salchicha premium y queso fundido.</p>
+          </div>
+        </div>
+
+        <div class="bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800">
+          <img src="/pickfost/mazorcada.jfif" alt="Mazorcadas" class="w-full h-40 object-cover" />
+          <div class="p-4 space-y-2">
+            <div class="flex justify-between items-center">
+              <h3 class="font-extrabold text-white text-sm">Mazorcadas</h3>
+              <span class="text-xs font-bold text-red-500">$12k-$25k</span>
+            </div>
+            <p class="text-zinc-400 text-xs">Maíz tierno desgranado, carne desmechada y queso.</p>
+          </div>
+        </div>
+
+        <div class="bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800">
+          <img src="/pickfost/hamburgesas.jfif" alt="Hamburguesas" class="w-full h-40 object-cover" />
+          <div class="p-4 space-y-2">
+            <div class="flex justify-between items-center">
+              <h3 class="font-extrabold text-white text-sm">Hamburguesas</h3>
+              <span class="text-xs font-bold text-red-500">$8k-$25k</span>
+            </div>
+            <p class="text-zinc-400 text-xs">Carne artesanal, cheddar derretido y tocineta.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script> lucide.createIcons(); </script>
+</body>
+</html>`;
+
 // HTML interactivo de la Rifa Sheerit (rifa.sheerit.com.co)
 const RIFA_AUTHENTIC_HTML = `
 <!DOCTYPE html>
@@ -449,150 +565,6 @@ const FURDEMY_AUTHENTIC_HTML = `
       });
     }
   </script>
-</body>
-</html>
-`;
-
-// Código HTML/CSS 100% auténtico renderizado con las imágenes REALES del repositorio pickfost.com.co
-const PICKFOST_AUTHENTIC_HTML = `
-<!DOCTYPE html>
-<html lang="es">
-      <div class="col-12 col-md-4">
-        <div class="p-3 bg-white rounded-3 shadow-sm border h-100">
-          <i class="fa-solid fa-truck-fast text-danger fa-3x mb-3"></i>
-          <h5 class="fw-bold">Envíos a Domicilio</h5>
-          <p class="text-muted small">Nuestro innovador sistema con múltiples puntos de distribución hace que sus domicilios lleguen calientes y frescos.</p>
-        </div>
-      </div>
-      <div class="col-12 col-md-4">
-        <div class="p-3 bg-white rounded-3 shadow-sm border h-100">
-          <i class="fa-solid fa-utensils text-warning fa-3x mb-3"></i>
-          <h5 class="fw-bold">Sazón y Sabor</h5>
-          <p class="text-muted small">Revolucionando la industria con nuestros excelentes productos únicos. Todo el sabor de Colombia reunido en un menú.</p>
-        </div>
-      </div>
-      <div class="col-12 col-md-4">
-        <div class="p-3 bg-white rounded-3 shadow-sm border h-100">
-          <i class="fa-solid fa-store-alt text-success fa-3x mb-3"></i>
-          <h5 class="fw-bold">Planifique su Alimentación</h5>
-          <p class="text-muted small">Planes semanales, quincenales y mensuales para que planifique su alimento sin cargar portacomidas.</p>
-        </div>
-      </div>
-    </div>
-
-    <h3 class="section-title" id="menu">Nuestros Platillos Más Populares</h3>
-    <div class="row g-4">
-      <div class="col-12 col-md-4">
-        <div class="card-dish">
-          <img src="/pickfost/salchipapas.jfif" alt="Salchipapas" class="dish-img" />
-          <div class="card-dish-body">
-            <div class="card-dish-title">Salchipapas</div>
-            <p class="text-danger fw-bold mb-2">$6.000 - $26.000</p>
-            <button onclick="addDish('Salchipapas Especiales', 16000)" class="btn-add"><i class="fa-solid fa-shopping-bag"></i> &nbsp; Agregar</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-12 col-md-4">
-        <div class="card-dish">
-          <img src="/pickfost/mazorcada.jfif" alt="Mazorcada" class="dish-img" />
-          <div class="card-dish-body">
-            <div class="card-dish-title">Mazorcadas</div>
-            <p class="text-danger fw-bold mb-2">$12.000 - $25.000</p>
-            <button onclick="addDish('Mazorcada Mixta', 18000)" class="btn-add"><i class="fa-solid fa-shopping-bag"></i> &nbsp; Agregar</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-12 col-md-4">
-        <div class="card-dish">
-          <img src="/pickfost/hamburgesas.jfif" alt="Hamburguesas" class="dish-img" />
-          <div class="card-dish-body">
-            <div class="card-dish-title">Hamburguesas</div>
-            <p class="text-danger fw-bold mb-2">$8.000 - $25.000</p>
-            <button onclick="addDish('Hamburguesa Artesanal', 15000)" class="btn-add"><i class="fa-solid fa-shopping-bag"></i> &nbsp; Agregar</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="row mt-5 align-items-center bg-white p-4 rounded-3 border shadow-sm">
-      <div class="col-12 col-md-6 text-center">
-        <img src="/pickfost/registration.png" alt="Registration App" class="img-fluid" style="max-height: 220px;" />
-      </div>
-      <div class="col-12 col-md-6 text-center text-md-start">
-        <h4 class="fw-bold">Descarga nuestra app</h4>
-        <p class="text-muted small">Descarga nuestra aplicación para poder acceder a nuestros servicios y realizar pedidos desde tu celular.</p>
-        <button class="btn btn-primary btn-sm px-4 py-2 font-weight-bold">Click aquí para registrarte</button>
-      </div>
-    </div>
-  </div>
-
-  <footer class="footer-pickfost">
-    <p class="mb-1"><strong>Esteban Ávila — PICKFOST Colombia</strong></p>
-    <p class="text-muted mb-0">© Todos los derechos reservados</p>
-  </footer>
-
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script>
-    let cartItems = [
-      { name: 'Salchipapas Especiales', price: 16000 },
-      { name: 'Mazorcada Mixta', price: 18000 }
-    ];
-
-    function updateCartBadge() {
-      const badge = document.getElementById('cart-badge');
-      if (badge) badge.innerText = 'Carrito (' + cartItems.length + ')';
-    }
-
-    function scrollToMenu(e) {
-      if (e) e.preventDefault();
-      const menuEl = document.getElementById('menu');
-      if (menuEl) menuEl.scrollIntoView({ behavior: 'smooth' });
-    }
-
-    function addDish(name, price) {
-      cartItems.push({ name: name, price: price });
-      updateCartBadge();
-      Swal.fire({
-        toast: true,
-        position: 'top-end',
-        icon: 'success',
-        title: '¡' + name + ' agregado al carrito!',
-        showConfirmButton: false,
-        timer: 2000
-      });
-    }
-
-    function showCartModal() {
-      const total = cartItems.reduce((acc, item) => acc + item.price, 0);
-      let itemsHtml = cartItems.map(item => 
-        '<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee;">' +
-        '<span>' + item.name + '</span>' +
-        '<strong>$' + item.price.toLocaleString('es-CO') + ' COP</strong>' +
-        '</div>'
-      ).join('');
-
-      Swal.fire({
-        title: '🛒 Carrito de Pedidos - Pickfost',
-        html: '<div style="text-align:left; max-height:200px; overflow-y:auto; margin-bottom:15px;">' +
-              (itemsHtml || '<p style="text-align:center;">El carrito está vacío</p>') +
-              '</div>' +
-              '<h4 style="text-align:right; color:#ec5252;">Total: $' + total.toLocaleString('es-CO') + ' COP</h4>',
-        showCancelButton: true,
-        confirmButtonText: '🚀 Realizar Pedido',
-        cancelButtonText: 'Seguir Comprando',
-        confirmButtonColor: '#28a745',
-        cancelButtonColor: '#6c757d'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          Swal.fire('¡Pedido Enviado!', 'Tu pedido ha sido recibido y está en preparación para entrega inmediata.', 'success');
-        }
-      });
-    }
-  </script>
-</body>
-</html>
 `;
 
 // Código HTML/CSS 100% auténtico del proyecto react-app (AAIPA Association Immigration Services)
