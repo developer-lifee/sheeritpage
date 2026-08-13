@@ -1,4 +1,4 @@
-name: 🚀 Production Deploy
+name: 🚀 VPS Production Deploy
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   web-deploy:
-    name: 🚀 Deploy website
+    name: 🚀 Deploy website to VPS
     runs-on: ubuntu-latest
     steps:
       - name: 🚚 Get latest code
@@ -24,43 +24,12 @@ jobs:
       - name: 🏗️ Build project
         run: npm run build
 
-      - name: 📂 Sync build folder via FTP (Intento 1)
-        id: ftp_deploy_1
-        continue-on-error: true
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      - name: 🚀 Sync build folder to VPS via SCP
+        uses: appleboy/scp-action@v0.1.7
         with:
-          local-dir: dist/
-          server: ftps4.us.freehostia.com
-          username: estavi0
-          password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: sheerit.com.co/
-
-      - name: ⏳ Pausa de 15 segundos si el servidor FTP rechazó la conexión
-        if: steps.ftp_deploy_1.outcome == 'failure'
-        run: sleep 15
-
-      - name: 📂 Sync build folder via FTP (Intento 2)
-        id: ftp_deploy_2
-        continue-on-error: true
-        if: steps.ftp_deploy_1.outcome == 'failure'
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          local-dir: dist/
-          server: ftps4.us.freehostia.com
-          username: estavi0
-          password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: sheerit.com.co/
-
-      - name: ⏳ Pausa de 25 segundos si el servidor FTP volvió a rechazar la conexión
-        if: steps.ftp_deploy_2.outcome == 'failure'
-        run: sleep 25
-
-      - name: 📂 Sync build folder via FTP (Intento 3 - Reintento Definitivo)
-        if: steps.ftp_deploy_2.outcome == 'failure'
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          local-dir: dist/
-          server: ftps4.us.freehostia.com
-          username: estavi0
-          password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: sheerit.com.co/
+          host: 147.79.75.135
+          username: root
+          password: ${{ secrets.VPS_PASSWORD || secrets.FTP_PASSWORD }}
+          source: "dist/*"
+          target: "/var/www/sheerit.com.co"
+          strip_components: 1
