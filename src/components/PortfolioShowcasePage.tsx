@@ -192,14 +192,14 @@ const PICKFOST_AUTHENTIC_HTML = `
       <span style="font-weight:900; font-size:18px; color:#ec5252; text-transform:uppercase;">PICKFOST</span>
     </div>
     <div>
-      <span class="badge bg-warning text-dark font-weight-bold" style="padding: 8px 14px; font-size:12px;"><i class="fa-solid fa-shopping-bag"></i> Carrito (2)</span>
+      <span id="cart-badge" onclick="showCartModal()" class="badge bg-warning text-dark font-weight-bold" style="padding: 8px 14px; font-size:12px; cursor:pointer;"><i class="fa-solid fa-shopping-bag"></i> Carrito (2)</span>
     </div>
   </header>
 
   <div class="banner">
     <h1>Bienvenido a PICKFOST</h1>
     <p>Comida del pueblo y para el pueblo sabrosa con su paladar y bolsillo, domicilios buenos, bonitos y baratos.</p>
-    <a href="#menu" class="btn-warning-custom"><i class="fa-solid fa-hamburger"></i> Ir al menú</a>
+    <a href="#menu" onclick="scrollToMenu(event)" class="btn-warning-custom"><i class="fa-solid fa-hamburger"></i> Ir al menú</a>
   </div>
 
   <div class="container my-4">
@@ -236,7 +236,7 @@ const PICKFOST_AUTHENTIC_HTML = `
           <div class="card-dish-body">
             <div class="card-dish-title">Salchipapas</div>
             <p class="text-danger fw-bold mb-2">$6.000 - $26.000</p>
-            <button class="btn-add"><i class="fa-solid fa-shopping-bag"></i> &nbsp; Agregar</button>
+            <button onclick="addDish('Salchipapas Especiales', 16000)" class="btn-add"><i class="fa-solid fa-shopping-bag"></i> &nbsp; Agregar</button>
           </div>
         </div>
       </div>
@@ -247,7 +247,7 @@ const PICKFOST_AUTHENTIC_HTML = `
           <div class="card-dish-body">
             <div class="card-dish-title">Mazorcadas</div>
             <p class="text-danger fw-bold mb-2">$12.000 - $25.000</p>
-            <button class="btn-add"><i class="fa-solid fa-shopping-bag"></i> &nbsp; Agregar</button>
+            <button onclick="addDish('Mazorcada Mixta', 18000)" class="btn-add"><i class="fa-solid fa-shopping-bag"></i> &nbsp; Agregar</button>
           </div>
         </div>
       </div>
@@ -258,7 +258,7 @@ const PICKFOST_AUTHENTIC_HTML = `
           <div class="card-dish-body">
             <div class="card-dish-title">Hamburguesas</div>
             <p class="text-danger fw-bold mb-2">$8.000 - $25.000</p>
-            <button class="btn-add"><i class="fa-solid fa-shopping-bag"></i> &nbsp; Agregar</button>
+            <button onclick="addDish('Hamburguesa Artesanal', 15000)" class="btn-add"><i class="fa-solid fa-shopping-bag"></i> &nbsp; Agregar</button>
           </div>
         </div>
       </div>
@@ -280,6 +280,65 @@ const PICKFOST_AUTHENTIC_HTML = `
     <p class="mb-1"><strong>Esteban Ávila — PICKFOST Colombia</strong></p>
     <p class="text-muted mb-0">© Todos los derechos reservados</p>
   </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    let cartItems = [
+      { name: 'Salchipapas Especiales', price: 16000 },
+      { name: 'Mazorcada Mixta', price: 18000 }
+    ];
+
+    function updateCartBadge() {
+      const badge = document.getElementById('cart-badge');
+      if (badge) badge.innerText = 'Carrito (' + cartItems.length + ')';
+    }
+
+    function scrollToMenu(e) {
+      if (e) e.preventDefault();
+      const menuEl = document.getElementById('menu');
+      if (menuEl) menuEl.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function addDish(name, price) {
+      cartItems.push({ name: name, price: price });
+      updateCartBadge();
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: '¡' + name + ' agregado al carrito!',
+        showConfirmButton: false,
+        timer: 2000
+      });
+    }
+
+    function showCartModal() {
+      const total = cartItems.reduce((acc, item) => acc + item.price, 0);
+      let itemsHtml = cartItems.map(item => 
+        '<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee;">' +
+        '<span>' + item.name + '</span>' +
+        '<strong>$' + item.price.toLocaleString('es-CO') + ' COP</strong>' +
+        '</div>'
+      ).join('');
+
+      Swal.fire({
+        title: '🛒 Carrito de Pedidos - Pickfost',
+        html: '<div style="text-align:left; max-height:200px; overflow-y:auto; margin-bottom:15px;">' +
+              (itemsHtml || '<p style="text-align:center;">El carrito está vacío</p>') +
+              '</div>' +
+              '<h4 style="text-align:right; color:#ec5252;">Total: $' + total.toLocaleString('es-CO') + ' COP</h4>',
+        showCancelButton: true,
+        confirmButtonText: '🚀 Realizar Pedido',
+        cancelButtonText: 'Seguir Comprando',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          Swal.fire('¡Pedido Enviado!', 'Tu pedido ha sido recibido y está en preparación para entrega inmediata.', 'success');
+        }
+      });
+    }
+  </script>
 </body>
 </html>
 `;
