@@ -214,11 +214,12 @@ function AppContent() {
     const pass = localStorage.getItem('ticket_agent_password') || '';
     const cleanEmail = email.trim().toLowerCase();
     const hasValidEmail = !!cleanEmail;
-    const hasValidPass = pass.toLowerCase() === 'admin123';
+    const isDemo = isDemoMode() || cleanEmail === 'demo@sheerit.com.co';
+    const hasValidPass = pass.toLowerCase() === 'admin123' || pass.toLowerCase() === 'demo123' || isDemo;
     
     if (hasValidEmail && hasValidPass) {
       if (!localStorage.getItem('ticket_agent_name')) {
-        const fallbackName = AUTHORIZED_ADVISORS[cleanEmail] || cleanEmail.split('@')[0];
+        const fallbackName = isDemo ? 'Asesor Demo Comercial' : (AUTHORIZED_ADVISORS[cleanEmail] || cleanEmail.split('@')[0]);
         localStorage.setItem('ticket_agent_name', fallbackName);
       }
       return true;

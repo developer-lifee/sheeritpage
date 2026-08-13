@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { enableDemoMode } from '../utils/demoMode';
 import { 
   Laptop, 
   Smartphone, 
@@ -392,11 +393,7 @@ export const PortfolioShowcasePage: React.FC = () => {
 
   useEffect(() => {
     if (activeProject.id === 'sheerit-saas' && typeof window !== 'undefined') {
-      if (!localStorage.getItem('ticket_agent_email')) {
-        localStorage.setItem('ticket_agent_email', 'admin@sheerit.com.co');
-        localStorage.setItem('ticket_agent_password', 'admin123');
-        localStorage.setItem('ticket_agent_name', 'Administrador Demo');
-      }
+      enableDemoMode();
     }
   }, [activeProject.id]);
 
