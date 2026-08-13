@@ -79,7 +79,7 @@ const PROJECTS: Project[] = [
       'Módulo de planificación de alimentación semanal, quincenal y mensual',
       'Carrito de compras dinámico con inicio de sesión y registro de usuarios'
     ],
-    liveUrl: 'https://github.com/developer-lifee/pickfost.com.co',
+    liveUrl: 'https://pickfost.com.co',
     fallbackGradient: 'from-amber-600 via-orange-700 to-slate-950',
     icon: Utensils,
     metrics: [
@@ -153,126 +153,6 @@ const PROJECTS: Project[] = [
     ]
   }
 ];
-
-// Código HTML/CSS 100% fiel extraído del repositorio oficial developer-lifee/pickfost.com.co
-const PICKFOST_LITERAL_HTML = `
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pickfost - Comida Sabrosa & Domicilios</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-  <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; color: #212529; margin: 0; padding: 0; }
-    .pickfost-header { background: #ffffff; border-bottom: 2px solid #ec5252; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; }
-    .pickfost-logo { font-size: 22px; font-weight: 900; color: #ec5252; text-transform: uppercase; letter-spacing: 1px; }
-    .pickfost-banner { background: linear-gradient(135deg, #ec5252 0%, #ff7b54 100%); color: white; padding: 45px 20px; text-center; }
-    .pickfost-banner h1 { font-size: 28px; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; }
-    .pickfost-banner p { font-size: 14px; opacity: 0.95; }
-    .btn-pickfost { background: #ffb703; color: #000; font-weight: 700; border-radius: 20px; padding: 8px 20px; border: none; text-decoration: none; display: inline-block; margin-top: 12px; }
-    .section-title { font-weight: 800; text-transform: uppercase; text-align: center; margin: 30px 0 20px; font-size: 18px; letter-spacing: 0.5px; }
-    .card-dish { background: white; border-radius: 16px; border: 1px solid #e9ecef; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: transform 0.2s; margin-bottom: 20px; }
-    .card-dish:hover { transform: translateY(-4px); }
-    .dish-img { height: 160px; background-size: cover; background-position: center; display: flex; align-items: flex-end; justify-content: flex-end; padding: 10px; }
-    .price-badge { background: #ec5252; color: white; font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 12px; }
-    .card-dish-body { padding: 16px; text-align: center; }
-    .card-dish-title { font-weight: 700; font-size: 16px; margin-bottom: 8px; }
-    .btn-add { background: #28a745; color: white; font-weight: 700; border: none; border-radius: 8px; padding: 6px 16px; font-size: 12px; }
-    .footer-pickfost { background: #14111a; color: white; padding: 30px 20px; font-size: 12px; margin-top: 40px; }
-  </style>
-</head>
-<body>
-  <header class="pickfost-header">
-    <div class="pickfost-logo"><i class="fa-solid fa-hamburger"></i> PICKFOST</div>
-    <div>
-      <span class="badge bg-warning text-dark font-weight-bold" style="padding: 6px 12px;"><i class="fa-solid fa-shopping-bag"></i> Carrito (2)</span>
-    </div>
-  </header>
-
-  <div class="pickfost-banner text-center">
-    <h1>Bienvenido a PICKFOST</h1>
-    <p>Comida del pueblo y para el pueblo sabrosa con su paladar y bolsillo, domicilios buenos, bonitos y baratos.</p>
-    <a href="#menu" class="btn-pickfost"><i class="fa-solid fa-utensils"></i> Ver Menú Completo</a>
-  </div>
-
-  <div class="container my-4">
-    <h3 class="section-title">Nuestros Servicios Domiciliarios</h3>
-    <div class="row text-center g-3">
-      <div class="col-12 col-md-4">
-        <div className="p-3 bg-white rounded-3 shadow-sm border">
-          <i class="fa-solid fa-truck-fast text-danger fa-2x mb-2"></i>
-          <h6 class="fw-bold">Envíos a Domicilio</h6>
-          <p class="text-muted small">Red de domiciliarios para que tus comida llegue caliente y fresca a tiempo.</p>
-        </div>
-      </div>
-      <div class="col-12 col-md-4">
-        <div className="p-3 bg-white rounded-3 shadow-sm border">
-          <i class="fa-solid fa-fire text-warning fa-2x mb-2"></i>
-          <h6 class="fw-bold">Sazón y Sabor</h6>
-          <p class="text-muted small">Todo el sabor de Colombia reunido en un menú único para tu paladar.</p>
-        </div>
-      </div>
-      <div class="col-12 col-md-4">
-        <div className="p-3 bg-white rounded-3 shadow-sm border">
-          <i class="fa-solid fa-calendar-check text-success fa-2x mb-2"></i>
-          <h6 class="fw-bold">Planifica tu Alimentación</h6>
-          <p class="text-muted small">Planes semanales y mensuales para comer delicioso sin descuidar tu bolsillo.</p>
-        </div>
-      </div>
-    </div>
-
-    <h3 class="section-title" id="menu">Platillos Más Populares</h3>
-    <div class="row g-3">
-      <div class="col-12 col-md-4">
-        <div class="card-dish">
-          <div class="dish-img" style="background-image: url('https://images.unsplash.com/photo-1585109649139-366815a0d713?w=500');">
-            <span class="price-badge">$6.000 - $26.000</span>
-          </div>
-          <div class="card-dish-body">
-            <div class="card-dish-title">Salchipapas Especiales</div>
-            <p class="text-muted small">Papas crujientes, salchicha suiza, queso derretido y salsas artesanales.</p>
-            <button class="btn-add"><i class="fa-solid fa-cart-plus"></i> Agregar al Pedido</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-12 col-md-4">
-        <div class="card-dish">
-          <div class="dish-img" style="background-image: url('https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=500');">
-            <span class="price-badge">$12.000 - $25.000</span>
-          </div>
-          <div class="card-dish-body">
-            <div class="card-dish-title">Mazorcadas Mixtas</div>
-            <p class="text-muted small">Maíz tierno desgranado, carne desmechada, pollo, ripio de papa y doble queso.</p>
-            <button class="btn-add"><i class="fa-solid fa-cart-plus"></i> Agregar al Pedido</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-12 col-md-4">
-        <div class="card-dish">
-          <div class="dish-img" style="background-image: url('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500');">
-            <span class="price-badge">$8.000 - $25.000</span>
-          </div>
-          <div class="card-dish-body">
-            <div class="card-dish-title">Hamburguesas Artesanales</div>
-            <p class="text-muted small">Carne 100% res, tocineta ahumada, queso cheddar derretido y pan brioche.</p>
-            <button class="btn-add"><i class="fa-solid fa-cart-plus"></i> Agregar al Pedido</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <footer class="footer-pickfost text-center">
-    <p class="mb-1"><strong>Esteban Ávila - PICKFOST Colombia</strong></p>
-    <p class="text-muted mb-0">© Todos los derechos reservados</p>
-  </footer>
-</body>
-</html>
-`;
 
 export const PortfolioShowcasePage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -462,7 +342,7 @@ export const PortfolioShowcasePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Contenedor del Marco del Dispositivo (Resizing Responsivo Real) */}
+          {/* Contenedor del Marco del Dispositivo */}
           <div className="flex justify-center items-center py-4 bg-slate-950/60 rounded-2xl border border-slate-800/80 min-h-[500px] overflow-hidden">
             <div className={`transition-all duration-500 overflow-hidden relative flex flex-col ${getDeviceWidthClass()}`}>
               
@@ -480,20 +360,13 @@ export const PortfolioShowcasePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Contenido Visual en IFRAME 100% REAL Y RESPONSIVO */}
+              {/* Contenido Visual en IFRAME DIRECTO EXACTAMENTE IGUAL QUE SCRATCHUP */}
               <div className="flex-1 bg-white relative flex flex-col overflow-hidden">
                 {currentProject.id === 'sheerit-store' ? (
                   <iframe
                     key={iframeKey}
                     src="/"
                     title="Sheerit Store Live"
-                    className="w-full h-full border-0 bg-white"
-                  />
-                ) : currentProject.id === 'pickfost' ? (
-                  <iframe
-                    key={iframeKey}
-                    srcDoc={PICKFOST_LITERAL_HTML}
-                    title="Pickfost Live"
                     className="w-full h-full border-0 bg-white"
                   />
                 ) : currentProject.liveUrl ? (
