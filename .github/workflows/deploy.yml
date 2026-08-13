@@ -32,15 +32,3 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: dist
-
-      - name: 📂 Deploy via FTP to VPS (If FTP Credentials Exist)
-        if: ${{ secrets.FTP_SERVER != '' }}
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: ${{ secrets.FTP_PORT || 21 }}
-          local-dir: ./dist/
-          server-dir: ${{ secrets.FTP_SERVER_DIR || '/var/www/sheerit.com.co/' }}
-          dangerous-clean-slate: false
