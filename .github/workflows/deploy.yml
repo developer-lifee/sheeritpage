@@ -32,3 +32,14 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: dist
+
+      - name: 📂 Deploy via FTP to Freehostia
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        continue-on-error: true
+        with:
+          server: ${{ secrets.FTP_SERVER || 'ftps4.us.freehostia.com' }}
+          username: ${{ secrets.FTP_USERNAME || 'estavi0' }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: ${{ secrets.FTP_SERVER_DIR || '/sheerit.com.co/' }}
+          local-dir: ./dist/
+          dangerous-clean-slate: false
