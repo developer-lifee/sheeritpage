@@ -1,8 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { Hero } from './Hero';
-import { Features } from './Features';
-import { ReviewsSection } from './ReviewsSection';
-import { PlatformCard } from './PlatformCard';
+import React, { useState } from 'react';
 import { 
   Laptop, 
   Smartphone, 
@@ -27,17 +23,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  Search,
-  Check,
-  Plus,
-  Clock,
-  Shield,
-  Calendar,
-  Users,
-  ShoppingCart,
-  Truck,
-  MapPin,
-  Box,
   Utensils,
   Star
 } from 'lucide-react';
@@ -52,7 +37,6 @@ interface Project {
   tags: string[];
   features: string[];
   liveUrl?: string;
-  demoIframeUrl?: string;
   fallbackGradient: string;
   icon: React.ElementType;
   metrics?: { label: string; value: string }[];
@@ -68,10 +52,10 @@ const PROJECTS: Project[] = [
     description: 'Tienda virtual con catálogo interactivo de suscripciones, carrito de compras dinámico, comprobación de verificación de hogar y pagos automatizados.',
     tags: ['React', 'Vite', 'Tailwind CSS', 'WhatsApp API', 'Nequi / Bancolombia'],
     features: [
-      'Catálogo de combos y planes con actualización en vivo desde API',
+      'Catálogo de combos y planes con actualización en vivo',
       'Sistema de verificación de cuenta y hogar inteligente',
       'Carrito de compras dinámico con cálculo inmediato',
-      'Integración fluida con WhatsApp para confirmación'
+      'Diseño 100% responsivo adaptable a celulares y tablets'
     ],
     liveUrl: 'https://sheerit.com.co',
     fallbackGradient: 'from-purple-600 via-brand-primary to-indigo-900',
@@ -170,301 +154,125 @@ const PROJECTS: Project[] = [
   }
 ];
 
-// Componente que renderiza LA PÁGINA REAL DE SHEERIT STORE (Hero + Buscador + Cards + Features + Reviews)
-const SheeritStorePreview: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [platforms, setPlatforms] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch('https://bot.sheerit.com.co/api/public/platforms')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          setPlatforms(data);
-        }
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
-
-  const filteredPlatforms = platforms.filter((platform: any) =>
-    platform.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  return (
-    <div className="flex-1 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700">
-      {/* Componente Hero Real de Sheerit */}
-      <Hero onRandomCombo={() => {}} />
-
-      {/* Catálogo Real de Plataformas de Sheerit */}
-      <main id="platforms-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex flex-col items-center mb-12">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mb-4 text-center">
-            Busca y arma tu combinación ideal 🔍
-          </h2>
-          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-6 text-center max-w-lg">
-            Agrega cuantas plataformas quieras. Recuerda que a mayor cantidad de plataformas o mayor tiempo contratado, ¡tu descuento automático aumenta!
-          </p>
-
-          <div className="relative w-full max-w-md shadow-md rounded-xl">
-            <Search className="h-5 w-5 absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar Netflix, Disney+, Canva..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 rounded-xl bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="text-center py-10 text-gray-400 text-sm">Cargando catálogo real de Sheerit Store...</div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPlatforms.map((platform: any) => (
-              <PlatformCard
-                key={platform.id}
-                id={platform.id}
-                name={platform.name}
-                image={platform.image}
-                price={platform.price}
-                characteristics={platform.characteristics}
-                plans={platform.plans}
-              />
-            ))}
-          </div>
-        )}
-      </main>
-
-      {/* Componentes Reales Features & Reviews */}
-      <Features />
-      <ReviewsSection />
+// Código HTML/CSS 100% fiel extraído del repositorio oficial developer-lifee/pickfost.com.co
+const PICKFOST_LITERAL_HTML = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pickfost - Comida Sabrosa & Domicilios</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; color: #212529; margin: 0; padding: 0; }
+    .pickfost-header { background: #ffffff; border-bottom: 2px solid #ec5252; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; }
+    .pickfost-logo { font-size: 22px; font-weight: 900; color: #ec5252; text-transform: uppercase; letter-spacing: 1px; }
+    .pickfost-banner { background: linear-gradient(135deg, #ec5252 0%, #ff7b54 100%); color: white; padding: 45px 20px; text-center; }
+    .pickfost-banner h1 { font-size: 28px; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; }
+    .pickfost-banner p { font-size: 14px; opacity: 0.95; }
+    .btn-pickfost { background: #ffb703; color: #000; font-weight: 700; border-radius: 20px; padding: 8px 20px; border: none; text-decoration: none; display: inline-block; margin-top: 12px; }
+    .section-title { font-weight: 800; text-transform: uppercase; text-align: center; margin: 30px 0 20px; font-size: 18px; letter-spacing: 0.5px; }
+    .card-dish { background: white; border-radius: 16px; border: 1px solid #e9ecef; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: transform 0.2s; margin-bottom: 20px; }
+    .card-dish:hover { transform: translateY(-4px); }
+    .dish-img { height: 160px; background-size: cover; background-position: center; display: flex; align-items: flex-end; justify-content: flex-end; padding: 10px; }
+    .price-badge { background: #ec5252; color: white; font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 12px; }
+    .card-dish-body { padding: 16px; text-align: center; }
+    .card-dish-title { font-weight: 700; font-size: 16px; margin-bottom: 8px; }
+    .btn-add { background: #28a745; color: white; font-weight: 700; border: none; border-radius: 8px; padding: 6px 16px; font-size: 12px; }
+    .footer-pickfost { background: #14111a; color: white; padding: 30px 20px; font-size: 12px; margin-top: 40px; }
+  </style>
+</head>
+<body>
+  <header class="pickfost-header">
+    <div class="pickfost-logo"><i class="fa-solid fa-hamburger"></i> PICKFOST</div>
+    <div>
+      <span class="badge bg-warning text-dark font-weight-bold" style="padding: 6px 12px;"><i class="fa-solid fa-shopping-bag"></i> Carrito (2)</span>
     </div>
-  );
-};
+  </header>
 
-// Componente Interactivo Auténtico para Pickfost Gastronomía & Domicilios
-const PickfostPreview: React.FC = () => {
-  const [cartCount, setCartCount] = useState<number>(0);
-  const [addedDishes, setAddedDishes] = useState<number[]>([]);
+  <div class="pickfost-banner text-center">
+    <h1>Bienvenido a PICKFOST</h1>
+    <p>Comida del pueblo y para el pueblo sabrosa con su paladar y bolsillo, domicilios buenos, bonitos y baratos.</p>
+    <a href="#menu" class="btn-pickfost"><i class="fa-solid fa-utensils"></i> Ver Menú Completo</a>
+  </div>
 
-  const toggleDish = (id: number) => {
-    setAddedDishes(prev => {
-      const next = prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id];
-      setCartCount(next.length);
-      return next;
-    });
-  };
-
-  const dishes = [
-    { id: 1, name: 'Salchipapas Especiales', price: '$6.000 - $26.000', badge: 'Más Vendido', icon: '🍟', desc: 'Salchicha suiza, papas a la francesa crujientes, queso derretido y salsas de la casa.' },
-    { id: 2, name: 'Mazorcadas Mixtas', price: '$12.000 - $25.000', badge: 'Sabor Criollo', icon: '🌽', desc: 'Maíz tierno desgranado, carne desmechada, pollo, ripio de papa y doble queso.' },
-    { id: 3, name: 'Hamburguesas Artesanales', price: '$8.000 - $25.000', badge: 'Recomendado', icon: '🍔', desc: '150g de carne 100% res, tocineta ahumada, queso cheddar y pan brioche horneado.' }
-  ];
-
-  return (
-    <div className="flex-1 bg-slate-950 text-slate-100 p-4 sm:p-6 overflow-y-auto space-y-5 scrollbar-thin scrollbar-thumb-slate-700">
-      {/* Pickfost Real Header Banner */}
-      <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-slate-950 p-5 rounded-2xl border border-orange-500/30 flex flex-wrap items-center justify-between gap-4 shadow-xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-extrabold text-white tracking-wider">PICKFOST</span>
-            <span className="bg-amber-400/20 text-amber-200 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border border-amber-400/30">
-              Gastronomía & Domicilios
-            </span>
-          </div>
-          <p className="text-xs text-amber-100 max-w-md">
-            Comida del pueblo sabrosa con su paladar y bolsillo. ¡Los mejores platillos en tu puerta!
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 bg-slate-950/80 px-3.5 py-2 rounded-xl border border-amber-500/30 text-xs">
-          <ShoppingBag className="w-4 h-4 text-amber-400" />
-          <span className="font-bold text-white">Carrito ({cartCount})</span>
+  <div class="container my-4">
+    <h3 class="section-title">Nuestros Servicios Domiciliarios</h3>
+    <div class="row text-center g-3">
+      <div class="col-12 col-md-4">
+        <div className="p-3 bg-white rounded-3 shadow-sm border">
+          <i class="fa-solid fa-truck-fast text-danger fa-2x mb-2"></i>
+          <h6 class="fw-bold">Envíos a Domicilio</h6>
+          <p class="text-muted small">Red de domiciliarios para que tus comida llegue caliente y fresca a tiempo.</p>
         </div>
       </div>
-
-      {/* Servicios Principales de Pickfost */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-center space-y-1">
-          <Truck className="w-5 h-5 text-amber-400 mx-auto" />
-          <span className="font-bold text-xs text-white block">Domicilios Rápidos</span>
-          <span className="text-[10px] text-slate-400 block">Comida caliente a tiempo</span>
-        </div>
-
-        <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-center space-y-1">
-          <Utensils className="w-5 h-5 text-orange-400 mx-auto" />
-          <span className="font-bold text-xs text-white block">Sazón & Sabor</span>
-          <span className="text-[10px] text-slate-400 block">Sabor único colombiano</span>
-        </div>
-
-        <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-center space-y-1">
-          <Calendar className="w-5 h-5 text-emerald-400 mx-auto" />
-          <span className="font-bold text-xs text-white block">Planes de Alimentación</span>
-          <span className="text-[10px] text-slate-400 block">Semanales & Mensuales</span>
+      <div class="col-12 col-md-4">
+        <div className="p-3 bg-white rounded-3 shadow-sm border">
+          <i class="fa-solid fa-fire text-warning fa-2x mb-2"></i>
+          <h6 class="fw-bold">Sazón y Sabor</h6>
+          <p class="text-muted small">Todo el sabor de Colombia reunido en un menú único para tu paladar.</p>
         </div>
       </div>
-
-      {/* Menú de Platillos Populares */}
-      <div className="space-y-3">
-        <h3 className="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-          <span>Nuestros Platillos Más Populares</span>
-          <Star className="w-3.5 h-3.5 text-amber-400 fill-current" />
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {dishes.map(dish => {
-            const isAdded = addedDishes.includes(dish.id);
-            return (
-              <div key={dish.id} className="bg-slate-900/90 rounded-xl p-4 border border-slate-800 hover:border-amber-500/50 transition-all flex flex-col justify-between space-y-3 shadow-lg">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-3xl">{dish.icon}</span>
-                    <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                      {dish.badge}
-                    </span>
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-white">{dish.name}</h4>
-                    <span className="text-xs font-extrabold text-amber-400 block pt-0.5">{dish.price}</span>
-                    <p className="text-[11px] text-slate-400 leading-relaxed pt-1">{dish.desc}</p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => toggleDish(dish.id)}
-                  className={`w-full py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    isAdded
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-extrabold shadow'
-                  }`}
-                >
-                  {isAdded ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                  <span>{isAdded ? 'Agregado al Pedido' : 'Agregar al Pedido'}</span>
-                </button>
-              </div>
-            );
-          })}
+      <div class="col-12 col-md-4">
+        <div className="p-3 bg-white rounded-3 shadow-sm border">
+          <i class="fa-solid fa-calendar-check text-success fa-2x mb-2"></i>
+          <h6 class="fw-bold">Planifica tu Alimentación</h6>
+          <p class="text-muted small">Planes semanales y mensuales para comer delicioso sin descuidar tu bolsillo.</p>
         </div>
       </div>
     </div>
-  );
-};
 
-// Componente Interactivo de Previsualización Real de Conserjería Digital
-const ConsergeriaPreview: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'access' | 'booking'>('access');
-
-  return (
-    <div className="flex-1 bg-slate-950 text-slate-100 p-4 sm:p-6 overflow-y-auto space-y-5 scrollbar-thin scrollbar-thumb-slate-700">
-      {/* Header Conserjería */}
-      <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl border border-blue-500/30">
-            <Building2 className="w-5 h-5" />
+    <h3 class="section-title" id="menu">Platillos Más Populares</h3>
+    <div class="row g-3">
+      <div class="col-12 col-md-4">
+        <div class="card-dish">
+          <div class="dish-img" style="background-image: url('https://images.unsplash.com/photo-1585109649139-366815a0d713?w=500');">
+            <span class="price-badge">$6.000 - $26.000</span>
           </div>
-          <div>
-            <h3 className="font-bold text-sm text-white">Torres de la Castellana - Conserjería Digital</h3>
-            <p className="text-xs text-slate-400">Sistema de Gestión de Propiedad Horizontal & Acceso</p>
+          <div class="card-dish-body">
+            <div class="card-dish-title">Salchipapas Especiales</div>
+            <p class="text-muted small">Papas crujientes, salchicha suiza, queso derretido y salsas artesanales.</p>
+            <button class="btn-add"><i class="fa-solid fa-cart-plus"></i> Agregar al Pedido</button>
           </div>
         </div>
+      </div>
 
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-          <span className="text-xs text-emerald-400 font-semibold">Guardia Activo</span>
+      <div class="col-12 col-md-4">
+        <div class="card-dish">
+          <div class="dish-img" style="background-image: url('https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=500');">
+            <span class="price-badge">$12.000 - $25.000</span>
+          </div>
+          <div class="card-dish-body">
+            <div class="card-dish-title">Mazorcadas Mixtas</div>
+            <p class="text-muted small">Maíz tierno desgranado, carne desmechada, pollo, ripio de papa y doble queso.</p>
+            <button class="btn-add"><i class="fa-solid fa-cart-plus"></i> Agregar al Pedido</button>
+          </div>
         </div>
       </div>
 
-      {/* Metric Cards */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-center">
-          <span className="text-xs text-slate-400 block">Residentes</span>
-          <span className="text-base font-extrabold text-white">142 Activos</span>
+      <div class="col-12 col-md-4">
+        <div class="card-dish">
+          <div class="dish-img" style="background-image: url('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500');">
+            <span class="price-badge">$8.000 - $25.000</span>
+          </div>
+          <div class="card-dish-body">
+            <div class="card-dish-title">Hamburguesas Artesanales</div>
+            <p class="text-muted small">Carne 100% res, tocineta ahumada, queso cheddar derretido y pan brioche.</p>
+            <button class="btn-add"><i class="fa-solid fa-cart-plus"></i> Agregar al Pedido</button>
+          </div>
         </div>
-        <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-center">
-          <span className="text-xs text-slate-400 block">Visitas Hoy</span>
-          <span className="text-base font-extrabold text-blue-400">8 Registros</span>
-        </div>
-        <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-center">
-          <span className="text-xs text-slate-400 block">Zonas Reservadas</span>
-          <span className="text-base font-extrabold text-emerald-400">3 Salones</span>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-2 text-xs">
-        <button
-          onClick={() => setActiveTab('access')}
-          className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
-            activeTab === 'access' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          🚪 Control de Accesos
-        </button>
-        <button
-          onClick={() => setActiveTab('booking')}
-          className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
-            activeTab === 'booking' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          📅 Reserva Zonas Comunes
-        </button>
-      </div>
-
-      {/* Tab Content */}
-      <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 text-xs space-y-3">
-        {activeTab === 'access' ? (
-          <>
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <span className="font-bold text-white">Registro de Entrada Reciente</span>
-              <span className="text-[10px] text-slate-400">Hoy 15:42</span>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                <div>
-                  <span className="font-bold text-white block">Apto 402 - Entregas Rápidas</span>
-                  <span className="text-[11px] text-slate-400">Domiciliario Paquetería</span>
-                </div>
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">
-                  Ingreso Autorizado
-                </span>
-              </div>
-              <div className="flex items-center justify-between bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                <div>
-                  <span className="font-bold text-white block">Apto 101 - Visita Familiar</span>
-                  <span className="text-[11px] text-slate-400">Carlos Gómez (Visitante)</span>
-                </div>
-                <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded border border-blue-500/30">
-                  En Propiedad
-                </span>
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <span className="font-bold text-white">Próximas Reservaciones</span>
-              <span className="text-[10px] text-slate-400">Calendario Activo</span>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                <div>
-                  <span className="font-bold text-white block">Salón Social Principal</span>
-                  <span className="text-[11px] text-slate-400">Sábado 15 Ago | 18:00 - 23:00</span>
-                </div>
-                <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30">
-                  Apto 305
-                </span>
-              </div>
-            </div>
-          </>
-        )}
       </div>
     </div>
-  );
-};
+  </div>
+
+  <footer class="footer-pickfost text-center">
+    <p class="mb-1"><strong>Esteban Ávila - PICKFOST Colombia</strong></p>
+    <p class="text-muted mb-0">© Todos los derechos reservados</p>
+  </footer>
+</body>
+</html>
+`;
 
 export const PortfolioShowcasePage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -508,10 +316,6 @@ export const PortfolioShowcasePage: React.FC = () => {
         return 'w-full h-[620px] rounded-2xl border border-slate-700/80 shadow-2xl';
     }
   };
-
-  const isSameOriginProject = currentProject.liveUrl && (
-    currentProject.liveUrl.includes('sheerit.com.co') && typeof window !== 'undefined' && window.location.hostname.includes('sheerit.com.co')
-  );
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 py-10 px-4 sm:px-6 lg:px-8 font-sans">
@@ -658,7 +462,7 @@ export const PortfolioShowcasePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Contenedor del Marco del Dispositivo */}
+          {/* Contenedor del Marco del Dispositivo (Resizing Responsivo Real) */}
           <div className="flex justify-center items-center py-4 bg-slate-950/60 rounded-2xl border border-slate-800/80 min-h-[500px] overflow-hidden">
             <div className={`transition-all duration-500 overflow-hidden relative flex flex-col ${getDeviceWidthClass()}`}>
               
@@ -676,15 +480,23 @@ export const PortfolioShowcasePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Contenido Visual Interactivo / Componentes de Presentación Real */}
-              <div className="flex-1 bg-slate-900 relative flex flex-col overflow-hidden">
+              {/* Contenido Visual en IFRAME 100% REAL Y RESPONSIVO */}
+              <div className="flex-1 bg-white relative flex flex-col overflow-hidden">
                 {currentProject.id === 'sheerit-store' ? (
-                  <SheeritStorePreview />
+                  <iframe
+                    key={iframeKey}
+                    src="/"
+                    title="Sheerit Store Live"
+                    className="w-full h-full border-0 bg-white"
+                  />
                 ) : currentProject.id === 'pickfost' ? (
-                  <PickfostPreview />
-                ) : currentProject.id === 'consergeria' ? (
-                  <ConsergeriaPreview />
-                ) : currentProject.liveUrl && !isSameOriginProject ? (
+                  <iframe
+                    key={iframeKey}
+                    srcDoc={PICKFOST_LITERAL_HTML}
+                    title="Pickfost Live"
+                    className="w-full h-full border-0 bg-white"
+                  />
+                ) : currentProject.liveUrl ? (
                   <iframe
                     key={iframeKey}
                     src={currentProject.liveUrl}
