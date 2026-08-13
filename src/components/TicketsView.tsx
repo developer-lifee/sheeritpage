@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp, Maximize2, Minimize2, Archive, TrendingUp, Keyboard, Mic, Square, Trash2, Plus, History } from 'lucide-react';
+import { isDemoMode, DEMO_TICKETS } from '../utils/demoMode';
 
 interface AccountInfo {
   streaming: string;
@@ -338,6 +339,13 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     const shouldShowLoading = !isSilent && tickets.length === 0;
     if (shouldShowLoading) setLoading(true);
     setError('');
+
+    if (isDemoMode()) {
+      setTickets(DEMO_TICKETS as any);
+      setLoading(false);
+      return;
+    }
+
     const apiUrl = getApiUrl();
     const queryParam = currentFilter === 'all_chats' ? '?allChats=true' : '';
     fetch(`${apiUrl}/api/admin/tickets${queryParam}`)
@@ -346,12 +354,16 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         return res.json();
       })
       .then((data) => {
-        setTickets(Array.isArray(data) ? data : []);
+        setTickets(Array.isArray(data) && data.length > 0 ? data : (isDemoMode() ? (DEMO_TICKETS as any) : []));
         setLoading(false);
       })
       .catch((err) => {
         console.error('Error fetching tickets:', err);
-        setError('No se pudo conectar con el bot. Asegúrate de que el backend esté encendido.');
+        if (isDemoMode()) {
+          setTickets(DEMO_TICKETS as any);
+        } else {
+          setError('No se pudo conectar con el bot. Asegúrate de que el backend esté encendido.');
+        }
         setLoading(false);
       });
   };

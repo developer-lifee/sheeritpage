@@ -91,10 +91,16 @@ export function SoftwarePricingPage() {
 
           <div className="flex flex-wrap items-center justify-center gap-4">
             <a 
+              href="/portafolio"
+              className="px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-2xl shadow-lg transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
+            >
+              <span>🎨 Ver Portafolio de Trabajos</span> <ArrowRight className="w-4 h-4" />
+            </a>
+            <a 
               href="#pricing-comparison"
               className="px-8 py-4 bg-brand-primary hover:bg-brand-dark text-white font-bold rounded-2xl shadow-lg hover:shadow-brand-primary/20 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
             >
-              Ver Planes de Inversión <ArrowRight className="w-4 h-4" />
+              Ver Planes de Inversión
             </a>
             <a 
               href="#cases"

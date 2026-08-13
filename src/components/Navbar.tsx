@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Menu, User, HelpCircle, Home, X, ShoppingCart, Code } from 'lucide-react';
+import { Menu, User, HelpCircle, Home, X, ShoppingCart, Code, Layers } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { useComboCart } from '../hooks/useComboCart';
 
@@ -94,7 +94,7 @@ export function Navbar({ isDark, toggleDark, onNavigate, currentView, agentName,
               <Menu className="h-6 w-6 cursor-pointer" />
             </button>
             
-            <div className="flex items-center ml-4">
+            <div className="flex items-center ml-4 cursor-pointer" onClick={() => onNavigate('home')}>
               <img 
                 src="/faviconsheerit.png" 
                 alt="Sheerit Logo" 
@@ -105,33 +105,40 @@ export function Navbar({ isDark, toggleDark, onNavigate, currentView, agentName,
             
             {/* Dropdown Menu */}
             {isMenuOpen && (
-              <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden z-20">
+              <div className="absolute top-full left-0 mt-2 w-60 bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden z-30 border border-gray-100 dark:border-gray-700">
                 <button 
                   onClick={() => { onNavigate('home'); setIsMenuOpen(false); }}
-                  className="w-full flex items-center px-4 py-3 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="w-full flex items-center px-4 py-3 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 text-sm font-semibold transition-colors"
                 >
-                  <Home className="h-5 w-5 mr-3" />
+                  <Home className="h-4 w-4 mr-3 text-brand-primary" />
                   <span>Inicio</span>
                 </button>
                 <button 
-                  onClick={() => { onNavigate('support'); setIsMenuOpen(false); }}
-                  className="w-full flex items-center px-4 py-3 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                  onClick={() => { onNavigate('portafolio'); setIsMenuOpen(false); }}
+                  className="w-full flex items-center px-4 py-3 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 text-sm font-semibold transition-colors"
                 >
-                  <HelpCircle className="h-5 w-5 mr-3" />
+                  <Layers className="h-4 w-4 mr-3 text-purple-500" />
+                  <span>Portafolio / Trabajos</span>
+                </button>
+                <button 
+                  onClick={() => { onNavigate('support'); setIsMenuOpen(false); }}
+                  className="w-full flex items-center px-4 py-3 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 text-sm font-semibold transition-colors"
+                >
+                  <HelpCircle className="h-4 w-4 mr-3 text-emerald-500" />
                   <span>Ayuda con mi cuenta</span>
                 </button>
                 <button 
                   onClick={() => { onNavigate('servicios'); setIsMenuOpen(false); }}
-                  className="w-full flex items-center px-4 py-3 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="w-full flex items-center px-4 py-3 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 text-sm font-semibold transition-colors"
                 >
-                  <User className="h-5 w-5 mr-3" />
+                  <User className="h-4 w-4 mr-3 text-blue-500" />
                   <span>Mis Servicios (Inicio de Sesión)</span>
                 </button>
                 <button 
                   onClick={() => { onNavigate('software'); setIsMenuOpen(false); }}
-                  className="w-full flex items-center px-4 py-3 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="w-full flex items-center px-4 py-3 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 text-sm font-semibold transition-colors"
                 >
-                  <Code className="h-5 w-5 mr-3" />
+                  <Code className="h-4 w-4 mr-3 text-amber-500" />
                   <span>Desarrollo de Software</span>
                 </button>
               </div>

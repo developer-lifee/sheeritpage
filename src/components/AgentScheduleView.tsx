@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, User, Plus, Trash2, Save, RefreshCw, AlertTriangle, CheckCircle, Calendar, Users, X, ChevronLeft, ChevronRight, Lock, DollarSign, Gift, Settings, ShieldAlert, FileText, Printer, Award, History, Copy, Zap, Info, Unlock, Activity } from 'lucide-react';
+import { isDemoMode, DEMO_AGENTS, DEMO_SCHEDULES, DEMO_PAYROLL } from '../utils/demoMode';
 
 interface Agent {
   id: number;
@@ -526,15 +527,22 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
   };
 
   const fetchAgents = async () => {
+    if (isDemoMode()) {
+      setAgents(DEMO_AGENTS as any);
+      return;
+    }
     const apiUrl = getApiUrl();
     try {
       const res = await fetch(`${apiUrl}/api/admin/agents`);
       const data = await res.json();
-      if (data.success) {
+      if (data.success && Array.isArray(data.agents) && data.agents.length > 0) {
         setAgents(data.agents);
+      } else if (isDemoMode()) {
+        setAgents(DEMO_AGENTS as any);
       }
     } catch (err) {
       console.error('Error fetching agents:', err);
+      if (isDemoMode()) setAgents(DEMO_AGENTS as any);
     }
   };
 
@@ -561,28 +569,43 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
   const fetchAllSchedules = async () => {
     setLoading(true);
     setError('');
+    if (isDemoMode()) {
+      setAllSchedules(DEMO_SCHEDULES as any);
+      setLoading(false);
+      return;
+    }
     const apiUrl = getApiUrl();
     const weekStart = getWeekStartParam();
     try {
       const res = await fetch(`${apiUrl}/api/admin/agents/schedules/all?week_start=${weekStart}`);
       const data = await res.json();
-      if (data.success) {
+      if (data.success && Array.isArray(data.schedules) && data.schedules.length > 0) {
         setAllSchedules(data.schedules);
+      } else if (isDemoMode()) {
+        setAllSchedules(DEMO_SCHEDULES as any);
       } else {
         setError(data.message || 'Error al obtener todos los horarios.');
       }
     } catch (err) {
       console.error('Error fetching all schedules:', err);
-      setError('No se pudo conectar con el servidor para cargar el panel de horarios.');
+      if (isDemoMode()) {
+        setAllSchedules(DEMO_SCHEDULES as any);
+      } else {
+        setError('No se pudo conectar con el servidor para cargar el panel de horarios.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const fetchPayrollData = async () => {
-    if (!isEsteban) return;
     setPayrollLoading(true);
     setError('');
+    if (isDemoMode()) {
+      setPayrollList(DEMO_PAYROLL as any);
+      setPayrollLoading(false);
+      return;
+    }
     const apiUrl = getApiUrl();
     try {
       const url = selectedPeriodMode === 'range'
@@ -590,16 +613,22 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         : `${apiUrl}/api/admin/payroll?month=${selectedMonth}`;
       const res = await fetch(url);
       const data = await res.json();
-      if (data.success) {
-        setPayrollList(Array.isArray(data.payroll) ? data.payroll : []);
+      if (data.success && Array.isArray(data.payroll) && data.payroll.length > 0) {
+        setPayrollList(data.payroll);
+      } else if (isDemoMode()) {
+        setPayrollList(DEMO_PAYROLL as any);
       } else {
         setPayrollList([]);
         setError(data.message || 'Error al cargar los datos de nómina.');
       }
     } catch (err) {
       console.error('Error fetching payroll:', err);
-      setPayrollList([]);
-      setError('Error al conectar para obtener los reportes de nómina.');
+      if (isDemoMode()) {
+        setPayrollList(DEMO_PAYROLL as any);
+      } else {
+        setPayrollList([]);
+        setError('Error al conectar para obtener los reportes de nómina.');
+      }
     } finally {
       setPayrollLoading(false);
     }

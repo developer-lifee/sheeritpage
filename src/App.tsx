@@ -14,10 +14,12 @@ import { VerificationPage } from './components/VerificationPage';
 import { SoftwarePricingPage } from './components/SoftwarePricingPage';
 import { RayTracingSupportPage } from './components/RayTracingSupportPage';
 import { RayTracingPrivacyPage } from './components/RayTracingPrivacyPage';
+import PortfolioShowcasePage from './components/PortfolioShowcasePage';
 import ClientLoginView from './components/ClientLoginView';
 import { useDarkMode } from './hooks/useDarkMode';
-import { Search, ShoppingCart, Lock, AlertCircle } from 'lucide-react';
+import { Search, ShoppingCart, Lock, AlertCircle, Globe } from 'lucide-react';
 import { ComboCartProvider, useComboCart } from './hooks/useComboCart';
+import { enableDemoMode } from './utils/demoMode';
 
 interface Plan {
   id: number;
@@ -35,7 +37,7 @@ interface Platform {
   plans: Plan[];
 }
 
-export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software' | 'raytracing-support' | 'raytracing-privacy';
+export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software' | 'raytracing-support' | 'raytracing-privacy' | 'portafolio';
 
 const AUTHORIZED_ADVISORS: { [email: string]: string } = {
   'esclepiades@hotmail.com': 'Esclepiades',
@@ -170,6 +172,23 @@ function AdminLoginOnApp({ onSuccess }: { onSuccess: () => void }) {
             {loading ? 'Verificando...' : 'Ingresar al Panel'}
           </button>
         </form>
+
+        <div className="mt-5 pt-5 border-t border-gray-200 dark:border-gray-700 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              enableDemoMode();
+              onSuccess();
+            }}
+            className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-extrabold rounded-xl transition-all shadow-md flex items-center justify-center gap-2 text-sm active:scale-95"
+          >
+            <Globe className="w-4 h-4 text-purple-200" />
+            <span>🌐 Probar Modo Demo Comercial</span>
+          </button>
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 text-center font-medium">
+            Entorno de presentación interactivo con datos sanitizados de muestra.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -184,6 +203,7 @@ function AppContent() {
     if (path === '/verificar') return 'verificar';
     if (path === '/mis-servicios') return 'servicios';
     if (path === '/software') return 'software';
+    if (path === '/portafolio' || path === '/proyectos' || path === '/trabajos') return 'portafolio';
     if (path === '/support/raytracinggame') return 'raytracing-support';
     if (path === '/support/raytracinggame/privacy') return 'raytracing-privacy';
     return 'home';
@@ -558,6 +578,10 @@ function AppContent() {
 
       {currentView === 'raytracing-privacy' && (
         <RayTracingPrivacyPage />
+      )}
+
+      {currentView === 'portafolio' && (
+        <PortfolioShowcasePage />
       )}
 
       {currentView === 'admin' && (

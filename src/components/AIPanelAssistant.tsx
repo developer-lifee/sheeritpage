@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, Bot, Send, X, ChevronRight, RefreshCw, Copy, Check, Calendar, DollarSign, LifeBuoy, TrendingUp, Cpu, Maximize2, Minimize2, Image as ImageIcon } from 'lucide-react';
+import { Sparkles, Bot, Send, X, ChevronRight, RefreshCw, Copy, Check, Calendar, DollarSign, LifeBuoy, TrendingUp, Cpu, Maximize2, Minimize2, Image as ImageIcon, Globe } from 'lucide-react';
+import { isDemoMode } from '../utils/demoMode';
 
 interface Message {
   id: string;
@@ -32,11 +33,15 @@ export const AIPanelAssistant: React.FC<AIPanelAssistantProps> = ({
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
+  const isDemo = isDemoMode();
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'init-1',
       sender: 'assistant',
-      text: `👋 ¡Hola **${agentName || 'Asesor'}**! Soy tu **Asistente Sheerit**.\n\nEstoy conectado en tiempo real a la plataforma para ayudarte con:\n- 📅 **Consultar quién estuvo trabajando en una fecha específica** (ej: 15 de julio, incluyendo contratos terminados).\n- 💰 **Reportes de Nómina y Horarios**.\n- 🎫 **Resumen de Tickets de Soporte**.\n- 📊 **Caja y Contabilidad**.\n- 🖼️ **Generación de imágenes y banners con Gemini**.\n\n¿En qué puedo ayudarte?`,
+      text: isDemo
+        ? `🌐 ¡Bienvenido al **Modo Demo Comercial de Sheerit**!\n\nSoy tu **Asistente Virtual Sheerit**. En este entorno de presentación puedes probar:\n- ⚡ **Asistencia Conversacional Inteligente**.\n- 📅 **Consulta de Horarios Históricos & Nómina**.\n- 🤖 **Supervisión de Automatizaciones RPA**.\n- 📊 **Balances y Métricas Contables**.\n- 🖼️ **Generación de Contenido Gráfico con Gemini**.\n\nPrueba los atajos rápidos de presentación a continuación:`
+        : `👋 ¡Hola **${agentName || 'Asesor'}**! Soy tu **Asistente Sheerit**.\n\nEstoy conectado en tiempo real a la plataforma para ayudarte con:\n- 📅 **Consultar quién estuvo trabajando en una fecha específica** (ej: 15 de julio, incluyendo contratos terminados).\n- 💰 **Reportes de Nómina y Horarios**.\n- 🎫 **Resumen de Tickets de Soporte**.\n- 📊 **Caja y Contabilidad**.\n- 🖼️ **Generación de imágenes y banners con Gemini**.\n\n¿En qué puedo ayudarte?`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);

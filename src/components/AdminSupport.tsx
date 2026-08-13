@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard, Radio, FileText, Smartphone, Settings, Cpu, ShoppingBag } from 'lucide-react';
+import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard, Radio, FileText, Smartphone, Settings, Cpu, ShoppingBag, Globe } from 'lucide-react';
 import { ClientsView } from './ClientsView';
 import { NetflixMatchView } from './NetflixMatchView';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
@@ -22,6 +22,7 @@ import RpaAutomatorView from './RpaAutomatorView';
 import { WebSalesView } from './WebSalesView';
 import { AccountingView } from './AccountingView';
 import { AIPanelAssistant } from './AIPanelAssistant';
+import { isDemoMode, disableDemoMode } from '../utils/demoMode';
 
 interface Step {
   text: string;
@@ -251,8 +252,43 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
     setData(newData);
   };
 
+  const isDemoActive = isDemoMode();
+
   return (
     <div className="max-w-[96%] mx-auto px-4 py-8 animate-fadeIn">
+
+      {/* Banner de Estado Modo Demo Comercial */}
+      {isDemoActive && (
+        <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white px-5 py-3.5 rounded-2xl mb-6 shadow-xl border border-purple-500/40 flex flex-wrap items-center justify-between gap-3 animate-fadeIn">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-purple-500/20 rounded-xl text-purple-300 border border-purple-500/30">
+              <Globe className="w-5 h-5 animate-pulse text-purple-300" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-sm text-white tracking-wide">⚡ MODO DEMO COMERCIAL ACTIVO</span>
+                <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border border-emerald-500/30">
+                  Datos Sanitizados
+                </span>
+              </div>
+              <p className="text-xs text-purple-200 mt-0.5">
+                Estás en el entorno de presentación con datos simulados y sanitizados para clientes sin exponer información confidencial.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              disableDemoMode();
+              onLogout();
+            }}
+            className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl border border-white/20 transition-all flex items-center gap-1.5 active:scale-95"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Salir de Modo Demo</span>
+          </button>
+        </div>
+      )}
 
       {message && (
         <div className={`p-4 rounded-xl mb-6 ${message.includes('éxito') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
