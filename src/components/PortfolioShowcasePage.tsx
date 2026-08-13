@@ -29,7 +29,8 @@ import {
   Clock,
   Shield,
   Calendar,
-  Users
+  Users,
+  ShoppingCart
 } from 'lucide-react';
 
 interface Project {
