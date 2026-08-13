@@ -188,12 +188,12 @@ export const PortfolioShowcasePage: React.FC = () => {
   const getDeviceWidthClass = () => {
     switch (deviceMode) {
       case 'mobile':
-        return 'max-w-[385px] h-[680px] rounded-[36px] border-[10px] border-slate-800 shadow-2xl';
+        return 'w-full max-w-[430px] h-[780px] rounded-[36px] border-[6px] border-slate-800 shadow-2xl';
       case 'tablet':
-        return 'max-w-[768px] h-[650px] rounded-[24px] border-[8px] border-slate-800 shadow-2xl';
+        return 'w-full max-w-[820px] h-[720px] rounded-[24px] border-[6px] border-slate-800 shadow-2xl';
       case 'desktop':
       default:
-        return 'w-full h-[620px] rounded-2xl border border-slate-700/80 shadow-2xl';
+        return 'w-full h-[650px] rounded-2xl border border-slate-700/80 shadow-2xl';
     }
   };
 
