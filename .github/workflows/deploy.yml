@@ -1,4 +1,4 @@
-name: 🚀 VPS Production Deploy
+name: 🚀 Production Deploy
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   web-deploy:
-    name: 🚀 Deploy website to VPS
+    name: 🚀 Deploy website
     runs-on: ubuntu-latest
     steps:
       - name: 🚚 Get latest code
@@ -24,13 +24,11 @@ jobs:
       - name: 🏗️ Build project
         run: npm run build
 
-      - name: 🚀 Sync build folder to VPS via SCP
-        uses: appleboy/scp-action@v0.1.7
+      - name: 📂 Sync build folder to Freehostia via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          host: 147.79.75.135
-          username: root
-          key: ${{ secrets.VPS_SSH_KEY || secrets.SSH_KEY }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          source: "dist/*"
-          target: "/var/www/sheerit.com.co"
-          strip_components: 1
+          local-dir: dist/
+          server: ftps4.us.freehostia.com
+          username: estavi0
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: sheerit.com.co/
