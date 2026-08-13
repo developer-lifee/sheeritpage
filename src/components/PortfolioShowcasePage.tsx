@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Laptop, 
   Smartphone, 
@@ -17,14 +17,15 @@ import {
   Zap, 
   Building2, 
   ShoppingBag, 
-  Dices, 
+  Coffee, 
   Bot, 
   Package,
   ChevronLeft,
   ChevronRight,
   Filter,
   Utensils,
-  Star
+  Star,
+  Shield
 } from 'lucide-react';
 
 interface Project {
@@ -88,46 +89,47 @@ const PROJECTS: Project[] = [
     ]
   },
   {
-    id: 'consergeria',
-    title: 'Conserjería Digital & Gestión de Edificios',
-    subtitle: 'Plataforma para Administración de Propiedad Horizontal',
-    category: 'webapp',
-    categoryLabel: 'App Web Empresarial',
-    description: 'Sistema completo para la gestión de residentes, citofonía digital, reservación de zonas comunes, control de acceso y conserjería sin restricciones.',
-    tags: ['Next.js 14', 'React', 'Tailwind CSS', 'TypeScript', 'Node.js'],
+    id: 'scratchup',
+    title: 'ScratchUp - Café de Especialidad & Coworking',
+    subtitle: 'Plataforma Web para Tienda de Café de Origen & Reservas',
+    category: 'ecommerce',
+    categoryLabel: 'E-Commerce & Gastronomía',
+    description: 'Plataforma web para marca de Café de Especialidad en Bogotá y espacios de coworking innovadores. Catálogo de grano seleccionado, método de extracción y comunidad.',
+    tags: ['Next.js', 'React', 'Tailwind CSS', 'TypeScript', 'CartProvider'],
     features: [
-      'Reserva interactiva de áreas comunes y salones sociales',
-      'Control de acceso de visitantes y paquetería',
-      'Panel responsivo adaptable a celulares y tablets para conserjes',
-      'Módulo de comunicados generales e incidencias'
+      'Catálogo de café de especialidad de origen colombiano',
+      'Sistema de reservas para áreas de trabajo y coworking',
+      'Carrito de compras y pasarela de pedidos rápida',
+      'Optimizado para dispositivos móviles y experiencia boutique'
     ],
-    fallbackGradient: 'from-blue-600 via-indigo-700 to-slate-900',
-    icon: Building2,
+    liveUrl: 'https://scratchup.com.co',
+    fallbackGradient: 'from-amber-700 via-amber-900 to-slate-950',
+    icon: Coffee,
     metrics: [
-      { label: 'Tiempo de Carga', value: '< 0.8s' },
-      { label: 'Diseño Mobile', value: '100% Responsivo' }
+      { label: 'Producto', value: 'Café de Origen' },
+      { label: 'Espacio', value: 'Coworking Innovador' }
     ]
   },
   {
-    id: 'scratchup',
-    title: 'ScratchUp Colombia',
-    subtitle: 'Plataforma Web de Raspa y Gana Digital',
+    id: 'consergeria',
+    title: 'Conserjería Profesional & Propiedad Horizontal',
+    subtitle: 'Plataforma de Servicios para Administración de Copropiedades',
     category: 'webapp',
-    categoryLabel: 'App Gamificada',
-    description: 'Plataforma promocional para la ejecución de campañas de Raspa y Gana digital, fidelización de usuarios y premios interactivos en Colombia.',
-    tags: ['React', 'HTML5 Canvas', 'Tailwind CSS', 'Node.js', 'Rest API'],
+    categoryLabel: 'App Web Empresarial',
+    description: 'Plataforma corporativa para la contratación de servicios de conserjería profesional en propiedad horizontal, atención en portería y gestión de residentes.',
+    tags: ['Next.js 14', 'React', 'Tailwind CSS', 'TypeScript', 'Lucide Icons'],
     features: [
-      'Efecto táctil e interactivo de raspado en pantalla',
-      'Motor de entrega aleatoria de premios y cupones',
-      'Optimizado para dispositivos móviles y ráfagas de tráfico',
-      'Panel de auditoría y validación de ganadores'
+      'Certificación de servicio 100% legal y cumplimiento normativo',
+      'Atención profesional en portería, recepción y minutas',
+      'Control de áreas comunes, accesos y paquetería',
+      'Cero riesgo laboral directo para administradores de edificios'
     ],
-    liveUrl: 'https://scratchup.com.co',
-    fallbackGradient: 'from-amber-500 via-rose-600 to-slate-900',
-    icon: Dices,
+    liveUrl: 'https://github.com/developer-lifee/consergeria-website',
+    fallbackGradient: 'from-blue-600 via-indigo-700 to-slate-900',
+    icon: Building2,
     metrics: [
-      { label: 'Interacción', value: 'Gamificada 100%' },
-      { label: 'Compatibilidad', value: 'Multi-Dispositivo' }
+      { label: 'Legalidad', value: '100% Certificado' },
+      { label: 'Cobertura', value: '24/7 Continua' }
     ]
   },
   {
@@ -281,6 +283,107 @@ const PICKFOST_AUTHENTIC_HTML = `
 </html>
 `;
 
+// Código HTML/CSS 100% auténtico del proyecto consergeria-website extraído de su repositorio
+const CONSERGERIA_AUTHENTIC_HTML = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conserjería Profesional para Copropiedades</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 0; }
+    .consergeria-header { background: #1e293b; border-bottom: 1px solid #334155; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .consergeria-hero { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); padding: 55px 24px; text-align: center; border-bottom: 1px solid #334155; }
+    .badge-certified { background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); color: #a5b4fc; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-block; margin-bottom: 16px; }
+    .hero-title { font-size: 30px; font-weight: 900; color: #ffffff; margin-bottom: 14px; }
+    .hero-subtitle { font-size: 14px; color: #94a3b8; max-width: 650px; margin: 0 auto 28px; line-height: 1.6; }
+    .stat-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 18px; text-align: center; }
+    .stat-value { font-size: 26px; font-weight: 900; }
+    .stat-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700; margin-top: 4px; }
+    .service-box { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 22px; height: 100%; transition: border-color 0.2s; }
+    .service-box:hover { border-color: #6366f1; }
+    .btn-quote { background: #6366f1; color: white; font-weight: 800; padding: 12px 26px; border-radius: 12px; border: none; text-decoration: none; display: inline-block; }
+    .footer-consergeria { background: #0b0f19; color: #64748b; padding: 24px; font-size: 12px; text-align: center; border-top: 1px solid #1e293b; margin-top: 40px; }
+  </style>
+</head>
+<body>
+  <header class="consergeria-header">
+    <div class="d-flex align-items-center gap-2">
+      <i class="fa-solid fa-shield-halved" style="font-size:22px; color:#818cf8;"></i>
+      <span style="font-weight:900; font-size:18px; color:#ffffff; letter-spacing:0.5px;">CONSERJERÍA PROFESIONAL</span>
+    </div>
+    <span class="badge bg-success" style="padding:6px 12px; font-size:11px;"><i class="fa-solid fa-circle-check"></i> Cobertura 24/7 Activa</span>
+  </header>
+
+  <div class="consergeria-hero">
+    <div class="badge-certified"><i class="fa-solid fa-shield"></i> Servicio Certificado & 100% Legal</div>
+    <h1 class="hero-title">Conserjería Profesional para su Copropiedad</h1>
+    <p class="hero-subtitle">Servicio especializado para propiedad horizontal, atención en portería, gestión de residentes y control administrativo en Edificios y Conjuntos Residenciales.</p>
+    
+    <div class="d-flex justify-content-center gap-3">
+      <a href="#contacto" class="btn-quote"><i class="fa-solid fa-file-contract"></i> Solicitar Cotización</a>
+    </div>
+
+    <div class="row g-3 mt-4 max-w-4xl mx-auto">
+      <div class="col-12 col-md-4">
+        <div class="stat-card">
+          <div class="stat-value" style="color:#34d399;">100%</div>
+          <div class="stat-label">Cumplimiento Legal</div>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="stat-card">
+          <div class="stat-value" style="color:#818cf8;">24 / 7</div>
+          <div class="stat-label">Cobertura Continua</div>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="stat-card">
+          <div class="stat-value" style="color:#38bdf8;">0%</div>
+          <div class="stat-label">Riesgo Laboral Directo</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container my-5">
+    <h3 class="text-center text-white font-weight-bold mb-4" style="font-weight:800; text-transform:uppercase;">Nuestros Servicios Principales</h3>
+    <div class="row g-4">
+      <div class="col-12 col-md-4">
+        <div class="service-box">
+          <i class="fa-solid fa-user-shield fa-2x mb-3" style="color:#818cf8;"></i>
+          <h5 class="fw-bold text-white">Atención en Portería</h5>
+          <p class="small mb-0" style="color:#94a3b8;">Control estricto de accesos, recepción de encomiendas y atención respetuosa a visitantes y propietarios.</p>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="service-box">
+          <i class="fa-solid fa-building-circle-check fa-2x mb-3" style="color:#38bdf8;"></i>
+          <h5 class="fw-bold text-white">Gestión Operativa</h5>
+          <p class="small mb-0" style="color:#94a3b8;">Supervisión del aseo de áreas comunes, control de parqueaderos de visitantes y reporte de minutas en tiempo real.</p>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="service-box">
+          <i class="fa-solid fa-clipboard-list fa-2x mb-3" style="color:#34d399;"></i>
+          <h5 class="fw-bold text-white">Soporte Administrativo</h5>
+          <p class="small mb-0" style="color:#94a3b8;">Asistencia directa al administrador de la copropiedad, bitácora digital e intermediación de comunicados.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer-consergeria">
+    <p class="mb-1"><strong>Conserjería Profesional para Propiedad Horizontal</strong></p>
+    <p class="mb-0">© Todos los derechos reservados — Esteban Ávila</p>
+  </footer>
+</body>
+</html>
+`;
+
 export const PortfolioShowcasePage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [activeProject, setActiveProject] = useState<Project>(PROJECTS[0]);
@@ -362,7 +465,7 @@ export const PortfolioShowcasePage: React.FC = () => {
           {[
             { id: 'all', label: 'Todos los Proyectos' },
             { id: 'webapp', label: '🏢 Apps Web' },
-            { id: 'ecommerce', label: '🛍️ E-Commerce' },
+            { id: 'ecommerce', label: '🛍️ E-Commerce & Gastronomía' },
             { id: 'saas', label: '⚡ SaaS & Bots' }
           ].map(cat => (
             <button
@@ -518,6 +621,13 @@ export const PortfolioShowcasePage: React.FC = () => {
                     key={iframeKey}
                     srcDoc={PICKFOST_AUTHENTIC_HTML}
                     title="Pickfost Internal Build"
+                    className="w-full h-full border-0 bg-white"
+                  />
+                ) : currentProject.id === 'consergeria' ? (
+                  <iframe
+                    key={iframeKey}
+                    srcDoc={CONSERGERIA_AUTHENTIC_HTML}
+                    title="Conserjería Profesional"
                     className="w-full h-full border-0 bg-white"
                   />
                 ) : currentProject.liveUrl ? (
