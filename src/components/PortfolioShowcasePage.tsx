@@ -33,7 +33,9 @@ import {
   ShoppingCart,
   Truck,
   MapPin,
-  Box
+  Box,
+  Utensils,
+  Star
 } from 'lucide-react';
 
 interface Project {
@@ -76,6 +78,28 @@ const PROJECTS: Project[] = [
     ]
   },
   {
+    id: 'pickfost',
+    title: 'Pickfost - Comida Sabrosa & Domicilios',
+    subtitle: 'Plataforma Web de Menú Digital, Pedidos & Domicilios',
+    category: 'ecommerce',
+    categoryLabel: 'E-Commerce & Gastronomía',
+    description: 'Plataforma web promocional y tienda de domicilios gastronómicos con catálogo interactivo de platillos, carrito de compras y planificador de alimentación semanal.',
+    tags: ['HTML5', 'MDBootstrap', 'JavaScript', 'CSS3', 'SweetAlert2'],
+    features: [
+      'Menú virtual interactivo con catálogo de Salchipapas, Mazorcadas y Hamburguesas',
+      'Sistema de pedidos a domicilio con múltiples puntos de distribución',
+      'Módulo de planificación de alimentación semanal, quincenal y mensual',
+      'Carrito de compras dinámico con inicio de sesión y registro de usuarios'
+    ],
+    liveUrl: 'https://github.com/developer-lifee/pickfost.com.co',
+    fallbackGradient: 'from-amber-600 via-orange-700 to-slate-950',
+    icon: Utensils,
+    metrics: [
+      { label: 'Menú Digital', value: 'Catálogo Interactivo' },
+      { label: 'Envíos', value: 'Domicilios Rápidos' }
+    ]
+  },
+  {
     id: 'consergeria',
     title: 'Conserjería Digital & Gestión de Edificios',
     subtitle: 'Plataforma para Administración de Propiedad Horizontal',
@@ -94,27 +118,6 @@ const PROJECTS: Project[] = [
     metrics: [
       { label: 'Tiempo de Carga', value: '< 0.8s' },
       { label: 'Diseño Mobile', value: '100% Responsivo' }
-    ]
-  },
-  {
-    id: 'pickfost',
-    title: 'Pickfost Colombia',
-    subtitle: 'Plataforma Web de Logística & Envíos Nacionales',
-    category: 'webapp',
-    categoryLabel: 'Plataforma Logística',
-    description: 'Sistema web de mensajería, seguimiento de paquetes en tiempo real, cotización automática de guías y despacho de envíos a nivel nacional.',
-    tags: ['React', 'Node.js', 'Tailwind CSS', 'Tracking API', 'TypeScript'],
-    features: [
-      'Cotizador de tarifas y cálculo de fletes en vivo',
-      'Seguimiento en tiempo real con número de guía',
-      'Panel de despacho responsivo para conductores y clientes',
-      'Integración con plataformas de mensajería urbana y nacional'
-    ],
-    fallbackGradient: 'from-blue-700 via-indigo-800 to-slate-950',
-    icon: Package,
-    metrics: [
-      { label: 'Envíos', value: 'Rastreo en vivo' },
-      { label: 'Cálculo', value: 'Tarifario Automático' }
     ]
   },
   {
@@ -312,86 +315,110 @@ const SheeritStorePreview: React.FC = () => {
   );
 };
 
-// Componente Interactivo de Previsualización de Pickfost Colombia
+// Componente Interactivo Auténtico para Pickfost Gastronomía & Domicilios
 const PickfostPreview: React.FC = () => {
-  const [guideNumber, setGuideNumber] = useState('PK-84920194');
-  const [trackingResult, setTrackingResult] = useState<any>({
-    guide: 'PK-84920194',
-    status: 'En Tránsito',
-    origin: 'Bogotá D.C.',
-    destination: 'Medellín, Ant.',
-    carrier: 'Pickfost Express',
-    estimated: 'Hoy 17:30 PM',
-    history: [
-      { step: 'Recolectado en bodega origen', time: '08:00 AM' },
-      { step: 'En ruta nacional (Vehículo #402)', time: '11:15 AM' },
-      { step: 'Arribo a centro de distribución', time: '14:30 PM' }
-    ]
-  });
+  const [cartCount, setCartCount] = useState<number>(0);
+  const [addedDishes, setAddedDishes] = useState<number[]>([]);
+
+  const toggleDish = (id: number) => {
+    setAddedDishes(prev => {
+      const next = prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id];
+      setCartCount(next.length);
+      return next;
+    });
+  };
+
+  const dishes = [
+    { id: 1, name: 'Salchipapas Especiales', price: '$6.000 - $26.000', badge: 'Más Vendido', icon: '🍟', desc: 'Salchicha suiza, papas a la francesa crujientes, queso derretido y salsas de la casa.' },
+    { id: 2, name: 'Mazorcadas Mixtas', price: '$12.000 - $25.000', badge: 'Sabor Criollo', icon: '🌽', desc: 'Maíz tierno desgranado, carne desmechada, pollo, ripio de papa y doble queso.' },
+    { id: 3, name: 'Hamburguesas Artesanales', price: '$8.000 - $25.000', badge: 'Recomendado', icon: '🍔', desc: '150g de carne 100% res, tocineta ahumada, queso cheddar y pan brioche horneado.' }
+  ];
 
   return (
     <div className="flex-1 bg-slate-950 text-slate-100 p-4 sm:p-6 overflow-y-auto space-y-5 scrollbar-thin scrollbar-thumb-slate-700">
-      {/* Pickfost Header */}
-      <div className="bg-gradient-to-r from-blue-700 via-indigo-900 to-slate-950 p-5 rounded-2xl border border-blue-500/30 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-blue-500/20 text-blue-300 rounded-xl border border-blue-400/30">
-            <Truck className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="font-extrabold text-base text-white tracking-wide">PICKFOST COLOMBIA</h3>
-            <p className="text-xs text-blue-200">Plataforma Logística & Gestión de Envíos Nacionales</p>
-          </div>
-        </div>
-
-        <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Red Logística Activa</span>
-        </span>
-      </div>
-
-      {/* Rastrear Guía */}
-      <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
-        <span className="font-bold text-xs text-white block">📦 Rastreo de Guía de Envío</span>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={guideNumber}
-            onChange={(e) => setGuideNumber(e.target.value)}
-            className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-          />
-          <button className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition-all shadow">
-            Rastrear
-          </button>
-        </div>
-      </div>
-
-      {/* Detalle del Envío */}
-      {trackingResult && (
-        <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-4 text-xs">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <div>
-              <span className="text-slate-400 text-[11px] block">Guía #{trackingResult.guide}</span>
-              <span className="font-bold text-white text-sm">{trackingResult.origin} ➔ {trackingResult.destination}</span>
-            </div>
-            <span className="px-2.5 py-1 bg-blue-500/20 text-blue-300 font-extrabold rounded-lg border border-blue-500/30">
-              {trackingResult.status}
+      {/* Pickfost Real Header Banner */}
+      <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-slate-950 p-5 rounded-2xl border border-orange-500/30 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-extrabold text-white tracking-wider">PICKFOST</span>
+            <span className="bg-amber-400/20 text-amber-200 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border border-amber-400/30">
+              Gastronomía & Domicilios
             </span>
           </div>
-
-          <div className="space-y-2">
-            <span className="font-bold text-slate-300 text-[11px] block">Historial de Trazabilidad:</span>
-            {trackingResult.history.map((item: any, idx: number) => (
-              <div key={idx} className="flex items-center justify-between bg-slate-950 p-2.5 rounded-lg border border-slate-800/80">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span className="text-slate-200">{item.step}</span>
-                </div>
-                <span className="text-[10px] text-slate-400">{item.time}</span>
-              </div>
-            ))}
-          </div>
+          <p className="text-xs text-amber-100 max-w-md">
+            Comida del pueblo sabrosa con su paladar y bolsillo. ¡Los mejores platillos en tu puerta!
+          </p>
         </div>
-      )}
+
+        <div className="flex items-center gap-2 bg-slate-950/80 px-3.5 py-2 rounded-xl border border-amber-500/30 text-xs">
+          <ShoppingBag className="w-4 h-4 text-amber-400" />
+          <span className="font-bold text-white">Carrito ({cartCount})</span>
+        </div>
+      </div>
+
+      {/* Servicios Principales de Pickfost */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-center space-y-1">
+          <Truck className="w-5 h-5 text-amber-400 mx-auto" />
+          <span className="font-bold text-xs text-white block">Domicilios Rápidos</span>
+          <span className="text-[10px] text-slate-400 block">Comida caliente a tiempo</span>
+        </div>
+
+        <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-center space-y-1">
+          <Utensils className="w-5 h-5 text-orange-400 mx-auto" />
+          <span className="font-bold text-xs text-white block">Sazón & Sabor</span>
+          <span className="text-[10px] text-slate-400 block">Sabor único colombiano</span>
+        </div>
+
+        <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-center space-y-1">
+          <Calendar className="w-5 h-5 text-emerald-400 mx-auto" />
+          <span className="font-bold text-xs text-white block">Planes de Alimentación</span>
+          <span className="text-[10px] text-slate-400 block">Semanales & Mensuales</span>
+        </div>
+      </div>
+
+      {/* Menú de Platillos Populares */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+          <span>Nuestros Platillos Más Populares</span>
+          <Star className="w-3.5 h-3.5 text-amber-400 fill-current" />
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {dishes.map(dish => {
+            const isAdded = addedDishes.includes(dish.id);
+            return (
+              <div key={dish.id} className="bg-slate-900/90 rounded-xl p-4 border border-slate-800 hover:border-amber-500/50 transition-all flex flex-col justify-between space-y-3 shadow-lg">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-3xl">{dish.icon}</span>
+                    <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      {dish.badge}
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-white">{dish.name}</h4>
+                    <span className="text-xs font-extrabold text-amber-400 block pt-0.5">{dish.price}</span>
+                    <p className="text-[11px] text-slate-400 leading-relaxed pt-1">{dish.desc}</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => toggleDish(dish.id)}
+                  className={`w-full py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    isAdded
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-extrabold shadow'
+                  }`}
+                >
+                  {isAdded ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                  <span>{isAdded ? 'Agregado al Pedido' : 'Agregar al Pedido'}</span>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 };
@@ -723,10 +750,10 @@ export const PortfolioShowcasePage: React.FC = () => {
               <div className="flex-1 bg-slate-900 relative flex flex-col overflow-hidden">
                 {currentProject.id === 'sheerit-store' ? (
                   <SheeritStorePreview />
-                ) : currentProject.id === 'consergeria' ? (
-                  <ConsergeriaPreview />
                 ) : currentProject.id === 'pickfost' ? (
                   <PickfostPreview />
+                ) : currentProject.id === 'consergeria' ? (
+                  <ConsergeriaPreview />
                 ) : currentProject.liveUrl && !isSameOriginProject ? (
                   <iframe
                     key={iframeKey}
