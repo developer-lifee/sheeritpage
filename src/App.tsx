@@ -266,6 +266,8 @@ function AppContent() {
       setCurrentView('servicios');
     } else if (path === '/software') {
       setCurrentView('software');
+    } else if (path === '/portafolio' || path === '/proyectos' || path === '/trabajos') {
+      setCurrentView('portafolio');
     } else if (path === '/support/raytracinggame') {
       setCurrentView('raytracing-support');
     } else if (path === '/support/raytracinggame/privacy') {
@@ -289,6 +291,8 @@ function AppContent() {
         setCurrentView('servicios');
       } else if (currentPath === '/software') {
         setCurrentView('software');
+      } else if (currentPath === '/portafolio' || currentPath === '/proyectos' || currentPath === '/trabajos') {
+        setCurrentView('portafolio');
       } else if (currentPath === '/support/raytracinggame') {
         setCurrentView('raytracing-support');
       } else if (currentPath === '/support/raytracinggame/privacy') {
@@ -310,6 +314,7 @@ function AppContent() {
     else if (view === 'verificar') path = '/verificar';
     else if (view === 'servicios') path = '/mis-servicios';
     else if (view === 'software') path = '/software';
+    else if (view === 'portafolio') path = '/portafolio';
     else if (view === 'raytracing-support') path = '/support/raytracinggame';
     else if (view === 'raytracing-privacy') path = '/support/raytracinggame/privacy';
     window.history.pushState({}, '', path);
@@ -569,7 +574,7 @@ function AppContent() {
       )}
 
       {currentView === 'software' && (
-        <SoftwarePricingPage />
+        <SoftwarePricingPage onNavigate={navigateTo} />
       )}
 
       {currentView === 'raytracing-support' && (

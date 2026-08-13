@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Shield, Sparkles, Server, Clock, Code, Award, CheckCircle2, MessageSquare, ArrowRight, Database, Settings, Zap, ArrowLeftRight, Check, ChevronLeft, ChevronRight, Laptop, Globe } from 'lucide-react';
 
-export function SoftwarePricingPage() {
+export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) => void }) {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const handleContactWhatsApp = (planType: string) => {
@@ -90,12 +90,19 @@ export function SoftwarePricingPage() {
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4">
-            <a 
-              href="/portafolio"
-              className="px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-2xl shadow-lg transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
+            <button
+              onClick={() => {
+                if (onNavigate) {
+                  onNavigate('portafolio');
+                } else {
+                  window.history.pushState({}, '', '/portafolio');
+                  window.dispatchEvent(new Event('popstate'));
+                }
+              }}
+              className="px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-2xl shadow-lg transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2 cursor-pointer"
             >
               <span>🎨 Ver Portafolio de Trabajos</span> <ArrowRight className="w-4 h-4" />
-            </a>
+            </button>
             <a 
               href="#pricing-comparison"
               className="px-8 py-4 bg-brand-primary hover:bg-brand-dark text-white font-bold rounded-2xl shadow-lg hover:shadow-brand-primary/20 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
