@@ -982,7 +982,7 @@ export const PortfolioShowcasePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Contenido Visual en IFRAME CON CONSTRUCCIÓN INTERNA DE ASSETS REALES */}
+              {/* Contenido Visual en IFRAME CON LA PÁGINA WEB REAL EN VIVO */}
               <div className="flex-1 bg-white relative flex flex-col overflow-hidden">
                 {currentProject.id === 'sheerit-store' ? (
                   <iframe
@@ -996,41 +996,6 @@ export const PortfolioShowcasePage: React.FC = () => {
                     key={iframeKey}
                     src="/aiuda/admin"
                     title="Sheerit Software Admin Panel Live"
-                    className="w-full h-full border-0 bg-white"
-                  />
-                ) : currentProject.id === 'rifa-sheerit' ? (
-                  <iframe
-                    key={iframeKey}
-                    srcDoc={RIFA_AUTHENTIC_HTML}
-                    title="Rifa Sheerit Digital"
-                    className="w-full h-full border-0 bg-white"
-                  />
-                ) : currentProject.id === 'furdemy' ? (
-                  <iframe
-                    key={iframeKey}
-                    srcDoc={FURDEMY_AUTHENTIC_HTML}
-                    title="ED-Fútbol / Furdemy"
-                    className="w-full h-full border-0 bg-white"
-                  />
-                ) : currentProject.id === 'pickfost' ? (
-                  <iframe
-                    key={iframeKey}
-                    srcDoc={PICKFOST_AUTHENTIC_HTML}
-                    title="Pickfost Internal Build"
-                    className="w-full h-full border-0 bg-white"
-                  />
-                ) : currentProject.id === 'aaipa' ? (
-                  <iframe
-                    key={iframeKey}
-                    srcDoc={AAIPA_AUTHENTIC_HTML}
-                    title="AAIPA Immigration Services"
-                    className="w-full h-full border-0 bg-white"
-                  />
-                ) : currentProject.id === 'consergeria' ? (
-                  <iframe
-                    key={iframeKey}
-                    srcDoc={CONSERGERIA_AUTHENTIC_HTML}
-                    title="Conserjería Profesional"
                     className="w-full h-full border-0 bg-white"
                   />
                 ) : currentProject.liveUrl ? (
