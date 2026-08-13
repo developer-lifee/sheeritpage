@@ -19,6 +19,7 @@ import {
   ShoppingBag, 
   Dices, 
   Bot, 
+  ChevronLeft,
   ChevronRight,
   Filter
 } from 'lucide-react';
