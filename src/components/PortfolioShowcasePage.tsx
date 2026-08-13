@@ -140,6 +140,18 @@ export const PortfolioShowcasePage: React.FC = () => {
     ? PROJECTS 
     : PROJECTS.filter(p => p.category === selectedCategory);
 
+  const handleNextProject = () => {
+    const currentIndex = filteredProjects.findIndex(p => p.id === activeProject.id);
+    const nextIndex = (currentIndex + 1) % filteredProjects.length;
+    setActiveProject(filteredProjects[nextIndex]);
+  };
+
+  const handlePrevProject = () => {
+    const currentIndex = filteredProjects.findIndex(p => p.id === activeProject.id);
+    const prevIndex = (currentIndex - 1 + filteredProjects.length) % filteredProjects.length;
+    setActiveProject(filteredProjects[prevIndex]);
+  };
+
   const handleRefreshIframe = () => {
     setIframeKey(prev => prev + 1);
   };
@@ -207,6 +219,27 @@ export const PortfolioShowcasePage: React.FC = () => {
           {/* Top Bar de Visualización */}
           <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
             <div className="flex items-center gap-3">
+              {/* Botones de Navegación Anterior/Siguiente */}
+              <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <button
+                  onClick={handlePrevProject}
+                  className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-1 text-xs"
+                  title="Ver proyecto anterior"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-[10px] text-slate-400 font-mono px-1 font-bold">
+                  {filteredProjects.findIndex(p => p.id === activeProject.id) + 1}/{filteredProjects.length}
+                </span>
+                <button
+                  onClick={handleNextProject}
+                  className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-1 text-xs"
+                  title="Ver siguiente proyecto"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
               <div className="p-2.5 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400">
                 <activeProject.icon className="w-5 h-5" />
               </div>
@@ -335,6 +368,31 @@ export const PortfolioShowcasePage: React.FC = () => {
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Barra Inferior de Navegación entre Proyectos */}
+          <div className="flex items-center justify-between gap-4 pt-2 border-t border-slate-800/80">
+            <button
+              onClick={handlePrevProject}
+              className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-800 text-xs font-semibold flex items-center gap-2 transition-all active:scale-95"
+            >
+              <ChevronLeft className="w-4 h-4 text-indigo-400" />
+              <span>Proyecto Anterior</span>
+            </button>
+
+            <div className="text-center hidden sm:block">
+              <span className="text-xs text-slate-400">
+                Viendo <strong className="text-white">{activeProject.title}</strong>
+              </span>
+            </div>
+
+            <button
+              onClick={handleNextProject}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl border border-indigo-500/40 text-xs font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95"
+            >
+              <span>Siguiente Proyecto</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
