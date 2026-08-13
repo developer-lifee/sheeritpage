@@ -457,50 +457,6 @@ const FURDEMY_AUTHENTIC_HTML = `
 const PICKFOST_AUTHENTIC_HTML = `
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pickfost - Comida Sabrosa & Domicilios</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-  <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; color: #212529; margin: 0; padding: 0; }
-    .pickfost-header { background: #ffffff; border-bottom: 2px solid #ec5252; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; }
-    .pickfost-logo-img { height: 38px; object-fit: contain; }
-    .banner { background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7)), url('/pickfost/banner_1.webp'); background-size: cover; background-position: center; color: white; padding: 50px 20px; text-align: center; }
-    .banner h1 { font-size: 30px; font-weight: 900; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 1px; }
-    .banner p { font-size: 14px; opacity: 0.95; max-width: 600px; margin: 0 auto 20px; }
-    .btn-warning-custom { background: #ffb703; color: #000; font-weight: 700; border-radius: 20px; padding: 10px 24px; border: none; text-decoration: none; display: inline-block; }
-    .section-title { font-weight: 800; text-transform: uppercase; text-align: center; margin: 35px 0 20px; font-size: 20px; }
-    .card-dish { background: white; border-radius: 16px; border: 1px solid #e9ecef; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.06); transition: transform 0.2s; margin-bottom: 24px; }
-    .card-dish:hover { transform: translateY(-4px); }
-    .dish-img { height: 180px; width: 100%; object-fit: cover; }
-    .card-dish-body { padding: 18px; text-align: center; }
-    .card-dish-title { font-weight: 800; font-size: 18px; margin-bottom: 6px; }
-    .btn-add { background: #28a745; color: white; font-weight: 700; border: none; border-radius: 8px; padding: 8px 18px; font-size: 13px; text-decoration: none; }
-    .footer-pickfost { background: #14111a; color: white; padding: 30px 20px; font-size: 13px; margin-top: 50px; text-align: center; }
-  </style>
-</head>
-<body>
-  <header class="pickfost-header">
-    <div class="d-flex align-items-center gap-2">
-      <img src="/pickfost/pickfost.png" alt="Pickfost Logo" class="pickfost-logo-img" />
-      <span style="font-weight:900; font-size:18px; color:#ec5252; text-transform:uppercase;">PICKFOST</span>
-    </div>
-    <div>
-      <span id="cart-badge" onclick="showCartModal()" class="badge bg-warning text-dark font-weight-bold" style="padding: 8px 14px; font-size:12px; cursor:pointer;"><i class="fa-solid fa-shopping-bag"></i> Carrito (2)</span>
-    </div>
-  </header>
-
-  <div class="banner">
-    <h1>Bienvenido a PICKFOST</h1>
-    <p>Comida del pueblo y para el pueblo sabrosa con su paladar y bolsillo, domicilios buenos, bonitos y baratos.</p>
-    <a href="#menu" onclick="scrollToMenu(event)" class="btn-warning-custom"><i class="fa-solid fa-hamburger"></i> Ir al menú</a>
-  </div>
-
-  <div class="container my-4">
-    <h3 class="section-title">Nuestros Servicios Domiciliarios</h3>
-    <div class="row text-center g-3">
       <div class="col-12 col-md-4">
         <div class="p-3 bg-white rounded-3 shadow-sm border h-100">
           <i class="fa-solid fa-truck-fast text-danger fa-3x mb-3"></i>
