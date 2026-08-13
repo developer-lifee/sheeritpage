@@ -144,7 +144,7 @@ const PROJECTS: Project[] = [
       'Supervisión de ejecuciones de bots de WhatsApp en vivo',
       'Asistente conversacional omnipresente para consultas rápidas'
     ],
-    liveUrl: 'https://bot.sheerit.com.co',
+    liveUrl: 'https://www.sheerit.com.co/aiuda/admin',
     fallbackGradient: 'from-emerald-600 via-teal-700 to-slate-900',
     icon: Bot,
     metrics: [
@@ -286,6 +286,16 @@ export const PortfolioShowcasePage: React.FC = () => {
   const [activeProject, setActiveProject] = useState<Project>(PROJECTS[0]);
   const [deviceMode, setDeviceMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [iframeKey, setIframeKey] = useState<number>(0);
+
+  useEffect(() => {
+    if (activeProject.id === 'sheerit-saas' && typeof window !== 'undefined') {
+      if (!localStorage.getItem('ticket_agent_email')) {
+        localStorage.setItem('ticket_agent_email', 'admin@sheerit.com.co');
+        localStorage.setItem('ticket_agent_password', 'admin123');
+        localStorage.setItem('ticket_agent_name', 'Administrador Demo');
+      }
+    }
+  }, [activeProject.id]);
 
   const filteredProjects = selectedCategory === 'all' 
     ? PROJECTS 
@@ -494,6 +504,13 @@ export const PortfolioShowcasePage: React.FC = () => {
                     key={iframeKey}
                     src="/"
                     title="Sheerit Store Live"
+                    className="w-full h-full border-0 bg-white"
+                  />
+                ) : currentProject.id === 'sheerit-saas' ? (
+                  <iframe
+                    key={iframeKey}
+                    src="/aiuda/admin"
+                    title="Sheerit Software Admin Panel Live"
                     className="w-full h-full border-0 bg-white"
                   />
                 ) : currentProject.id === 'pickfost' ? (
