@@ -20,7 +20,7 @@ import ClientLoginView from './components/ClientLoginView';
 import { useDarkMode } from './hooks/useDarkMode';
 import { Search, ShoppingCart, Lock, AlertCircle, Globe } from 'lucide-react';
 import { ComboCartProvider, useComboCart } from './hooks/useComboCart';
-import { enableDemoMode } from './utils/demoMode';
+import { enableDemoMode, isDemoMode } from './utils/demoMode';
 
 interface Plan {
   id: number;
