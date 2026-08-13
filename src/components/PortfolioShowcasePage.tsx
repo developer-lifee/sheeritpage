@@ -26,7 +26,8 @@ import {
   Filter,
   Utensils,
   Star,
-  Shield
+  Shield,
+  FileText
 } from 'lucide-react';
 
 interface Project {
@@ -87,6 +88,28 @@ const PROJECTS: Project[] = [
     metrics: [
       { label: 'Menú Digital', value: 'Catálogo Interactivo' },
       { label: 'Envíos', value: 'Domicilios Rápidos' }
+    ]
+  },
+  {
+    id: 'aaipa',
+    title: 'AAIPA - Servicios Migratorios & Visados',
+    subtitle: 'Plataforma de Asesoría Legal de Inmigración & Cursos',
+    category: 'webapp',
+    categoryLabel: 'App Web LegalTech',
+    description: 'Plataforma integral para gestión de trámites migratorios, cursos de derecho de inmigración, preparación para ciudadanía y autenticación social (Google & Apple).',
+    tags: ['React', 'TypeScript', 'Vite', 'React Bootstrap', 'i18n', 'OAuth'],
+    features: [
+      'Cursos especializados: Basics, Visa Process y Citizenship Preparation',
+      'Selector de planes de asesoría migratoria y evaluación de perfil',
+      'Autenticación social integrada con Google y Apple Login',
+      'Soporte multi-idioma con i18next'
+    ],
+    liveUrl: 'https://github.com/developer-lifee/react-app',
+    fallbackGradient: 'from-blue-700 via-sky-800 to-slate-950',
+    icon: FileText,
+    metrics: [
+      { label: 'Especialidad', value: 'Derecho Migratorio' },
+      { label: 'Autenticación', value: 'Google & Apple OAuth' }
     ]
   },
   {
@@ -339,6 +362,99 @@ const PICKFOST_AUTHENTIC_HTML = `
       });
     }
   </script>
+</body>
+</html>
+`;
+
+// Código HTML/CSS 100% auténtico del proyecto react-app (AAIPA Association Immigration Services)
+const AAIPA_AUTHENTIC_HTML = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AAIPA - Association Immigration Services</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; color: #212529; margin: 0; padding: 0; }
+    .aaipa-header { background: #1a2530; color: white; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0d6efd; }
+    .aaipa-logo { font-size: 18px; font-weight: 900; color: #ffffff; letter-spacing: 0.5px; }
+    .aaipa-hero { background: linear-gradient(rgba(26, 37, 48, 0.85), rgba(26, 37, 48, 0.95)), url('https://images.unsplash.com/photo-1521791136064-7986c2920216?w=1200'); background-size: cover; background-position: center; color: white; padding: 60px 24px; text-align: center; }
+    .hero-title { font-size: 30px; font-weight: 900; margin-bottom: 14px; }
+    .hero-text { font-size: 14px; color: #e2e8f0; max-width: 650px; margin: 0 auto 24px; line-height: 1.6; }
+    .btn-aaipa { background: #0d6efd; color: white; font-weight: 700; border-radius: 20px; padding: 10px 28px; border: none; text-decoration: none; display: inline-block; }
+    .card-course { background: white; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.05); height: 100%; transition: transform 0.2s; }
+    .card-course:hover { transform: translateY(-4px); }
+    .course-img-box { height: 150px; background: linear-gradient(135deg, #1e3a8a, #3b82f6); display: flex; align-items: center; justify-content: center; color: white; font-size: 42px; }
+    .footer-aaipa { background: #0f172a; color: #94a3b8; padding: 25px 20px; font-size: 12px; text-align: center; margin-top: 50px; }
+  </style>
+</head>
+<body>
+  <header class="aaipa-header">
+    <div class="d-flex align-items-center gap-2">
+      <i class="fa-solid fa-passport text-primary" style="font-size:22px;"></i>
+      <span class="aaipa-logo">AAIPA IMMIGRATION SERVICES</span>
+    </div>
+    <div>
+      <span class="btn btn-outline-light btn-sm font-weight-bold" style="font-size:12px;"><i class="fa-solid fa-user"></i> Portal Cliente</span>
+    </div>
+  </header>
+
+  <div class="aaipa-hero">
+    <h1 class="hero-title">Welcome to AAIPA Association Immigration Services</h1>
+    <p class="hero-text">AAIPA Association is dedicated to helping individuals and families navigate the complex immigration process. We offer a wide range of services tailored to your needs.</p>
+    <a href="#courses" class="btn-aaipa"><i class="fa-solid fa-graduation-cap"></i> Explorar Cursos & Servicios</a>
+  </div>
+
+  <div class="container my-5" id="courses">
+    <h3 class="text-center font-weight-bold mb-4" style="font-weight:800; text-transform:uppercase;">Courses and Immigration Services</h3>
+    <div class="row g-4">
+      <div class="col-12 col-md-4">
+        <div class="card-course">
+          <div class="course-img-box">
+            <i class="fa-solid fa-scale-balanced"></i>
+          </div>
+          <div class="p-4 text-center">
+            <h5 class="fw-bold">Immigration Law Basics</h5>
+            <p class="text-muted small">Learn the fundamentals of immigration law to help you navigate complex legal processes effectively.</p>
+            <button class="btn btn-primary btn-sm px-4">Ver Detalles</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <div class="card-course">
+          <div class="course-img-box" style="background: linear-gradient(135deg, #047857, #10b981);">
+            <i class="fa-solid fa-stamp"></i>
+          </div>
+          <div class="p-4 text-center">
+            <h5 class="fw-bold">Visa Application Process</h5>
+            <p class="text-muted small">Get detailed step-by-step guidance on how to apply for different types of visas and residency status.</p>
+            <button class="btn btn-primary btn-sm px-4">Ver Detalles</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <div class="card-course">
+          <div class="course-img-box" style="background: linear-gradient(135deg, #b91c1c, #f43f5e);">
+            <i class="fa-solid fa-flag-usa"></i>
+          </div>
+          <div class="p-4 text-center">
+            <h5 class="fw-bold">Citizenship Preparation</h5>
+            <p class="text-muted small">Prepare for the citizenship test and interview with our comprehensive learning resources and support.</p>
+            <button class="btn btn-primary btn-sm px-4">Ver Detalles</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer-aaipa">
+    <p class="mb-1"><strong>AAIPA Association Immigration Services</strong></p>
+    <p class="mb-0">© Todos los derechos reservados — Esteban Ávila</p>
+  </footer>
 </body>
 </html>
 `;
@@ -677,6 +793,13 @@ export const PortfolioShowcasePage: React.FC = () => {
                     key={iframeKey}
                     srcDoc={PICKFOST_AUTHENTIC_HTML}
                     title="Pickfost Internal Build"
+                    className="w-full h-full border-0 bg-white"
+                  />
+                ) : currentProject.id === 'aaipa' ? (
+                  <iframe
+                    key={iframeKey}
+                    srcDoc={AAIPA_AUTHENTIC_HTML}
+                    title="AAIPA Immigration Services"
                     className="w-full h-full border-0 bg-white"
                   />
                 ) : currentProject.id === 'consergeria' ? (
