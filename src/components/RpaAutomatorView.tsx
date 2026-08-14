@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Upload, Code, HelpCircle, Save, CheckCircle, AlertTriangle, FileText, Settings2, Trash2, RefreshCw, Key, Plus } from 'lucide-react';
+import { isDemoMode, DEMO_RPA_BOTS } from '../utils/demoMode';
 
 interface RpaStep {
   action: string;
@@ -88,6 +89,38 @@ export default function RpaAutomatorView() {
   const fetchRecipes = async () => {
     setLoading(true);
     setError(null);
+    if (isDemoMode()) {
+      setRecipes([
+        {
+          id: 1,
+          name: 'Bot Auto-Entrega Netflix (Demo)',
+          platform: 'Netflix Ultra HD',
+          recipeJson: {
+            name: 'Auto-Entrega Netflix (Demo)',
+            platform: 'Netflix Ultra HD',
+            steps: [
+              { action: 'navigate', url: 'https://netflix.com/login', description: 'Abrir portal Netflix Demo' },
+              { action: 'type', selector: '#id_userLoginId', value: 'demo.netflix@sheerit.com', description: 'Ingresar correo demo' },
+              { action: 'click', selector: '.btn-submit', description: 'Iniciar sesión automatizada' }
+            ]
+          }
+        },
+        {
+          id: 2,
+          name: 'Bot Verificador Nequi (Demo)',
+          platform: 'Nequi',
+          recipeJson: {
+            name: 'Verificador Nequi (Demo)',
+            platform: 'Nequi',
+            steps: [
+              { action: 'navigate', url: 'https://nequi.com/banca-personas', description: 'Conectar API Nequi' }
+            ]
+          }
+        }
+      ]);
+      setLoading(false);
+      return;
+    }
     try {
       const response = await fetch(`${API_BASE}/api/admin/rpa/list`);
       if (!response.ok) throw new Error('Error al obtener el listado de recetas');
@@ -101,13 +134,20 @@ export default function RpaAutomatorView() {
   };
 
   const fetchProviders = async () => {
+    if (isDemoMode()) {
+      setProviders([
+        { id: 101, platform: 'Netflix', providerName: 'Proveedor Demo 1', username: 'proveedor.demo1@sheerit.com', phone: '+57 300 *** 1234' },
+        { id: 102, platform: 'Disney+', providerName: 'Proveedor Demo 2', username: 'proveedor.demo2@sheerit.com', phone: '+57 310 *** 5678' }
+      ]);
+      return;
+    }
     try {
       const response = await fetch(`${API_BASE}/api/admin/rpa/providers`);
       if (response.ok) {
         const data = await response.json();
         setProviders(data);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error fetching providers:', e.message);
     }
   };

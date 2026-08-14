@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Trash2, RefreshCw, AlertTriangle, CheckCircle, Phone, Mail, ShoppingBag, Calendar, User, DollarSign, Clock } from 'lucide-react';
+import { isDemoMode, DEMO_SALES } from '../utils/demoMode';
 
 interface WebSale {
   orderId: string;
@@ -26,6 +27,23 @@ export const WebSalesView: React.FC = () => {
   const fetchSales = async () => {
     setLoading(true);
     setError('');
+    if (isDemoMode()) {
+      const demoList = DEMO_SALES.map(s => ({
+        orderId: s.id,
+        firstName: s.customer.split(' ')[0],
+        lastName: s.customer.split(' ')[1] || '(Demo)',
+        email: 'cliente.demo@sheerit.com',
+        whatsapp: '+57 300 *** 1234',
+        platformName: s.service,
+        amount: s.amount,
+        createdAt: s.date,
+        approvedAt: s.date
+      }));
+      setApprovedSales(demoList);
+      setPendingSales([]);
+      setLoading(false);
+      return;
+    }
     const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
     
     try {

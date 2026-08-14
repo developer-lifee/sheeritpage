@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calculator, Save, Plus, Trash2, TrendingUp, CreditCard, RefreshCcw, DollarSign, Calendar, Eye, EyeOff } from 'lucide-react';
+import { isDemoMode, DEMO_ACCOUNTING } from '../utils/demoMode';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -99,6 +100,12 @@ export function AccountingView() {
 
   const fetchData = async () => {
     setLoading(true);
+    if (isDemoMode()) {
+      setRows(DEMO_ACCOUNTING.rows as any);
+      setTotals(DEMO_ACCOUNTING.totals as any);
+      setLoading(false);
+      return;
+    }
     const apiUrl = getApiUrl();
     try {
       // 1. Fetch accounting data (projections)

@@ -8,6 +8,7 @@ import {
   DollarSign, Award, Heart, ShoppingBag, MousePointer, Activity, Eye, Share2, 
   Monitor, Tablet, Smartphone, Globe 
 } from 'lucide-react';
+import { isDemoMode } from '../utils/demoMode';
 
 interface Stats {
   totalClients: number;
@@ -74,6 +75,35 @@ export const AnalyticsDashboard: React.FC = () => {
 
   const fetchStats = async () => {
     setLoading(true);
+    if (isDemoMode()) {
+      setStats({
+        totalClients: 412,
+        byPlatform: { 'Netflix': 145, 'Disney+': 95, 'Spotify': 80, 'Max (HBO)': 52, 'YouTube': 40 },
+        byStatus: { active: 380, expired: 12, warning: 20 },
+        expirations: { next7Days: 8, next15Days: 14, next30Days: 25 },
+        newsCount: 48,
+        renewalsCount: 310,
+        churnedCount: 12,
+        financials: {
+          totalIncome: 14850000,
+          totalExpense: 4200000,
+          netProfit: 10650000,
+          trend: [
+            { name: 'Mayo', ingresos: 12000000, egresos: 3500000, ganancias: 8500000 },
+            { name: 'Junio', ingresos: 13500000, egresos: 3900000, ganancias: 9600000 },
+            { name: 'Julio', ingresos: 14200000, egresos: 4100000, ganancias: 10100000 },
+            { name: 'Agosto', ingresos: 14850000, egresos: 4200000, ganancias: 10650000 }
+          ]
+        },
+        loyalty: {
+          topPurchasers: [{ phone: '+57 300 *** 4567', name: 'Carlos Mendoza (Demo)', count: 12 }],
+          topRenewals: [{ phone: '+57 310 *** 6543', name: 'Mariana Gómez (Demo)', count: 8 }],
+          topSpenders: [{ phone: '+57 320 *** 2334', name: 'Javier Ríos (Demo)', count: 28 }]
+        }
+      });
+      setLoading(false);
+      return;
+    }
     const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
     try {
       const res = await fetch(`${apiUrl}/api/admin/stats?timeframe=${timeframe}`);
@@ -88,6 +118,18 @@ export const AnalyticsDashboard: React.FC = () => {
 
   const fetchTrafficStats = async () => {
     setLoadingTraffic(true);
+    if (isDemoMode()) {
+      setTrafficStats({
+        summary: { totalVisits: 14250, uniqueVisits: 8900, totalClicks: 34100 },
+        deviceBreakdown: [{ name: 'Móvil', value: 68 }, { name: 'Escritorio', value: 32 }],
+        topPages: [{ page: '/', visits: 9800 }, { page: '/portafolio', visits: 3200 }, { page: '/servicios', visits: 1250 }],
+        clicksByPage: [{ page: '/', clicks: 22000 }, { page: '/portafolio', clicks: 8400 }],
+        visitsHistory: [{ date: '2026-08-10', count: 1200 }, { date: '2026-08-11', count: 1450 }, { date: '2026-08-12', count: 1680 }],
+        topReferrers: [{ name: 'Directo / WhatsApp', value: 55 }, { name: 'Google Search', value: 30 }, { name: 'Instagram', value: 15 }]
+      });
+      setLoadingTraffic(false);
+      return;
+    }
     const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
     try {
       const res = await fetch(`${apiUrl}/api/admin/visit-stats`);

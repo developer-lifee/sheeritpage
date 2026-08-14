@@ -24,6 +24,35 @@ export const disableDemoMode = (): void => {
 };
 
 // ==========================================
+// FUNCIONES DE SANITIZADO & ENMASCARAMIENTO DEMO
+// ==========================================
+
+export const maskPhoneForDemo = (phone: string | number): string => {
+  if (!isDemoMode()) return String(phone || '');
+  const str = String(phone || '').replace(/\D/g, '');
+  if (str.length <= 4) return '***';
+  return `+57 ${str.slice(0, 3)} *** ${str.slice(-4)}`;
+};
+
+export const maskEmailForDemo = (email: string): string => {
+  if (!isDemoMode()) return email || '';
+  if (!email) return 'demo.usuario@sheerit.com';
+  const parts = email.split('@');
+  if (parts.length < 2) return 'demo.usuario@sheerit.com';
+  return `${parts[0].slice(0, 3)}***@sheerit.com`;
+};
+
+export const maskNameForDemo = (name: string): string => {
+  if (!isDemoMode()) return name || '';
+  if (!name) return 'Cliente Demo';
+  return `${name} (Demo)`;
+};
+
+export const maskPasswordForDemo = (): string => {
+  return '••••••••';
+};
+
+// ==========================================
 // DATASETS 100% SANITIZADOS Y SIMULADOS DE DEMOSTRACIÓN
 // ==========================================
 
@@ -121,9 +150,9 @@ export const DEMO_PAYROLL = [
 ];
 
 export const DEMO_CUSTOMERS = [
-  { id: 1, name: 'Carlos Mendoza (Demo)', phone: '+573001234567', email: 'carlos.demo@example.com', totalOrders: 12, totalSpent: 280000, status: 'Activo', lastPurchase: '2026-08-10' },
-  { id: 2, name: 'Mariana Gómez (Demo)', phone: '+573109876543', email: 'mariana.demo@example.com', totalOrders: 5, totalSpent: 115000, status: 'Activo', lastPurchase: '2026-08-11' },
-  { id: 3, name: 'Javier Ríos (Demo)', phone: '+573201122334', email: 'javier.demo@example.com', totalOrders: 28, totalSpent: 640000, status: 'VIP', lastPurchase: '2026-08-12' }
+  { id: 1, name: 'Carlos Mendoza (Demo)', phone: '+57 300 *** 4567', email: 'carlos.demo@sheerit.com', totalOrders: 12, totalSpent: 280000, status: 'Activo', lastPurchase: '2026-08-10' },
+  { id: 2, name: 'Mariana Gómez (Demo)', phone: '+57 310 *** 6543', email: 'mariana.demo@sheerit.com', totalOrders: 5, totalSpent: 115000, status: 'Activo', lastPurchase: '2026-08-11' },
+  { id: 3, name: 'Javier Ríos (Demo)', phone: '+57 320 *** 2334', email: 'javier.demo@sheerit.com', totalOrders: 28, totalSpent: 640000, status: 'VIP', lastPurchase: '2026-08-12' }
 ];
 
 export const DEMO_SALES = [
@@ -137,11 +166,38 @@ export const DEMO_ACCOUNTING = {
   monthlyExpenses: 4200000,
   netProfit: 10650000,
   activeSubscriptions: 412,
-  retentionRate: '94.2%'
+  retentionRate: '94.2%',
+  rows: [
+    { platform: 'Netflix Ultra HD', ingreso_total: 5800000, egreso_total: 1600000, ganancia_porcentaje: 72.4, egreso_porcentaje: 27.6, utilidad_total: 4200000, indicador_gan: 72, active_profiles: 145 },
+    { platform: 'Disney+ Premium', ingreso_total: 3200000, egreso_total: 900000, ganancia_porcentaje: 71.8, egreso_porcentaje: 28.2, utilidad_total: 2300000, indicador_gan: 71, active_profiles: 95 },
+    { platform: 'Spotify Family', ingreso_total: 2400000, egreso_total: 700000, ganancia_porcentaje: 70.8, egreso_porcentaje: 29.2, utilidad_total: 1700000, indicador_gan: 70, active_profiles: 80 },
+    { platform: 'Max (HBO)', ingreso_total: 1950000, egreso_total: 550000, ganancia_porcentaje: 71.7, egreso_porcentaje: 28.3, utilidad_total: 1400000, indicador_gan: 71, active_profiles: 52 },
+    { platform: 'YouTube Premium', ingreso_total: 1500000, egreso_total: 450000, ganancia_porcentaje: 70.0, egreso_porcentaje: 30.0, utilidad_total: 1050000, indicador_gan: 70, active_profiles: 40 }
+  ],
+  totals: {
+    ingreso_total: 14850000,
+    egreso_total: 4200000,
+    utilidad_total: 10650000,
+    porcentaje_utilidad: 71.7,
+    mensual_ingreso: 14850000,
+    mensual_egreso: 4200000,
+    mensual_utilidad: 10650000
+  }
 };
 
 export const DEMO_RPA_BOTS = [
   { id: 'bot-01', name: 'Bot-01 Auto-Entrega Licencias (Demo)', status: 'active', cpuUsage: '14%', ramUsage: '280 MB', tasksCompletedToday: 142, lastRun: 'Hace 2 minutos' },
   { id: 'bot-02', name: 'Bot-02 Verificador Nequi & Bancolombia (Demo)', status: 'active', cpuUsage: '8%', ramUsage: '190 MB', tasksCompletedToday: 89, lastRun: 'Hace 5 minutos' },
   { id: 'bot-03', name: 'Bot-03 Recordatorios & Notificaciones (Demo)', status: 'active', cpuUsage: '5%', ramUsage: '150 MB', tasksCompletedToday: 215, lastRun: 'Hace 1 minuto' }
+];
+
+export const DEMO_MANAGED_EMAILS = [
+  { id: 1, email: 'proveedor.demo1@sheerit.com', status: 'Activa', accountsCount: 12, providerName: 'Google Workspace Demo' },
+  { id: 2, email: 'proveedor.demo2@sheerit.com', status: 'Activa', accountsCount: 8, providerName: 'Microsoft 365 Demo' }
+];
+
+export const DEMO_INVENTORY = [
+  { id: 1, platform: 'Netflix Ultra HD', email: 'demo.netflix1@sheerit.com', status: 'Disponible', profileSlot: 'Perfil 1', pin: '****' },
+  { id: 2, platform: 'Disney+ Premium', email: 'demo.disney1@sheerit.com', status: 'Disponible', profileSlot: 'Perfil 2', pin: '****' },
+  { id: 3, platform: 'Spotify Family', email: 'demo.spotify1@sheerit.com', status: 'Asignado', profileSlot: 'Perfil 3', pin: '****' }
 ];

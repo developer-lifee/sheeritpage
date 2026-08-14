@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Search, Trash2, PlusCircle, RefreshCw, AlertTriangle, CheckCircle, ExternalLink, ArrowRight, X, User, Copy, Check, ShieldAlert, CreditCard } from 'lucide-react';
+import { isDemoMode, DEMO_MANAGED_EMAILS } from '../utils/demoMode';
 
 interface EmailMessage {
   id: string;
