@@ -88,7 +88,7 @@ const PROJECTS: Project[] = [
       'Generador automático de informes de rendimiento en PDF',
       'Gráficos e indicadores clave de efectividad de equipo'
     ],
-    liveUrl: 'https://github.com/developer-lifee/furdemy2',
+    liveUrl: 'https://developer-lifee.github.io/furdemy2/',
     githubUrl: 'https://github.com/developer-lifee/furdemy2',
     fallbackGradient: 'from-blue-800 via-indigo-900 to-slate-950',
     icon: Trophy,
@@ -160,7 +160,7 @@ const PROJECTS: Project[] = [
       'Integración con pasarela de pago digital y Nequi',
       'Confirmación automática de boleta y comprobantes'
     ],
-    liveUrl: 'https://developer-lifee.github.io/rifa-sheerit/',
+    liveUrl: 'https://developer-lifee.github.io/rifa.sheerit.com.co/',
     githubUrl: 'https://github.com/developer-lifee/rifa-sheerit',
     fallbackGradient: 'from-purple-700 via-violet-800 to-slate-950',
     icon: Ticket,
