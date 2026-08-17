@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard, Radio, FileText, Smartphone, Settings, Cpu, ShoppingBag, Globe } from 'lucide-react';
+import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard, Radio, FileText, Smartphone, Settings, Cpu, ShoppingBag, Globe, Bot, Moon, Sun, Power } from 'lucide-react';
 import { ClientsView } from './ClientsView';
 import { NetflixMatchView } from './NetflixMatchView';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
@@ -116,6 +116,52 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
     };
     fetchRole();
   }, [agentEmail]);
+
+  const [botSleeping, setBotSleeping] = useState<boolean | null>(null);
+  const [botToggling, setBotToggling] = useState(false);
+
+  useEffect(() => {
+    const fetchBotStatus = async () => {
+      try {
+        const apiUrl = getApiUrl();
+        const res = await fetch(`${apiUrl}/api/admin/bot/status`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setBotSleeping(data.isSleeping);
+          }
+        }
+      } catch (e) { }
+    };
+    fetchBotStatus();
+    const interval = setInterval(fetchBotStatus, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleToggleBotSleep = async () => {
+    setBotToggling(true);
+    try {
+      const apiUrl = getApiUrl();
+      const nextSleep = !botSleeping;
+      const res = await fetch(`${apiUrl}/api/admin/bot/toggle-sleep`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sleep: nextSleep })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBotSleeping(data.isSleeping);
+        setMessage(data.isSleeping ? '😴 Bot pausado: La atención automática de WhatsApp está apagada (panel web sigue activo).' : '🟢 Bot activado: Atención automática reanudada.');
+        logAuditAction('TOGGLE_BOT_SLEEP', { isSleeping: data.isSleeping });
+        setTimeout(() => setMessage(''), 6000);
+      }
+    } catch (e) {
+      setMessage('Error de conexión al cambiar estado del bot');
+      setTimeout(() => setMessage(''), 4000);
+    } finally {
+      setBotToggling(false);
+    }
+  };
 
   useEffect(() => {
     const apiUrl = getApiUrl();
@@ -295,6 +341,60 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           {message}
         </div>
       )}
+
+      {/* Panel de Control de Botón de Encendido / Suspensión de Bot */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6 bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm transition-all">
+        <div className="flex items-center gap-3">
+          <div className={`p-2.5 rounded-xl ${botSleeping ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+            {botSleeping ? <Moon className="w-5 h-5" /> : <Bot className="w-5 h-5 animate-pulse" />}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-sm text-gray-900 dark:text-white">
+                Atención Automática (WhatsApp Bot):
+              </span>
+              <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full ${
+                botSleeping === null 
+                  ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                  : botSleeping 
+                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-300 dark:border-amber-700' 
+                    : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
+              }`}>
+                {botSleeping === null ? 'Consultando...' : botSleeping ? '😴 EN PAUSA (DORMIDO)' : '🟢 ACTIVO Y ATENDIENDO'}
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              {botSleeping 
+                ? 'El bot NO responderá a clientes por WhatsApp. Toda la web de administración, bases de datos y herramientas siguen 100% activas.' 
+                : 'El bot está atendiendo consultas, cotizaciones y ventas automáticamente por WhatsApp.'}
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={handleToggleBotSleep}
+          disabled={botToggling || botSleeping === null}
+          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2 ${
+            botSleeping
+              ? 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95'
+              : 'bg-amber-500 hover:bg-amber-600 text-white active:scale-95'
+          } disabled:opacity-50`}
+        >
+          {botToggling ? (
+            <span>Actualizando...</span>
+          ) : botSleeping ? (
+            <>
+              <Sun className="w-4 h-4" />
+              <span>Despertar Bot (Reanudar)</span>
+            </>
+          ) : (
+            <>
+              <Moon className="w-4 h-4" />
+              <span>Pausar / Apagar Bot</span>
+            </>
+          )}
+        </button>
+      </div>
 
       {/* Tabs Navigation */}
       <div className="flex space-x-2 mb-8 border-b border-gray-200 dark:border-gray-700 pb-4 overflow-x-auto whitespace-nowrap scrollbar-none">
