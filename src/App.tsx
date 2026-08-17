@@ -14,6 +14,8 @@ import { VerificationPage } from './components/VerificationPage';
 import { SoftwarePricingPage } from './components/SoftwarePricingPage';
 import { RayTracingSupportPage } from './components/RayTracingSupportPage';
 import { RayTracingPrivacyPage } from './components/RayTracingPrivacyPage';
+import { PueblappSupportPage } from './components/PueblappSupportPage';
+import { PueblappPrivacyPage } from './components/PueblappPrivacyPage';
 import PortfolioShowcasePage from './components/PortfolioShowcasePage';
 import ErrorBoundary from './components/ErrorBoundary';
 import ClientLoginView from './components/ClientLoginView';
@@ -38,7 +40,7 @@ interface Platform {
   plans: Plan[];
 }
 
-export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software' | 'raytracing-support' | 'raytracing-privacy' | 'portafolio';
+export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software' | 'raytracing-support' | 'raytracing-privacy' | 'pueblapp-support' | 'pueblapp-privacy' | 'portafolio';
 
 const AUTHORIZED_ADVISORS: { [email: string]: string } = {
   'esclepiades@hotmail.com': 'Esclepiades',
@@ -207,6 +209,8 @@ function AppContent() {
     if (path === '/portafolio' || path === '/portfolio' || path === '/proyectos' || path === '/trabajos') return 'portafolio';
     if (path === '/support/raytracinggame') return 'raytracing-support';
     if (path === '/support/raytracinggame/privacy') return 'raytracing-privacy';
+    if (path === '/support/pueblapp' || path === '/support/puebloapp' || path === '/support/yaconecta') return 'pueblapp-support';
+    if (path === '/support/pueblapp/privacy' || path === '/support/puebloapp/privacy' || path === '/support/yaconecta/privacy') return 'pueblapp-privacy';
     return 'home';
   });
   const [isAdminAuth, setIsAdminAuth] = useState(() => {
@@ -274,6 +278,10 @@ function AppContent() {
       setCurrentView('raytracing-support');
     } else if (path === '/support/raytracinggame/privacy') {
       setCurrentView('raytracing-privacy');
+    } else if (path === '/support/pueblapp' || path === '/support/puebloapp' || path === '/support/yaconecta') {
+      setCurrentView('pueblapp-support');
+    } else if (path === '/support/pueblapp/privacy' || path === '/support/puebloapp/privacy' || path === '/support/yaconecta/privacy') {
+      setCurrentView('pueblapp-privacy');
     } else {
       setCurrentView('home');
     }
@@ -299,6 +307,10 @@ function AppContent() {
         setCurrentView('raytracing-support');
       } else if (currentPath === '/support/raytracinggame/privacy') {
         setCurrentView('raytracing-privacy');
+      } else if (currentPath === '/support/pueblapp' || currentPath === '/support/puebloapp' || currentPath === '/support/yaconecta') {
+        setCurrentView('pueblapp-support');
+      } else if (currentPath === '/support/pueblapp/privacy' || currentPath === '/support/puebloapp/privacy' || currentPath === '/support/yaconecta/privacy') {
+        setCurrentView('pueblapp-privacy');
       } else {
         setCurrentView('home');
       }
@@ -319,6 +331,8 @@ function AppContent() {
     else if (view === 'portafolio') path = '/portafolio';
     else if (view === 'raytracing-support') path = '/support/raytracinggame';
     else if (view === 'raytracing-privacy') path = '/support/raytracinggame/privacy';
+    else if (view === 'pueblapp-support') path = '/support/pueblapp';
+    else if (view === 'pueblapp-privacy') path = '/support/pueblapp/privacy';
     window.history.pushState({}, '', path);
     window.scrollTo(0, 0);
   };
@@ -585,6 +599,14 @@ function AppContent() {
 
       {currentView === 'raytracing-privacy' && (
         <RayTracingPrivacyPage />
+      )}
+
+      {currentView === 'pueblapp-support' && (
+        <PueblappSupportPage />
+      )}
+
+      {currentView === 'pueblapp-privacy' && (
+        <PueblappPrivacyPage />
       )}
 
       {currentView === 'portafolio' && (
