@@ -20,8 +20,9 @@ const isLidNumber = (phoneStr: string): boolean => {
   const raw = phoneStr.toLowerCase();
   if (raw.includes('@lid')) return true;
   const clean = raw.replace(/[^0-9]/g, '');
-  // Cualquier ID numérico de 14 o más dígitos es un LID de privacidad de WhatsApp
-  return clean.length >= 14;
+  if (clean.length >= 14) return true;
+  if (clean.length === 13 && !clean.startsWith('573') && !clean.startsWith('52')) return true;
+  return false;
 };
 
 // Helper: Formatear teléfono o identificador LID para la interfaz
@@ -30,7 +31,7 @@ const formatPhoneDisplay = (phone: string): string => {
   const cleaned = phone.replace(/@(lid|c\.us)/g, '').replace(/^\+/, '').trim();
   if (!cleaned) return '';
   if (isLidNumber(phone) || isLidNumber(cleaned)) {
-    return `ID Privado (LID): ${cleaned}`;
+    return `ID Privado (LID): ${cleaned.length > 10 ? cleaned.slice(0, 4) + '...' + cleaned.slice(-4) : cleaned}`;
   }
   return `+${cleaned}`;
 };
