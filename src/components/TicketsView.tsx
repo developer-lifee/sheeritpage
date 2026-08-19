@@ -1138,7 +1138,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
   const sendHogarNetflixTemplate = () => {
     if (!activeChatTicket) return;
-    const text = `🤖 Para actualizar tu hogar de Netflix, abre este enlace desde tu celular o TV:\n👉 https://sheerit.com.co/verificar?tel=${activeChatTicket.phone}`;
+    const text = `🤖 Para actualizar tu hogar de Netflix, abre este enlace desde tu celular o TV:\n👉 https://sheerit.co/verificar?tel=${activeChatTicket.phone}`;
     setNewMsgText(prev => (prev ? prev + "\n" + text : text));
   };
 
@@ -1458,7 +1458,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const getShortcuts = (t: Ticket) => {
     const list = [
       { key: 'nombre', label: '👤 Nombre del Cliente', description: 'Inserta el primer nombre del cliente', text: t.nombre ? t.nombre.split(' ')[0] : 'Cliente' },
-      { key: 'hogar', label: '📺 Link Hogar Netflix', description: 'Inserta la plantilla de Hogar Netflix', text: `🤖 Para actualizar tu hogar de Netflix, abre este enlace desde tu celular o TV:\n👉 https://sheerit.com.co/verificar?tel=${t.phone}` },
+      { key: 'hogar', label: '📺 Link Hogar Netflix', description: 'Inserta la plantilla de Hogar Netflix', text: `🤖 Para actualizar tu hogar de Netflix, abre este enlace desde tu celular o TV:\n👉 https://sheerit.co/verificar?tel=${t.phone}` },
       { key: 'cobro', label: '💰 Cobro / Renovación', description: 'Inserta la plantilla de cobro/renovación', text: `🤖 *Recordatorio de Pago / Renovación Sheerit Store* 💰\n\nPor favor realiza tu transferencia usando nuestra *Llave Bre-V:* \`0087387259\` (RECOMENDADO: entrega inmediata ⚡)\n\nValor: $` },
       { key: 'credenciales', label: '🔑 Credenciales de Cuenta (Todas)', description: 'Inserta credenciales de todas las cuentas', text: (() => {
           let text = `🤖 *Tus credenciales de ingreso de Sheerit Store* 🔑:\n\n`;
@@ -2669,7 +2669,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     </button>
                     <button
                       type="button"
-                      onClick={() => setNewMsgText(prev => prev + (prev ? ' ' : '') + `https://sheerit.com.co/verificar?tel=${activeChatTicket.phone}`)}
+                      onClick={() => setNewMsgText(prev => prev + (prev ? ' ' : '') + `https://sheerit.co/verificar?tel=${activeChatTicket.phone}`)}
                       className="text-[10px] bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 px-2 py-1 rounded-lg font-bold text-gray-700 dark:text-gray-300 transition-all active:scale-95"
                       title="Insertar link de verificación de hogar"
                     >
