@@ -203,7 +203,7 @@ function AppContent() {
     const path = rawPath === '/' ? '/' : rawPath.replace(/\/$/, '');
     if (path === '/aiuda') return 'support';
     if (path === '/aiuda/admin') return 'admin';
-    if (path === '/verificar') return 'verificar';
+    if (path === '/verificar' || path === '/actualizar' || path === '/hogar' || path === '/codigo') return 'verificar';
     if (path === '/mis-servicios') return 'servicios';
     if (path === '/software') return 'software';
     if (path === '/portafolio' || path === '/portfolio' || path === '/proyectos' || path === '/trabajos') return 'portafolio';
