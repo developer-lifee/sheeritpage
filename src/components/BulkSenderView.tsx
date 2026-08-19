@@ -123,7 +123,7 @@ export const BulkSenderView: React.FC = () => {
     setLoadingClients(true);
     const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
       ? 'http://localhost:3000'
-      : 'https://bot.sheerit.com.co';
+      : window.location.origin;
     try {
       const res = await fetch(`${apiUrl}/api/admin/clients${force ? '?force=true' : ''}`);
       const data = await res.json();
@@ -139,7 +139,7 @@ export const BulkSenderView: React.FC = () => {
     setLoadingGroups(true);
     const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
       ? 'http://localhost:3000'
-      : 'https://bot.sheerit.com.co';
+      : window.location.origin;
     try {
       const res = await fetch(`${apiUrl}/api/admin/groups`);
       const data = await res.json();
@@ -261,7 +261,7 @@ export const BulkSenderView: React.FC = () => {
   const sendSingle = async (phone: string, type: 'custom' | 'credentials' | 'payment', messageText?: string, scheduledTime?: string) => {
     const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
       ? 'http://localhost:3000'
-      : 'https://bot.sheerit.com.co';
+      : window.location.origin;
     const body: any = { phone, type, password: 'admin123' };
     if (type === 'custom') {
       body.message = messageText;

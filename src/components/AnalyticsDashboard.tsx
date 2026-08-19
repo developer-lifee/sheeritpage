@@ -104,7 +104,7 @@ export const AnalyticsDashboard: React.FC = () => {
       setLoading(false);
       return;
     }
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     try {
       const res = await fetch(`${apiUrl}/api/admin/stats?timeframe=${timeframe}`);
       const data = await res.json();
@@ -130,7 +130,7 @@ export const AnalyticsDashboard: React.FC = () => {
       setLoadingTraffic(false);
       return;
     }
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     try {
       const res = await fetch(`${apiUrl}/api/admin/visit-stats`);
       const data = await res.json();
@@ -144,7 +144,7 @@ export const AnalyticsDashboard: React.FC = () => {
 
   const fetchHeatmapClicks = async (page: string, device: string = 'all') => {
     setLoadingHeatmap(true);
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     try {
       const res = await fetch(`${apiUrl}/api/admin/click-heatmap?page=${encodeURIComponent(page)}&device=${device}`);
       const data = await res.json();
@@ -157,7 +157,7 @@ export const AnalyticsDashboard: React.FC = () => {
   };
 
   const fetchElementClicks = async () => {
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     try {
       const res = await fetch(`${apiUrl}/api/admin/element-clicks`);
       const data = await res.json();
@@ -168,7 +168,7 @@ export const AnalyticsDashboard: React.FC = () => {
   };
 
   const fetchPurchaseFunnel = async () => {
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     try {
       const res = await fetch(`${apiUrl}/api/admin/purchase-funnel`);
       const data = await res.json();

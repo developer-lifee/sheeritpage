@@ -44,7 +44,7 @@ export const WebSalesView: React.FC = () => {
       setLoading(false);
       return;
     }
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     
     try {
       // Fetch pending
@@ -82,7 +82,7 @@ export const WebSalesView: React.FC = () => {
 
     setError('');
     setSuccess('');
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     
     try {
       const res = await fetch(`${apiUrl}/api/admin/web-sales/pending/delete`, {

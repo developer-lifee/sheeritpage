@@ -186,7 +186,7 @@ export const ManagedEmailsView: React.FC = () => {
   const fetchEmails = () => {
     setLoading(true);
     setError('');
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     fetch(`${apiUrl}/api/admin/gmail-inboxes`)
       .then((res) => {
         if (!res.ok) throw new Error('Error al obtener los correos');
@@ -207,7 +207,7 @@ export const ManagedEmailsView: React.FC = () => {
     setEmailsLoading(true);
     setEmailsError('');
     setSelectedEmail(email);
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     fetch(`${apiUrl}/api/admin/gmail-inboxes/emails?email=${encodeURIComponent(email)}&password=admin123`)
       .then((res) => {
         if (!res.ok) throw new Error('Error al obtener los correos de la bandeja');
@@ -239,7 +239,7 @@ export const ManagedEmailsView: React.FC = () => {
     setError('');
     setSuccess('');
 
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     try {
       const res = await fetch(`${apiUrl}/api/admin/gmail-inboxes/auth-url`, {
         method: 'POST',
@@ -272,7 +272,7 @@ export const ManagedEmailsView: React.FC = () => {
     setError('');
     setSuccess('');
 
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     try {
       const res = await fetch(`${apiUrl}/api/admin/gmail-inboxes/confirm-code`, {
         method: 'POST',
@@ -309,7 +309,7 @@ export const ManagedEmailsView: React.FC = () => {
       setInboxEmails([]);
     }
 
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     try {
       const res = await fetch(`${apiUrl}/api/admin/gmail-inboxes/delete`, {
         method: 'POST',

@@ -24,7 +24,7 @@ export const AccountAlertsView: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     setError('');
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     
     try {
       const availRes = await fetch(`${apiUrl}/api/admin/availability`);
@@ -74,7 +74,7 @@ export const AccountAlertsView: React.FC = () => {
     setError('');
     setSuccess('');
 
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     try {
       const res = await fetch(`${apiUrl}/api/admin/availability/save`, {
         method: 'POST',

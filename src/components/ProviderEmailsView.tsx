@@ -48,7 +48,7 @@ interface TestSidebarState {
 }
 
 const getApiUrl = () =>
-  window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+  window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
 
 const PLATFORM_COLORS: Record<string, string> = {
   disney: 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300',

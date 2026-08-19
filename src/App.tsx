@@ -66,7 +66,7 @@ function AdminLoginOnApp({ onSuccess }: { onSuccess: () => void }) {
     try {
       const apiUrl = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
         ? 'http://localhost:3000'
-        : 'https://bot.sheerit.com.co';
+        : window.location.origin;
       
       const res = await fetch(`${apiUrl}/api/admin/agents`);
       const data = await res.json();
@@ -239,7 +239,7 @@ function AppContent() {
       try {
         const apiUrl = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
           ? 'http://localhost:3000'
-          : 'https://bot.sheerit.com.co';
+          : window.location.origin;
         const res = await fetch(`${apiUrl}/api/admin/agents`);
         const data = await res.json();
         if (data.success && Array.isArray(data.agents)) {
@@ -353,7 +353,7 @@ function AppContent() {
       return 'desktop';
     };
 
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     const deviceType = getDeviceType();
 
     // Detección e inicio de validación inmediata al retornar de la pasarela Bold / PSE
@@ -436,7 +436,7 @@ function AppContent() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     fetch(`${apiUrl}/api/public/platforms`)
       .then(response => response.json())
       .then(data => {
@@ -462,7 +462,7 @@ function AppContent() {
     let selected: Platform[] = [];
     
     try {
-      const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+      const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
       const response = await fetch(`${apiUrl}/api/public/recommended-combo`);
       const data = await response.json();
       

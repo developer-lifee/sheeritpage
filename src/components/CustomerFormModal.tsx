@@ -50,7 +50,7 @@ export function CustomerFormModal({ platformName, platformPrice, onClose }: Cust
     setActiveOrderId(orderId);
     setPollingStatus('PENDING');
 
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     
     const interval = setInterval(async () => {
       try {
@@ -74,7 +74,7 @@ export function CustomerFormModal({ platformName, platformPrice, onClose }: Cust
     setIsLoading(true);
     setError(null);
     try {
-      const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+      const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
       const response = await fetch(`${apiUrl}/api/bold/generate-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

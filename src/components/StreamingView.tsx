@@ -26,7 +26,7 @@ export const StreamingView: React.FC<StreamingViewProps> = ({ adminPassword = 'a
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
   const getApiUrl = () => {
-    return window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    return window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
   };
 
   const fetchData = async (silent = false) => {

@@ -130,7 +130,7 @@ export const ClientsView: React.FC = () => {
         if (!editingDateClient || !editingDateClient.date) return;
         setIsSavingDate(true);
         try {
-            const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+            const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
             const res = await fetch(`${apiUrl}/api/admin/client/update-expiration`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -210,7 +210,7 @@ export const ClientsView: React.FC = () => {
             setLoading(false);
             return;
         }
-        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
         fetch(`${apiUrl}/api/admin/clients`)
             .then(res => res.json())
             .then(data => {
@@ -283,7 +283,7 @@ export const ClientsView: React.FC = () => {
     const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
     const sendSingle = async (phone: string, type: 'custom' | 'credentials' | 'payment', messageText?: string, platformFilter?: string) => {
-        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
         const body: any = { phone, type, password: 'admin123' };
         if (type === 'custom') {
             body.message = messageText;
@@ -412,7 +412,7 @@ export const ClientsView: React.FC = () => {
             setEditingProfile(null);
         }
         
-        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
         try {
             const res = await fetch(`${apiUrl}/api/admin/client-history?phone=${phone}${force ? '&force=true' : ''}`);
             const data = await res.json();
@@ -437,7 +437,7 @@ export const ClientsView: React.FC = () => {
     const handleSaveProfileNotes = async () => {
         if (!editingProfile) return;
         setSavingNotes(true);
-        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
         try {
             const res = await fetch(`${apiUrl}/api/admin/client-history/save-notes`, {
                 method: 'POST',
@@ -480,7 +480,7 @@ export const ClientsView: React.FC = () => {
         }
         
         setActionStates(prev => ({ ...prev, [key]: 'loading' }));
-        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
         try {
             const res = await fetch(`${apiUrl}/api/admin/actions/send-info`, {
                 method: 'POST',

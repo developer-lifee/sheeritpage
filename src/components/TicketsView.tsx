@@ -115,7 +115,7 @@ const formatMessageDate = (timestamp: number) => {
 const getApiUrl = () => {
   return (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
     ? 'http://localhost:3000'
-    : 'https://bot.sheerit.com.co';
+    : window.location.origin;
 };
 
 const logAuditAction = async (action: string, details: any) => {

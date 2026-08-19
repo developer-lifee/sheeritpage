@@ -9,7 +9,7 @@ export const NetflixMatchView: React.FC = () => {
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
         
         fetch(`${apiUrl}/api/admin/match?isp=${encodeURIComponent(isp)}`)
             .then(res => res.json())

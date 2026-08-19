@@ -39,7 +39,7 @@ export const GptAccountsView: React.FC = () => {
 
   const fetchAccounts = () => {
     setError('');
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     fetch(`${apiUrl}/api/admin/gpt-accounts`)
       .then((res) => {
         if (!res.ok) throw new Error('Error al obtener las cuentas');
@@ -89,7 +89,7 @@ export const GptAccountsView: React.FC = () => {
     setError('');
     setSuccess('');
 
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     const serviceValue = service === 'Otro' ? customService : service;
     try {
       const res = await fetch(`${apiUrl}/api/admin/gpt-accounts/save`, {
@@ -122,7 +122,7 @@ export const GptAccountsView: React.FC = () => {
     setError('');
     setSuccess('');
 
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     try {
       const res = await fetch(`${apiUrl}/api/admin/gpt-accounts/delete`, {
         method: 'POST',

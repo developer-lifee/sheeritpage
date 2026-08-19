@@ -55,7 +55,7 @@ export const AddSaleForm: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState('Nequi');
 
   useEffect(() => {
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     fetch(`${apiUrl}/api/public/platforms`)
       .then(res => res.json())
       .then(data => setPlatforms(data))
@@ -105,7 +105,7 @@ export const AddSaleForm: React.FC = () => {
     setIsVerifying(true);
     setMessage('');
     
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     try {
       const response = await fetch(`${apiUrl}/api/admin/clients`);
       const allClients = await response.json();
@@ -161,7 +161,7 @@ export const AddSaleForm: React.FC = () => {
     if (!phone || !name || (selectedItems.length === 0 && !isRenewal)) return;
     
     setLoading(true);
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     
     // Prepare items based on mode
     let requestItems = [];

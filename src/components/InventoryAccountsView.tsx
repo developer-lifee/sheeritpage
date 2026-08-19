@@ -20,7 +20,7 @@ export const InventoryAccountsView: React.FC = () => {
     setInvError('');
     setInvSuccess('');
 
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     try {
       const res = await fetch(`${apiUrl}/api/admin/accounts/add`, {
         method: 'POST',

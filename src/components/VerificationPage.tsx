@@ -19,7 +19,7 @@ export const VerificationPage: React.FC = () => {
     // Call the bot express server (assuming localhost:3000 for local dev, 
     // but in prod it would be sheerit.com.co/api or whatever mapping they have. 
     // We will hardcode standard PM2 bot port 3000 for now.
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     
     // Petición al endpoint del Whatbot
     fetch(`${apiUrl}/api/netflix/verify`, {

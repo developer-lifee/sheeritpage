@@ -24,7 +24,7 @@ export const PoliciesView: React.FC = () => {
 
   const fetchPolicies = async () => {
     setLoading(true);
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     try {
       const res = await fetch(`${apiUrl}/api/admin/policies`);
       const data = await res.json();
@@ -41,7 +41,7 @@ export const PoliciesView: React.FC = () => {
     if (!policies) return;
     setSaving(true);
     setMessage(null);
-    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://bot.sheerit.com.co';
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     try {
       const res = await fetch(`${apiUrl}/api/admin/policies/save`, {
         method: 'POST',
