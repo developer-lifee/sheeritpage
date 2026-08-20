@@ -402,12 +402,35 @@ function AppContent() {
       const xPct = parseFloat(((xPx / (docWidth || 1)) * 100).toFixed(2));
       const yPct = parseFloat(((yPx / (docHeight || 1)) * 100).toFixed(2));
 
-      let selector = target.tagName.toLowerCase();
-      if (target.id) {
-        selector += `#${target.id}`;
-      } else if (target.className && typeof target.className === 'string') {
-        const firstClass = target.className.trim().split(/\s+/)[0];
-        if (firstClass) selector += `.${firstClass}`;
+      // Resolutor inteligente de nombres amigables para analíticas
+      let selector = '';
+      const interactiveEl = (target.closest('button, a, input, select, textarea, [data-track-name], [role="button"]') as HTMLElement) || target;
+      
+      const trackName = interactiveEl.getAttribute('data-track-name');
+      const ariaLabel = interactiveEl.getAttribute('aria-label');
+      const placeholder = (interactiveEl as HTMLInputElement).placeholder;
+      const text = (interactiveEl.innerText || '').trim().replace(/\s+/g, ' ').substring(0, 40);
+      const tagName = interactiveEl.tagName.toLowerCase();
+
+      if (trackName) {
+        selector = trackName;
+      } else if (tagName === 'button' || interactiveEl.getAttribute('role') === 'button') {
+        selector = text ? `Botón: ${text}` : (ariaLabel ? `Botón: ${ariaLabel}` : 'Botón de Acción');
+      } else if (tagName === 'a') {
+        selector = text ? `Enlace: ${text}` : (ariaLabel ? `Enlace: ${ariaLabel}` : `Enlace (${interactiveEl.getAttribute('href') || 'Ruta'})`);
+      } else if (tagName === 'input') {
+        selector = placeholder ? `Campo: ${placeholder}` : (interactiveEl.getAttribute('name') ? `Campo: ${interactiveEl.getAttribute('name')}` : 'Campo de Entrada');
+      } else if (tagName === 'select') {
+        selector = `Selector: ${interactiveEl.getAttribute('name') || 'Desplegable'}`;
+      } else {
+        const cardTitle = target.closest('.group, [data-product-card]')?.querySelector('h1, h2, h3, h4, .font-bold, .font-extrabold')?.textContent?.trim();
+        if (cardTitle && cardTitle.length < 35) {
+          selector = `Tarjeta: ${cardTitle}`;
+        } else if (text && text.length > 2 && text.length < 35) {
+          selector = `Texto: ${text}`;
+        } else {
+          selector = `Página: ${path === '/' ? 'Inicio' : path}`;
+        }
       }
 
       fetch(`${apiUrl}/api/public/track-click`, {

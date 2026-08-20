@@ -62,6 +62,7 @@ export const AnalyticsDashboard: React.FC = () => {
 
   // Traffic / Heatmap Sub-tabs State
   const [subTab, setSubTab] = useState<'financial' | 'traffic'>('financial');
+  const [trafficTimeframe, setTrafficTimeframe] = useState<'all' | 'today' | '7d' | '30d'>('all');
   const [trafficStats, setTrafficStats] = useState<TrafficStats | null>(null);
   const [loadingTraffic, setLoadingTraffic] = useState(false);
   const [selectedHeatmapPage, setSelectedHeatmapPage] = useState<string>('/');
@@ -116,7 +117,7 @@ export const AnalyticsDashboard: React.FC = () => {
     }
   };
 
-  const fetchTrafficStats = async () => {
+  const fetchTrafficStats = async (tf = trafficTimeframe) => {
     setLoadingTraffic(true);
     if (isDemoMode()) {
       setTrafficStats({
@@ -132,7 +133,7 @@ export const AnalyticsDashboard: React.FC = () => {
     }
     const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     try {
-      const res = await fetch(`${apiUrl}/api/admin/visit-stats`);
+      const res = await fetch(`${apiUrl}/api/admin/visit-stats?timeframe=${tf}`);
       const data = await res.json();
       setTrafficStats(data);
     } catch (err) {
@@ -142,11 +143,11 @@ export const AnalyticsDashboard: React.FC = () => {
     }
   };
 
-  const fetchHeatmapClicks = async (page: string, device: string = 'all') => {
+  const fetchHeatmapClicks = async (page: string, device: string = 'all', tf = trafficTimeframe) => {
     setLoadingHeatmap(true);
     const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     try {
-      const res = await fetch(`${apiUrl}/api/admin/click-heatmap?page=${encodeURIComponent(page)}&device=${device}`);
+      const res = await fetch(`${apiUrl}/api/admin/click-heatmap?page=${encodeURIComponent(page)}&device=${device}&timeframe=${tf}`);
       const data = await res.json();
       setHeatmapClicks(data.clicks || []);
     } catch (err) {
@@ -156,10 +157,10 @@ export const AnalyticsDashboard: React.FC = () => {
     }
   };
 
-  const fetchElementClicks = async () => {
+  const fetchElementClicks = async (tf = trafficTimeframe) => {
     const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     try {
-      const res = await fetch(`${apiUrl}/api/admin/element-clicks`);
+      const res = await fetch(`${apiUrl}/api/admin/element-clicks?timeframe=${tf}`);
       const data = await res.json();
       setElementClicks(data.elements || []);
     } catch (err) {
@@ -167,10 +168,10 @@ export const AnalyticsDashboard: React.FC = () => {
     }
   };
 
-  const fetchPurchaseFunnel = async () => {
+  const fetchPurchaseFunnel = async (tf = trafficTimeframe) => {
     const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     try {
-      const res = await fetch(`${apiUrl}/api/admin/purchase-funnel`);
+      const res = await fetch(`${apiUrl}/api/admin/purchase-funnel?timeframe=${tf}`);
       const data = await res.json();
       setFunnelData(data);
     } catch (err) {
@@ -726,6 +727,42 @@ export const AnalyticsDashboard: React.FC = () => {
             </div>
           ) : (
             <>
+              {/* Selector de Período / Fecha de Análisis */}
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white dark:bg-gray-800 p-4 rounded-2xl border dark:border-gray-700 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-indigo-500" />
+                  <span className="text-xs font-extrabold text-gray-700 dark:text-gray-200">Período de Análisis:</span>
+                  <span className="text-[11px] text-gray-400">Filtra visitas, clics en botones y funnel por fecha</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-750 p-1 rounded-xl">
+                  {[
+                    { id: 'today', label: '⚡ Hoy' },
+                    { id: '7d', label: '📅 7 días' },
+                    { id: '30d', label: '🗓️ 30 días' },
+                    { id: 'all', label: '🌐 Histórico Total' }
+                  ].map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => {
+                        const newTf = t.id as any;
+                        setTrafficTimeframe(newTf);
+                        fetchTrafficStats(newTf);
+                        fetchElementClicks(newTf);
+                        fetchPurchaseFunnel(newTf);
+                        fetchHeatmapClicks(selectedHeatmapPage, selectedDeviceFilter, newTf);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all ${
+                        trafficTimeframe === t.id
+                          ? 'bg-brand-primary text-white shadow-sm'
+                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Traffic Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border dark:border-gray-700">
