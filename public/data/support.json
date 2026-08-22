@@ -10,10 +10,9 @@
         "image": "/errores_img/codigo_netflix.png",
         "whatsappMessage": "Hola, necesito ayuda con un código de acceso para Netflix.",
         "steps": [
-          { "text": "Dale en la opción estoy de viaje (si estas en tv) o ver temporalmente (si estas en el cel) y luego enviar email." },
-          { "text": "Después entras desde tu cel al enlace Sheerit.com.co/actualizar." },
-          { "text": "Ya estando adentro, en el buscador escribes sheerit2." },
-          { "text": "Listo, ya tienes a la mano el correo para generar el código de Netflix, escoges la primera opción que te sale o la más reciente." }
+          { "text": "Selecciona en tu pantalla la opción 'Estoy de viaje' (TV) o 'Ver temporalmente' (celular) hasta que se envíe el correo." },
+          { "text": "Entra desde tu celular al enlace: https://sheerit.co/verificar" },
+          { "text": "Ingresa tu número de WhatsApp para ver tu código de acceso reciente de 4 dígitos o autorizar tu dispositivo." }
         ]
       },
       {
@@ -22,10 +21,9 @@
         "image": "/errores_img/actualizacion_netflix.png",
         "whatsappMessage": "Hola, me aparece el mensaje de actualización de hogar en Netflix.",
         "steps": [
-          { "text": "Dale en la opción de actualizar hogar con Netflix hasta que te salga la opción de enviar email." },
-          { "text": "Después entras desde tu cel al enlace Sheerit.com.co/actualizar." },
-          { "text": "Ya estando adentro, en el buscador escribes sheerit." },
-          { "text": "Listo, ya tienes a la mano el correo para actualizar hogar de Netflix, escoges la primera opción que te sale o la más reciente." }
+          { "text": "Selecciona en tu pantalla la opción 'Actualizar Hogar con Netflix' hasta que se envíe el correo de confirmación." },
+          { "text": "Entra desde tu celular al enlace: https://sheerit.co/verificar" },
+          { "text": "Ingresa tu número de WhatsApp y presiona 'Confirmar Hogar / Actualizar IP' para autorizar tu TV de inmediato." }
         ]
       },
       {
