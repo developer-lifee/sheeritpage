@@ -63,7 +63,7 @@ interface CostConfig {
 
 export function AccountingView() {
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'projections' | 'real'>('projections');
+  const [viewMode, setViewMode] = useState<'excel' | 'projections' | 'real'>('excel');
   const [rows, setRows] = useState<AccountingRow[]>([]);
   const [totals, setTotals] = useState<AccountingTotals | null>(null);
   const [realData, setRealData] = useState<RealCashFlowData | null>(null);
@@ -275,6 +275,16 @@ export function AccountingView() {
           {/* View mode toggle */}
           <div className="bg-gray-100 dark:bg-gray-750 p-1 rounded-xl flex">
             <button
+              onClick={() => setViewMode('excel')}
+              className={`px-3 py-1.5 rounded-lg text-xxs font-bold transition-all ${
+                viewMode === 'excel'
+                  ? 'bg-white dark:bg-gray-800 text-brand-primary shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-800'
+              }`}
+            >
+              📊 Cartera Excel (Mensual / Inventario)
+            </button>
+            <button
               onClick={() => setViewMode('projections')}
               className={`px-3 py-1.5 rounded-lg text-xxs font-bold transition-all ${
                 viewMode === 'projections'
@@ -282,7 +292,7 @@ export function AccountingView() {
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-800'
               }`}
             >
-              Matriz Proyectada (Diaria)
+              📈 Matriz Normalizada (Diaria)
             </button>
             <button
               onClick={() => setViewMode('real')}
@@ -292,7 +302,7 @@ export function AccountingView() {
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-800'
               }`}
             >
-              Flujo de Caja Real (Mes)
+              💵 Flujo de Caja Real (Mes)
             </button>
           </div>
           <button 
@@ -305,7 +315,40 @@ export function AccountingView() {
         </div>
       </div>
 
-      {/* Totales Resumen */}
+      {/* Totales Resumen - Cartera Excel (Mensual) */}
+      {viewMode === 'excel' && totals && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
+            <span className="text-xs text-gray-400 font-semibold uppercase">Ingreso Total Cartera (Mensual)</span>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
+              ${Math.round(totals.mensual_ingreso).toLocaleString()}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Equivalente Diario: ${Math.round(totals.ingreso_total).toLocaleString()} / día
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
+            <span className="text-xs text-gray-400 font-semibold uppercase">Egreso Total Cuentas Matriz (Mensual)</span>
+            <div className="text-2xl font-bold text-red-650 dark:text-red-400 mt-1">
+              ${Math.round(totals.mensual_egreso).toLocaleString()}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Costo Diario de Inventario: ${Math.round(totals.egreso_total).toLocaleString()} / día
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
+            <span className="text-xs text-gray-400 font-semibold uppercase">Utilidad Mensual Neta (Inventario)</span>
+            <div className="text-2xl font-bold text-brand-primary mt-1">
+              ${Math.round(totals.mensual_utilidad).toLocaleString()}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Margen Neto: {totals.porcentaje_utilidad.toFixed(1)}% | Ganancia Diaria: ${Math.round(totals.utilidad_total).toLocaleString()} / día
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Totales Resumen - Normalizado Diario */}
       {viewMode === 'projections' && totals && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
@@ -371,7 +414,82 @@ export function AccountingView() {
       )}
 
       {/* Main Table View */}
-      {viewMode === 'projections' ? (
+      {viewMode === 'excel' ? (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 overflow-hidden">
+          <div className="px-6 py-4 border-b dark:border-gray-700 flex justify-between items-center">
+            <h3 className="font-bold dark:text-white text-sm">Contabilidad de Cartera Total (Modelo Excel)</h3>
+            <span className="text-xs text-gray-400">Totales mensuales de compras de cuentas vs ventas a clientes</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-gray-900/50 font-bold text-gray-500 uppercase">
+                  <th className="px-6 py-3">Streaming</th>
+                  <th className="px-6 py-3 text-center">Cupos Vendidos</th>
+                  <th className="px-6 py-3 text-center">Cuentas Compradas</th>
+                  <th className="px-6 py-3 text-right">Ingreso Mensual</th>
+                  <th className="px-6 py-3 text-right">Egreso Cuentas (Mes)</th>
+                  <th className="px-6 py-3 text-center">Margen %</th>
+                  <th className="px-6 py-3 text-right">Utilidad Mensual</th>
+                  <th className="px-6 py-3 text-right">Ganancia Diaria</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y dark:divide-gray-700 text-sm">
+                {rows.map((row: any, i) => (
+                  <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-750/30 text-xs">
+                    <td className="px-6 py-3.5 font-bold dark:text-white uppercase">{row.platform}</td>
+                    <td className="px-6 py-3.5 text-center text-gray-500 font-semibold">{row.active_profiles}</td>
+                    <td className="px-6 py-3.5 text-center text-indigo-400 font-bold">{row.accounts_needed || Math.ceil(row.active_profiles / 5)}</td>
+                    <td className="px-6 py-3.5 text-right text-green-600 dark:text-green-400 font-semibold">
+                      ${Math.round(row.ingreso_total * 30).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-3.5 text-right text-red-650 dark:text-red-400 font-medium">
+                      ${Math.round(row.monthly_inventory_cost || (row.egreso_total * 30)).toLocaleString()}
+                    </td>
+                    <td className={`px-6 py-3.5 text-center font-bold ${row.indicador_gan >= 30 ? 'text-green-500' : 'text-yellow-500'}`}>
+                      {row.indicador_gan.toFixed(0)}%
+                    </td>
+                    <td className="px-6 py-3.5 text-right font-bold text-brand-primary">
+                      ${Math.round((row.ingreso_total * 30) - (row.monthly_inventory_cost || (row.egreso_total * 30))).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-3.5 text-right font-semibold dark:text-gray-300">
+                      ${Math.round(row.utilidad_total).toLocaleString()} / día
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              {totals && (
+                <tfoot>
+                  <tr className="bg-gray-100 dark:bg-gray-900/60 font-bold border-t dark:border-gray-700 text-xs">
+                    <td className="px-6 py-4 dark:text-white">TOTALES CARTERA</td>
+                    <td className="px-6 py-4 text-center dark:text-white font-extrabold">
+                      {rows.reduce((sum, r) => sum + r.active_profiles, 0)} cupos
+                    </td>
+                    <td className="px-6 py-4 text-center text-indigo-400 font-extrabold">
+                      {rows.reduce((sum: number, r: any) => sum + (r.accounts_needed || Math.ceil(r.active_profiles / 5)), 0)} cuentas
+                    </td>
+                    <td className="px-6 py-4 text-right text-green-600 dark:text-green-400 font-extrabold">
+                      ${Math.round(totals.mensual_ingreso).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-right text-red-650 dark:text-red-400 font-extrabold">
+                      ${Math.round(totals.mensual_egreso).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-center text-brand-primary font-extrabold">
+                      {totals.porcentaje_utilidad.toFixed(0)}%
+                    </td>
+                    <td className="px-6 py-4 text-right text-brand-primary font-extrabold">
+                      ${Math.round(totals.mensual_utilidad).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-right text-brand-primary font-extrabold">
+                      ${Math.round(totals.utilidad_total).toLocaleString()} / día
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        </div>
+      ) : viewMode === 'projections' ? (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 overflow-hidden">
           <div className="px-6 py-4 border-b dark:border-gray-700">
             <h3 className="font-bold dark:text-white text-sm">Matriz de Contabilidad Diaria (Normalizada)</h3>
