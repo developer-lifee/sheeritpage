@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle, Calendar } from 'lucide-react';
+import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle, Calendar, Plus, CreditCard, ShoppingBag } from 'lucide-react';
 import { isDemoMode } from '../utils/demoMode';
+import { AddSaleForm } from './AddSaleForm';
 
 function formatExcelDate(excelDate: any): string {
     if (!excelDate) return '-';
@@ -199,7 +200,11 @@ export const ClientsView: React.FC = () => {
     const [actionStates, setActionStates] = useState<{[key: string]: 'idle' | 'loading' | 'success' | 'error'}>({});
     const [actionErrorMessage, setActionErrorMessage] = useState<{[key: string]: string}>({});
 
-    useEffect(() => {
+    // Modal de Venta Directa / Renovación
+    const [saleModalOpen, setSaleModalOpen] = useState(false);
+    const [saleModalClient, setSaleModalClient] = useState<{ phone: string; name: string } | null>(null);
+
+    const fetchClientsData = useCallback(() => {
         if (isDemoMode()) {
             setClients([
                 { rowNumber: 1, Nombre: 'Carlos', Apellido: 'Mendoza (Demo)', numero: '573001234567', Streaming: 'Netflix Ultra HD', correo: 'demo.cliente1@sheerit.com', deben: '2026-08-25', status: 'Activo' },
@@ -210,6 +215,7 @@ export const ClientsView: React.FC = () => {
             setLoading(false);
             return;
         }
+        setLoading(true);
         const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
         fetch(`${apiUrl}/api/admin/clients`)
             .then(res => res.json())
@@ -222,6 +228,10 @@ export const ClientsView: React.FC = () => {
                 setLoading(false);
             });
     }, []);
+
+    useEffect(() => {
+        fetchClientsData();
+    }, [fetchClientsData]);
 
     // Click outside handler
     useEffect(() => {
@@ -614,6 +624,17 @@ export const ClientsView: React.FC = () => {
                             <option key={service} value={service}>{service}</option>
                         ))}
                     </select>
+
+                    <button
+                        onClick={() => {
+                            setSaleModalClient(null);
+                            setSaleModalOpen(true);
+                        }}
+                        className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition-all cursor-pointer"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>Nueva Venta</span>
+                    </button>
 
                     <button
                         onClick={() => setShowBulkSender(!showBulkSender)}
@@ -1073,7 +1094,21 @@ export const ClientsView: React.FC = () => {
                                                      )}
                                                 </td>
                                                 <td data-label="Acciones" className="py-3.5 px-4 text-sm text-center">
-                                                    <div className="flex gap-2 justify-center">
+                                                    <div className="flex gap-2 justify-center items-center">
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const rawPhone = (c.numero || c.Numero || c.whatsapp || '').toString().replace(/\D/g, '');
+                                                                const rawName = `${c.Nombre || ''} ${c.apellido || c.Apellido || ''}`.trim();
+                                                                setSaleModalClient({ phone: rawPhone, name: rawName });
+                                                                setSaleModalOpen(true);
+                                                            }}
+                                                            className="p-2 rounded-xl text-xs font-bold transition-all border bg-green-50 hover:bg-green-100 text-green-750 dark:bg-green-950/30 dark:hover:bg-green-900/50 dark:text-green-300 border-green-200/50 dark:border-green-800/40 flex items-center gap-1 shadow-2xs"
+                                                            title="Registrar cobro, descuento o renovar servicio para este cliente"
+                                                        >
+                                                            <CreditCard className="w-3.5 h-3.5" />
+                                                            <span>Venta / Renovar</span>
+                                                        </button>
                                                         <button 
                                                             onClick={() => toggleExpandHistory(phone, i, c)}
                                                             className={`p-2 rounded-xl text-xs font-bold transition-all border ${
@@ -1262,6 +1297,28 @@ export const ClientsView: React.FC = () => {
                         </tbody>
                     </table>
                     {filtered.length > 50 && <p className="text-center text-sm text-gray-500 mt-4">Mostrando 50 resultados...</p>}
+                </div>
+            )}
+
+            {/* MODAL DE VENTA DIRECTA / RENOVACIÓN */}
+            {saleModalOpen && (
+                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+                    <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl">
+                        <AddSaleForm
+                            isModal={true}
+                            initialPhone={saleModalClient?.phone || ''}
+                            initialName={saleModalClient?.name || ''}
+                            onClose={() => {
+                                setSaleModalOpen(false);
+                                setSaleModalClient(null);
+                            }}
+                            onSuccess={() => {
+                                setSaleModalOpen(false);
+                                setSaleModalClient(null);
+                                fetchClientsData();
+                            }}
+                        />
+                    </div>
                 </div>
             )}
         </div>

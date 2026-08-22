@@ -412,12 +412,6 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           <Database className="w-5 h-5 mr-2" /> Base de Datos
         </button>
         <button 
-          onClick={() => setActiveTab('sales')}
-          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'sales' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
-        >
-          <Calculator className="w-5 h-5 mr-2" /> Nueva Venta
-        </button>
-        <button 
           onClick={() => setActiveTab('stats')}
           className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'stats' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >

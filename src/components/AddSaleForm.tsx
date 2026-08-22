@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Calculator, Send, CheckCircle2 } from 'lucide-react';
+import { Plus, Trash2, Calculator, Send, CheckCircle2, X } from 'lucide-react';
 
 interface Plan {
   name: string;
@@ -11,6 +11,14 @@ interface Platform {
   name: string;
   plans: Plan[];
   discountTier?: string;
+}
+
+export interface AddSaleFormProps {
+  initialPhone?: string;
+  initialName?: string;
+  onClose?: () => void;
+  onSuccess?: () => void;
+  isModal?: boolean;
 }
 
 const DEFAULT_RULES = {
@@ -37,13 +45,21 @@ const DEFAULT_RULES = {
   }
 };
 
-export const AddSaleForm: React.FC = () => {
+export const AddSaleForm: React.FC<AddSaleFormProps> = ({ 
+  initialPhone = '', 
+  initialName = '', 
+  onClose, 
+  onSuccess,
+  isModal = false 
+}) => {
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [selectedItems, setSelectedItems] = useState<{ platformId: string, planName: string }[]>([]);
-  const [phone, setPhone] = useState('');
-  const [name, setName] = useState('');
+  const [phone, setPhone] = useState(initialPhone);
+  const [name, setName] = useState(initialName);
   const [duration, setDuration] = useState<string>('1');
   const [total, setTotal] = useState(0);
+  const [customTotal, setCustomTotal] = useState<number | ''>('');
+  const [hasCustomTotal, setHasCustomTotal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -63,12 +79,20 @@ export const AddSaleForm: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (initialPhone) {
+      setPhone(initialPhone);
+      handleVerifyClientPhone(initialPhone);
+    }
+  }, [initialPhone]);
+
+  useEffect(() => {
     calculateTotal();
   }, [selectedItems, duration, platforms]);
 
   const calculateTotal = () => {
     if (selectedItems.length === 0) {
       setTotal(0);
+      if (!hasCustomTotal) setCustomTotal('');
       return;
     }
 
@@ -93,15 +117,16 @@ export const AddSaleForm: React.FC = () => {
       finalTotal += (itemMonthlyPrice * parseInt(duration)) * factor;
     });
 
-    // Round to nearest 1000 using Math.ceil
-    setTotal(Math.ceil(finalTotal / 1000) * 1000);
+    const calculated = Math.ceil(finalTotal / 1000) * 1000;
+    setTotal(calculated);
+    if (!hasCustomTotal) {
+      setCustomTotal(calculated);
+    }
   };
 
-  const handleVerifyClient = async () => {
-    if (!phone) {
-      setMessage('⚠️ Por favor ingresa el número de WhatsApp.');
-      return;
-    }
+  const handleVerifyClientPhone = async (phoneToVerify: string) => {
+    const cleanSearchPhone = phoneToVerify.replace(/\D/g, '');
+    if (!cleanSearchPhone) return;
     setIsVerifying(true);
     setMessage('');
     
@@ -110,13 +135,6 @@ export const AddSaleForm: React.FC = () => {
       const response = await fetch(`${apiUrl}/api/admin/clients`);
       const allClients = await response.json();
       
-      const cleanSearchPhone = phone.replace(/\D/g, '');
-      if (!cleanSearchPhone) {
-        setMessage('⚠️ Número de WhatsApp no válido.');
-        setIsVerifying(false);
-        return;
-      }
-      
       const filtered = allClients.filter((c: any) => {
         const cPhone = String(c.whatsapp || c.numero || '').replace(/\D/g, '');
         return cPhone && cPhone.includes(cleanSearchPhone);
@@ -124,7 +142,7 @@ export const AddSaleForm: React.FC = () => {
       
       setCustomerServices(filtered);
       if (filtered.length > 0) {
-        setName(filtered[0].Nombre || filtered[0].nombre || '');
+        setName(filtered[0].Nombre || filtered[0].nombre || initialName || '');
         setMessage(`🔍 Encontrado cliente con ${filtered.length} servicio(s) activo(s).`);
       } else {
         setMessage('ℹ️ No se encontraron servicios activos para este número. Procediendo como Venta Nueva.');
@@ -138,6 +156,14 @@ export const AddSaleForm: React.FC = () => {
     } finally {
       setIsVerifying(false);
     }
+  };
+
+  const handleVerifyClient = async () => {
+    if (!phone) {
+      setMessage('⚠️ Por favor ingresa el número de WhatsApp.');
+      return;
+    }
+    await handleVerifyClientPhone(phone);
   };
 
   const addItem = () => {
@@ -181,6 +207,10 @@ export const AddSaleForm: React.FC = () => {
       });
     }
 
+    const finalAmountToSend = (hasCustomTotal && customTotal !== '' && Number(customTotal) > 0)
+      ? Number(customTotal)
+      : total;
+
     try {
       const response = await fetch(`${apiUrl}/api/admin/sales/create`, {
         method: 'POST',
@@ -190,7 +220,7 @@ export const AddSaleForm: React.FC = () => {
           name,
           items: requestItems,
           duration,
-          total,
+          total: finalAmountToSend,
           isRenewal,
           paymentMethod,
           password: 'admin123'
@@ -201,11 +231,18 @@ export const AddSaleForm: React.FC = () => {
       if (result.success) {
         setMessage(isRenewal ? '✅ Renovación registrada con éxito en Excel.' : '✅ Venta registrada con éxito y cupos asignados.');
         setSelectedItems([]);
-        setPhone('');
-        setName('');
+        if (!initialPhone) setPhone('');
+        if (!initialName) setName('');
         setCustomerServices([]);
         setIsRenewal(false);
         setSelectedServiceToRenew(null);
+        setHasCustomTotal(false);
+        setCustomTotal('');
+        if (onSuccess) {
+          setTimeout(() => {
+            onSuccess();
+          }, 1000);
+        }
       } else {
         setMessage('❌ Error: ' + result.message);
       }
@@ -217,15 +254,28 @@ export const AddSaleForm: React.FC = () => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-8 max-w-4xl mx-auto">
-      <div className="flex items-center gap-4 mb-8">
-        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-          <Calculator className="text-blue-600 w-6 h-6" />
+    <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6 md:p-8 max-w-4xl mx-auto ${isModal ? 'relative' : ''}`}>
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-brand-primary/10 rounded-xl flex items-center justify-center">
+            <Calculator className="text-brand-primary w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold dark:text-white">
+              {isRenewal ? '💳 Registrar Renovación de Cliente' : '🛒 Registrar Venta Directa'}
+            </h2>
+            <p className="text-gray-500 text-xs">Asigna cupos, actualiza vencimientos y registra el ingreso en caja real.</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-bold dark:text-white">Nueva Venta Directa</h2>
-          <p className="text-gray-500 text-sm">Registra clientes y asigna cupos automáticamente.</p>
-        </div>
+        {isModal && onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 text-gray-450 hover:text-gray-700 dark:hover:text-white rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -238,7 +288,7 @@ export const AddSaleForm: React.FC = () => {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="Ej: 57313..."
-                className="flex-grow px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="flex-grow px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white font-medium"
                 required
               />
               <button
@@ -258,7 +308,7 @@ export const AddSaleForm: React.FC = () => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Nombre Completo"
-              className="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              className="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white font-medium"
               required
             />
           </div>
@@ -368,14 +418,14 @@ export const AddSaleForm: React.FC = () => {
         )}
 
         {/* Pricing, payment method and custom months selectors */}
-        <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-stretch md:items-center gap-6">
+        <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-stretch md:items-center gap-6 border dark:border-gray-700">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex flex-col gap-1.5">
               <span className="text-[10px] uppercase font-bold text-gray-450 tracking-wider">Duración (Meses)</span>
               <select
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
-                className="px-4 py-2 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white font-bold"
+                className="px-4 py-2 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white font-bold text-sm"
               >
                 {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                   <option key={m} value={String(m)}>
@@ -390,7 +440,7 @@ export const AddSaleForm: React.FC = () => {
               <select
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value)}
-                className="px-4 py-2 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white font-bold"
+                className="px-4 py-2 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white font-bold text-sm"
               >
                 <option value="Nequi">Nequi</option>
                 <option value="Daviplata">Daviplata</option>
@@ -401,27 +451,55 @@ export const AddSaleForm: React.FC = () => {
             </div>
           </div>
 
-          <div className="text-right flex flex-col justify-center">
-            <div className="text-sm text-gray-500 font-medium tracking-wide">TOTAL ESTIMADO</div>
-            <div className="text-3xl font-black text-brand-primary tracking-tight">
-              ${total.toLocaleString()} COP
+          <div className="flex flex-col md:items-end justify-center gap-1 border-t md:border-t-0 md:border-l dark:border-gray-700 pt-4 md:pt-0 md:pl-6">
+            <span className="text-[10px] text-gray-450 font-bold uppercase tracking-wider">
+              Monto Cobrado en esta ocasión
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400 font-bold">$</span>
+              <input
+                type="number"
+                value={hasCustomTotal ? customTotal : (total > 0 ? total : '')}
+                onChange={(e) => {
+                  setHasCustomTotal(true);
+                  setCustomTotal(e.target.value === '' ? '' : Number(e.target.value));
+                }}
+                placeholder={String(total)}
+                className="w-36 px-3 py-1.5 rounded-xl border border-brand-primary/50 dark:bg-gray-750 dark:border-brand-primary/60 dark:text-white font-black text-xl text-brand-primary text-right focus:outline-none focus:ring-2 focus:ring-brand-primary"
+              />
+              <span className="text-xs font-bold text-gray-400">COP</span>
             </div>
+            {hasCustomTotal && customTotal !== total && (
+              <button
+                type="button"
+                onClick={() => {
+                  setHasCustomTotal(false);
+                  setCustomTotal(total);
+                }}
+                className="text-2xs text-brand-primary hover:underline font-bold"
+              >
+                Restablecer tarifa regular (${total.toLocaleString()})
+              </button>
+            )}
+            <span className="text-[10px] text-gray-400">
+              * Entra a la contabilidad de este mes.
+            </span>
           </div>
         </div>
 
         {message && (
-          <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-medium flex items-center">
-            <CheckCircle2 className="w-5 h-5 mr-2" /> {message}
+          <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-medium flex items-center text-sm">
+            <CheckCircle2 className="w-5 h-5 mr-2 flex-shrink-0" /> {message}
           </div>
         )}
 
         <button 
           type="submit" 
           disabled={loading || (selectedItems.length === 0 && !isRenewal)}
-          className="w-full bg-brand-primary text-white py-4 rounded-2xl font-black text-lg shadow-xl shadow-brand-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center disabled:opacity-50"
+          className="w-full bg-brand-primary hover:bg-brand-dark text-white py-3.5 rounded-2xl font-black text-base shadow-lg shadow-brand-primary/20 hover:scale-[1.005] active:scale-[0.995] transition-all flex items-center justify-center disabled:opacity-50"
         >
-          <Send className="w-6 h-6 mr-2" />
-          {loading ? 'Procesando registro...' : isRenewal ? 'Registrar Renovación en Excel' : 'Registrar Venta y Notificar Cliente'}
+          <Send className="w-5 h-5 mr-2" />
+          {loading ? 'Procesando registro...' : isRenewal ? 'Registrar Renovación en Excel y Flujo Real' : 'Registrar Venta y Asignar Cupos'}
         </button>
       </form>
     </div>
