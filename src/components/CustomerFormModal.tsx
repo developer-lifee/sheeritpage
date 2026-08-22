@@ -20,6 +20,9 @@ type PaymentConfig = {
   redirectionUrl: string;
   description: string;
   currency: string;
+  paymentUrl?: string;
+  url?: string;
+  apiKey?: string;
 };
 
 export function CustomerFormModal({ platformName, platformPrice, onClose }: CustomerFormModalProps) {
@@ -95,11 +98,17 @@ export function CustomerFormModal({ platformName, platformPrice, onClose }: Cust
       
       const config: PaymentConfig = await response.json();
       
-      // Iniciamos el polling activo inmediatamente
+      // Iniciamos el polling activo
       startActivePolling(config.orderId);
 
-      // Llamamos a la función del hook para cargar y abrir el checkout
-      loadAndOpenCheckout(config, "1y0D48xaDriWO_CNz7oXUopfkKx5VjiExsdDW0gj2eA");
+      const targetUrl = config.paymentUrl || config.url;
+      if (targetUrl) {
+        // Redirección directa al checkout oficial y actualizado de Bold
+        window.location.href = targetUrl;
+      } else {
+        // Fallback al hook si no hay URL directa
+        loadAndOpenCheckout(config, config.apiKey || "1y0D48xaDriWO_CNz7oXUopfkKx5VjiExsdDW0gj2eA");
+      }
 
     } catch (error: any) {
       setError(error.message);
