@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, Save, Plus, Trash2, TrendingUp, CreditCard, RefreshCcw, DollarSign, Calendar, Eye, EyeOff } from 'lucide-react';
+import { Calculator, Save, Plus, Trash2, Edit2, TrendingUp, CreditCard, RefreshCcw, DollarSign, Calendar, Eye, EyeOff } from 'lucide-react';
 import { isDemoMode, DEMO_ACCOUNTING } from '../utils/demoMode';
 import {
   ResponsiveContainer,
@@ -80,6 +80,8 @@ export function AccountingView() {
     entryDate: new Date().toISOString().slice(0, 10)
   });
 
+  const [editingCostId, setEditingCostId] = useState<number | null>(null);
+
   const [newCost, setNewCost] = useState<CostConfig>({
     platform: '',
     email: '',
@@ -97,6 +99,38 @@ export function AccountingView() {
   };
 
   const adminPassword = localStorage.getItem('ticket_agent_password') || 'admin123';
+
+  const handleEditCost = (cost: CostConfig) => {
+    setEditingCostId(cost.id || null);
+    setNewCost({
+      id: cost.id,
+      platform: cost.platform,
+      email: cost.email || '',
+      total_cost: cost.total_cost || 0,
+      profile_slots: cost.profile_slots || 1,
+      duration_days: cost.duration_days || 30,
+      expiration_date: cost.expiration_date ? new Date(cost.expiration_date).toISOString().slice(0, 10) : '',
+      payment_method: cost.payment_method || ''
+    });
+    // Scroll al formulario suavemente
+    const formElement = document.getElementById('account-cost-form');
+    if (formElement) {
+      formElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  const handleCancelEditCost = () => {
+    setEditingCostId(null);
+    setNewCost({
+      platform: '',
+      email: '',
+      total_cost: 0,
+      profile_slots: 5,
+      duration_days: 30,
+      expiration_date: '',
+      payment_method: ''
+    });
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -212,28 +246,23 @@ export function AccountingView() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          costData: newCost,
+          costData: {
+            ...newCost,
+            id: editingCostId || undefined
+          },
           password: adminPassword
         })
       });
       const result = await res.json();
       if (result.success) {
-        alert('Costo guardado con éxito');
-        setNewCost({
-          platform: '',
-          email: '',
-          total_cost: 0,
-          profile_slots: 5,
-          duration_days: 30,
-          expiration_date: '',
-          payment_method: ''
-        });
+        alert(editingCostId ? '✅ Costo actualizado con éxito' : '✅ Costo guardado con éxito');
+        handleCancelEditCost();
         fetchData();
       } else {
-        alert('Error: ' + result.message);
+        alert('Error: ' + (result.message || result.error));
       }
     } catch (e) {
-      alert('Error de red');
+      alert('Error de red al guardar el costo');
     }
   };
 
@@ -799,19 +828,37 @@ export function AccountingView() {
 
       {/* Account Cost configurations */}
       <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
-        <h3 className="font-bold dark:text-white text-sm mb-4">Administrar Costos de Cuentas (Costo Real Operativo)</h3>
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h3 className="font-bold dark:text-white text-sm">Administrar Costos de Cuentas (Costo Real Operativo)</h3>
+            <p className="text-xs text-gray-400">Edita o ingresa los costos exactos pagados a proveedores para cada plataforma matriz.</p>
+          </div>
+          {editingCostId && (
+            <span className="px-2.5 py-1 bg-brand-primary/20 text-brand-primary text-xs font-bold rounded-lg border border-brand-primary/40">
+              ✏️ Modo Edición Activo
+            </span>
+          )}
+        </div>
         
-        {/* Form to add Cost */}
-        <form onSubmit={handleAddCost} className="grid grid-cols-2 md:grid-cols-8 gap-3 mb-6 p-4 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border dark:border-gray-700">
+        {/* Form to add/edit Cost */}
+        <form 
+          id="account-cost-form"
+          onSubmit={handleAddCost} 
+          className={`grid grid-cols-2 md:grid-cols-8 gap-3 mb-6 p-4 rounded-2xl border transition-all ${
+            editingCostId 
+              ? 'bg-indigo-50/50 dark:bg-indigo-950/20 border-brand-primary shadow-sm' 
+              : 'bg-gray-50 dark:bg-gray-900/40 border-gray-200 dark:border-gray-700'
+          }`}
+        >
           <div>
             <label className="block text-2xs text-gray-400 uppercase font-bold mb-1">Plataforma</label>
             <input
               type="text"
               required
-              placeholder="NETFLIX, DISNEY"
+              placeholder="NETFLIX, AMAZON, etc."
               value={newCost.platform}
-              onChange={(e) => setNewCost({ ...newCost, platform: e.target.value })}
-              className="w-full px-2 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white"
+              onChange={(e) => setNewCost({ ...newCost, platform: e.target.value.toUpperCase() })}
+              className="w-full px-2 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white font-bold"
             />
           </div>
           <div className="col-span-2">
@@ -831,8 +878,8 @@ export function AccountingView() {
               type="number"
               required
               value={newCost.total_cost}
-              onChange={(e) => setNewCost({ ...newCost, total_cost: parseFloat(e.target.value) })}
-              className="w-full px-2 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white"
+              onChange={(e) => setNewCost({ ...newCost, total_cost: parseFloat(e.target.value) || 0 })}
+              className="w-full px-2 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white font-bold text-red-500"
             />
           </div>
           <div>
@@ -841,7 +888,7 @@ export function AccountingView() {
               type="number"
               required
               value={newCost.profile_slots}
-              onChange={(e) => setNewCost({ ...newCost, profile_slots: parseInt(e.target.value) })}
+              onChange={(e) => setNewCost({ ...newCost, profile_slots: parseInt(e.target.value) || 1 })}
               className="w-full px-2 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white"
             />
           </div>
@@ -851,7 +898,7 @@ export function AccountingView() {
               type="number"
               required
               value={newCost.duration_days}
-              onChange={(e) => setNewCost({ ...newCost, duration_days: parseInt(e.target.value) })}
+              onChange={(e) => setNewCost({ ...newCost, duration_days: parseInt(e.target.value) || 30 })}
               className="w-full px-2 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white"
             />
           </div>
@@ -868,19 +915,37 @@ export function AccountingView() {
             <label className="block text-2xs text-gray-400 uppercase font-bold mb-1">Método Pago</label>
             <input
               type="text"
-              placeholder="ej. Visa Oro"
+              placeholder="ej. Tarjeta, Proveedor"
               value={newCost.payment_method || ''}
               onChange={(e) => setNewCost({ ...newCost, payment_method: e.target.value })}
               className="w-full px-2 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white"
             />
           </div>
-          <div className="col-span-2 md:col-span-1 flex items-end">
-            <button
-              type="submit"
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-1.5 rounded-lg text-xs"
-            >
-              + Agregar
-            </button>
+          <div className="col-span-2 md:col-span-1 flex flex-col justify-end gap-1">
+            {editingCostId ? (
+              <>
+                <button
+                  type="submit"
+                  className="w-full bg-brand-primary hover:bg-brand-secondary text-white font-bold py-1.5 rounded-lg text-xs transition-colors"
+                >
+                  💾 Guardar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelEditCost}
+                  className="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-1 rounded-lg text-xxs transition-colors"
+                >
+                  Cancelar
+                </button>
+              </>
+            ) : (
+              <button
+                type="submit"
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-1.5 rounded-lg text-xs transition-colors"
+              >
+                + Agregar
+              </button>
+            )}
           </div>
         </form>
 
@@ -897,15 +962,21 @@ export function AccountingView() {
                 <th className="px-3 py-2">Vencimiento</th>
                 <th className="px-3 py-2">Método Pago</th>
                 <th className="px-3 py-2">Costo Diario</th>
-                <th className="px-3 py-2">Acciones</th>
+                <th className="px-3 py-2 text-center">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y dark:divide-gray-700">
               {costs.map((cost, idx) => {
                 const costPerProfile = cost.total_cost / (cost.profile_slots || 1);
                 const dailyCost = costPerProfile / (cost.duration_days || 30);
+                const isBeingEdited = editingCostId === cost.id;
                 return (
-                  <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-gray-750/30">
+                  <tr 
+                    key={idx} 
+                    className={`hover:bg-gray-50/50 dark:hover:bg-gray-750/30 transition-colors ${
+                      isBeingEdited ? 'bg-indigo-50/60 dark:bg-indigo-950/40 font-semibold' : ''
+                    }`}
+                  >
                     <td className="px-3 py-2 font-bold dark:text-white uppercase">{cost.platform}</td>
                     <td className="px-3 py-2 text-gray-400">{cost.email}</td>
                     <td className="px-3 py-2 text-red-650 dark:text-red-400 font-semibold">
@@ -920,12 +991,22 @@ export function AccountingView() {
                     <td className="px-3 py-2 text-gray-500">{cost.payment_method || 'N/A'}</td>
                     <td className="px-3 py-2 text-gray-500">${dailyCost.toFixed(1)}</td>
                     <td className="px-3 py-2">
-                      <button
-                        onClick={() => cost.id && handleDeleteCost(cost.id)}
-                        className="text-red-500 hover:text-red-750 p-1"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-center space-x-1.5">
+                        <button
+                          onClick={() => handleEditCost(cost)}
+                          className="p-1.5 text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                          title="Editar costo y valores"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => cost.id && handleDeleteCost(cost.id)}
+                          className="p-1.5 text-red-500 hover:text-red-650 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                          title="Eliminar costo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
