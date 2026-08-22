@@ -538,7 +538,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
     try {
       const res = await fetch(`${apiUrl}/api/admin/agents`);
       const data = await res.json();
-      if (data.success && Array.isArray(data.agents) && data.agents.length > 0) {
+      if (data.success && Array.isArray(data.agents)) {
         setAgents(data.agents);
       } else if (isDemoMode()) {
         setAgents(DEMO_AGENTS as any);
@@ -582,8 +582,9 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
     try {
       const res = await fetch(`${apiUrl}/api/admin/agents/schedules/all?week_start=${weekStart}`);
       const data = await res.json();
-      if (data.success && Array.isArray(data.schedules) && data.schedules.length > 0) {
+      if (data.success && Array.isArray(data.schedules)) {
         setAllSchedules(data.schedules);
+        setError('');
       } else if (isDemoMode()) {
         setAllSchedules(DEMO_SCHEDULES as any);
       } else {
@@ -616,8 +617,9 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         : `${apiUrl}/api/admin/payroll?month=${selectedMonth}`;
       const res = await fetch(url);
       const data = await res.json();
-      if (data.success && Array.isArray(data.payroll) && data.payroll.length > 0) {
+      if (data.success && Array.isArray(data.payroll)) {
         setPayrollList(data.payroll);
+        setError('');
       } else if (isDemoMode()) {
         setPayrollList(DEMO_PAYROLL as any);
       } else {
