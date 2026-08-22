@@ -114,13 +114,6 @@ export function Navbar({ isDark, toggleDark, onNavigate, currentView, agentName,
                   <span>Inicio</span>
                 </button>
                 <button 
-                  onClick={() => { onNavigate('portafolio'); setIsMenuOpen(false); }}
-                  className="w-full flex items-center px-4 py-3 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 text-sm font-semibold transition-colors"
-                >
-                  <Layers className="h-4 w-4 mr-3 text-purple-500" />
-                  <span>Portafolio / Trabajos</span>
-                </button>
-                <button 
                   onClick={() => { onNavigate('support'); setIsMenuOpen(false); }}
                   className="w-full flex items-center px-4 py-3 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 text-sm font-semibold transition-colors"
                 >

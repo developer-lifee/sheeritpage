@@ -41,7 +41,6 @@ export function Footer() {
             <h4 className="text-lg font-semibold mb-4">Enlaces Rápidos</h4>
             <ul className="space-y-2">
               <li><a href="/" className="text-white/80 hover:text-white">Inicio</a></li>
-              <li><a href="/portafolio" className="text-white/80 hover:text-white font-bold text-purple-200">Portafolio / Trabajos</a></li>
               <li><a href="/software" className="text-white/80 hover:text-white">Desarrollo de Software</a></li>
               <li><a href="#platforms-section" className="text-white/80 hover:text-white">Plataformas</a></li>
             </ul>
