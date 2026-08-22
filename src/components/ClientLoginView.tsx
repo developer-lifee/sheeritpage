@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Phone, Key, Tv, Lock, Eye, EyeOff, RefreshCw, CheckCircle, AlertCircle, Copy, LogOut } from 'lucide-react';
+import { Shield, Phone, Key, Tv, Lock, Eye, EyeOff, RefreshCw, CheckCircle, AlertCircle, Copy, LogOut, ExternalLink, Check } from 'lucide-react';
 
 interface ClientAccount {
   id: number;
@@ -8,6 +8,14 @@ interface ClientAccount {
   password?: string;
   profile: string;
   vencimiento: string;
+}
+
+interface Account2faResult {
+  code?: string;
+  link?: string;
+  snippet?: string;
+  message?: string;
+  type?: string;
 }
 
 export default function ClientLoginView() {
@@ -20,6 +28,8 @@ export default function ClientLoginView() {
   const [success, setSuccess] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<ClientAccount[]>([]);
   const [showPass, setShowPass] = useState<Record<number, boolean>>({});
+  const [accountResults, setAccountResults] = useState<Record<number, Account2faResult>>({});
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const API_BASE = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
     ? 'http://localhost:3000'
@@ -31,22 +41,29 @@ export default function ClientLoginView() {
     setError(null);
     setSuccess(null);
 
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone) {
+      setError('Por favor ingresa un número de teléfono válido.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch(`${API_BASE}/api/client/request-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone })
+        body: JSON.stringify({ phone: cleanPhone })
       });
 
       const data = await response.json();
       if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Error al solicitar el código OTP');
+        throw new Error(data.message || 'No se pudo enviar el código OTP');
       }
 
-      setSuccess('Código OTP enviado correctamente a tu WhatsApp. Ingresa el código de 6 dígitos.');
+      setSuccess(data.message || 'Código OTP enviado a tu WhatsApp.');
       setStep(2);
     } catch (err: any) {
-      setError(err.message || 'Error de conexión');
+      setError(err.message || 'Error de red al solicitar el código');
     } finally {
       setLoading(false);
     }
@@ -58,11 +75,12 @@ export default function ClientLoginView() {
     setError(null);
     setSuccess(null);
 
+    const cleanPhone = phone.replace(/\D/g, '');
     try {
       const response = await fetch(`${API_BASE}/api/client/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, code })
+        body: JSON.stringify({ phone: cleanPhone, code: code.trim() })
       });
 
       const data = await response.json();
@@ -97,9 +115,26 @@ export default function ClientLoginView() {
         throw new Error(data.message || 'No se pudo generar la solicitud de código');
       }
 
-      setSuccess(data.message || 'Solicitud enviada con éxito.');
+      setAccountResults(prev => ({
+        ...prev,
+        [accountId]: {
+          code: data.code,
+          link: data.link,
+          snippet: data.snippet,
+          message: data.message,
+          type: data.type
+        }
+      }));
+
+      if (data.code) {
+        setSuccess(`¡Código generado con éxito: ${data.code}!`);
+      } else if (data.link) {
+        setSuccess('¡Enlace de acceso listo!');
+      } else {
+        setSuccess(data.message || 'Buscando código en buzón...');
+      }
     } catch (err: any) {
-      setError(err.message || 'Error de red');
+      setError(err.message || 'Error de red al consultar código');
     } finally {
       setRequesting2fa(null);
     }
@@ -367,6 +402,62 @@ export default function ClientLoginView() {
                       <div className="p-2.5 rounded-lg bg-gray-50 dark:bg-slate-950/60 border border-gray-150 dark:border-slate-850 text-gray-750 dark:text-slate-300">
                         <span className="text-gray-400 dark:text-slate-500 mr-1.5 font-medium">Perfil asignado:</span> {acc.profile}
                       </div>
+
+                      {/* Display extracted 2FA code / link directly in the card */}
+                      {accountResults[acc.id] && (
+                        <div className="pt-2 animate-fade-in">
+                          {accountResults[acc.id].code && (
+                            <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-center space-y-2">
+                              <span className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest block">
+                                🔐 Código de Acceso / 2FA
+                              </span>
+                              <div className="flex items-center justify-center gap-2">
+                                <span className="font-mono text-2xl sm:text-3xl font-black tracking-widest text-indigo-600 dark:text-indigo-300 select-all">
+                                  {accountResults[acc.id].code}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    copyToClipboard(accountResults[acc.id].code || '', 'Código');
+                                    setCopiedKey(`code_${acc.id}`);
+                                    setTimeout(() => setCopiedKey(null), 2500);
+                                  }}
+                                  className="p-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-sm"
+                                  title="Copiar Código"
+                                >
+                                  {copiedKey === `code_${acc.id}` ? <Check size={14} /> : <Copy size={14} />}
+                                </button>
+                              </div>
+                              <p className="text-[10px] text-gray-500 dark:text-slate-400">
+                                Digita este código en tu pantalla o app para iniciar sesión.
+                              </p>
+                            </div>
+                          )}
+
+                          {accountResults[acc.id].link && (
+                            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-center space-y-2">
+                              <a
+                                href={accountResults[acc.id].link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full py-2.5 px-4 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-600/20"
+                              >
+                                <span>🚀 Abrir Enlace de Acceso Oficial</span>
+                                <ExternalLink size={14} />
+                              </a>
+                              <p className="text-[10px] text-gray-500 dark:text-slate-400">
+                                Haz clic para confirmar el acceso o dispositivo en Netflix.
+                              </p>
+                            </div>
+                          )}
+
+                          {!accountResults[acc.id].code && !accountResults[acc.id].link && (
+                            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-300 text-xs">
+                              {accountResults[acc.id].message}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -379,7 +470,7 @@ export default function ClientLoginView() {
                     >
                       {requesting2fa === acc.id ? (
                         <>
-                          <RefreshCw size={12} className="animate-spin" /> Solicitando...
+                          <RefreshCw size={12} className="animate-spin" /> Consultando buzón seguro...
                         </>
                       ) : (
                         <>
