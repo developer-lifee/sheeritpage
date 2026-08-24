@@ -92,6 +92,27 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
     ? activePlan.isPersonalEmail
     : checkIsPersonalEmail();
 
+  const getFallbackImage = (platformName: string, originalImage: string) => {
+    const n = (platformName || '').toLowerCase();
+    if (n.includes('netflix')) return '/plataform/netflix.webp';
+    if (n.includes('disney')) return '/plataform/disney.webp';
+    if (n.includes('hbo') || n.includes('max')) return '/plataform/hbo.webp';
+    if (n.includes('prime') || n.includes('amazon')) return '/plataform/prime_video.png';
+    if (n.includes('spotify')) return '/plataform/spotify.png';
+    if (n.includes('youtube')) return '/plataform/youtube.webp';
+    if (n.includes('crunchyroll')) return '/plataform/crunchyroll.svg';
+    if (n.includes('paramount')) return '/plataform/paramount.webp';
+    if (n.includes('claude')) return '/plataform/claude.svg';
+    if (n.includes('chatgpt')) return '/plataform/chatgpt-icon-logo.webp';
+    return originalImage || '/faviconsheerit.png';
+  };
+
+  const [imgSrc, setImgSrc] = useState(() => getFallbackImage(name, image));
+
+  useEffect(() => {
+    setImgSrc(getFallbackImage(name, image));
+  }, [name, image]);
+
   return (
     <div 
       onMouseEnter={() => setIsHovered(true)}
@@ -117,13 +138,18 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
       <div className="relative h-32 bg-slate-900 flex-shrink-0 overflow-hidden">
         <div 
           className="absolute inset-0 bg-cover bg-center opacity-30 blur-sm scale-110" 
-          style={{ backgroundImage: image ? `url(${image})` : 'none' }}
+          style={{ backgroundImage: imgSrc ? `url(${imgSrc})` : 'none' }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/40 to-transparent" />
       </div>
 
       <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-10">
-        <img src={image} alt={name} className="w-16 h-16 object-cover rounded-full border-4 border-white dark:border-gray-800 shadow-md bg-white" />
+        <img 
+          src={imgSrc} 
+          alt={name} 
+          onError={() => setImgSrc(getFallbackImage(name, ''))}
+          className="w-16 h-16 object-cover rounded-full border-4 border-white dark:border-gray-800 shadow-md bg-white" 
+        />
       </div>
 
       <div className="p-4 pt-10 flex flex-col flex-grow justify-between">

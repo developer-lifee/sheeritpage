@@ -2,7 +2,7 @@
   {
     "id": 1,
     "name": "Netflix",
-    "image": "https://th.bing.com/th/id/R.64d5f8b96325d2be917f9ab402e92b99?rik=1BawFvPFPBGxrg&pid=ImgRaw&r=0",
+    "image": "/plataform/netflix.webp",
     "price": 13000,
     "characteristics": [
       "Cuenta estable y renovable",
