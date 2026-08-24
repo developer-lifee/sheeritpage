@@ -148,7 +148,7 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
           src={imgSrc} 
           alt={name} 
           onError={() => setImgSrc(getFallbackImage(name, ''))}
-          className="w-16 h-16 object-cover rounded-full border-4 border-white dark:border-gray-800 shadow-md bg-white" 
+          className="w-16 h-16 object-contain p-2 rounded-full border-4 border-white dark:border-gray-800 shadow-md bg-white" 
         />
       </div>
 
