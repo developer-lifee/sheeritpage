@@ -155,17 +155,16 @@ export function AccountingView() {
       const realJson = await realRes.json();
       setRealData(realJson);
 
-      // 2. Fetch prices from public catalog
-      const priceRes = await fetch(`${apiUrl}/api/public/platforms`);
+      // 2. Fetch prices from admin prices catalog and sort A-Z
+      const priceRes = await fetch(`${apiUrl}/api/admin/prices`);
       const priceData = await priceRes.json();
-      const mappedPrices = priceData.map((p: any) => ({
-        platform: p.name,
-        normal_price: p.price
-      }));
-      setPrices(mappedPrices);
+      const sortedPrices = Array.isArray(priceData)
+        ? priceData.sort((a: any, b: any) => String(a.platform || '').localeCompare(String(b.platform || '')))
+        : [];
+      setPrices(sortedPrices);
       
       const priceMap: Record<string, number> = {};
-      mappedPrices.forEach((p: PriceConfig) => {
+      sortedPrices.forEach((p: PriceConfig) => {
         priceMap[p.platform] = p.normal_price;
       });
       setEditingPrice(priceMap);
