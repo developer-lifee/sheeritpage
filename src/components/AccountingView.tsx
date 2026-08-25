@@ -861,11 +861,10 @@ export function AccountingView() {
             />
           </div>
           <div className="col-span-2">
-            <label className="block text-2xs text-gray-400 uppercase font-bold mb-1">Correo/Cuenta</label>
+            <label className="block text-2xs text-gray-400 uppercase font-bold mb-1">Correo/Cuenta (Opcional)</label>
             <input
-              type="email"
-              required
-              placeholder="cuenta@correo.com"
+              type="text"
+              placeholder="Opcional o cuenta@correo.com"
               value={newCost.email}
               onChange={(e) => setNewCost({ ...newCost, email: e.target.value })}
               className="w-full px-2 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white"
