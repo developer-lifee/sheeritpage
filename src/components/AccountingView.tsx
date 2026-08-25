@@ -739,7 +739,7 @@ export function AccountingView() {
         <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
           <h3 className="font-bold dark:text-white text-sm mb-4">Configurar Precios de Venta</h3>
           <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-            {prices.map((p, index) => (
+            {[...prices].sort((a, b) => String(a.platform || '').localeCompare(String(b.platform || ''))).map((p, index) => (
               <div key={index} className="flex items-center justify-between gap-4 p-2 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
                 <span className="font-bold text-xs uppercase dark:text-white">{p.platform}</span>
                 <div className="flex items-center gap-2">
