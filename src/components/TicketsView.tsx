@@ -1294,17 +1294,11 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
   const handleResolveClick = (t: Ticket) => {
     const sharedWithDetails = findSharedTicketsWithDetails(t);
-    if (sharedWithDetails.length > 0) {
-      setResolveDialog({
-        phone: t.phone,
-        nombre: t.nombre || 'Cliente WhatsApp',
-        sharedTickets: sharedWithDetails
-      });
-    } else {
-      if (window.confirm(`¿Estás seguro de resolver el ticket de ${t.nombre || t.phone}?`)) {
-        executeResolve(t.phone, false);
-      }
-    }
+    setResolveDialog({
+      phone: t.phone,
+      nombre: t.nombre || 'Cliente WhatsApp',
+      sharedTickets: sharedWithDetails
+    });
   };
 
   const executeResolve = async (phone: string, resolveAll: boolean) => {
@@ -3011,67 +3005,106 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
       {/* Custom Resolve Dialog Modal */}
       {resolveDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fadeIn">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border dark:border-gray-750">
-            <h3 className="text-lg font-bold text-gray-950 dark:text-white mb-2 flex items-center gap-1.5">
-              ⚠️ Resolver Ticket en Lote
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-              El cliente <strong>{resolveDialog.nombre}</strong> comparte cuenta con los siguientes clientes que también tienen tickets de soporte abiertos:
-            </p>
-            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 mb-4 max-h-60 overflow-y-auto border dark:border-gray-750 flex flex-col gap-3">
-              {resolveDialog.sharedTickets.map(({ ticket: s, matchingAccounts }) => (
-                <div key={s.userId} className="text-xs pb-3 border-b last:border-0 last:pb-0 border-gray-150 dark:border-gray-800 flex flex-col gap-1 dark:text-gray-300">
-                  <div className="flex justify-between items-center font-bold">
-                    <span>👤 {s.nombre || 'Cliente WhatsApp'}</span>
-                    <span className="font-mono text-gray-400">+{s.phone}</span>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    <span className="text-[10px] text-gray-400 uppercase font-bold mr-1">Cuentas compartidas:</span>
-                    {matchingAccounts.map((acc, idx) => (
-                      <span key={idx} className="bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 text-[10px] px-1.5 py-0.5 rounded border border-red-100 dark:border-red-900/30">
-                        📺 {acc.streaming} ({acc.correo})
-                      </span>
-                    ))}
-                  </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-fadeIn backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border dark:border-gray-700">
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${resolveDialog.sharedTickets.length > 0 ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400' : 'bg-green-100 dark:bg-green-950/60 text-green-600 dark:text-green-400'}`}>
+                <CheckCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                  {resolveDialog.sharedTickets.length > 0 ? '⚠️ Resolver Ticket en Lote' : '¿Resolver Ticket de Soporte?'}
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {resolveDialog.sharedTickets.length > 0
+                    ? 'Se detectaron otros clientes abiertos con las mismas cuentas.'
+                    : 'El bot se reactivará para atender al cliente automáticamente.'}
+                </p>
+              </div>
+            </div>
 
-                  {s.summary && (
-                    <div className="mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded text-[11px] text-gray-600 dark:text-gray-400 italic">
-                      <strong>Motivo:</strong> {s.summary}
+            {resolveDialog.sharedTickets.length > 0 ? (
+              <>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                  El cliente <strong>{resolveDialog.nombre}</strong> comparte cuenta con los siguientes clientes que también tienen tickets de soporte abiertos:
+                </p>
+                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 mb-4 max-h-60 overflow-y-auto border dark:border-gray-750 flex flex-col gap-3">
+                  {resolveDialog.sharedTickets.map(({ ticket: s, matchingAccounts }) => (
+                    <div key={s.userId} className="text-xs pb-3 border-b last:border-0 last:pb-0 border-gray-150 dark:border-gray-800 flex flex-col gap-1 dark:text-gray-300">
+                      <div className="flex justify-between items-center font-bold">
+                        <span>👤 {s.nombre || 'Cliente WhatsApp'}</span>
+                        <span className="font-mono text-gray-400">+{s.phone}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        <span className="text-[10px] text-gray-400 uppercase font-bold mr-1">Cuentas compartidas:</span>
+                        {matchingAccounts.map((acc, idx) => (
+                          <span key={idx} className="bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 text-[10px] px-1.5 py-0.5 rounded border border-red-100 dark:border-red-900/30">
+                            📺 {acc.streaming} ({acc.correo})
+                          </span>
+                        ))}
+                      </div>
+                      {s.summary && (
+                        <div className="mt-1 bg-gray-100 dark:bg-gray-800 p-2 rounded text-[11px] text-gray-600 dark:text-gray-400 italic">
+                          <strong>Motivo:</strong> {s.summary}
+                        </div>
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
-              ))}
-            </div>
-            
-            <p className="text-xs text-amber-600 dark:text-amber-400 mb-6 font-medium bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded-lg border border-amber-100 dark:border-amber-900/20">
-              💡 <strong>Nota:</strong> A veces la falla es individual (solo le falla a una persona la cuenta). Compara los motivos/resúmenes de arriba antes de decidir si los resuelves en lote o de forma individual.
-            </p>
-            
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => executeResolve(resolveDialog.phone, false)}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
-              >
-                Resolver SOLO el de {resolveDialog.nombre}
-              </button>
-              <button
-                type="button"
-                onClick={() => executeResolve(resolveDialog.phone, true)}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
-              >
-                Resolver TODOS en Lote
-              </button>
-              <button
-                type="button"
-                onClick={() => setResolveDialog(null)}
-                className="w-full bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-650 hover:bg-gray-200 text-gray-750 dark:text-gray-200 font-bold py-2.5 rounded-xl text-sm transition-all"
-              >
-                Cancelar
-              </button>
-            </div>
+                
+                <p className="text-xs text-amber-600 dark:text-amber-400 mb-6 font-medium bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded-lg border border-amber-100 dark:border-amber-900/20">
+                  💡 <strong>Nota:</strong> A veces la falla es individual. Compara los resúmenes antes de decidir resolver en lote.
+                </p>
+                
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => executeResolve(resolveDialog.phone, false)}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
+                  >
+                    Resolver SOLO el de {resolveDialog.nombre}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => executeResolve(resolveDialog.phone, true)}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
+                  >
+                    Resolver TODOS en Lote
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setResolveDialog(null)}
+                    className="w-full bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-650 hover:bg-gray-200 text-gray-750 dark:text-gray-200 font-bold py-2.5 rounded-xl text-sm transition-all"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 mb-6 border dark:border-gray-750">
+                  <p className="text-sm text-gray-700 dark:text-gray-200 font-medium">
+                    ¿Confirmas que deseas cerrar y dar por resuelto el ticket de <strong>{resolveDialog.nombre}</strong> (+{resolveDialog.phone})?
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setResolveDialog(null)}
+                    className="flex-1 bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-650 hover:bg-gray-200 text-gray-750 dark:text-gray-200 font-bold py-2.5 rounded-xl text-sm transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => executeResolve(resolveDialog.phone, false)}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all flex items-center justify-center gap-1.5 shadow-md shadow-green-600/20"
+                  >
+                    <CheckCircle className="w-4 h-4" /> Resolver Ticket
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
