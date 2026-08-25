@@ -1527,8 +1527,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     return nameMatches || phoneMatches || summaryMatches || accountMatches;
   });
 
-  // Filter columns
-  const activeTickets = filteredTickets.filter(t => t.state !== 'resolved' && !t.isProbablyFinished);
+  // Filter columns (Mantener todos los tickets activos visibles hasta que un asesor los resuelva manualmente)
+  const activeTickets = filteredTickets.filter(t => t.state !== 'resolved');
   const probablyFinishedTickets = filteredTickets.filter(t => t.isProbablyFinished && t.state !== 'resolved');
   const archivedTickets = filteredTickets.filter(t => t.state === 'resolved');
 
