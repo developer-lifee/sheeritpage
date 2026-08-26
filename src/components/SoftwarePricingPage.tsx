@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Shield, Sparkles, Server, Clock, Code, Award, CheckCircle2, MessageSquare, ArrowRight, Database, Settings, Zap, ArrowLeftRight, Check, ChevronLeft, ChevronRight, Laptop, Globe } from 'lucide-react';
+import { Shield, Sparkles, Server, Clock, Code, Award, CheckCircle2, MessageSquare, ArrowRight, Database, Settings, Zap, ArrowLeftRight, Check, ChevronLeft, ChevronRight, Laptop, Globe, Smartphone, ExternalLink } from 'lucide-react';
 
 export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) => void }) {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const handleContactWhatsApp = (planType: string) => {
-    const message = `Hola Sheerit! Estoy interesado en sus servicios de desarrollo de software, páginas web y automatización (Opción: ${planType}). Me gustaría agendar una asesoría para mi proyecto.`;
+    const message = `Hola Sheerit! Estoy interesado en sus servicios de desarrollo de software, apps móviles iOS/Android y automatización (Opción: ${planType}). Me gustaría agendar una asesoría para mi proyecto.`;
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/573107946794?text=${encodedMessage}`, '_blank');
   };
@@ -74,19 +74,19 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-primary/10 dark:bg-brand-primary/25 border border-brand-primary/20 mb-6 animate-pulse">
             <Sparkles className="w-4 h-4 text-brand-primary dark:text-brand-light" />
             <span className="text-xs font-bold text-brand-primary dark:text-brand-light uppercase tracking-wider">
-              Soluciones Tecnológicas & Automatización
+              Desarrollo Web, Móvil (iOS & Android) & Automatización
             </span>
           </div>
           
           <h1 className="text-4xl md:text-6xl font-black tracking-tight text-gray-950 dark:text-white mb-6">
-            Digitaliza y Automatiza <br />
-            <span className="bg-gradient-to-r from-brand-primary to-emerald-500 bg-clip-text text-transparent">
-              los Procesos de tu Empresa
+            Desarrollo de Software, Apps Móviles <br />
+            <span className="bg-gradient-to-r from-brand-primary via-indigo-500 to-emerald-500 bg-clip-text text-transparent">
+              & Automatizaciones a la Medida
             </span>
           </h1>
           
           <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-10 leading-relaxed">
-            Creamos software a la medida, integraciones de API, bots de mensajería y automatizaciones que eliminan las tareas manuales repetitivas en tu negocio.
+            Diseñamos y programamos aplicaciones móviles nativas para <strong>iOS (App Store)</strong> y <strong>Android (Google Play)</strong>, plataformas web de alto rendimiento y bots de automatización para empresas.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4">
@@ -104,16 +104,16 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
               <span>🎨 Ver Portafolio de Trabajos</span> <ArrowRight className="w-4 h-4" />
             </button>
             <a 
+              href="#mobile-apps"
+              className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-lg transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
+            >
+              <Smartphone className="w-4 h-4" /> Apps iOS & Android
+            </a>
+            <a 
               href="#pricing-comparison"
               className="px-8 py-4 bg-brand-primary hover:bg-brand-dark text-white font-bold rounded-2xl shadow-lg hover:shadow-brand-primary/20 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
             >
               Ver Planes de Inversión
-            </a>
-            <a 
-              href="#cases"
-              className="px-8 py-4 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-250 hover:bg-gray-100 dark:hover:bg-gray-755 border border-gray-250 dark:border-gray-700 font-bold rounded-2xl transition-all text-sm md:text-base"
-            >
-              Ver Casos de Uso
             </a>
           </div>
         </div>
@@ -134,35 +134,192 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-md border border-gray-150 dark:border-gray-700">
-            <div className="w-12 h-12 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary mb-6">
-              <Code className="w-6 h-6" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md border border-gray-150 dark:border-gray-700 flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary mb-5">
+                <Code className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold dark:text-white mb-2">Software & Web Apps</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                Plataformas web intuitivas, paneles de control SaaS y herramientas a la medida con arquitecturas seguras y escalables.
+              </p>
             </div>
-            <h3 className="text-xl font-bold dark:text-white mb-3">Software & Web Apps</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-              Plataformas web intuitivas y herramientas internas seguras hechas para las necesidades específicas de tu equipo y clientes.
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md border border-gray-150 dark:border-gray-700 flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 mb-5">
+                <Smartphone className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold dark:text-white mb-2">Apps Móviles (iOS & Android)</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                Desarrollo nativo e híbrido (Swift, Kotlin, React Native) con publicación oficial en <strong>App Store</strong> y <strong>Google Play</strong>.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md border border-gray-150 dark:border-gray-700 flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-5">
+                <Zap className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold dark:text-white mb-2">Automatización (RPA & Bots)</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                Conectamos tus sistemas (Excel, CRMs, WhatsApp, ERPs) con bots de IA para eliminar tareas repetitivas 24/7.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md border border-gray-150 dark:border-gray-700 flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500 mb-5">
+                <ArrowLeftRight className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold dark:text-white mb-2">Integración de Datos & APIs</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                Consolidación de bases de datos, generación de reportes y pasarelas de pago automáticas (Bre-B, PSE, Bold).
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Sección Destacada: Aplicaciones Móviles Publicadas */}
+      <section id="mobile-apps" className="py-16 bg-gradient-to-br from-indigo-900/10 via-purple-900/5 to-brand-primary/10 border-y border-indigo-200/40 dark:border-indigo-900/30">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <span className="px-3.5 py-1 text-xs font-bold text-indigo-600 bg-indigo-100 dark:text-indigo-300 dark:bg-indigo-900/40 rounded-full uppercase tracking-wider">
+              Ecosistema Móvil Oficial
+            </span>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-gray-950 dark:text-white mt-3">
+              Nuestras Aplicaciones Móviles (iOS & Android)
+            </h2>
+            <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 mt-2 max-w-2xl mx-auto">
+              Contamos con aplicaciones desarrolladas y publicadas para plataformas Apple iOS y Google Android con cumplimiento estricto de privacidad y rendimiento nativo.
             </p>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-md border border-gray-150 dark:border-gray-700">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-6">
-              <Zap className="w-6 h-6" />
-            </div>
-            <h3 className="text-xl font-bold dark:text-white mb-3">Automatización (RPA & Bots)</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-              Conectamos tus sistemas existentes (Excel, CRMs, WhatsApp, ERPs) para automatizar flujos de trabajo sin intervención humana.
-            </p>
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* PueblApp */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border border-indigo-100 dark:border-indigo-900/50 flex flex-col justify-between hover:shadow-2xl transition-all">
+              <div>
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white text-2xl font-black shadow-md">
+                      🏘️
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-950 dark:text-white">PueblApp</h3>
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">Turismo & Comercio Local • iOS & Android</p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 text-[11px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 rounded-full">
+                    App Store / Play Store
+                  </span>
+                </div>
 
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-md border border-gray-150 dark:border-gray-700">
-            <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500 mb-6">
-              <ArrowLeftRight className="w-6 h-6" />
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
+                  Plataforma móvil integral para el descubrimiento de destinos turísticos, municipios colombianos, gastronomía, eventos culturales y directorio de negocios locales con geolocalización en tiempo real.
+                </p>
+
+                <div className="grid grid-cols-2 gap-3 mb-6 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
+                  <div className="text-xs">
+                    <span className="text-gray-400 block">Tecnología:</span>
+                    <strong className="text-gray-800 dark:text-gray-200">iOS (Swift) / Android (Kotlin)</strong>
+                  </div>
+                  <div className="text-xs">
+                    <span className="text-gray-400 block">Funciones:</span>
+                    <strong className="text-gray-800 dark:text-gray-200">GPS, Mapas, Notificaciones</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <a
+                  href="/support/pueblapp"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (onNavigate) onNavigate('pueblapp-support');
+                    else { window.history.pushState({}, '', '/support/pueblapp'); window.dispatchEvent(new Event('popstate')); }
+                  }}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  Soporte PueblApp <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+                <a
+                  href="/support/pueblapp/privacy"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (onNavigate) onNavigate('pueblapp-privacy');
+                    else { window.history.pushState({}, '', '/support/pueblapp/privacy'); window.dispatchEvent(new Event('popstate')); }
+                  }}
+                  className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  Privacidad & Términos <Shield className="w-3.5 h-3.5" />
+                </a>
+              </div>
             </div>
-            <h3 className="text-xl font-bold dark:text-white mb-3">Integración de Datos</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-              Consolidación de bases de datos, generación de reportes automatizados y archivos planos listos para bancos y programas contables.
-            </p>
+
+            {/* RayTracing 3D Viewer */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border border-purple-100 dark:border-purple-900/50 flex flex-col justify-between hover:shadow-2xl transition-all">
+              <div>
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-700 flex items-center justify-center text-white text-2xl font-black shadow-md">
+                      ✨
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-950 dark:text-white">RayTracing 3D</h3>
+                      <p className="text-xs text-purple-600 dark:text-purple-400 font-semibold">Renderizado & Óptica 3D • iOS / iPadOS</p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 text-[11px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded-full">
+                    App Store iOS
+                  </span>
+                </div>
+
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
+                  Aplicación interactiva de simulación de trazado de rayos (Ray Tracing) y visualización física de materiales, sombras suaves y reflexión óptica en tiempo real para dispositivos Apple con tecnología Metal.
+                </p>
+
+                <div className="grid grid-cols-2 gap-3 mb-6 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
+                  <div className="text-xs">
+                    <span className="text-gray-400 block">Tecnología:</span>
+                    <strong className="text-gray-800 dark:text-gray-200">SwiftUI / Metal Shader</strong>
+                  </div>
+                  <div className="text-xs">
+                    <span className="text-gray-400 block">Compatibilidad:</span>
+                    <strong className="text-gray-800 dark:text-gray-200">iPhone, iPad, Mac</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <a
+                  href="/support/raytracing"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (onNavigate) onNavigate('raytracing-support');
+                    else { window.history.pushState({}, '', '/support/raytracing'); window.dispatchEvent(new Event('popstate')); }
+                  }}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  Soporte RayTracing <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+                <a
+                  href="/support/raytracing/privacy"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (onNavigate) onNavigate('raytracing-privacy');
+                    else { window.history.pushState({}, '', '/support/raytracing/privacy'); window.dispatchEvent(new Event('popstate')); }
+                  }}
+                  className="px-4 py-2 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  Privacidad & Términos <Shield className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </section>
