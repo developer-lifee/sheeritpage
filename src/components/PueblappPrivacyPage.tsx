@@ -34,7 +34,7 @@ export const PueblappPrivacyPage: React.FC = () => {
             </a>
             <div>
               <h1 className="text-xl font-extrabold tracking-tight text-white">
-                YaConecta <span className="text-emerald-400 font-medium text-sm">(PuebloApp)</span>
+                PueblApp
               </h1>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
                 Política de Privacidad
@@ -52,7 +52,7 @@ export const PueblappPrivacyPage: React.FC = () => {
 
             <div>
               <p className="text-gray-300 text-sm md:text-base leading-relaxed">
-                Esta Política de Privacidad describe cómo <strong className="text-white">YaConecta (PuebloApp)</strong> recopila, utiliza y protege la información en la aplicación móvil para iOS y sus servicios web asociados. Respetamos plenamente la privacidad de nuestros usuarios, comerciantes y comunidades locales.
+                Esta Política de Privacidad describe cómo <strong className="text-white">PueblApp</strong> recopila, utiliza y protege la información en la aplicación móvil para iOS y sus servicios web asociados. Respetamos plenamente la privacidad de nuestros usuarios, comerciantes y comunidades locales.
               </p>
             </div>
 
@@ -131,14 +131,14 @@ export const PueblappPrivacyPage: React.FC = () => {
               </div>
               <div className="flex items-center gap-3">
                 <a
-                  href={`mailto:${SUPPORT_EMAIL}?subject=Privacidad%20YaConecta`}
+                  href={`mailto:${SUPPORT_EMAIL}?subject=Privacidad%20PueblApp`}
                   className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-all flex items-center gap-2"
                 >
                   <Mail className="w-4 h-4 text-emerald-400" />
                   <span>Email</span>
                 </a>
                 <a
-                  href={getWaLink('Consulta sobre Privacidad de YaConecta (PuebloApp).')}
+                  href={getWaLink('Consulta sobre Privacidad de PueblApp.')}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs transition-all shadow-md flex items-center gap-2"
@@ -155,7 +155,7 @@ export const PueblappPrivacyPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="relative z-10 py-8 px-6 border-t border-white/5 text-center text-xs text-gray-500">
-        <p>© 2026 YaConecta (PuebloApp). Todos los derechos reservados. 🇨🇴</p>
+        <p>© 2026 PueblApp. Todos los derechos reservados. 🇨🇴</p>
       </footer>
     </div>
   );

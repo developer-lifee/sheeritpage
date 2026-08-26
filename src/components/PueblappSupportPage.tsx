@@ -27,12 +27,12 @@ export const PueblappSupportPage: React.FC = () => {
 
   const faqItems = [
     {
-      q: '¿Cómo registro mi comercio o negocio en YaConecta / PuebloApp?',
+      q: '¿Cómo registro mi comercio o negocio en PueblApp?',
       a: 'Inicia sesión con tu Apple ID, Google o correo. Dirígete a la pestaña "Mi Negocio", completa la información comercial (logo, horario, tarifa de envío) y agrega tus productos manualmente o con el cargador masivo en Excel/CSV.'
     },
     {
-      q: '¿YaConecta cobra alguna comisión por venta, carrera o envío?',
-      a: 'No. YaConecta opera bajo un modelo libre de intermediarios y comisiones (GobiernoFree). El 100% de la venta es del comerciante o trabajador local, acordando el pago directamente en efectivo, Nequi o Daviplata.'
+      q: '¿PueblApp cobra alguna comisión por venta, carrera o envío?',
+      a: 'No. PueblApp opera bajo un modelo libre de intermediarios y comisiones (GobiernoFree). El 100% de la venta es del comerciante o trabajador local, acordando el pago directamente en efectivo, Nequi o Daviplata.'
     },
     {
       q: '¿Cómo funciona la verificación de noticias comunitarias?',
@@ -74,7 +74,7 @@ export const PueblappSupportPage: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-extrabold tracking-tight text-white">
-                  YaConecta <span className="text-emerald-400 font-medium text-sm">(PuebloApp)</span>
+                  PueblApp
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                   iOS 17+
@@ -95,7 +95,7 @@ export const PueblappSupportPage: React.FC = () => {
               <span>Privacidad</span>
             </a>
             <a
-              href={getWaLink('Hola, necesito asistencia técnica con YaConecta (PuebloApp).')}
+              href={getWaLink('Hola, necesito asistencia técnica con PueblApp.')}
               target="_blank"
               rel="noopener noreferrer"
               className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2"
@@ -203,7 +203,7 @@ export const PueblappSupportPage: React.FC = () => {
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="text-center space-y-2">
             <h3 className="text-2xl font-extrabold text-white">Preguntas Frecuentes (FAQ)</h3>
-            <p className="text-xs text-gray-400">Todo lo que necesitas saber sobre el uso de YaConecta</p>
+            <p className="text-xs text-gray-400">Todo lo que necesitas saber sobre el uso de PueblApp</p>
           </div>
 
           <div className="space-y-3">
@@ -243,14 +243,14 @@ export const PueblappSupportPage: React.FC = () => {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
             <a
-              href={`mailto:${SUPPORT_EMAIL}?subject=Soporte%20YaConecta%20PuebloApp`}
+              href={`mailto:${SUPPORT_EMAIL}?subject=Soporte%20PueblApp`}
               className="px-5 py-2.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/15 text-xs font-bold transition-all flex items-center gap-2"
             >
               <Mail className="w-4 h-4 text-emerald-400" />
               <span>{SUPPORT_EMAIL}</span>
             </a>
             <a
-              href={getWaLink('Hola, necesito asistencia con YaConecta (PuebloApp).')}
+              href={getWaLink('Hola, necesito asistencia con PueblApp.')}
               target="_blank"
               rel="noopener noreferrer"
               className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2"
@@ -264,7 +264,7 @@ export const PueblappSupportPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="relative z-10 py-8 px-6 border-t border-white/5 text-center text-xs text-gray-500 space-y-2">
-        <p>© 2026 YaConecta (PuebloApp). Todos los derechos reservados. Construido para la Colombia Real. 🇨🇴</p>
+        <p>© 2026 PueblApp. Todos los derechos reservados. Construido para la Colombia Real. 🇨🇴</p>
         <div className="flex items-center justify-center gap-4 text-[11px]">
           <a href="/support/pueblapp/privacy" className="hover:text-emerald-400 transition-colors">
             Política de Privacidad
