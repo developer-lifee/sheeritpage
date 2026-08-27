@@ -1,8 +1,7 @@
-// sheeritpage/src/components/ComboMenu.tsx (CORREGIDO)
-
 import React, { useState, useEffect } from 'react';
 import { useComboCart } from '../hooks/useComboCart';
 import { useWhatsAppContact } from '../hooks/useWhatsAppContact';
+import { useCurrency } from '../hooks/useCurrency';
 import { X, ShoppingCart } from 'lucide-react';
 import { CustomerFormModal } from './CustomerFormModal';
 import { calculatePSEFee } from '../utils/fees';
@@ -63,6 +62,8 @@ export function ComboMenu() {
     platforms
   } = useComboCart();
 
+  const { formatPrice } = useCurrency();
+
   const [duration, setDuration] = useState<'1' | '3' | '6' | '12'>('1');
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
@@ -80,6 +81,15 @@ export function ComboMenu() {
     const name = planName.toLowerCase();
     return name.includes('anual') || name.includes('trimestral') || name.includes('semestral') || name.includes('12 meses') || name.includes('3 meses');
   };
+
+  // List of plan names for WhatsApp
+  const getSelectedPlanNames = (): string[] =>
+    getSelectedEntries().flatMap(([planId, qty]) => {
+      const platform = platforms.find(p => p.plans.some(plan => plan.id === planId));
+      const plan = platform?.plans.find(p => p.id === planId);
+      if (!plan || qty <= 0) return [];
+      return Array.from({ length: qty }, () => `${platform?.name} - ${plan.name}`);
+    });
 
   // Calcula el total del combo
   const calculateTotal = (): number => {

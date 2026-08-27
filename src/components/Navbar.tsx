@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Menu, User, HelpCircle, Home, X, ShoppingCart, Code, Layers } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
+import { CurrencyToggle } from './CurrencyToggle';
 import { useComboCart } from '../hooks/useComboCart';
 
 // Removed ComboMenu import since we'll move it to Hero
@@ -174,7 +175,8 @@ export function Navbar({ isDark, toggleDark, onNavigate, currentView, agentName,
             </div>
             
             {/* Right column - theme toggle & cart */}
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex items-center justify-end gap-1.5 sm:gap-2">
+              <CurrencyToggle />
               <button
                 onClick={() => setIsComboOpen(true)}
                 className="relative p-2 rounded-lg hover:bg-white/10 transition-colors flex items-center justify-center"
@@ -192,7 +194,8 @@ export function Navbar({ isDark, toggleDark, onNavigate, currentView, agentName,
           </div>
           
           {/* Desktop Menu Items */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-3">
+            <CurrencyToggle />
             <ThemeToggle isDark={isDark} toggle={toggleDark} />
             <button
               onClick={() => setIsComboOpen(true)}

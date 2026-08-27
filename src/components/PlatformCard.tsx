@@ -1,6 +1,7 @@
 // sheeritpage/src/components/PlatformCard.tsx
 import { useState, useEffect } from 'react';
 import { useComboCart } from '../hooks/useComboCart';
+import { useCurrency } from '../hooks/useCurrency';
 
 interface Plan { id: number; name: string; price: number; characteristics: string[]; isPersonalEmail?: boolean; }
 interface PlatformCardProps {
@@ -15,12 +16,9 @@ interface PlatformCardProps {
 
 export function PlatformCard({ id, name, image, price, characteristics, plans }: PlatformCardProps) {
   const { addToCombo, setIsComboOpen } = useComboCart();
+  const { formatPrice } = useCurrency();
   const [activePlanIndex, setActivePlanIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
-
-  const formatPrice = (value: number) => new Intl.NumberFormat('es-CO', {
-    style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0
-  }).format(value);
 
   const safePlans: Plan[] = Array.isArray(plans) ? plans : [];
   const hasPlans = safePlans.length > 0;
