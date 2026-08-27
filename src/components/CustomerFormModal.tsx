@@ -179,7 +179,7 @@ export function CustomerFormModal({ platformName, platformPrice, onClose }: Cust
             <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded">
               <p className="text-sm text-gray-600 dark:text-gray-300">Producto: <span className="font-bold">{platformName}</span></p>
               <p className="text-sm text-gray-600 dark:text-gray-300">Precio base: <span className="font-bold">{formatPrice(platformPrice)}</span></p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">Tarifa PSE: <span className="font-bold">{formatPrice(pseFee)}</span></p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Tarifa Pasarela / Pago Electrónico: <span className="font-bold">{formatPrice(pseFee)}</span></p>
               <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-2">Total a pagar: <span className="font-bold">{formatPrice(totalPrice)}</span></p>
             </div>
 
@@ -187,12 +187,12 @@ export function CustomerFormModal({ platformName, platformPrice, onClose }: Cust
                 <input type="text" name="firstName" placeholder="Nombre" value={customer.firstName} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
                 <input type="text" name="lastName" placeholder="Apellido" value={customer.lastName} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
                 <input type="email" name="email" placeholder="Email" value={customer.email} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
-                <input type="tel" name="whatsapp" placeholder="WhatsApp" value={customer.whatsapp} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
+                <input type="tel" name="whatsapp" placeholder="WhatsApp (Ej: 3001234567 o +52...)" value={customer.whatsapp} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
                 <button 
                     type="submit" 
                     className="w-full py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark disabled:opacity-50" 
                     disabled={isLoading || isScriptLoading}>
-                    {isLoading ? 'Preparando pago...' : isScriptLoading ? 'Cargando...' : 'Continuar con PSE / Nequi'}
+                    {isLoading ? 'Preparando pago...' : isScriptLoading ? 'Cargando pasarela...' : 'Pagar con Pago Electrónico (Tarjetas / PSE / Nequi)'}
                 </button>
             </form>
 

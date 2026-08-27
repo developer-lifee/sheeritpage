@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield, Phone, Key, Tv, Lock, Eye, EyeOff, RefreshCw, CheckCircle, AlertCircle, Copy, LogOut, ExternalLink, Check } from 'lucide-react';
 
 interface ClientAccount {
@@ -34,6 +34,36 @@ export default function ClientLoginView() {
   const API_BASE = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
     ? 'http://localhost:3000'
     : window.location.origin;
+
+  useEffect(() => {
+    // Auto-login si viene de pasarela de pago o sesión guardada
+    const urlParams = new URLSearchParams(window.location.search);
+    const telParam = urlParams.get('tel') || urlParams.get('phone');
+    const storedPhone = localStorage.getItem('client_session_phone') || localStorage.getItem('sheerit_client_phone');
+    const targetPhone = telParam || storedPhone;
+
+    if (targetPhone) {
+      const cleanTarget = targetPhone.replace(/\D/g, '');
+      if (cleanTarget.length >= 7) {
+        setPhone(cleanTarget);
+        setLoading(true);
+        fetch(`${API_BASE}/api/client/auto-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: cleanTarget })
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && Array.isArray(data.accounts)) {
+              setAccounts(data.accounts);
+              setStep(3);
+            }
+          })
+          .catch(err => console.warn("Auto-session check:", err))
+          .finally(() => setLoading(false));
+      }
+    }
+  }, []);
 
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();

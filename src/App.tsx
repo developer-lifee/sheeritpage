@@ -369,8 +369,10 @@ function AppContent() {
             console.log(`[Redirection Validation] ✅ Orden ${redirectedOrderId} aprobada y procesada al instante.`);
             if (data.sale && data.sale.whatsapp) {
               const tel = data.sale.whatsapp.replace(/\D/g, '');
+              localStorage.setItem('client_session_phone', tel);
+              localStorage.setItem('sheerit_client_phone', tel);
               window.history.replaceState(null, '', `/?tel=${tel}`);
-              setCurrentView('verificar');
+              setCurrentView('servicios');
             }
           }
         })
