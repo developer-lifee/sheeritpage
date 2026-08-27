@@ -135,6 +135,8 @@ const logAuditAction = async (action: string, details: any) => {
 
 export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName, onLogout }) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [allChats, setAllChats] = useState<Ticket[]>([]);
+  const [loadingAllChats, setLoadingAllChats] = useState(false);
   const [chatFilter, setChatFilter] = useState<'my' | 'all_tickets' | 'all_chats' | 'heavy'>('all_tickets');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -338,36 +340,50 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
   const fetchTickets = (isSilent = false, currentFilter = chatFilter) => {
     if (!agentEmail) return;
-    const shouldShowLoading = !isSilent && tickets.length === 0;
-    if (shouldShowLoading) setLoading(true);
-    setError('');
 
     if (isDemoMode()) {
       setTickets(DEMO_TICKETS as any);
+      setAllChats(DEMO_TICKETS as any);
       setLoading(false);
+      setLoadingAllChats(false);
       return;
     }
 
     const apiUrl = getApiUrl();
-    const queryParam = currentFilter === 'all_chats' ? '?allChats=true' : '';
-    fetch(`${apiUrl}/api/admin/tickets${queryParam}`)
-      .then((res) => {
-        if (!res.ok) throw new Error('Error al obtener los tickets');
-        return res.json();
-      })
-      .then((data) => {
-        setTickets(Array.isArray(data) && data.length > 0 ? data : (isDemoMode() ? (DEMO_TICKETS as any) : []));
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('Error fetching tickets:', err);
-        if (isDemoMode()) {
-          setTickets(DEMO_TICKETS as any);
-        } else {
+    const isAllChats = currentFilter === 'all_chats';
+
+    if (isAllChats) {
+      if (!isSilent && allChats.length === 0) setLoadingAllChats(true);
+      fetch(`${apiUrl}/api/admin/tickets?allChats=true`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data)) setAllChats(data);
+          setLoadingAllChats(false);
+        })
+        .catch((err) => {
+          console.error('Error fetching all chats:', err);
+          setLoadingAllChats(false);
+        });
+    } else {
+      const shouldShowLoading = !isSilent && tickets.length === 0;
+      if (shouldShowLoading) setLoading(true);
+      setError('');
+
+      fetch(`${apiUrl}/api/admin/tickets`)
+        .then((res) => {
+          if (!res.ok) throw new Error('Error al obtener los tickets');
+          return res.json();
+        })
+        .then((data) => {
+          setTickets(Array.isArray(data) ? data : []);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error('Error fetching tickets:', err);
           setError('No se pudo conectar con el bot. Asegúrate de que el backend esté encendido.');
-        }
-        setLoading(false);
-      });
+          setLoading(false);
+        });
+    }
   };
 
   const fetchAvailabilityOverrides = async () => {
@@ -1521,6 +1537,19 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     return nameMatches || phoneMatches || summaryMatches || accountMatches;
   });
 
+  const filteredAllChats = allChats.filter(t => {
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return true;
+    const nameMatches = String(t.nombre || '').toLowerCase().includes(term);
+    const phoneMatches = String(t.phone || '').includes(term);
+    const summaryMatches = String(t.summary || '').toLowerCase().includes(term);
+    const accountMatches = t.accounts?.some(acc =>
+      String(acc.correo || '').toLowerCase().includes(term) ||
+      String(acc.streaming || '').toLowerCase().includes(term)
+    );
+    return nameMatches || phoneMatches || summaryMatches || accountMatches;
+  });
+
   // Filter columns (Mantener todos los tickets activos visibles hasta que un asesor los resuelva manualmente)
   const activeTickets = filteredTickets.filter(t => t.state !== 'resolved');
   const probablyFinishedTickets = filteredTickets.filter(t => t.isProbablyFinished && t.state !== 'resolved');
@@ -2092,7 +2121,12 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
               {chatFilter === 'all_chats' && (
                 <div className="space-y-2">
-                  {filteredTickets.length === 0 ? (
+                  {loadingAllChats && allChats.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 space-y-3">
+                      <div className="w-6 h-6 border-2 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
+                      <p className="text-xs text-gray-400">Cargando todos los chats...</p>
+                    </div>
+                  ) : filteredAllChats.length === 0 ? (
                     <div className="text-center py-6 px-4">
                       <p className="text-xs text-gray-450 italic mb-3">No se encontraron chats.</p>
                       {(() => {
@@ -2116,11 +2150,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                                    summary: 'Visualización directa',
                                    accounts: []
                                  };
-                                 // Agregar al estado local temporalmente para poder listarlo en "Todos los chats"
-                                 setTickets(prev => {
-                                   const filtered = prev.filter(t => t.userId !== tempChat.userId);
-                                   return [tempChat, ...filtered];
-                                 });
+                                 setAllChats(prev => [tempChat, ...prev.filter(t => t.userId !== tempChat.userId)]);
                                  setActiveChatTicket(tempChat);
                                  setTimeout(() => fetchChatMessages(true), 150);
                                }}
@@ -2136,7 +2166,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                       })()}
                     </div>
                   ) : (
-                    filteredTickets.map(t => renderCompactTicketItem(t, 'chat'))
+                    filteredAllChats.map(t => renderCompactTicketItem(t, 'chat'))
                   )}
                 </div>
               )}
