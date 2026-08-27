@@ -225,7 +225,7 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
         {/* Bottom Section: PSE Fee + Dots + Button */}
         <div>
           <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-2 text-center">
-            <p>Pagando por PSE aprox: <strong>{formatPrice(totalWithPSE)}</strong></p>
+            <p>Pago electrónico aprox: <strong>{formatPrice(totalWithPSE)}</strong></p>
             <p className="opacity-70 text-[9.5px]">Incluye comisión estimada</p>
           </div>
 

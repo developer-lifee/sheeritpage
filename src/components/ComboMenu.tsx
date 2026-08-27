@@ -402,7 +402,7 @@ export function ComboMenu() {
                       alt="PSE" 
                       className="h-5 w-auto"
                     />
-                    Pagar con PSE (+{formatPrice(calculatePSEFee(calculateTotal()))})
+                    Pagar con Pago Electrónico (Tarjetas / PSE / Nequi)
                   </button>
                   <button
                     type="button"
