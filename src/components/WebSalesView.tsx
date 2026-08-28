@@ -24,9 +24,9 @@ export const WebSalesView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSubTab, setActiveSubTab] = useState<'approved' | 'pending'>('approved');
 
-  const fetchSales = async () => {
-    setLoading(true);
-    setError('');
+  const fetchSales = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
+    if (!isSilent) setError('');
     if (isDemoMode()) {
       const demoList = DEMO_SALES.map(s => ({
         orderId: s.id,
@@ -68,13 +68,48 @@ export const WebSalesView: React.FC = () => {
       console.error('Error fetching web sales:', err);
       setError('No se pudo conectar al servidor para listar las ventas de la página.');
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+
   useEffect(() => {
     fetchSales();
+    const interval = setInterval(() => {
+      fetchSales(true);
+    }, 8000);
+    return () => clearInterval(interval);
   }, []);
+
+  const handleApprovePending = async (orderId: string) => {
+    const confirmApprove = window.confirm(`¿Confirmas que el pago de la orden ${orderId} fue recibido y deseas entregar el servicio y registrarlo en Excel?`);
+    if (!confirmApprove) return;
+
+    setError('');
+    setSuccess('');
+    setApprovingId(orderId);
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
+
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/web-sales/pending/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId })
+      });
+      const result = await res.json();
+      if (result.success) {
+        setSuccess(`¡Orden ${orderId} aprobada con éxito! Servicio registrado en Excel y notificado por WhatsApp.`);
+        fetchSales();
+      } else {
+        setError(`Error aprobando orden: ${result.error || result.message}`);
+      }
+    } catch (err: any) {
+      setError('Error al comunicarse con el servidor: ' + err.message);
+    } finally {
+      setApprovingId(null);
+    }
+  };
 
   const handleDeletePending = async (orderId: string) => {
     const confirmDelete = window.confirm(`¿Estás seguro de eliminar el link de pago pendiente para la orden: ${orderId}?`);
@@ -287,13 +322,24 @@ export const WebSalesView: React.FC = () => {
                   </td>
                   {activeSubTab === 'pending' && (
                     <td className="py-3 px-4 text-center">
-                      <button
-                        onClick={() => handleDeletePending(sale.orderId)}
-                        className="p-1.5 rounded-lg border border-red-100 hover:border-red-200 dark:border-red-900/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all active:scale-95"
-                        title="Eliminar intento de pago"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => handleApprovePending(sale.orderId)}
+                          disabled={approvingId === sale.orderId}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm hover:shadow transition-all active:scale-95 disabled:opacity-50"
+                          title="Aprobar y entregar servicio manualmente"
+                        >
+                          <CheckCircle className={`w-3.5 h-3.5 ${approvingId === sale.orderId ? 'animate-spin' : ''}`} />
+                          {approvingId === sale.orderId ? 'Aprobando...' : 'Aprobar'}
+                        </button>
+                        <button
+                          onClick={() => handleDeletePending(sale.orderId)}
+                          className="p-1.5 rounded-lg border border-red-100 hover:border-red-200 dark:border-red-900/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all active:scale-95"
+                          title="Eliminar intento de pago"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   )}
                 </tr>
