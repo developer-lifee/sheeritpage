@@ -50,8 +50,10 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
 
   const checkIsPersonalEmail = () => {
     const combinedPlanText = [
+      name,
       currentPlanName,
-      ...currentCharacteristics
+      ...currentCharacteristics,
+      activePlan?.detalles || ''
     ].join(' ').toLowerCase();
 
     // 1. Negative override: If plan text mentions shared account / sheerit account / account provided by us
@@ -65,7 +67,7 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
       'pantalla'
     ].some(kw => combinedPlanText.includes(kw));
 
-    if (isExplicitlyShared && !combinedPlanText.includes('tu correo') && !combinedPlanText.includes('correo propio') && !combinedPlanText.includes('tu propia cuenta')) {
+    if (isExplicitlyShared && !combinedPlanText.includes('tu correo') && !combinedPlanText.includes('correo propio') && !combinedPlanText.includes('tu propia cuenta') && !combinedPlanText.includes('extra') && !combinedPlanText.includes('one')) {
       return false;
     }
 
@@ -76,11 +78,15 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
       'tu cuenta', 
       'tu propio correo', 
       'mismo apple id', 
+      'apple id',
+      'apple one',
+      'extra',
       'invitacion', 
       'invitación', 
       'familiar', 
       'family', 
-      'owner'
+      'owner',
+      'personal'
     ].some(kw => combinedPlanText.includes(kw) || (name.toLowerCase().includes('youtube') && !isExplicitlyShared));
 
     return isPersonal;
@@ -92,16 +98,16 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
 
   const getFallbackImage = (platformName: string, originalImage: string) => {
     const n = (platformName || '').toLowerCase();
+    if (n.includes('claude')) return '/plataform/claude.svg';
     if (n.includes('netflix')) return '/plataform/netflix.webp';
     if (n.includes('disney')) return '/plataform/disney.webp';
-    if (n.includes('hbo') || n.includes('max')) return '/plataform/hbo.webp';
     if (n.includes('prime') || n.includes('amazon')) return '/plataform/prime_video.png';
     if (n.includes('spotify')) return '/plataform/spotify.png';
     if (n.includes('youtube')) return '/plataform/youtube.webp';
     if (n.includes('crunchyroll')) return '/plataform/crunchyroll.svg';
     if (n.includes('paramount')) return '/plataform/paramount.webp';
-    if (n.includes('claude')) return '/plataform/claude.svg';
-    if (n.includes('chatgpt')) return '/plataform/chatgpt-icon-logo.webp';
+    if (n.includes('chatgpt') || n.includes('gpt')) return '/plataform/chatgpt-icon-logo.webp';
+    if (n.includes('hbo') || n.includes('max platino') || n === 'max' || n.includes('hbomax')) return '/plataform/hbo.webp';
     return originalImage || '/faviconsheerit.png';
   };
 
