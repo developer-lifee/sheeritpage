@@ -67,11 +67,11 @@ export function Footer() {
           </div>
           
           <div>
-            <h4 className="text-lg font-semibold mb-4">Contacto</h4>
+            <h4 className="text-lg font-semibold mb-4">Contacto y Soporte</h4>
             <ul className="space-y-2 text-white/80">
               <li>WhatsApp: {getFormattedPhone()}</li>
-              <li>Horario Automático: 24/7</li>
-              <li>Horario Humano: 10:00 AM - 6:00 PM</li>
+              <li>Entregas y Renovaciones: Automático 24/7 ⚡</li>
+              <li>Atención Asesores: Turnos rotativos en WhatsApp</li>
             </ul>
           </div>
         </div>
