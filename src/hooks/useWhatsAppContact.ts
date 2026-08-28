@@ -4,7 +4,7 @@ const getApiUrl = () => {
   if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
     return 'http://localhost:3000';
   }
-  return 'https://whatbot.sheerit.com';
+  return typeof window !== 'undefined' ? window.location.origin : 'https://sheerit.co';
 };
 
 const DEFAULT_WA_NUMBER = '573118587974';
