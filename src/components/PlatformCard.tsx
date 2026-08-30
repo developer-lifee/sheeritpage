@@ -98,7 +98,7 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
 
   const getFallbackImage = (platformName: string, originalImage: string) => {
     const n = (platformName || '').toLowerCase();
-    if (n.includes('claude')) return '/plataform/claude.svg';
+    if (n.includes('claude')) return '/plataform/claude.png';
     if (n.includes('netflix')) return '/plataform/netflix.webp';
     if (n.includes('disney')) return '/plataform/disney.webp';
     if (n.includes('prime') || n.includes('amazon')) return '/plataform/prime_video.png';
@@ -107,7 +107,7 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
     if (n.includes('crunchyroll')) return '/plataform/crunchyroll.svg';
     if (n.includes('paramount')) return '/plataform/paramount.webp';
     if (n.includes('chatgpt') || n.includes('gpt')) return '/plataform/chatgpt-icon-logo.webp';
-    if (n.includes('hbo') || n.includes('max platino') || n === 'max' || n.includes('hbomax')) return '/plataform/hbo.webp';
+    if (n.includes('hbo') || n.includes('max platino') || n.includes('hbomax') || (n.includes('max') && !n.includes('claude'))) return '/plataform/hbo.webp';
     return originalImage || '/faviconsheerit.png';
   };
 
