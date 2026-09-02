@@ -30,6 +30,9 @@ interface Plan {
   name: string;
   price: number;
   characteristics: string[];
+  isAvailable?: boolean;
+  reason?: string;
+  isPersonalEmail?: boolean;
 }
 
 interface Platform {
@@ -39,6 +42,9 @@ interface Platform {
   price: number;
   characteristics: string[];
   plans: Plan[];
+  isAvailable?: boolean;
+  reason?: string;
+  incident?: string;
 }
 
 export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software' | 'raytracing-support' | 'raytracing-privacy' | 'pueblapp-support' | 'pueblapp-privacy' | 'portafolio';
@@ -591,6 +597,9 @@ function AppContent() {
                 price={platform.price}
                 characteristics={platform.characteristics}
                 plans={platform.plans}
+                isAvailable={platform.isAvailable}
+                reason={platform.reason}
+                incident={platform.incident}
               />
             ))}
           </div>

@@ -11,6 +11,9 @@ interface Plan {
   name: string;
   price: number;
   characteristics: string[];
+  isAvailable?: boolean;
+  reason?: string;
+  isPersonalEmail?: boolean;
 }
 
 interface Platform {
@@ -21,6 +24,9 @@ interface Platform {
   characteristics: string[];
   plans: Plan[];
   discountTier?: string;
+  isAvailable?: boolean;
+  reason?: string;
+  incident?: string;
 }
 
 interface PricingRules {
@@ -70,7 +76,13 @@ export function ComboMenu() {
 
   // Selección de planes
   const handlePlanSelection = (planId: number, quantity: number) => {
-    updatePlanQuantity(planId, quantity);
+    if (quantity > (selectedPlans[planId] || 0)) {
+      const platform = platforms.find(p => p.plans.some(plan => plan.id === planId));
+      if (platform && platform.isAvailable === false) return;
+      const plan = platform?.plans.find(p => p.id === planId);
+      if (plan && plan.isAvailable === false) return;
+    }
+    updatePlanQuantity(planId, Math.max(0, quantity));
   };
 
   // Obtiene los planes seleccionados y su cantidad

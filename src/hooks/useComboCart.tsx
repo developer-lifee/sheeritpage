@@ -5,6 +5,9 @@ interface Plan {
   name: string;
   price: number;
   characteristics: string[];
+  isAvailable?: boolean;
+  reason?: string;
+  isPersonalEmail?: boolean;
 }
 
 interface Platform {
@@ -14,6 +17,9 @@ interface Platform {
   price: number;
   characteristics: string[];
   plans: Plan[];
+  isAvailable?: boolean;
+  reason?: string;
+  incident?: string;
 }
 
 interface ComboCartContextType {
@@ -52,6 +58,14 @@ export function ComboCartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addToCombo = (planId: number) => {
+    // Check availability
+    const platform = platforms.find(p => p.plans?.some(pl => pl.id === planId) || (p.id * 1000) === planId);
+    if (platform) {
+      if (platform.isAvailable === false) return;
+      const plan = platform.plans?.find(pl => pl.id === planId);
+      if (plan && plan.isAvailable === false) return;
+    }
+
     setSelectedPlans(prev => ({
       ...prev,
       [planId]: (prev[planId] || 0) + 1

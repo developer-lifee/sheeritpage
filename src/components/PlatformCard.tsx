@@ -3,7 +3,17 @@ import { useState, useEffect } from 'react';
 import { useComboCart } from '../hooks/useComboCart';
 import { useCurrency } from '../hooks/useCurrency';
 
-interface Plan { id: number; name: string; price: number; characteristics: string[]; isPersonalEmail?: boolean; }
+interface Plan { 
+  id: number; 
+  name: string; 
+  price: number; 
+  characteristics: string[]; 
+  isPersonalEmail?: boolean; 
+  isAvailable?: boolean;
+  reason?: string;
+  detalles?: string;
+}
+
 interface PlatformCardProps {
   id: number;
   name: string;
@@ -12,9 +22,22 @@ interface PlatformCardProps {
   characteristics?: string[];
   plans?: Plan[];
   isPersonalEmail?: boolean;
+  isAvailable?: boolean;
+  reason?: string;
+  incident?: string;
 }
 
-export function PlatformCard({ id, name, image, price, characteristics, plans }: PlatformCardProps) {
+export function PlatformCard({ 
+  id, 
+  name, 
+  image, 
+  price, 
+  characteristics, 
+  plans, 
+  isAvailable = true, 
+  reason, 
+  incident 
+}: PlatformCardProps) {
   const { addToCombo, setIsComboOpen } = useComboCart();
   const { formatPrice } = useCurrency();
   const [activePlanIndex, setActivePlanIndex] = useState(0);
@@ -40,6 +63,11 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
   const currentCharacteristics = activePlan ? activePlan.characteristics : (characteristics || []);
   const currentPlanName = activePlan ? activePlan.name : '';
   const currentId = activePlan ? activePlan.id : (id * 1000);
+
+  // Stock availability check
+  const isPlatformAvailable = isAvailable !== false;
+  const isPlanAvailable = activePlan ? (activePlan.isAvailable !== false && isPlatformAvailable) : isPlatformAvailable;
+  const outOfStockReason = activePlan?.reason || reason || 'Sin stock de momento';
 
   function calculatePSEFee(price: number) {
     return price * 0.03 + 2000;
@@ -98,13 +126,13 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
 
   const getFallbackImage = (platformName: string, originalImage: string) => {
     const n = (platformName || '').toLowerCase();
-    if (n.includes('claude')) return '/plataform/claude.png';
+    if (n.includes('claude')) return '/plataform/claude.svg';
     if (n.includes('netflix')) return '/plataform/netflix.webp';
     if (n.includes('disney')) return '/plataform/disney.webp';
     if (n.includes('prime') || n.includes('amazon')) return '/plataform/prime_video.png';
     if (n.includes('spotify')) return '/plataform/spotify.png';
     if (n.includes('youtube')) return '/plataform/youtube.webp';
-    if (n.includes('crunchyroll')) return '/plataform/crunchyroll.svg';
+    if (n.includes('crunchyroll') || n.includes('crunchy')) return '/plataform/crunchyroll.svg';
     if (n.includes('paramount')) return '/plataform/paramount.webp';
     if (n.includes('chatgpt') || n.includes('gpt')) return '/plataform/chatgpt-icon-logo.webp';
     if (n.includes('hbo') || n.includes('max platino') || n.includes('hbomax') || (n.includes('max') && !n.includes('claude'))) return '/plataform/hbo.webp';
@@ -121,8 +149,19 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
     <div 
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="relative overflow-hidden rounded-2xl shadow-lg w-full max-w-sm bg-white dark:bg-gray-800 flex flex-col justify-between transition-all duration-300 hover:shadow-xl border border-gray-100 dark:border-gray-700 min-h-[580px] h-full"
+      className={`relative overflow-hidden rounded-2xl shadow-lg w-full max-w-sm bg-white dark:bg-gray-800 flex flex-col justify-between transition-all duration-300 hover:shadow-xl border ${
+        !isPlanAvailable ? 'border-red-300 dark:border-red-900/50 opacity-95' : 'border-gray-100 dark:border-gray-700'
+      } min-h-[580px] h-full`}
     >
+      {/* Stock Status Badge (Left) */}
+      {!isPlanAvailable && (
+        <div className="absolute top-3 left-3 z-20">
+          <span className="bg-red-600/95 backdrop-blur-md text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-lg border border-red-400/50 flex items-center gap-1 tracking-tight animate-pulse">
+            🚫 Sin Stock de Momento
+          </span>
+        </div>
+      )}
+
       {/* Type Badge (Correo Personal vs Correo Sheerit) */}
       <div className="absolute top-3 right-3 z-20">
         {isPersonalEmail ? (
@@ -160,6 +199,21 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
         <div>
           <h3 className="text-xl font-bold mb-1 text-center dark:text-white line-clamp-1">{name}</h3>
 
+          {/* Active Incident Warning chip */}
+          {incident && (
+            <div className="mb-2 mx-auto max-w-[280px] p-1.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-lg flex items-center justify-center gap-1 text-amber-800 dark:text-amber-200 text-[10.5px] font-bold text-center leading-tight">
+              <span>⚠️</span>
+              <span className="line-clamp-2">{incident}</span>
+            </div>
+          )}
+
+          {/* Out of stock reason chip */}
+          {!isPlanAvailable && (
+            <div className="mb-2 mx-auto max-w-[280px] p-1.5 bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 rounded-lg flex items-center justify-center gap-1 text-red-700 dark:text-red-300 text-[11px] font-extrabold text-center leading-tight">
+              <span>🚫 {outOfStockReason}</span>
+            </div>
+          )}
+
           {/* Informative Sub-tag */}
           <div className="flex justify-center mb-2">
             {isPersonalEmail ? (
@@ -188,9 +242,16 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded text-brand-primary dark:text-brand-light text-center line-clamp-1 max-w-[160px]">
-                  {currentPlanName}
-                </span>
+                <div className="flex items-center gap-1 max-w-[170px]">
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded text-center line-clamp-1 ${
+                    activePlan?.isAvailable === false ? 'text-red-500 line-through' : 'text-brand-primary dark:text-brand-light'
+                  }`}>
+                    {currentPlanName}
+                  </span>
+                  {activePlan?.isAvailable === false && (
+                    <span className="text-[9px] bg-red-100 text-red-700 px-1 py-0.2 rounded font-bold">Agotado</span>
+                  )}
+                </div>
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
@@ -208,7 +269,9 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
 
           {/* Price display */}
           <div className="text-center mb-2">
-            <p className="text-2xl font-bold text-brand-primary dark:text-brand-light transition-all duration-300">
+            <p className={`text-2xl font-bold transition-all duration-300 ${
+              !isPlanAvailable ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-brand-primary dark:text-brand-light'
+            }`}>
               {formatPrice(currentPrice)}/mes
             </p>
           </div>
@@ -218,10 +281,10 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
             <ul className="space-y-1">
               {currentCharacteristics.map((feature, index) => (
                 <li key={index} className="flex items-start text-xs">
-                  <svg className="w-3.5 h-3.5 mr-1.5 text-green-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className={`w-3.5 h-3.5 mr-1.5 flex-shrink-0 mt-0.5 ${!isPlanAvailable ? 'text-gray-400' : 'text-green-500'}`} fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L8.414 15 4 10.586l1.414-1.414L8.414 12l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  <span className="leading-tight">{feature}</span>
+                  <span className={`leading-tight ${!isPlanAvailable ? 'text-gray-400 dark:text-gray-500' : ''}`}>{feature}</span>
                 </li>
               ))}
             </ul>
@@ -254,18 +317,29 @@ export function PlatformCard({ id, name, image, price, characteristics, plans }:
             ))}
           </div>
 
-          <button
-            onClick={() => {
-              addToCombo(currentId);
-              setIsComboOpen(true);
-            }}
-            className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors text-sm flex items-center justify-center gap-1.5 shadow-sm"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            Agregar al Combo
-          </button>
+          {isPlanAvailable ? (
+            <button
+              onClick={() => {
+                addToCombo(currentId);
+                setIsComboOpen(true);
+              }}
+              className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors text-sm flex items-center justify-center gap-1.5 shadow-sm"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Agregar al Combo
+            </button>
+          ) : (
+            <button
+              disabled
+              title={outOfStockReason}
+              className="w-full py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-bold rounded-xl text-sm flex items-center justify-center gap-1.5 cursor-not-allowed shadow-none border border-gray-300 dark:border-gray-600"
+            >
+              <span className="w-2 h-2 rounded-full bg-red-500"></span>
+              🚫 Sin Stock de Momento
+            </button>
+          )}
         </div>
       </div>
     </div>

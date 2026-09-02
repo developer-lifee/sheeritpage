@@ -91,15 +91,25 @@ export const GptAccountsView: React.FC = () => {
 
     const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     const serviceValue = service === 'Otro' ? customService : service;
+    const agentEmail = localStorage.getItem('ticket_agent_email') || '';
+    const agentName = localStorage.getItem('ticket_agent_name') || '';
+
     try {
       const res = await fetch(`${apiUrl}/api/admin/gpt-accounts/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, secret, service: serviceValue, password: 'admin123' })
+        body: JSON.stringify({ 
+          email, 
+          secret, 
+          service: serviceValue, 
+          password: 'admin123',
+          agentEmail,
+          agentName
+        })
       });
       const result = await res.json();
       if (result.success) {
-        setSuccess('Cuenta 2FA guardada con éxito.');
+        setSuccess('Cuenta 2FA guardada y auditada con éxito.');
         setEmail('');
         setSecret('');
         setService('ChatGPT');
@@ -123,11 +133,19 @@ export const GptAccountsView: React.FC = () => {
     setSuccess('');
 
     const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
+    const agentEmail = localStorage.getItem('ticket_agent_email') || '';
+    const agentName = localStorage.getItem('ticket_agent_name') || '';
+
     try {
       const res = await fetch(`${apiUrl}/api/admin/gpt-accounts/delete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: targetEmail, password: 'admin123' })
+        body: JSON.stringify({ 
+          email: targetEmail, 
+          password: 'admin123',
+          agentEmail,
+          agentName
+        })
       });
       const result = await res.json();
       if (result.success) {

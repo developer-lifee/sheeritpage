@@ -82,121 +82,66 @@ export const AIPanelAssistant: React.FC<AIPanelAssistantProps> = ({
     setInputQuery('');
     setIsTyping(true);
 
-    const cleanLower = queryText.toLowerCase();
-
-    // Check if query is about generating an image or banner
-    const isImageQuery = cleanLower.includes('imagen') || cleanLower.includes('diseño') || cleanLower.includes('logo') || cleanLower.includes('banner') || cleanLower.includes('crear imagen');
-    // Check if query is about who worked on a specific date (e.g. 15 de julio)
-    const isDateQuery = cleanLower.includes('quien estuvo') || cleanLower.includes('quién estuvo') || cleanLower.includes('15 de julio') || cleanLower.includes('fecha') || cleanLower.includes('horario');
-
     try {
       const apiUrl = getApiUrl();
-      if (isDateQuery) {
-        try {
-          await fetch(`${apiUrl}/api/admin/agents`);
-        } catch (e) {
-          console.warn('Backend fetch fallback:', e);
-        }
-      }
+      const currentEmail = localStorage.getItem('ticket_agent_email') || '';
+      const currentName = agentName || localStorage.getItem('ticket_agent_name') || 'Asesor';
 
-      setTimeout(() => {
-        let aiResponseText = '';
-        let buttons: Array<{ label: string; action: () => void }> = [];
+      const res = await fetch(`${apiUrl}/api/admin/ai-assistant/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: queryText,
+          activeTab,
+          agentName: currentName,
+          agentEmail: currentEmail,
+          history: messages.slice(-6).map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', text: m.text }))
+        })
+      });
 
-        if (isImageQuery) {
-          aiResponseText = `🖼️ **Generación Visual (Gemini Image AI)**:\n\n` +
-            `He recibido tu solicitud de diseño gráfico: "*${queryText}*".\n\n` +
-            `• **Estado**: Procesando banner publicitario con motor visual de Gemini...\n` +
-            `• **Visualización**: El recurso gráfico estará disponible para usar en promociones y módulos del sitio.`;
-        } else if (cleanLower.includes('15 de julio') || (cleanLower.includes('quien estuvo') && cleanLower.includes('julio'))) {
-          aiResponseText = `📅 **Consulta del 15 de Julio de 2026**:\n\n` +
-            `Al revisar la base de datos de horarios e historial de contratos para el **15 de Julio de 2026** (Miércoles):\n\n` +
-            `• **Agentes Activos en esa fecha**:\n` +
-            `  - **Esteban Ávila** (Turno 08:00 - 16:00 | 8.0 hrs)\n` +
-            `  - **Camilo** (Turno 14:00 - 22:00 | 8.0 hrs)\n` +
-            `  - **Carol Cubillos** (Turno 09:00 - 17:00 | 8.0 hrs)\n\n` +
-            `⚠️ **Contratos Terminados/Inactivos que SI estuvieron en esa fecha**:\n` +
-            `  - **Agente Desvinculado / Finalizado** (Turno 08:00 - 12:00 | 4.0 hrs)\n` +
-            `  *(Su contrato terminó posteriormente, pero estuvo presente y registrado el 15 de Julio)*.\n\n` +
-            `Puedes pulsar el botón a continuación para abrir el desglose interactivo en la pestaña de Horarios.`;
-          
-          if (onOpenDateQuery) {
-            buttons.push({
-              label: '🔍 Abrir Buscador del 15 de Julio en Horarios',
-              action: () => {
-                if (onNavigateTab) onNavigateTab('payments');
+      const data = await res.json();
+      let aiResponseText = '';
+      let buttons: Array<{ label: string; action: () => void }> = [];
+
+      if (data && data.success && data.answer) {
+        aiResponseText = data.answer;
+
+        if (Array.isArray(data.buttons)) {
+          buttons = data.buttons.map((btn: any) => ({
+            label: btn.label,
+            action: () => {
+              if (btn.tab && onNavigateTab) onNavigateTab(btn.tab);
+              if (btn.tab === 'payments' && onOpenDateQuery && (queryText.includes('15 de julio') || queryText.includes('julio'))) {
                 onOpenDateQuery('2026-07-15');
               }
-            });
-          }
-        } else if (cleanLower.includes('nómina') || cleanLower.includes('nomina') || cleanLower.includes('pago')) {
-          aiResponseText = `💰 **Resumen de Nómina y Horarios**:\n\n` +
-            `• **Tarifa estándar**: $8,333 / hr\n` +
-            `• **Tarifa prueba**: $5,000 / hr\n` +
-            `• **Filtro histórico**: El reporte de sueldos calcula automáticamente los devengados del personal activo y desvinculado que laboró en las fechas de corte.`;
-          if (onNavigateTab) {
-            buttons.push({
-              label: 'Ir a Horarios & Nómina',
-              action: () => onNavigateTab('payments')
-            });
-          }
-        } else if (cleanLower.includes('ticket') || cleanLower.includes('soporte')) {
-          aiResponseText = `🎫 **Estado de Tickets & Atenciones**:\n\n` +
-            `Te encuentras en la sección de atenciones. Puedes filtrar tickets por asesor, estado (pendiente, resuelto) o canal de soporte.`;
-          if (onNavigateTab) {
-            buttons.push({
-              label: 'Ir a Pestaña de Tickets',
-              action: () => onNavigateTab('tickets')
-            });
-          }
-        } else if (cleanLower.includes('caja') || cleanLower.includes('venta') || cleanLower.includes('contabilidad')) {
-          aiResponseText = `📊 **Balance de Caja y Contabilidad**:\n\n` +
-            `El módulo de contabilidad consolida ventas web, ingresos por licencias streaming y gastos operativos.`;
-          if (onNavigateTab) {
-            buttons.push({
-              label: 'Ir a Contabilidad',
-              action: () => onNavigateTab('accounting')
-            });
-          }
-        } else if (cleanLower.includes('rpa') || cleanLower.includes('bot')) {
-          aiResponseText = `🤖 **Estado de Automatizaciones RPA**:\n\n` +
-            `Los ejecutores RPA supervisan la entrega automática de licencias y verificación de pagos.`;
-          if (onNavigateTab) {
-            buttons.push({
-              label: 'Ir a Automatización RPA',
-              action: () => onNavigateTab('rpa')
-            });
-          }
-        } else {
-          aiResponseText = `🤖 **Respuesta del Asistente**:\n\n` +
-            `He procesado tu solicitud: "*${queryText}*".\n\n` +
-            `Te encuentras actualmente en la sección **${activeTab.toUpperCase()}**.\n` +
-            `Si deseas consultar una fecha en particular de la planilla de horarios, presiona el botón a continuación.`;
-          
-          if (onOpenDateQuery) {
-            buttons.push({
-              label: '📅 Consultar Fecha Específica',
-              action: () => {
-                if (onNavigateTab) onNavigateTab('payments');
-                onOpenDateQuery();
-              }
-            });
-          }
+            }
+          }));
         }
+      } else {
+        aiResponseText = `🤖 **Respuesta del Asistente**:\n\n` +
+          `He procesado tu solicitud: "*${queryText}*".\n\n` +
+          `No se pudo obtener una respuesta detallada del servidor de IA. Por favor, verifica la conexión con el bot.`;
+      }
 
-        const aiMsg: Message = {
-          id: `msg-${Date.now()}`,
-          sender: 'assistant',
-          text: aiResponseText,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          actionButtons: buttons
-        };
+      const aiMsg: Message = {
+        id: `msg-${Date.now()}`,
+        sender: 'assistant',
+        text: aiResponseText,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        actionButtons: buttons
+      };
 
-        setMessages(prev => [...prev, aiMsg]);
-        setIsTyping(false);
-      }, 600);
+      setMessages(prev => [...prev, aiMsg]);
+      setIsTyping(false);
     } catch (err) {
       console.error("AI Assistant query error:", err);
+      const errorMsg: Message = {
+        id: `msg-${Date.now()}`,
+        sender: 'assistant',
+        text: `⚠️ **Error de conexión con el Asistente AI**:\n\nNo fue posible comunicarse con el backend del bot para consultar el registro de auditoría y base de conocimiento.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, errorMsg]);
       setIsTyping(false);
     }
   };
