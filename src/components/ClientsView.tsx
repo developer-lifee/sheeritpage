@@ -363,7 +363,7 @@ export const ClientsView: React.FC = () => {
                         .replace(/{Vencimiento}/g, formatExcelDate(client.deben || client.vencimiento));
                 }
 
-                const res = await sendSingle(phone, messageType, finalMessage, filterService || client.Streaming);
+                const res = await sendSingle(phone, messageType, finalMessage, filterService ? filterService : undefined);
                 
                 if (res.success) {
                     successCount++;
