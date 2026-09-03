@@ -153,26 +153,23 @@ export function PlatformCard({
         !isPlanAvailable ? 'border-red-300 dark:border-red-900/50 opacity-95' : 'border-gray-100 dark:border-gray-700'
       } min-h-[580px] h-full`}
     >
-      {/* Stock Status Badge (Left) */}
-      {!isPlanAvailable && (
-        <div className="absolute top-3 left-3 z-20">
-          <span className="bg-red-600/95 backdrop-blur-md text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-lg border border-red-400/50 flex items-center gap-1 tracking-tight animate-pulse">
-            🚫 Sin Stock de Momento
+      {/* Top Badges Bar: Stock Status & Delivery Type (shared flex container to prevent overlap) */}
+      <div className="absolute top-2.5 inset-x-2.5 z-20 flex items-start justify-between gap-1.5 pointer-events-none">
+        {!isPlanAvailable ? (
+          <span className="bg-red-600/95 backdrop-blur-md text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md border border-red-400/50 flex items-center gap-1 tracking-tight animate-pulse shrink-0">
+            🚫 Sin Stock
           </span>
-        </div>
-      )}
+        ) : <div />}
 
-      {/* Type Badge (Correo Personal vs Correo Sheerit) */}
-      <div className="absolute top-3 right-3 z-20">
         {isPersonalEmail ? (
-          <span className="bg-emerald-600/95 backdrop-blur-md text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-lg border border-emerald-400/40 flex items-center gap-1 tracking-tight">
+          <span className="bg-emerald-600/95 backdrop-blur-md text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-md border border-emerald-400/40 flex items-center gap-1 tracking-tight shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-200 animate-pulse"></span>
-            ✉️ En Tu Correo Personal
+            ✉️ Correo Personal
           </span>
         ) : (
-          <span className="bg-indigo-600/95 backdrop-blur-md text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-lg border border-indigo-400/40 flex items-center gap-1 tracking-tight">
+          <span className="bg-indigo-600/95 backdrop-blur-md text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-md border border-indigo-400/40 flex items-center gap-1 tracking-tight shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-indigo-200"></span>
-            🔑 Perfil (Correo Sheerit)
+            🔑 Perfil Sheerit
           </span>
         )}
       </div>
