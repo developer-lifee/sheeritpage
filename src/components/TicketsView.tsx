@@ -1254,13 +1254,13 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     }
   };
 
-  const handleForceBotReply = async (phone: string) => {
+  const handleForceBotReply = async (phone: string, userId?: string) => {
     const apiUrl = getApiUrl();
     try {
       const res = await fetch(`${apiUrl}/api/admin/tickets/force-bot-reply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, password: 'admin123' })
+        body: JSON.stringify({ phone, userId, password: 'admin123' })
       });
       const result = await res.json();
       if (!result.success) {
@@ -2405,7 +2405,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     </button>
                     
                     <button
-                      onClick={() => handleForceBotReply(activeChatTicket.phone)}
+                      onClick={() => handleForceBotReply(activeChatTicket.phone, activeChatTicket.userId)}
                       className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1 active:scale-95 animate-fadeIn"
                       title="Fuerza al bot a responder de inmediato al último mensaje del cliente"
                     >
