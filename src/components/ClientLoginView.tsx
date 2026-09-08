@@ -119,6 +119,7 @@ export default function ClientLoginView() {
       }
 
       setAccounts(data.accounts);
+      localStorage.setItem('client_session_phone', cleanPhone);
       setSuccess('Inicio de sesión exitoso.');
       setStep(3);
     } catch (err: any) {
@@ -134,10 +135,16 @@ export default function ClientLoginView() {
     setSuccess(null);
 
     try {
+      const targetAcc = accounts.find(a => a.id === accountId);
       const response = await fetch(`${API_BASE}/api/client/request-2fa`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, accountId })
+        body: JSON.stringify({
+          phone,
+          accountId,
+          email: targetAcc?.email,
+          platform: targetAcc?.platform
+        })
       });
 
       const data = await response.json();
