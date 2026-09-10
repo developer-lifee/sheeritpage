@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Phone, Key, Tv, Lock, Eye, EyeOff, RefreshCw, CheckCircle, AlertCircle, Copy, LogOut, ExternalLink, Check } from 'lucide-react';
+import { Shield, Phone, Key, Tv, Lock, Eye, EyeOff, RefreshCw, CheckCircle, AlertCircle, Copy, LogOut, ExternalLink, Check, Smartphone } from 'lucide-react';
 
 interface ClientAccount {
   id: number;
@@ -8,6 +8,9 @@ interface ClientAccount {
   password?: string;
   profile: string;
   vencimiento: string;
+  devicesUsed?: number;
+  devicesRemaining?: number;
+  maxDevices?: number;
 }
 
 interface Account2faResult {
@@ -149,7 +152,15 @@ export default function ClientLoginView() {
 
       const data = await response.json();
       if (!response.ok || !data.success) {
+        if (data.limitReached) {
+          setAccounts(prev => prev.map(a => a.id === accountId ? { ...a, devicesRemaining: 0, devicesUsed: data.devicesUsed || 3 } : a));
+          throw new Error(data.message || 'Límite de 3 dispositivos alcanzado para esta cuenta.');
+        }
         throw new Error(data.message || 'No se pudo generar la solicitud de código');
+      }
+
+      if (typeof data.devicesRemaining === 'number') {
+        setAccounts(prev => prev.map(a => a.id === accountId ? { ...a, devicesRemaining: data.devicesRemaining, devicesUsed: data.devicesUsed } : a));
       }
 
       setAccountResults(prev => ({
@@ -163,12 +174,16 @@ export default function ClientLoginView() {
         }
       }));
 
+      const remainingNote = typeof data.devicesRemaining === 'number' 
+        ? ` (Te quedan ${data.devicesRemaining} de ${data.maxDevices || 3} dispositivos)` 
+        : '';
+
       if (data.code) {
-        setSuccess(`¡Código generado con éxito: ${data.code}!`);
+        setSuccess(`¡Código generado con éxito: ${data.code}!${remainingNote}`);
       } else if (data.link) {
-        setSuccess('¡Enlace de acceso listo!');
+        setSuccess(`¡Enlace de acceso listo!${remainingNote}`);
       } else {
-        setSuccess(data.message || 'Buscando código en buzón...');
+        setSuccess((data.message || 'Buscando código en buzón...') + remainingNote);
       }
     } catch (err: any) {
       setError(err.message || 'Error de red al consultar código');
@@ -440,6 +455,42 @@ export default function ClientLoginView() {
                         <span className="text-gray-400 dark:text-slate-500 mr-1.5 font-medium">Perfil asignado:</span> {acc.profile}
                       </div>
 
+                      {/* Dispositivos permitidos y contador */}
+                      <div className="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 dark:bg-slate-950/60 border border-gray-150 dark:border-slate-850">
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-slate-400">
+                          <Smartphone size={13} className="text-indigo-500 shrink-0" />
+                          <span>Dispositivos:</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-bold ${
+                            (acc.devicesRemaining ?? 3) === 0
+                              ? 'text-rose-600 dark:text-rose-400'
+                              : (acc.devicesRemaining ?? 3) === 1
+                              ? 'text-amber-600 dark:text-amber-400'
+                              : 'text-emerald-600 dark:text-emerald-400'
+                          }`}>
+                            {(acc.devicesRemaining ?? 3) === 0
+                              ? 'Límite alcanzado (3/3)'
+                              : `Te quedan ${acc.devicesRemaining ?? 3} de ${acc.maxDevices ?? 3}`}
+                          </span>
+                          <div className="flex gap-1" title={`${acc.devicesUsed ?? 0} de ${acc.maxDevices ?? 3} dispositivos vinculados`}>
+                            {[1, 2, 3].map((dot) => {
+                              const isUsed = dot <= (acc.devicesUsed ?? (3 - (acc.devicesRemaining ?? 3)));
+                              return (
+                                <span
+                                  key={dot}
+                                  className={`w-2 h-2 rounded-full transition-all ${
+                                    isUsed
+                                      ? ((acc.devicesRemaining ?? 3) === 0 ? 'bg-rose-500' : 'bg-indigo-500')
+                                      : 'bg-gray-200 dark:bg-slate-800'
+                                  }`}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
                       {/* Display extracted 2FA code / link directly in the card */}
                       {accountResults[acc.id] && (
                         <div className="pt-2 animate-fade-in">
@@ -500,27 +551,45 @@ export default function ClientLoginView() {
 
                   {/* Actions */}
                   <div className="p-4 bg-gray-50/50 dark:bg-slate-900/60 border-t border-gray-100 dark:border-slate-800/80">
-                    <button
-                      onClick={() => handleRequest2fa(acc.id)}
-                      disabled={requesting2fa !== null}
-                      className="w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/5"
-                    >
-                      {requesting2fa === acc.id ? (
-                        <>
-                          <RefreshCw size={12} className="animate-spin" /> Consultando buzón seguro...
-                        </>
-                      ) : (
-                        <>
-                          <Key size={12} />
-                          {(() => {
-                            const p = (acc.platform || "").toUpperCase();
-                            if (p.includes('NETFLIX')) return 'Actualizar Hogar / Código de Acceso';
-                            if (p.includes('DISNEY')) return 'Solicitar Código / Enlace de Acceso';
-                            return 'Solicitar Código 2FA / Acceso';
-                          })()}
-                        </>
-                      )}
-                    </button>
+                    {(acc.devicesRemaining ?? 3) === 0 ? (
+                      <div className="space-y-2">
+                        <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-center text-xs text-rose-600 dark:text-rose-400 font-semibold flex items-center justify-center gap-1.5">
+                          <AlertCircle size={14} />
+                          <span>Límite de 3 dispositivos alcanzado</span>
+                        </div>
+                        <a
+                          href={`https://wa.me/573118587974?text=Hola,%20alcanc%C3%A9%20el%20l%C3%ADmite%20de%203%20dispositivos%20en%20mi%20perfil%20de%20${encodeURIComponent(acc.platform)}%20(${encodeURIComponent(acc.email)})`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5"
+                        >
+                          <span>Solicitar Liberar / Transferir Dispositivo</span>
+                          <ExternalLink size={12} />
+                        </a>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleRequest2fa(acc.id)}
+                        disabled={requesting2fa !== null}
+                        className="w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/5"
+                      >
+                        {requesting2fa === acc.id ? (
+                          <>
+                            <RefreshCw size={12} className="animate-spin" /> Consultando buzón seguro...
+                          </>
+                        ) : (
+                          <>
+                            <Key size={12} />
+                            {(() => {
+                              const p = (acc.platform || "").toUpperCase();
+                              if (p.includes('NETFLIX')) return 'Actualizar Hogar / Código de Acceso';
+                              if (p.includes('DISNEY')) return 'Solicitar Código / Enlace de Acceso';
+                              return 'Solicitar Código 2FA / Acceso';
+                            })()}
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
