@@ -8,9 +8,10 @@ interface ClientAccount {
   password?: string;
   profile: string;
   vencimiento: string;
-  devicesUsed?: number;
-  devicesRemaining?: number;
-  maxDevices?: number;
+  isLimitedPlatform?: boolean;
+  devicesUsed?: number | null;
+  devicesRemaining?: number | null;
+  maxDevices?: number | null;
 }
 
 interface Account2faResult {
@@ -174,7 +175,8 @@ export default function ClientLoginView() {
         }
       }));
 
-      const remainingNote = typeof data.devicesRemaining === 'number' 
+      const isLimited = data.isLimitedPlatform || (typeof data.devicesRemaining === 'number' && typeof data.maxDevices === 'number');
+      const remainingNote = (isLimited && typeof data.devicesRemaining === 'number')
         ? ` (Te quedan ${data.devicesRemaining} de ${data.maxDevices || 3} dispositivos)` 
         : '';
 
@@ -455,41 +457,43 @@ export default function ClientLoginView() {
                         <span className="text-gray-400 dark:text-slate-500 mr-1.5 font-medium">Perfil asignado:</span> {acc.profile}
                       </div>
 
-                      {/* Dispositivos permitidos y contador */}
-                      <div className="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 dark:bg-slate-950/60 border border-gray-150 dark:border-slate-850">
-                        <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-slate-400">
-                          <Smartphone size={13} className="text-indigo-500 shrink-0" />
-                          <span>Dispositivos:</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-xs font-bold ${
-                            (acc.devicesRemaining ?? 3) === 0
-                              ? 'text-rose-600 dark:text-rose-400'
-                              : (acc.devicesRemaining ?? 3) === 1
-                              ? 'text-amber-600 dark:text-amber-400'
-                              : 'text-emerald-600 dark:text-emerald-400'
-                          }`}>
-                            {(acc.devicesRemaining ?? 3) === 0
-                              ? 'Límite alcanzado (3/3)'
-                              : `Te quedan ${acc.devicesRemaining ?? 3} de ${acc.maxDevices ?? 3}`}
-                          </span>
-                          <div className="flex gap-1" title={`${acc.devicesUsed ?? 0} de ${acc.maxDevices ?? 3} dispositivos vinculados`}>
-                            {[1, 2, 3].map((dot) => {
-                              const isUsed = dot <= (acc.devicesUsed ?? (3 - (acc.devicesRemaining ?? 3)));
-                              return (
-                                <span
-                                  key={dot}
-                                  className={`w-2 h-2 rounded-full transition-all ${
-                                    isUsed
-                                      ? ((acc.devicesRemaining ?? 3) === 0 ? 'bg-rose-500' : 'bg-indigo-500')
-                                      : 'bg-gray-200 dark:bg-slate-800'
-                                  }`}
-                                />
-                              );
-                            })}
+                      {/* Dispositivos permitidos y contador (Exclusivo para cuentas de Claude y GPT) */}
+                      {(acc.isLimitedPlatform || (acc.platform && (acc.platform.toLowerCase().includes('gpt') || acc.platform.toLowerCase().includes('claude')))) && (
+                        <div className="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 dark:bg-slate-950/60 border border-gray-150 dark:border-slate-850">
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-slate-400">
+                            <Smartphone size={13} className="text-indigo-500 shrink-0" />
+                            <span>Dispositivos:</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-bold ${
+                              (acc.devicesRemaining ?? 3) === 0
+                                ? 'text-rose-600 dark:text-rose-400'
+                                : (acc.devicesRemaining ?? 3) === 1
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : 'text-emerald-600 dark:text-emerald-400'
+                            }`}>
+                              {(acc.devicesRemaining ?? 3) === 0
+                                ? 'Límite alcanzado (3/3)'
+                                : `Te quedan ${acc.devicesRemaining ?? 3} de ${acc.maxDevices ?? 3}`}
+                            </span>
+                            <div className="flex gap-1" title={`${acc.devicesUsed ?? 0} de ${acc.maxDevices ?? 3} dispositivos vinculados`}>
+                              {[1, 2, 3].map((dot) => {
+                                const isUsed = dot <= (acc.devicesUsed ?? (3 - (acc.devicesRemaining ?? 3)));
+                                return (
+                                  <span
+                                    key={dot}
+                                    className={`w-2 h-2 rounded-full transition-all ${
+                                      isUsed
+                                        ? ((acc.devicesRemaining ?? 3) === 0 ? 'bg-rose-500' : 'bg-indigo-500')
+                                        : 'bg-gray-200 dark:bg-slate-800'
+                                    }`}
+                                  />
+                                );
+                              })}
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      )}
 
                       {/* Display extracted 2FA code / link directly in the card */}
                       {accountResults[acc.id] && (
@@ -551,7 +555,7 @@ export default function ClientLoginView() {
 
                   {/* Actions */}
                   <div className="p-4 bg-gray-50/50 dark:bg-slate-900/60 border-t border-gray-100 dark:border-slate-800/80">
-                    {(acc.devicesRemaining ?? 3) === 0 ? (
+                    {((acc.isLimitedPlatform || (acc.platform && (acc.platform.toLowerCase().includes('gpt') || acc.platform.toLowerCase().includes('claude')))) && acc.devicesRemaining === 0) ? (
                       <div className="space-y-2">
                         <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-center text-xs text-rose-600 dark:text-rose-400 font-semibold flex items-center justify-center gap-1.5">
                           <AlertCircle size={14} />
