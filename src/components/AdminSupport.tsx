@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard, Radio, FileText, Smartphone, Settings, Cpu, ShoppingBag, Globe, Bot, Moon, Sun, Power } from 'lucide-react';
+import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard, Radio, FileText, Smartphone, Settings, Cpu, ShoppingBag, Globe, Bot, Moon, Sun, Power, Layers } from 'lucide-react';
 import { ClientsView } from './ClientsView';
+import { DataStudioView } from './DataStudioView';
 import { NetflixMatchView } from './NetflixMatchView';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { AddSaleForm } from './AddSaleForm';
@@ -75,7 +76,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       console.error("Failed to write frontend audit log:", e);
     }
   };
-  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'payments' | 'streaming' | 'policies' | 'whatsapp' | 'prompts' | 'rpa' | 'web_sales' | 'accounting'>('tickets');
+  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'studio' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'payments' | 'streaming' | 'policies' | 'whatsapp' | 'prompts' | 'rpa' | 'web_sales' | 'accounting'>('tickets');
   const [activePaymentsSubTab, setActivePaymentsSubTab] = useState<'calendar' | 'payroll'>('calendar');
   const [searchQuery, setSearchQuery] = useState('');
   const [externalQueryDate, setExternalQueryDate] = useState<string | undefined>(undefined);
@@ -412,6 +413,12 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           <Database className="w-5 h-5 mr-2" /> Base de Datos
         </button>
         <button 
+          onClick={() => setActiveTab('studio')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'studio' ? 'bg-indigo-600 text-white shadow-md' : 'text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/30'}`}
+        >
+          <Layers className="w-5 h-5 mr-2" /> Data Studio (ER & SQL)
+        </button>
+        <button 
           onClick={() => setActiveTab('stats')}
           className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'stats' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
@@ -494,12 +501,19 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           <LifeBuoy className="w-5 h-5 mr-2" /> Guías
         </button>
 
+        <button 
+          onClick={() => setActiveTab('rpa')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'rpa' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <Cpu className="w-5 h-5 mr-2" /> RPA Automator
+        </button>
+
         {role === 'admin' && (
           <>
             {/* Separador visual */}
             <div className="h-6 w-px bg-gray-250 dark:bg-gray-700 self-center mx-1"></div>
 
-            {/* GRUPO 4: SaaS y Automatización */}
+            {/* GRUPO 4: SaaS y Configuración Exclusiva Admin */}
             <button 
               onClick={() => setActiveTab('whatsapp')}
               className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'whatsapp' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
@@ -512,18 +526,13 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
             >
               <Settings className="w-5 h-5 mr-2" /> Prompts IA
             </button>
-            <button 
-              onClick={() => setActiveTab('rpa')}
-              className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'rpa' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
-            >
-              <Cpu className="w-5 h-5 mr-2" /> RPA Automator
-            </button>
           </>
         )}
       </div>
 
       <div className={activeTab === 'tickets' ? '' : 'hidden'}><TicketsView agentEmail={agentEmail} agentName={agentName} onLogout={onLogout} /></div>
       <div className={activeTab === 'db' ? '' : 'hidden'}><ClientsView /></div>
+      <div className={activeTab === 'studio' ? '' : 'hidden'}><DataStudioView /></div>
       <div className={activeTab === 'netflix' ? '' : 'hidden'}><NetflixMatchView /></div>
       <div className={activeTab === 'stats' ? '' : 'hidden'}><AnalyticsDashboard /></div>
       <div className={activeTab === 'sales' ? '' : 'hidden'}><AddSaleForm /></div>

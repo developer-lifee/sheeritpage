@@ -8,6 +8,9 @@ interface ClientAccount {
   password?: string;
   profile: string;
   vencimiento: string;
+  isAutomated?: boolean;
+  automationType?: string;
+  automationLabel?: string;
   isLimitedPlatform?: boolean;
   devicesUsed?: number | null;
   devicesRemaining?: number | null;
@@ -140,6 +143,11 @@ export default function ClientLoginView() {
 
     try {
       const targetAcc = accounts.find(a => a.id === accountId);
+      if (targetAcc && targetAcc.isAutomated === false) {
+        setError('Esta cuenta no está automatizada. Por favor solicita el código directamente con un asesor por WhatsApp.');
+        return;
+      }
+
       const response = await fetch(`${API_BASE}/api/client/request-2fa`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -153,6 +161,9 @@ export default function ClientLoginView() {
 
       const data = await response.json();
       if (!response.ok || !data.success) {
+        if (data.unautomated) {
+          throw new Error(data.message || 'Esta cuenta no está automatizada. Solicita el código directamente a un asesor por WhatsApp.');
+        }
         if (data.limitReached) {
           setAccounts(prev => prev.map(a => a.id === accountId ? { ...a, devicesRemaining: 0, devicesUsed: data.devicesUsed || 3 } : a));
           throw new Error(data.message || 'Límite de 3 dispositivos alcanzado para esta cuenta.');
@@ -405,9 +416,20 @@ export default function ClientLoginView() {
                     {/* Header card */}
                     <div className="flex justify-between items-start gap-2">
                       <div className="space-y-1">
-                        <span className="text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest">
-                          {acc.platform}
-                        </span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest">
+                            {acc.platform}
+                          </span>
+                          {acc.isAutomated === false ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 rounded-full">
+                              <AlertCircle size={10} /> Código con Asesor
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 rounded-full">
+                              <CheckCircle size={10} /> Código Automático
+                            </span>
+                          )}
+                        </div>
                         <h3 className="font-semibold text-gray-800 dark:text-white text-sm truncate max-w-[200px]" title={acc.email}>
                           {acc.email}
                         </h3>
@@ -569,6 +591,28 @@ export default function ClientLoginView() {
                         >
                           <span>Solicitar Liberar / Transferir Dispositivo</span>
                           <ExternalLink size={12} />
+                        </a>
+                      </div>
+                    ) : acc.isAutomated === false ? (
+                      <div className="space-y-2.5 pt-1">
+                        <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-xs">
+                          <div className="flex items-center gap-1.5 font-bold text-amber-700 dark:text-amber-400 mb-1">
+                            <AlertCircle size={14} className="shrink-0" />
+                            <span>Código no automatizado</span>
+                          </div>
+                          <p className="text-[11px] text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
+                            Esta cuenta no cuenta con entrega automática de código. Para recibir tu código de acceso o verificación, solicítalo directamente con un asesor por WhatsApp.
+                          </p>
+                        </div>
+                        <a
+                          href={`https://wa.me/573118587974?text=Hola,%20solicito%20c%C3%B3digo%20para%20mi%20servicio%20de%20${encodeURIComponent(acc.platform)}%20(${encodeURIComponent(acc.email)})%20perfil%20${encodeURIComponent(acc.profile)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/15"
+                        >
+                          <Phone size={14} />
+                          <span>Pedir Código al Asesor por WhatsApp</span>
+                          <ExternalLink size={12} className="opacity-80" />
                         </a>
                       </div>
                     ) : (

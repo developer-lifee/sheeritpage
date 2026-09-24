@@ -1,5 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { QrCode, Phone, CheckCircle, AlertCircle, RefreshCw, Key } from 'lucide-react';
+import { QrCode, Phone, CheckCircle, AlertCircle, RefreshCw, Key, Globe } from 'lucide-react';
+
+interface Country {
+  code: string;
+  name: string;
+  flag: string;
+}
+
+const COUNTRIES: Country[] = [
+  { code: '57', name: 'Colombia', flag: '🇨🇴' },
+  { code: '52', name: 'México', flag: '🇲🇽' },
+  { code: '1', name: 'Estados Unidos / Canadá', flag: '🇺🇸' },
+  { code: '34', name: 'España', flag: '🇪🇸' },
+  { code: '54', name: 'Argentina', flag: '🇦🇷' },
+  { code: '51', name: 'Perú', flag: '🇵🇪' },
+  { code: '56', name: 'Chile', flag: '🇨🇱' },
+  { code: '593', name: 'Ecuador', flag: '🇪🇨' },
+  { code: '58', name: 'Venezuela', flag: '🇻🇪' },
+  { code: '55', name: 'Brasil', flag: '🇧🇷' },
+  { code: '507', name: 'Panamá', flag: '🇵🇦' },
+  { code: '506', name: 'Costa Rica', flag: '🇨🇷' },
+  { code: '502', name: 'Guatemala', flag: '🇬🇹' },
+  { code: '503', name: 'El Salvador', flag: '🇸🇻' },
+  { code: '504', name: 'Honduras', flag: '🇭🇳' },
+  { code: '505', name: 'Nicaragua', flag: '🇳🇮' },
+  { code: '591', name: 'Bolivia', flag: '🇧🇴' },
+  { code: '595', name: 'Paraguay', flag: '🇵🇾' },
+  { code: '598', name: 'Uruguay', flag: '🇺🇾' },
+  { code: '1809', name: 'República Dominicana', flag: '🇩🇴' },
+  { code: '44', name: 'Reino Unido', flag: '🇬🇧' },
+  { code: '33', name: 'Francia', flag: '🇫🇷' },
+  { code: '49', name: 'Alemania', flag: '🇩🇪' },
+  { code: '39', name: 'Italia', flag: '🇮🇹' },
+  { code: '351', name: 'Portugal', flag: '🇵🇹' }
+];
 
 interface WhatsappState {
   status: string;
@@ -14,6 +48,8 @@ export default function ConnectionView() {
     qr: null,
     pairingCode: null,
   });
+  const [selectedCountry, setSelectedCountry] = useState<string>('57');
+  const [dialCode, setDialCode] = useState<string>('57');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,19 +101,40 @@ export default function ConnectionView() {
     setError(null);
     setSuccessMsg(null);
 
+    const cleanDial = dialCode.replace(/\D/g, '');
+    let cleanNumber = phoneNumber.replace(/\D/g, '');
+
+    // Si el usuario por error volvió a pegar el indicativo en el campo del teléfono (ej: si pegó 573118587974)
+    if (cleanDial && cleanNumber.startsWith(cleanDial) && cleanNumber.length > cleanDial.length + 6) {
+      cleanNumber = cleanNumber.slice(cleanDial.length);
+    }
+
+    if (!cleanDial) {
+      setError('Por favor ingresa o selecciona un indicativo internacional válido.');
+      setLoading(false);
+      return;
+    }
+    if (!cleanNumber) {
+      setError('Por favor ingresa tu número de teléfono.');
+      setLoading(false);
+      return;
+    }
+
+    const fullPhone = `${cleanDial}${cleanNumber}`;
+
     try {
       const response = await fetch(`${API_BASE}/api/whatsapp/request-pairing-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phone: phoneNumber,
+          phone: fullPhone,
           password: 'admin123' // Stored password in SaaS
         })
       });
 
       const data = await response.json();
       if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Error al solicitar el código de vinculación');
+        throw new Error(data.error || data.message || 'Error al solicitar el código de vinculación');
       }
 
       setSuccessMsg('Solicitud enviada con éxito. Esperando código...');
@@ -266,20 +323,78 @@ export default function ConnectionView() {
             <form onSubmit={handleRequestPairingCode} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                  Número de Teléfono (Formato Internacional)
+                  País e Indicativo
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="sm:col-span-2 relative">
+                    <select
+                      value={selectedCountry}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSelectedCountry(val);
+                        if (val !== 'custom') {
+                          setDialCode(val);
+                        }
+                      }}
+                      disabled={loading || state.status === 'CONNECTED'}
+                      className="w-full bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl py-3 px-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer"
+                    >
+                      {COUNTRIES.map((c) => (
+                        <option key={c.code + '-' + c.name} value={c.code}>
+                          {c.flag} {c.name} (+{c.code})
+                        </option>
+                      ))}
+                      <option value="custom">🌐 Otro indicativo...</option>
+                    </select>
+                  </div>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-sm font-semibold">
+                      +
+                    </div>
+                    <input
+                      type="text"
+                      value={dialCode}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        setDialCode(val);
+                        const match = COUNTRIES.find(c => c.code === val);
+                        if (match) setSelectedCountry(match.code);
+                        else setSelectedCountry('custom');
+                      }}
+                      placeholder="57"
+                      maxLength={5}
+                      disabled={loading || state.status === 'CONNECTED'}
+                      className="w-full bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl py-3 pl-7 pr-3 text-sm font-mono font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                      title="Indicativo internacional"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                  Número de Teléfono
                 </label>
                 <div className="relative">
                   <input
                     type="tel"
-                    placeholder="Ej: 573112513995"
+                    placeholder="Ej: 311 858 7974"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
                     required
                     disabled={loading || state.status === 'CONNECTED'}
-                    className="w-full bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl py-3 pl-4 pr-10 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors"
+                    className="w-full bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl py-3 pl-4 pr-10 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors text-sm"
                   />
-                  <Phone size={16} className="absolute right-3.5 top-4 text-slate-400" />
+                  <Phone size={16} className="absolute right-3.5 top-3.5 text-slate-400" />
                 </div>
+              </div>
+
+              {/* Live Preview */}
+              <div className="bg-slate-50 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-xs">
+                <span className="text-slate-500 dark:text-slate-400">Número a vincular:</span>
+                <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-sm">
+                  +{dialCode.replace(/\D/g, '') || '??'} {phoneNumber.replace(/\D/g, '') || '...'}
+                </span>
               </div>
 
               <button

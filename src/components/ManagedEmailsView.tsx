@@ -1,6 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Search, Trash2, PlusCircle, RefreshCw, AlertTriangle, CheckCircle, ExternalLink, ArrowRight, X, User, Copy, Check, ShieldAlert, CreditCard } from 'lucide-react';
+import { Mail, Search, Trash2, PlusCircle, RefreshCw, AlertTriangle, CheckCircle, ExternalLink, ArrowRight, X, User, Copy, Check, ShieldAlert, CreditCard, Tv, Key, Bot, ChevronDown, ChevronUp, ShieldCheck, Sparkles, Phone } from 'lucide-react';
 import { isDemoMode, DEMO_MANAGED_EMAILS } from '../utils/demoMode';
+
+export interface StreamingAccountProfile {
+  rowNumber?: number;
+  clientName?: string;
+  phone?: string;
+  pin?: string;
+  venc?: string;
+}
+
+export interface StreamingAccountItem {
+  email: string;
+  platform: string;
+  password?: string;
+  clientCount: number;
+  profiles: StreamingAccountProfile[];
+  providerName?: string | null;
+  isAutomated: boolean;
+  automationType: 'gmail' | 'totp' | 'rpa' | 'netflix' | 'manual';
+  automationLabel: string;
+  rpaRecipeId?: number | null;
+  rpaRecipeName?: string | null;
+}
 
 interface EmailMessage {
   id: string;
@@ -176,11 +198,61 @@ export const ManagedEmailsView: React.FC = () => {
   const [expandedEmailId, setExpandedEmailId] = useState<string | null>(null);
   const [htmlViewMode, setHtmlViewMode] = useState<Record<string, boolean>>({});
 
+  // Top-level subtab: 'accounts' | 'inboxes'
+  const [activeSubTab, setActiveSubTab] = useState<'accounts' | 'inboxes'>('accounts');
+
+  // Streaming Accounts state
+  const [streamingAccounts, setStreamingAccounts] = useState<StreamingAccountItem[]>([]);
+  const [accountsLoading, setAccountsLoading] = useState(false);
+  const [syncingExcel, setSyncingExcel] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [accountSearch, setAccountSearch] = useState('');
+  const [accountFilter, setAccountFilter] = useState<'all' | 'automated' | 'manual'>('all');
+  const [expandedAccount, setExpandedAccount] = useState<string | null>(null);
+
   const handleCopy = (e: React.MouseEvent, text: string, id: string) => {
     e.stopPropagation();
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const fetchStreamingAccounts = async () => {
+    setAccountsLoading(true);
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/streaming-accounts/overview`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.accounts)) {
+        setStreamingAccounts(data.accounts);
+      }
+    } catch (err) {
+      console.error('Error fetching streaming accounts:', err);
+    } finally {
+      setAccountsLoading(false);
+    }
+  };
+
+  const handleSyncFromExcel = async () => {
+    setSyncingExcel(true);
+    setSyncMessage(null);
+    const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/streaming-accounts/sync-excel`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSyncMessage(`✅ ${data.message} (${data.syncedAccounts} cuentas y ${data.syncedSubs} suscripciones en MySQL)`);
+        await fetchStreamingAccounts();
+      } else {
+        setSyncMessage(`❌ Error al sincronizar: ${data.error || 'Fallo desconocido'}`);
+      }
+    } catch (err: any) {
+      setSyncMessage(`❌ Error de conexión: ${err.message}`);
+    } finally {
+      setSyncingExcel(false);
+    }
   };
 
   const fetchEmails = () => {
@@ -226,6 +298,7 @@ export const ManagedEmailsView: React.FC = () => {
 
   useEffect(() => {
     fetchEmails();
+    fetchStreamingAccounts();
   }, []);
 
   const handleStartAuth = async (e: React.FormEvent) => {
@@ -328,15 +401,335 @@ export const ManagedEmailsView: React.FC = () => {
     }
   };
 
+  const filteredAccounts = streamingAccounts.filter(acc => {
+    const term = accountSearch.toLowerCase();
+    const matchesTerm = acc.email.toLowerCase().includes(term) ||
+      acc.platform.toLowerCase().includes(term) ||
+      acc.profiles.some(p => (p.clientName || '').toLowerCase().includes(term) || (p.phone || '').includes(term));
+    
+    if (!matchesTerm) return false;
+    if (accountFilter === 'automated') return acc.isAutomated;
+    if (accountFilter === 'manual') return !acc.isAutomated;
+    return true;
+  });
+
   const filteredEmails = emails.filter((email) =>
     email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Email List Dashboard */}
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6">
+      {/* Selector de Sub-Pestañas */}
+      <div className="flex flex-wrap items-center justify-between gap-4 p-2 bg-gray-100 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveSubTab('accounts')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+              activeSubTab === 'accounts'
+                ? 'bg-brand-primary text-white shadow-md'
+                : 'text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700'
+            }`}
+          >
+            <Tv className="w-4 h-4" />
+            <span>Cuentas Streaming & 2FA (Excel / BD)</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+              activeSubTab === 'accounts' ? 'bg-white/20 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+            }`}>
+              {streamingAccounts.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('inboxes')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+              activeSubTab === 'inboxes'
+                ? 'bg-brand-primary text-white shadow-md'
+                : 'text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700'
+            }`}
+          >
+            <Mail className="w-4 h-4" />
+            <span>Bandejas Gmail Activas</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+              activeSubTab === 'inboxes' ? 'bg-white/20 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+            }`}>
+              {emails.length}
+            </span>
+          </button>
+        </div>
+
+        {activeSubTab === 'accounts' && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSyncFromExcel}
+              disabled={syncingExcel}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow transition-all"
+              title="Descarga la versión más reciente del Excel desde OneDrive / Microsoft Graph y sincroniza a MySQL"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${syncingExcel ? 'animate-spin' : ''}`} />
+              <span>{syncingExcel ? 'Sincronizando desde Excel...' : 'Sincronizar Cuentas desde Excel'}</span>
+            </button>
+            <button
+              onClick={fetchStreamingAccounts}
+              disabled={accountsLoading}
+              className="p-2 text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 rounded-xl transition-all"
+              title="Refrescar lista"
+            >
+              <RefreshCw className={`w-4 h-4 ${accountsLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {syncMessage && (
+        <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-200 text-sm flex items-center justify-between animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+            <span>{syncMessage}</span>
+          </div>
+          <button onClick={() => setSyncMessage(null)} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+      )}
+
+      {activeSubTab === 'accounts' ? (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Tarjetas de Métricas */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border dark:border-gray-700 shadow-sm">
+              <div className="flex items-center justify-between text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase">
+                <span>Cuentas Totales</span>
+                <Tv className="w-4 h-4 text-blue-500" />
+              </div>
+              <p className="text-2xl font-black mt-2 text-gray-900 dark:text-white">{streamingAccounts.length}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">En Excel y Base de Datos</p>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border dark:border-gray-700 shadow-sm">
+              <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400 text-xs font-semibold uppercase">
+                <span>Automatizadas</span>
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+              </div>
+              <p className="text-2xl font-black mt-2 text-emerald-600 dark:text-emerald-400">
+                {streamingAccounts.filter(a => a.isAutomated).length}
+              </p>
+              <p className="text-[11px] text-gray-400 mt-0.5">Gmail API / TOTP / Sheerit</p>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border dark:border-gray-700 shadow-sm">
+              <div className="flex items-center justify-between text-amber-600 dark:text-amber-400 text-xs font-semibold uppercase">
+                <span>Manuales / Sin Token</span>
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
+              </div>
+              <p className="text-2xl font-black mt-2 text-amber-600 dark:text-amber-400">
+                {streamingAccounts.filter(a => !a.isAutomated).length}
+              </p>
+              <p className="text-[11px] text-gray-400 mt-0.5">Requieren asesor o RPA</p>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border dark:border-gray-700 shadow-sm">
+              <div className="flex items-center justify-between text-indigo-600 dark:text-indigo-400 text-xs font-semibold uppercase">
+                <span>Perfiles Activos</span>
+                <User className="w-4 h-4 text-indigo-500" />
+              </div>
+              <p className="text-2xl font-black mt-2 text-indigo-600 dark:text-indigo-400">
+                {streamingAccounts.reduce((sum, a) => sum + a.clientCount, 0)}
+              </p>
+              <p className="text-[11px] text-gray-400 mt-0.5">Clientes atendidos</p>
+            </div>
+          </div>
+
+          {/* Barra de Filtro y Búsqueda */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center bg-white dark:bg-gray-800 p-4 rounded-2xl border dark:border-gray-700 shadow-sm">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar por correo (ej: herbertpearson), plataforma o cliente..."
+                value={accountSearch}
+                onChange={(e) => setAccountSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm dark:text-white"
+              />
+            </div>
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              <button
+                onClick={() => setAccountFilter('all')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  accountFilter === 'all'
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                }`}
+              >
+                Todas ({streamingAccounts.length})
+              </button>
+              <button
+                onClick={() => setAccountFilter('automated')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  accountFilter === 'automated'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-emerald-600 dark:text-emerald-400'
+                }`}
+              >
+                🟢 Automatizadas ({streamingAccounts.filter(a => a.isAutomated).length})
+              </button>
+              <button
+                onClick={() => setAccountFilter('manual')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  accountFilter === 'manual'
+                    ? 'bg-amber-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-amber-600 dark:text-amber-400'
+                }`}
+              >
+                ⚠️ Manuales ({streamingAccounts.filter(a => !a.isAutomated).length})
+              </button>
+            </div>
+          </div>
+
+          {/* Grid de Cuentas */}
+          {accountsLoading ? (
+            <div className="text-center py-16 text-gray-400 bg-white dark:bg-gray-800 rounded-2xl border dark:border-gray-700">
+              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3 text-brand-primary" />
+              <p className="font-semibold text-sm">Analizando cuentas y estados 2FA...</p>
+            </div>
+          ) : filteredAccounts.length === 0 ? (
+            <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl border dark:border-gray-700">
+              <Tv className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+              <h3 className="font-bold text-gray-700 dark:text-gray-300">No se encontraron cuentas</h3>
+              <p className="text-xs text-gray-400 mt-1">Prueba con otro término de búsqueda o sincroniza desde Excel.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filteredAccounts.map((acc) => {
+                const isExpanded = expandedAccount === acc.email;
+                const isGmail = acc.email.toLowerCase().endsWith('@gmail.com');
+                const p = acc.platform.toUpperCase();
+
+                let platformColor = 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600';
+                if (p.includes('NETFLIX')) platformColor = 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/50';
+                else if (p.includes('DISNEY')) platformColor = 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900/50';
+                else if (p.includes('MAX') || p.includes('HBO')) platformColor = 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900/50';
+                else if (p.includes('PRIME') || p.includes('AMAZON')) platformColor = 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950/40 dark:text-cyan-300 dark:border-cyan-900/50';
+                else if (p.includes('CRUNCHY')) platformColor = 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-900/50';
+
+                return (
+                  <div
+                    key={acc.email}
+                    className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                  >
+                    <div>
+                      {/* Top platform & Automation badge */}
+                      <div className="flex items-center justify-between gap-2 mb-2.5">
+                        <span className={`text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-lg border ${platformColor}`}>
+                          {acc.platform}
+                        </span>
+
+                        {acc.isAutomated ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/50 px-2 py-0.5 rounded-full">
+                            <ShieldCheck className="w-3 h-3" />
+                            <span>{acc.automationLabel}</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50 px-2 py-0.5 rounded-full">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>Manual (Sin Token)</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Email row with copy button */}
+                      <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/40 p-2 rounded-xl border border-gray-150 dark:border-gray-750 mb-2.5">
+                        <div className="min-w-0 pr-2">
+                          <p className="text-xs font-mono font-bold text-gray-900 dark:text-white truncate" title={acc.email}>
+                            {acc.email}
+                          </p>
+                          {acc.password && (
+                            <p className="text-[10px] text-gray-400 font-mono">
+                              Clave: <span className="text-gray-600 dark:text-gray-300">{acc.password}</span>
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={(e) => handleCopy(e, acc.email, `acc-${acc.email}`)}
+                          className="p-1 text-gray-400 hover:text-brand-primary rounded-lg transition-colors flex-shrink-0"
+                          title="Copiar correo"
+                        >
+                          {copiedId === `acc-${acc.email}` ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+
+                      {/* Profiles indicator */}
+                      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        <span className="font-semibold flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-gray-400" />
+                          {acc.clientCount === 1 ? '1 perfil asignado' : `${acc.clientCount} perfiles asignados`}
+                        </span>
+                        {acc.clientCount > 0 && (
+                          <button
+                            onClick={() => setExpandedAccount(isExpanded ? null : acc.email)}
+                            className="text-brand-primary hover:underline font-bold text-[11px] flex items-center gap-0.5"
+                          >
+                            <span>{isExpanded ? 'Ocultar' : 'Ver perfiles'}</span>
+                            {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Accordion of Profiles */}
+                      {isExpanded && acc.profiles && acc.profiles.length > 0 && (
+                        <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-900/60 rounded-xl border border-gray-150 dark:border-gray-750 text-[11px] space-y-1.5 max-h-48 overflow-y-auto animate-fadeIn">
+                          {acc.profiles.map((prof, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-1.5 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
+                              <div>
+                                <p className="font-semibold text-gray-800 dark:text-gray-200">{prof.clientName || 'Cliente'}</p>
+                                <p className="text-[10px] text-gray-400 font-mono">{prof.phone || 'Sin número'}</p>
+                              </div>
+                              {prof.pin && (
+                                <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded font-mono text-[10px] text-gray-600 dark:text-gray-300">
+                                  PIN: {prof.pin}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bottom Actions */}
+                    <div className="pt-3 mt-3 border-t border-gray-100 dark:border-gray-750 flex items-center justify-between text-xs">
+                      {!acc.isAutomated && isGmail ? (
+                        <button
+                          onClick={() => {
+                            setActiveSubTab('inboxes');
+                            setNewEmail(acc.email);
+                          }}
+                          className="w-full py-1.5 px-3 bg-brand-primary hover:bg-brand-primary/90 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                        >
+                          <Mail className="w-3.5 h-3.5" />
+                          <span>Conectar Bandeja Gmail</span>
+                        </button>
+                      ) : !acc.isAutomated ? (
+                        <div className="w-full flex items-center justify-between text-[11px] text-gray-400">
+                          <span>Webmail externo</span>
+                          <span className="text-amber-500 font-semibold">Configurar Receta RPA</span>
+                        </div>
+                      ) : (
+                        <div className="w-full flex items-center justify-between text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                          <span className="flex items-center gap-1">
+                            <ShieldCheck className="w-3 h-3" /> Extracción Activa
+                          </span>
+                          <span className="text-[10px] text-gray-400">{acc.automationType.toUpperCase()}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Email List Dashboard */}
+            <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <div>
               <h2 className="text-xl font-bold flex items-center dark:text-white">
@@ -815,5 +1208,7 @@ export const ManagedEmailsView: React.FC = () => {
         </div>
       )}
     </div>
+  )}
+</div>
   );
 };
