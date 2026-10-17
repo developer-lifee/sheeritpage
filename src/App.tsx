@@ -208,6 +208,14 @@ function AdminLoginOnApp({ onSuccess }: { onSuccess: () => void }) {
 }
 
 function AppContent() {
+  const { getWaLink } = useWhatsAppContact();
+  const [isBotModalOpen, setIsBotModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenDemo = () => setIsBotModalOpen(true);
+    window.addEventListener('open-bot-demo', handleOpenDemo);
+    return () => window.removeEventListener('open-bot-demo', handleOpenDemo);
+  }, []);
   const [currentView, setCurrentView] = useState<ViewState>(() => {
     const rawPath = window.location.pathname;
     const path = rawPath === '/' ? '/' : rawPath.replace(/\/$/, '');
