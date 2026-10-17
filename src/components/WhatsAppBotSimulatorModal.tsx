@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useWhatsAppContact } from '../hooks/useWhatsAppContact';
 import { 
   X, Mic, MicOff, Send, Sparkles, Check, CheckCheck, 
   MessageSquare, Heart, Clock, Film, Briefcase, ChevronRight, 
@@ -6,6 +7,7 @@ import {
 } from 'lucide-react';
 
 interface PersonaConfig {
+  phone?: string;
   name: string;
   type: 'negocio' | 'pareja' | 'recordatorios' | 'cine';
   instructions: string;
@@ -26,6 +28,8 @@ interface WhatsAppBotSimulatorModalProps {
 }
 
 export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps> = ({
+  // hook
+
   isOpen,
   onClose,
   onSelectPlan
@@ -182,7 +186,8 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
           message: userText,
           personaConfig: persona,
           history: historyPayload,
-          remaining: remainingMessages
+          remaining: remainingMessages,
+          userPhone: persona.phone || ''
         })
       });
 
@@ -404,6 +409,23 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
                     placeholder="Ej. Tienda Rápida / Mi Asistente / Amor"
                     className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase mb-1">
+                    📱 Tu Número de WhatsApp (Para activar tus 20 créditos y venta cruzada)
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={persona.phone || ''}
+                    onChange={(e) => setPersona({ ...persona, phone: e.target.value.replace(/[^0-9+]/g, '') })}
+                    placeholder="Ej. 3101234567 o +57 310..."
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                    Guardaremos tu configuración aquí para vincularla a tu bot oficial cuando lo actives.
+                  </p>
                 </div>
 
                 <div>

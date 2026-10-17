@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useWhatsAppContact } from '../hooks/useWhatsAppContact';
 import { WhatsAppBotSimulatorModal } from './WhatsAppBotSimulatorModal';
 import { Bot, Heart, MessageCircle } from 'lucide-react';
 import { Shield, Sparkles, Server, Clock, Code, Award, CheckCircle2, MessageSquare, ArrowRight, Database, Settings, Zap, ArrowLeftRight, Check, ChevronLeft, ChevronRight, Laptop, Globe, Smartphone, ExternalLink } from 'lucide-react';

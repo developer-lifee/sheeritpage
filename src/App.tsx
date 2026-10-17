@@ -13,6 +13,7 @@ import { AdminSupport } from './components/AdminSupport';
 import { VerificationPage } from './components/VerificationPage';
 import { SoftwarePricingPage } from './components/SoftwarePricingPage';
 import { WhatsAppBotSimulatorModal } from './components/WhatsAppBotSimulatorModal';
+import { useWhatsAppContact } from './hooks/useWhatsAppContact';
 import { Sparkles, Bot } from 'lucide-react';
 import { RayTracingSupportPage } from './components/RayTracingSupportPage';
 import { RayTracingPrivacyPage } from './components/RayTracingPrivacyPage';
@@ -726,7 +727,7 @@ function AppContent() {
         onClose={() => setIsBotModalOpen(false)}
         onSelectPlan={(plan, price) => {
           const msg = encodeURIComponent('Hola Sheerit! Quiero activar el ' + plan + ' (' + price + ') para mi WhatsApp.');
-          window.open('https://wa.me/573107946794?text=' + msg, '_blank');
+          window.open(getWaLink(), '_blank');
         }}
       />
     </div>
