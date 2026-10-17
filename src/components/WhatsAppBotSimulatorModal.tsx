@@ -827,20 +827,16 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
                 </div>
               </div>
 
-              <div className="space-y-2.5 pt-2">
+              <div className="space-y-3 pt-2">
                 <button
                   onClick={handleCheckoutWhatsAppAdvisor}
-                  className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
+                  className="w-full py-4 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 text-sm cursor-pointer transform hover:-translate-y-0.5 active:scale-95"
                 >
-                  <CreditCard className="w-4 h-4" /> Pagar $10.000 y Activar con Asesor
+                  <CreditCard className="w-4 h-4" /> Pagar $10.000 y Activar Plan Starter
                 </button>
-
-                <button
-                  onClick={handleGoToClientLogin}
-                  className="w-full py-2.5 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs cursor-pointer border border-gray-200 dark:border-gray-600"
-                >
-                  <QrCode className="w-4 h-4 text-emerald-500" /> Ir a Mis Servicios para Generar QR
-                </button>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  🔒 El código QR de vinculación se generará automáticamente en tu sesión tras confirmar el pago de $10.000 COP.
+                </p>
               </div>
             </div>
           </div>
