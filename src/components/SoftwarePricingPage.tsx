@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { useWhatsAppContact } from '../hooks/useWhatsAppContact';
 import { WhatsAppBotSimulatorModal } from './WhatsAppBotSimulatorModal';
-import { Bot, Heart, MessageCircle } from 'lucide-react';
+import { Bot, Heart, MessageCircle, Film } from 'lucide-react';
 import { Shield, Sparkles, Server, Clock, Code, Award, CheckCircle2, MessageSquare, ArrowRight, Database, Settings, Zap, ArrowLeftRight, Check, ChevronLeft, ChevronRight, Laptop, Globe, Smartphone, ExternalLink } from 'lucide-react';
 
 export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) => void }) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isBotModalOpen, setIsBotModalOpen] = useState(false);
+  const { getWaLink } = useWhatsAppContact();
 
   const handleContactWhatsApp = (planType: string) => {
     const message = `Hola Sheerit! Estoy interesado en sus servicios de desarrollo de software, apps móviles iOS/Android y automatización (Opción: ${planType}). Me gustaría agendar una asesoría para mi proyecto.`;
-    const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/573107946794?text=${encodedMessage}`, '_blank');
+    window.open(getWaLink(message), '_blank');
   };
 
   const cases = [
@@ -516,7 +516,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                 </p>
                 <div className="mb-6">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-black text-gray-950 dark:text-white">.000 COP</span>
+                    <span className="text-4xl font-black text-gray-950 dark:text-white">$10.000 COP</span>
                     <span className="text-gray-500 dark:text-gray-400 text-sm">/ mes</span>
                   </div>
                   <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
@@ -547,7 +547,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                 onClick={() => setIsBotModalOpen(true)}
                 className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
               >
-                <Sparkles className="w-4 h-4" /> Probar Demo / Activar (k)
+                <Sparkles className="w-4 h-4" /> Probar Demo / Activar ($10k)
               </button>
             </div>
 
@@ -563,7 +563,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                 </p>
                 <div className="mb-6">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-black text-gray-950 dark:text-white">.000 COP</span>
+                    <span className="text-4xl font-black text-gray-950 dark:text-white">$30.000 COP</span>
                     <span className="text-gray-500 dark:text-gray-400 text-sm">/ mes</span>
                   </div>
                   <p className="text-xs text-gray-400 mt-1">
@@ -591,10 +591,10 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                 </ul>
               </div>
               <button
-                onClick={() => handleContactWhatsApp('Bot WhatsApp Plan Pro (k/mes)')}
+                onClick={() => handleContactWhatsApp('Bot WhatsApp Plan Pro ($30.000 COP/mes)')}
                 className="w-full py-3.5 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
               >
-                <MessageSquare className="w-4 h-4" /> Solicitar Plan Pro (k)
+                <MessageSquare className="w-4 h-4" /> Solicitar Plan Pro ($30k)
               </button>
             </div>
 
@@ -610,7 +610,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                 </p>
                 <div className="mb-6">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-black text-gray-950 dark:text-white">.000 COP</span>
+                    <span className="text-4xl font-black text-gray-950 dark:text-white">$60.000 COP</span>
                     <span className="text-gray-500 dark:text-gray-400 text-sm">/ mes</span>
                   </div>
                   <p className="text-xs text-gray-400 mt-1">
@@ -638,10 +638,10 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                 </ul>
               </div>
               <button
-                onClick={() => handleContactWhatsApp('Bot WhatsApp Plan Scale (k/mes)')}
+                onClick={() => handleContactWhatsApp('Bot WhatsApp Plan Scale ($60.000 COP/mes)')}
                 className="w-full py-3.5 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
               >
-                <MessageSquare className="w-4 h-4" /> Solicitar Plan Scale (k)
+                <MessageSquare className="w-4 h-4" /> Solicitar Plan Scale ($60k)
               </button>
             </div>
           </div>

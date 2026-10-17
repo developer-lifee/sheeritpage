@@ -597,7 +597,7 @@ function AppContent() {
             </h2>
             <p className="text-emerald-100 text-xs sm:text-sm max-w-xl leading-relaxed">
               Automatiza tu WhatsApp en minutos: responde a tus clientes, modo para tu pareja si estás ocupado o recordatorios personales. 
-              Planes desde solo <strong>.000 COP/mes</strong>.
+              Planes desde solo <strong>$10.000 COP/mes</strong>.
             </p>
           </div>
           <div className="z-10 flex flex-wrap items-center justify-center gap-3 shrink-0">
@@ -612,7 +612,7 @@ function AppContent() {
               onClick={() => navigateTo('software')}
               className="px-5 py-3.5 bg-emerald-950/60 hover:bg-emerald-950/80 text-white font-bold rounded-2xl transition-all text-xs sm:text-sm flex items-center gap-1.5 cursor-pointer border border-emerald-400/30"
             >
-              <span>Ver Planes (k)</span>
+              <span>Ver Planes ($10k)</span>
             </button>
           </div>
         </div>
