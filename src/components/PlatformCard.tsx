@@ -126,6 +126,7 @@ export function PlatformCard({
 
   const getFallbackImage = (platformName: string, originalImage: string) => {
     const n = (platformName || '').toLowerCase();
+    if (n.includes('whatsapp') || n.includes('bot')) return '/plataform/whatsapp.svg';
     if (n.includes('claude')) return '/plataform/claude.svg';
     if (n.includes('netflix')) return '/plataform/netflix.webp';
     if (n.includes('disney')) return '/plataform/disney.webp';
@@ -315,18 +316,32 @@ export function PlatformCard({
           </div>
 
           {isPlanAvailable ? (
-            <button
-              onClick={() => {
-                addToCombo(currentId);
-                setIsComboOpen(true);
-              }}
-              className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors text-sm flex items-center justify-center gap-1.5 shadow-sm"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              Agregar al Combo
-            </button>
+            <div className="flex flex-col gap-2 w-full">
+              {(name.toLowerCase().includes('bot') || name.toLowerCase().includes('whatsapp')) && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.dispatchEvent(new CustomEvent('open-bot-demo'));
+                  }}
+                  className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold rounded-xl transition-all text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md transform hover:-translate-y-0.5 active:scale-95 border border-emerald-400/40 cursor-pointer"
+                >
+                  <span>✨ Probar Demo (20 Msgs Gratis)</span>
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  addToCombo(currentId);
+                  setIsComboOpen(true);
+                }}
+                className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors text-sm flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Agregar al Combo
+              </button>
+            </div>
           ) : (
             <button
               disabled

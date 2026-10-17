@@ -12,6 +12,8 @@ import { SupportSection } from './components/SupportSection';
 import { AdminSupport } from './components/AdminSupport';
 import { VerificationPage } from './components/VerificationPage';
 import { SoftwarePricingPage } from './components/SoftwarePricingPage';
+import { WhatsAppBotSimulatorModal } from './components/WhatsAppBotSimulatorModal';
+import { Sparkles, Bot } from 'lucide-react';
 import { RayTracingSupportPage } from './components/RayTracingSupportPage';
 import { RayTracingPrivacyPage } from './components/RayTracingPrivacyPage';
 import { PueblappSupportPage } from './components/PueblappSupportPage';
@@ -574,6 +576,38 @@ function AppContent() {
               </div>
             </div>
         
+                {/* Banner Destacado: Bot de WhatsApp con IA para Clientes Sheerit */}
+        <div className="mb-10 rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-800 text-white p-6 sm:p-8 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+          <div className="space-y-2 text-center md:text-left z-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-emerald-100 text-xs font-black uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5" /> ¡Nuevo Servicio de Autogestión!
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
+              Tu Asistente & Bot de WhatsApp con IA
+            </h2>
+            <p className="text-emerald-100 text-xs sm:text-sm max-w-xl leading-relaxed">
+              Automatiza tu WhatsApp en minutos: responde a tus clientes, modo para tu pareja si estás ocupado o recordatorios personales. 
+              Planes desde solo <strong>.000 COP/mes</strong>.
+            </p>
+          </div>
+          <div className="z-10 flex flex-wrap items-center justify-center gap-3 shrink-0">
+            <button
+              onClick={() => setIsBotModalOpen(true)}
+              className="px-6 py-3.5 bg-white hover:bg-emerald-50 text-emerald-900 font-black rounded-2xl shadow-xl transition-all transform hover:-translate-y-0.5 active:scale-95 text-xs sm:text-sm flex items-center gap-2 cursor-pointer border border-white/40"
+            >
+              <Sparkles className="w-4 h-4 text-emerald-600" />
+              <span>Probar Demo Gratis (20 Msgs)</span>
+            </button>
+            <button
+              onClick={() => navigateTo('software')}
+              className="px-5 py-3.5 bg-emerald-950/60 hover:bg-emerald-950/80 text-white font-bold rounded-2xl transition-all text-xs sm:text-sm flex items-center gap-1.5 cursor-pointer border border-emerald-400/30"
+            >
+              <span>Ver Planes (k)</span>
+            </button>
+          </div>
+        </div>
+
         {loading ? (
           <div className="text-center py-10">
             <p className="text-gray-600 dark:text-gray-300 text-lg">
@@ -587,6 +621,9 @@ function AppContent() {
             </p>
           </div>
         ) : (
+          
+        
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {filteredPlatforms.map((platform) => (
               <PlatformCard
@@ -682,39 +719,18 @@ function AppContent() {
       
       {/* Global Combo Cart Modal */}
       <ComboMenu />
+
+      {/* Modal Simulador Interactivo Global */}
+      <WhatsAppBotSimulatorModal
+        isOpen={isBotModalOpen}
+        onClose={() => setIsBotModalOpen(false)}
+        onSelectPlan={(plan, price) => {
+          const msg = encodeURIComponent('Hola Sheerit! Quiero activar el ' + plan + ' (' + price + ') para mi WhatsApp.');
+          window.open('https://wa.me/573107946794?text=' + msg, '_blank');
+        }}
+      />
     </div>
   );
 }
 
-function FloatingCartButton() {
-  const { getTotalItems, setIsComboOpen } = useComboCart();
-  const count = getTotalItems();
-
-  if (count === 0) return null;
-
-  return (
-    <button
-      onClick={() => setIsComboOpen(true)}
-      className="fixed bottom-24 right-6 z-40 flex items-center gap-2 px-5 py-3 bg-emerald-500 text-white rounded-full shadow-2xl hover:bg-emerald-600 transition-all duration-300 transform hover:scale-105 active:scale-95 animate-bounce-slow"
-      title="Ver mi combo y pagar"
-    >
-      <div className="relative">
-        <ShoppingCart className="h-5 w-5" />
-        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-extrabold rounded-full h-4 w-4 flex items-center justify-center border border-emerald-500 animate-pulse">
-          {count}
-        </span>
-      </div>
-      <span className="font-bold text-xs sm:text-sm tracking-wide">Pagar Combo ({count})</span>
-    </button>
-  );
-}
-
-export default function App() {
-  return (
-    <CurrencyProvider>
-      <ComboCartProvider>
-        <AppContent />
-      </ComboCartProvider>
-    </CurrencyProvider>
-  );
-}
+export default App;
