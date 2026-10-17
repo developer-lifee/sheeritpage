@@ -3,7 +3,8 @@ import { useWhatsAppContact } from '../hooks/useWhatsAppContact';
 import { 
   X, Mic, MicOff, Send, Sparkles, CheckCheck, 
   MessageSquare, Heart, Clock, Film, Briefcase, ChevronRight, 
-  RefreshCw, ArrowLeft, ShieldCheck, Zap, ArrowRight, CornerDownLeft
+  RefreshCw, ArrowLeft, ShieldCheck, Zap, ArrowRight, CornerDownLeft,
+  QrCode, CreditCard, ExternalLink, Smartphone
 } from 'lucide-react';
 
 interface PersonaConfig {
@@ -36,12 +37,13 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
 
   // Estados generales: 'interview' | 'chat'
   const [step, setStep] = useState<'interview' | 'chat'>('interview');
+  const [showLinkingModal, setShowLinkingModal] = useState(false);
   
   // Preguntas Typeform: 1 -> 2 -> 3 -> 4
   const [currentQuestion, setCurrentQuestion] = useState<number>(1);
   const totalQuestions = 4;
   
-  // Configuración de la Persona
+  // Configuración de la Persona: name inicia COMPLETAMENTE VACÍO
   const [persona, setPersona] = useState<PersonaConfig>({
     name: '',
     type: 'negocio',
@@ -62,6 +64,7 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [remainingMessages, setRemainingMessages] = useState<number>(20);
+  const [phoneMessageSent, setPhoneMessageSent] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -149,15 +152,13 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
 
   // Iniciar la simulación de chat
   const startChatSimulation = async () => {
-    const finalName = persona.name.trim() || (
-      persona.type === 'negocio' ? 'Mi Tienda' :
-      persona.type === 'pareja' ? 'Amor ❤️' :
-      persona.type === 'recordatorios' ? 'Asistente Personal' : 'Cine Sheerit'
-    );
+    const finalName = persona.name.trim();
+    if (!finalName) return;
 
-    // Guardar lead de una vez en backend
+    // Guardar lead y enviar mensaje de WhatsApp en vivo a su número
     try {
-      fetch('/api/public/bot-demo/save-lead', {
+      const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
+      fetch(`${apiUrl}/api/public/bot-demo/save-lead`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -167,7 +168,14 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
           instructions: persona.instructions || 'Sin instrucciones adicionales',
           remaining: 20
         })
-      }).catch(err => console.warn('Lead save background note:', err));
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.whatsappSent) {
+          setPhoneMessageSent(true);
+        }
+      })
+      .catch(err => console.warn('Lead save background note:', err));
     } catch (e) {
       // Ignorar fallo no bloqueante
     }
@@ -222,9 +230,14 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
         text: m.text
       }));
 
-      const res = await fetch('/api/public/bot-demo/chat', {
+      const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+      const res = await fetch(`${apiUrl}/api/public/bot-demo/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           message: userText,
           personaConfig: persona,
@@ -233,11 +246,12 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
           userPhone: persona.phone || ''
         })
       });
+      clearTimeout(timeoutId);
 
       const data = await res.json();
       setIsTyping(false);
 
-      if (data.success) {
+      if (data && data.success) {
         setRemainingMessages(data.remaining ?? Math.max(0, remainingMessages - 1));
         const botMsg: Message = {
           id: `bot-${Date.now()}`,
@@ -250,34 +264,48 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
         const errMsg: Message = {
           id: `bot-${Date.now()}`,
           sender: 'bot',
-          text: data.reply || "Lo siento, tuve un problema de conexión temporal. Intenta de nuevo.",
+          text: data?.reply || "¡Hola! Con gusto te atiendo. ¿Deseas conocer más detalles de nuestros productos o servicios?",
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
         setMessages(prev => [...prev, errMsg]);
       }
     } catch (err) {
-      console.error(err);
+      console.warn("Error en fetch chat, usando fallback suave:", err);
       setIsTyping(false);
+      
+      // Fallback amigable inmediato basado en el tipo de negocio
+      let fallbackAnswer = "¡Hola! Con mucho gusto te asesoro. ¿Qué referencia o consulta puntual tienes?";
+      if (persona.type === 'negocio') {
+        fallbackAnswer = `¡Hola! En ${persona.name || 'nuestra tienda'} estamos para servirte. Cuéntame qué modelo o servicio te interesa y con gusto te damos precios.`;
+      } else if (persona.type === 'pareja') {
+        fallbackAnswer = "Hola mi vida ❤️ Estoy atento a ti, dime qué necesitas y te respondo con todo el cariño.";
+      }
+
+      setRemainingMessages(prev => Math.max(0, prev - 1));
       setMessages(prev => [
         ...prev,
         {
           id: `bot-${Date.now()}`,
           sender: 'bot',
-          text: "¡Ups! No pude contactar al servidor. Revisa tu conexión.",
+          text: fallbackAnswer,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
     }
   };
 
-  const handleCheckoutStarter = () => {
-    if (onSelectPlan) {
-      onSelectPlan('Plan Starter Bot WhatsApp', '$10.000 COP');
-    } else {
-      const msg = "¡Hola Sheerit! Probé el demo del Bot de WhatsApp y quiero activar el Plan Starter de $10.000 COP/mes para mi número.";
-      window.open(getWaLink(msg), '_blank');
-    }
-    onClose();
+  const handleOpenLinking = () => {
+    setShowLinkingModal(true);
+  };
+
+  const handleCheckoutWhatsAppAdvisor = () => {
+    const msg = `¡Hola Sheerit! Probé el demo de mi bot "${persona.name || 'Mi Bot'}" (tel: ${persona.phone || ''}). Quiero activar el Plan Starter de $10.000 COP/mes y vincular mi sesión de WhatsApp.`;
+    window.open(getWaLink(msg), '_blank');
+  };
+
+  const handleGoToClientLogin = () => {
+    const cleanPhone = (persona.phone || '').replace(/\D/g, '');
+    window.location.href = `/servicios?phone=${cleanPhone}&vincular=whatsapp`;
   };
 
   return (
@@ -362,42 +390,38 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
                       type: 'negocio',
                       title: 'Mis Clientes / Ventas',
                       desc: 'Precios, catálogos y resolver dudas 24/7 sin dejar a nadie en visto.',
-                      icon: <Briefcase className="w-5 h-5 text-emerald-500" />,
-                      defaultName: 'Mi Tienda Sheerit'
+                      icon: <Briefcase className="w-5 h-5 text-emerald-500" />
                     },
                     {
                       key: 'B',
                       type: 'pareja',
                       title: 'Mi Pareja / Novia',
                       desc: 'Modo cariñoso: responder con amor cuando ando ocupado o manejando.',
-                      icon: <Heart className="w-5 h-5 text-pink-500" />,
-                      defaultName: 'Modo Amor ❤️'
+                      icon: <Heart className="w-5 h-5 text-pink-500" />
                     },
                     {
                       key: 'C',
                       type: 'recordatorios',
                       title: 'A mí mismo (Asistente & Alarmas)',
                       desc: 'Recordatorios de pagos, citas, tareas y apuntes rápidos por WhatsApp.',
-                      icon: <Clock className="w-5 h-5 text-amber-500" />,
-                      defaultName: 'Mi Asistente Personal'
+                      icon: <Clock className="w-5 h-5 text-amber-500" />
                     },
                     {
                       key: 'D',
                       type: 'cine',
                       title: 'Amigos / Grupo (Cine & Streaming)',
                       desc: 'Recomendar qué ver en Netflix o Max según tu ánimo o el de tus amigos.',
-                      icon: <Film className="w-5 h-5 text-purple-500" />,
-                      defaultName: 'Experto en Streaming'
+                      icon: <Film className="w-5 h-5 text-purple-500" />
                     }
                   ].map((item) => (
                     <button
                       key={item.key}
                       type="button"
                       onClick={() => {
+                        // NO sobreescribimos name, se mantiene vacío para que el usuario deba escribirlo
                         setPersona(p => ({ 
                           ...p, 
-                          type: item.type as any, 
-                          name: p.name || item.defaultName 
+                          type: item.type as any
                         }));
                         setCurrentQuestion(2);
                       }}
@@ -423,7 +447,7 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
               </div>
             )}
 
-            {/* PREGUNTA 2: Nombre del Bot o Negocio */}
+            {/* PREGUNTA 2: Nombre del Bot o Negocio (COMPLETAMENTE VACÍO Y BLOQUEANTE) */}
             {currentQuestion === 2 && (
               <div className="space-y-6 animate-fadeIn my-auto">
                 <div>
@@ -434,7 +458,7 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
                     ¿Cómo se llama tu bot o tu negocio?
                   </h2>
                   <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Así se presentará ante las personas cuando inicien una conversación en WhatsApp.
+                    Escribe el nombre de tu marca, tienda o asistente para continuar.
                   </p>
                 </div>
 
@@ -450,14 +474,22 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
                       }
                     }}
                     placeholder={
-                      persona.type === 'negocio' ? "Ej: Tienda Sheerit / Mi Joyería" :
-                      persona.type === 'pareja' ? "Ej: Amor ❤️ / Mi Corazón" :
-                      persona.type === 'recordatorios' ? "Ej: Mi Asistente / Recordatorios" : "Ej: Cine Sheerit"
+                      persona.type === 'negocio' ? "Escribe el nombre de tu negocio (ej. Pantalones, Mi Tienda...)" :
+                      persona.type === 'pareja' ? "Escribe un apodo o nombre (ej. Mi Amor, Andrea...)" :
+                      persona.type === 'recordatorios' ? "Escribe el nombre de tu asistente (ej. Asistente Juan...)" : "Escribe un nombre (ej. Cinefilo Sheerit...)"
                     }
                     className="w-full px-4 py-3.5 rounded-2xl border-2 border-emerald-500/50 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-base sm:text-lg focus:ring-4 focus:ring-emerald-500/20 outline-none transition-all shadow-inner"
                   />
                   <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2 flex items-center gap-1">
-                    <CornerDownLeft className="w-3.5 h-3.5" /> Presiona Continuar o la tecla Enter para avanzar
+                    {persona.name.trim() ? (
+                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                        <CornerDownLeft className="w-3.5 h-3.5" /> Presiona Continuar o Enter para avanzar
+                      </span>
+                    ) : (
+                      <span className="text-amber-600 dark:text-amber-400 font-medium">
+                        * Debes escribir un nombre para poder continuar
+                      </span>
+                    )}
                   </p>
                 </div>
 
@@ -474,7 +506,7 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
                     type="button"
                     disabled={!persona.name.trim()}
                     onClick={() => setCurrentQuestion(3)}
-                    className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-bold rounded-xl text-xs sm:text-sm transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+                    className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl text-xs sm:text-sm transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
                   >
                     Continuar <ArrowRight className="w-4 h-4" />
                   </button>
@@ -504,12 +536,12 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
                     onChange={(e) => setPersona({ ...persona, instructions: e.target.value })}
                     placeholder={
                       persona.type === 'negocio' 
-                        ? "Ej: Vendemos suscripciones y cuentas premium. Los pagos son por Nequi o Bancolombia. Trata a la gente de tú y pide siempre el comprobante..."
+                        ? `Ej: Vendemos ropa y accesorios en ${persona.name || 'nuestro negocio'}. Precios desde $50.000 COP. Pagos por Nequi y Bancolombia. Trata a la gente de tú y pide comprobante...`
                         : persona.type === 'pareja'
-                        ? "Ej: Si me escriben, di que estoy en una reunión importante pero que la amo con todo el corazón y le respondo apenas salga a las 6pm..."
+                        ? "Ej: Si me escriben, di que estoy en reunión importante pero que salgo a las 6pm para vernos. Responde con mucho amor..."
                         : persona.type === 'recordatorios'
-                        ? "Ej: Ayúdame a agendar pagos, alarmas y reuniones. Confírmame siempre la hora exacta y el recordatorio..."
-                        : "Ej: Me gustan las películas de suspenso, drama y ciencia ficción. Pregúntame qué plataformas tengo activas..."
+                        ? "Ej: Ayúdame a agendar pagos, alarmas y reuniones. Confírmame siempre la hora exacta..."
+                        : "Ej: Me gustan las películas de suspenso, drama y ciencia ficción en Netflix y Max..."
                     }
                     className="w-full p-4 rounded-2xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs sm:text-sm focus:ring-2 focus:ring-emerald-500 outline-none resize-none leading-relaxed shadow-sm"
                   />
@@ -597,18 +629,18 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
               </div>
             )}
 
-            {/* PREGUNTA 4: Teléfono para 20 créditos & Venta cruzada */}
+            {/* PREGUNTA 4: Teléfono para 20 créditos & Envío a su WhatsApp Real */}
             {currentQuestion === 4 && (
               <div className="space-y-6 animate-fadeIn my-auto">
                 <div>
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-xs font-bold mb-3">
-                    4 → Activación Gratuita
+                    4 → Activación en tu WhatsApp
                   </div>
                   <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight">
                     ¿A qué número de WhatsApp vincularemos tus 20 créditos?
                   </h2>
                   <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Guardaremos esta configuración oficial para que pruebes tu bot ahora y un asesor pueda activártelo en tu número real.
+                    Te escribiremos a tu WhatsApp para que puedas probar a tu bot desde tu propio celular y en esta pantalla.
                   </p>
                 </div>
 
@@ -629,9 +661,9 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
                   </div>
                   
                   <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 flex items-start gap-2.5">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <Smartphone className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                     <p className="text-xs text-emerald-900 dark:text-emerald-200 leading-snug">
-                      <strong>Prueba 100% gratuita:</strong> Cuentas con 20 mensajes con IA para interactuar libremente. No te pediremos tarjeta de crédito.
+                      <strong>Prueba en vivo en tu celular:</strong> Nuestro bot te enviará un WhatsApp directo para que chatees con tu bot como si fuera un cliente real.
                     </p>
                   </div>
                 </div>
@@ -651,7 +683,7 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
                     onClick={startChatSimulation}
                     className="px-6 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 text-white font-black rounded-2xl text-xs sm:text-sm transition-all shadow-lg flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5 active:scale-95"
                   >
-                    <Sparkles className="w-4 h-4" /> Iniciar Simulación en Vivo (20 Msgs) →
+                    <Sparkles className="w-4 h-4" /> Iniciar Prueba (20 Mensajes Gratis) →
                   </button>
                 </div>
               </div>
@@ -667,16 +699,16 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
             {/* Fondo con marcas sutiles estilo WhatsApp */}
             <div className="absolute inset-0 opacity-[0.04] dark:opacity-[0.03] pointer-events-none bg-[radial-gradient(#000_1px,transparent_1px)] dark:bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
 
-            {/* Aviso Superior de Prueba */}
-            <div className="bg-amber-100 dark:bg-amber-950/60 border-b border-amber-200 dark:border-amber-900/40 px-4 py-1.5 flex items-center justify-between text-[11px] text-amber-800 dark:text-amber-300 z-10">
-              <span className="flex items-center gap-1">
-                🔒 <strong>Simulación en vivo:</strong> Este mismo comportamiento responderá en tu WhatsApp oficial.
+            {/* Aviso Superior de Prueba con Botón de Vincular */}
+            <div className="bg-amber-100 dark:bg-amber-950/60 border-b border-amber-200 dark:border-amber-900/40 px-4 py-2 flex items-center justify-between text-[11px] text-amber-800 dark:text-amber-300 z-10">
+              <span className="flex items-center gap-1 truncate mr-2">
+                🔒 <strong>Simulación en vivo:</strong> Responde en web y a tu WhatsApp (+57 {persona.phone || ''}).
               </span>
               <button
-                onClick={handleCheckoutStarter}
-                className="font-bold underline hover:text-amber-950 dark:hover:text-amber-100 shrink-0 ml-2"
+                onClick={handleOpenLinking}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3 py-1 rounded-xl text-xs transition-all shadow-sm flex items-center gap-1 shrink-0 cursor-pointer"
               >
-                Vincular a $10.000/mes
+                <Zap className="w-3.5 h-3.5" /> Vincular a $10.000/mes
               </button>
             </div>
 
@@ -746,17 +778,71 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
             {remainingMessages <= 5 && (
               <div className="bg-emerald-900 text-white p-3 flex flex-wrap items-center justify-between gap-2 z-20 shadow-lg">
                 <div className="text-xs">
-                  <strong>¿Te gustó cómo responde?</strong> Activa tu bot oficial en tu número de WhatsApp.
+                  <strong>¿Te gustó cómo responde?</strong> Vincula tu WhatsApp oficial y genera tu QR.
                 </div>
                 <button
-                  onClick={handleCheckoutStarter}
+                  onClick={handleOpenLinking}
                   className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-gray-950 font-bold rounded-xl text-xs transition-all shadow flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Zap className="w-3.5 h-3.5" /> Plan Starter ($10.000 COP)
+                  <Zap className="w-3.5 h-3.5" /> Vincular ($10.000 COP)
                 </button>
               </div>
             )}
 
+          </div>
+        )}
+
+        {/* MODAL SECUNDARIO: VINCULAR YA PARA PAGAR Y GENERAR QR */}
+        {showLinkingModal && (
+          <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl border border-emerald-500/30 text-center relative space-y-4">
+              <button 
+                onClick={() => setShowLinkingModal(false)}
+                className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center mx-auto mb-2 shadow-inner">
+                <QrCode className="w-7 h-7" />
+              </div>
+
+              <h3 className="text-xl font-black text-gray-950 dark:text-white">
+                Vincular Bot a tu WhatsApp Oficial
+              </h3>
+              
+              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                Tu bot <strong>"{persona.name || 'Mi Negocio'}"</strong> está configurado con tus instrucciones. Con el <strong>Plan Starter ($10.000 COP/mes)</strong> se enlazará a tu número de WhatsApp para atender a tus clientes 24/7.
+              </p>
+
+              <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border border-gray-200 dark:border-gray-600 text-left text-xs space-y-1.5 text-gray-700 dark:text-gray-300">
+                <div className="flex justify-between font-bold">
+                  <span>Plan Starter WhatsApp</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">$10.000 COP / mes</span>
+                </div>
+                <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                  • 50 Mensajes con IA al mes<br/>
+                  • Respuestas automáticas y catálogo ilimitado<br/>
+                  • Generación de código QR para conectar tu WhatsApp
+                </div>
+              </div>
+
+              <div className="space-y-2.5 pt-2">
+                <button
+                  onClick={handleCheckoutWhatsAppAdvisor}
+                  className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
+                >
+                  <CreditCard className="w-4 h-4" /> Pagar $10.000 y Activar con Asesor
+                </button>
+
+                <button
+                  onClick={handleGoToClientLogin}
+                  className="w-full py-2.5 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs cursor-pointer border border-gray-200 dark:border-gray-600"
+                >
+                  <QrCode className="w-4 h-4 text-emerald-500" /> Ir a Mis Servicios para Generar QR
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
