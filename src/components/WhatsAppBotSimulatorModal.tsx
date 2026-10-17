@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useWhatsAppContact } from '../hooks/useWhatsAppContact';
+import { CustomerFormModal } from './CustomerFormModal';
 import { 
   X, Mic, MicOff, Send, Sparkles, CheckCheck, 
   MessageSquare, Heart, Clock, Film, Briefcase, ChevronRight, 
   RefreshCw, ArrowLeft, ShieldCheck, Zap, ArrowRight, CornerDownLeft,
-  QrCode, CreditCard, ExternalLink, Smartphone
+  QrCode, CreditCard, ExternalLink, Smartphone, Check, Copy
 } from 'lucide-react';
 
 interface PersonaConfig {
@@ -38,6 +39,9 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
   // Estados generales: 'interview' | 'chat'
   const [step, setStep] = useState<'interview' | 'chat'>('interview');
   const [showLinkingModal, setShowLinkingModal] = useState(false);
+  const [showCustomerFormModal, setShowCustomerFormModal] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>(['Tratar de tú y con amabilidad']);
   
   // Preguntas Typeform: 1 -> 2 -> 3 -> 4
   const [currentQuestion, setCurrentQuestion] = useState<number>(1);
@@ -240,7 +244,12 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
         signal: controller.signal,
         body: JSON.stringify({
           message: userText,
-          personaConfig: persona,
+          personaConfig: {
+            ...persona,
+            instructions: selectedTags.length > 0 
+              ? (persona.instructions ? `${persona.instructions}. Reglas de estilo: ${selectedTags.join(', ')}` : `Reglas de estilo: ${selectedTags.join(', ')}`)
+              : persona.instructions
+          },
           history: historyPayload,
           remaining: remainingMessages,
           userPhone: persona.phone || ''
@@ -296,6 +305,12 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
 
   const handleOpenLinking = () => {
     setShowLinkingModal(true);
+  };
+
+  const handleCopy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(id);
+    setTimeout(() => setCopiedKey(null), 2500);
   };
 
   const handleCheckoutWhatsAppAdvisor = () => {
@@ -584,28 +599,41 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
                     </button>
                   </div>
 
-                  {/* Chips de sugerencias rápidas */}
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {[
-                      'Tratar de tú y con amabilidad',
-                      'Precios y entrega inmediata',
-                      'Pedir comprobante de pago',
-                      'Responder corto y al grano'
-                    ].map((chip) => (
-                      <button
-                        key={chip}
-                        type="button"
-                        onClick={() => {
-                          setPersona(prev => ({
-                            ...prev,
-                            instructions: prev.instructions ? `${prev.instructions}. ${chip}` : chip
-                          }));
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-[11px] text-gray-600 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-700 transition-colors border border-gray-200 dark:border-gray-700"
-                      >
-                        + {chip}
-                      </button>
-                    ))}
+                  {/* Reglas de Estilo y Comportamiento (NO se escriben en el texto de arriba) */}
+                  <div className="space-y-1.5 pt-1">
+                    <label className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 block">
+                      Estilo y reglas de atención (actívalas sin alterar tu descripción):
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        'Tratar de tú y con amabilidad',
+                        'Precios y entrega inmediata',
+                        'Pedir comprobante de pago',
+                        'Responder corto y al grano'
+                      ].map((tag) => {
+                        const isSelected = selectedTags.includes(tag);
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => {
+                              setSelectedTags(prev => 
+                                isSelected ? prev.filter(t => t !== tag) : [...prev, tag]
+                              );
+                            }}
+                            className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                              isSelected
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-700'
+                            }`}
+                          >
+                            <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-white' : 'bg-gray-400'}`}></span>
+                            {tag}
+                            {isSelected && <Check className="w-3 h-3" />}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
@@ -828,12 +856,70 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
               </div>
 
               <div className="space-y-3 pt-2">
+                {/* Opción 1: Pago en línea directo con PSE, Nequi o Tarjeta */}
                 <button
-                  onClick={handleCheckoutWhatsAppAdvisor}
-                  className="w-full py-4 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 text-sm cursor-pointer transform hover:-translate-y-0.5 active:scale-95"
+                  type="button"
+                  onClick={() => setShowCustomerFormModal(true)}
+                  className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer transform hover:-translate-y-0.5 active:scale-95"
                 >
-                  <CreditCard className="w-4 h-4" /> Pagar $10.000 y Activar Plan Starter
+                  <CreditCard className="w-4 h-4" /> Pagar en Línea con PSE / Tarjeta / Nequi ($10.000 COP)
                 </button>
+
+                {/* Opción 2: Transferencia Bancaria Directa (Bre-V / Bancolombia) */}
+                <div className="p-3.5 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 text-left space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-gray-800 dark:text-gray-200">
+                    <span className="flex items-center gap-1.5">
+                      ⚡ Transferencia Directa ($10.000 COP)
+                    </span>
+                    <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold">
+                      Entrega Inmediata
+                    </span>
+                  </div>
+
+                  {/* Llave Bre-V */}
+                  <div className="flex items-center justify-between bg-white dark:bg-gray-700/60 p-2 rounded-xl border border-gray-200 dark:border-gray-600 text-xs">
+                    <div>
+                      <span className="text-[10px] text-gray-400 block">Llave Bre-V (Nequi / Daviplata / Bancos):</span>
+                      <span className="font-mono font-bold text-gray-900 dark:text-white">0087387259</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy('0087387259', 'brev')}
+                      className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-600 hover:bg-emerald-50 text-gray-600 dark:text-gray-200 hover:text-emerald-600 transition-colors text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedKey === 'brev' ? <><Check className="w-3.5 h-3.5 text-emerald-500" /> Copiado</> : <><Copy className="w-3.5 h-3.5" /> Copiar</>}
+                    </button>
+                  </div>
+
+                  {/* Bancolombia Ahorros */}
+                  <div className="flex items-center justify-between bg-white dark:bg-gray-700/60 p-2 rounded-xl border border-gray-200 dark:border-gray-600 text-xs">
+                    <div>
+                      <span className="text-[10px] text-gray-400 block">Bancolombia Ahorros:</span>
+                      <span className="font-mono font-bold text-gray-900 dark:text-white">46772753713</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy('46772753713', 'banco')}
+                      className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-600 hover:bg-emerald-50 text-gray-600 dark:text-gray-200 hover:text-emerald-600 transition-colors text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedKey === 'banco' ? <><Check className="w-3.5 h-3.5 text-emerald-500" /> Copiado</> : <><Copy className="w-3.5 h-3.5" /> Copiar</>}
+                    </button>
+                  </div>
+
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight pt-1">
+                    Envía tu comprobante de $10.000 COP al WhatsApp del bot para activar la sesión de inmediato.
+                  </p>
+                </div>
+
+                {/* Opción 3: Confirmar por WhatsApp */}
+                <button
+                  type="button"
+                  onClick={handleCheckoutWhatsAppAdvisor}
+                  className="w-full py-2.5 px-4 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 font-bold rounded-xl border border-emerald-200 dark:border-emerald-800 transition-all flex items-center justify-center gap-1.5 text-xs cursor-pointer"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" /> Enviar Comprobante por WhatsApp (+57 311 858 7974)
+                </button>
+
                 <p className="text-[11px] text-gray-500 dark:text-gray-400">
                   🔒 El código QR de vinculación se generará automáticamente en tu sesión tras confirmar el pago de $10.000 COP.
                 </p>
@@ -843,6 +929,13 @@ export const WhatsAppBotSimulatorModal: React.FC<WhatsAppBotSimulatorModalProps>
         )}
 
       </div>
+      {showCustomerFormModal && (
+        <CustomerFormModal
+          onClose={() => setShowCustomerFormModal(false)}
+          platformName={`Bot de WhatsApp IA - Plan Starter (${persona.name || 'Mi Negocio'})`}
+          platformPrice={10000}
+        />
+      )}
     </div>
   );
 };
