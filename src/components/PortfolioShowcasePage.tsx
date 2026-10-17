@@ -64,7 +64,7 @@ const PROJECTS: Project[] = [
       'Carrito de compras dinámico con cálculo inmediato',
       'Diseño 100% responsivo adaptable a celulares y tablets'
     ],
-    liveUrl: 'https://sheerit.com.co',
+    liveUrl: 'https://sheerit.co',
     githubUrl: 'https://github.com/developer-lifee/sheeritpage',
     fallbackGradient: 'from-purple-600 via-brand-primary to-indigo-900',
     icon: ShoppingBag,
@@ -184,7 +184,7 @@ const PROJECTS: Project[] = [
       'Supervisión de ejecuciones de bots de WhatsApp en vivo',
       'Asistente conversacional omnipresente para consultas rápidas'
     ],
-    liveUrl: 'https://sheerit.com.co/aiuda/admin',
+    liveUrl: 'https://sheerit.co/aiuda/admin',
     githubUrl: 'https://github.com/developer-lifee/sheeritpage',
     fallbackGradient: 'from-emerald-600 via-teal-700 to-slate-900',
     icon: Bot,
