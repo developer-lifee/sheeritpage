@@ -734,4 +734,35 @@ function AppContent() {
   );
 }
 
-export default App;
+function FloatingCartButton() {
+  const { getTotalItems, setIsComboOpen } = useComboCart();
+  const count = getTotalItems();
+
+  if (count === 0) return null;
+
+  return (
+    <button
+      onClick={() => setIsComboOpen(true)}
+      className="fixed bottom-24 right-6 z-40 flex items-center gap-2 px-5 py-3 bg-emerald-500 text-white rounded-full shadow-2xl hover:bg-emerald-600 transition-all duration-300 transform hover:scale-105 active:scale-95 animate-bounce-slow"
+      title="Ver mi combo y pagar"
+    >
+      <div className="relative">
+        <ShoppingCart className="h-5 w-5" />
+        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-extrabold rounded-full h-4 w-4 flex items-center justify-center border border-emerald-500 animate-pulse">
+          {count}
+        </span>
+      </div>
+      <span className="font-bold text-xs sm:text-sm tracking-wide">Pagar Combo ({count})</span>
+    </button>
+  );
+}
+
+export default function App() {
+  return (
+    <CurrencyProvider>
+      <ComboCartProvider>
+        <AppContent />
+      </ComboCartProvider>
+    </CurrencyProvider>
+  );
+}
