@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
+import { WhatsAppBotSimulatorModal } from './WhatsAppBotSimulatorModal';
+import { Bot, Heart, MessageCircle } from 'lucide-react';
 import { Shield, Sparkles, Server, Clock, Code, Award, CheckCircle2, MessageSquare, ArrowRight, Database, Settings, Zap, ArrowLeftRight, Check, ChevronLeft, ChevronRight, Laptop, Globe, Smartphone, ExternalLink } from 'lucide-react';
 
 export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) => void }) {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isBotModalOpen, setIsBotModalOpen] = useState(false);
 
   const handleContactWhatsApp = (planType: string) => {
     const message = `Hola Sheerit! Estoy interesado en sus servicios de desarrollo de software, apps móviles iOS/Android y automatización (Opción: ${planType}). Me gustaría agendar una asesoría para mi proyecto.`;
@@ -109,6 +112,12 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
             >
               <Smartphone className="w-4 h-4" /> Apps iOS & Android
             </a>
+            <button
+              onClick={() => setIsBotModalOpen(true)}
+              className="px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black rounded-2xl shadow-xl transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2 cursor-pointer border border-emerald-400/30"
+            >
+              <span>🤖 Bot WhatsApp IA (k)</span> <Sparkles className="w-4 h-4" />
+            </button>
             <a 
               href="#pricing-comparison"
               className="px-8 py-4 bg-brand-primary hover:bg-brand-dark text-white font-bold rounded-2xl shadow-lg hover:shadow-brand-primary/20 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
@@ -414,6 +423,230 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
         </div>
       </section>
 
+      
+      {/* SECCIÓN ESTRELLA: BOT DE WHATSAPP AUTOGESTIÓN CON IA */}
+      <section id="bot-whatsapp" className="py-16 md:py-24 bg-gradient-to-br from-emerald-900/10 via-emerald-500/5 to-teal-900/10 border-y border-emerald-200/40 dark:border-emerald-900/30">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider mb-3">
+              <Sparkles className="w-4 h-4" /> Autogestión WhatsApp 24/7 • Con Inteligencia Artificial
+            </div>
+            <h2 className="text-3xl md:text-5xl font-black text-gray-950 dark:text-white">
+              Tu Asistente Personal & Negocio en WhatsApp
+            </h2>
+            <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 mt-3 max-w-3xl mx-auto leading-relaxed">
+              Diseñado para los clientes reales de Sheerit: no necesitas ser programador. Configura tu bot por audio o texto, dale personalidad y pruébalo con <strong>20 mensajes gratis en vivo</strong> antes de pagar.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <button
+                onClick={() => setIsBotModalOpen(true)}
+                className="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-2xl shadow-xl hover:shadow-emerald-500/20 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm flex items-center gap-2 cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4" /> <span>Probar Demo Gratis (20 Mensajes IA)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 4 Modos Cotidianos */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+            <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-emerald-100 dark:border-gray-700 shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-pink-500/10 text-pink-600 flex items-center justify-center mb-3">
+                  <Heart className="w-5 h-5" />
+                </div>
+                <h4 className="font-bold text-gray-900 dark:text-white text-base">Modo Pareja / Novia</h4>
+                <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
+                  Respuestas tiernas si estás ocupado o manejando, recuerdos de aniversarios y buenos días automáticos.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-emerald-100 dark:border-gray-700 shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center mb-3">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <h4 className="font-bold text-gray-900 dark:text-white text-base">Recordatorios & Citas</h4>
+                <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
+                  "Acuérdame pagar mañana a las 9am". Tu bot te manda un WhatsApp puntual con lo que tengas pendiente.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-emerald-100 dark:border-gray-700 shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center mb-3">
+                  <Film className="w-5 h-5" />
+                </div>
+                <h4 className="font-bold text-gray-900 dark:text-white text-base">Cinéfilo Sheerit</h4>
+                <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
+                  Recomendaciones de películas y series en Netflix, Max o Disney+ según lo que tengas ganas de ver hoy.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-emerald-100 dark:border-gray-700 shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center mb-3">
+                  <Bot className="w-5 h-5" />
+                </div>
+                <h4 className="font-bold text-gray-900 dark:text-white text-base">Ventas & Catálogo</h4>
+                <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
+                  Entrega precios, responde preguntas frecuentes y atiende clientes 24/7 sin dejar a nadie en visto.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Planes del Bot */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+            {/* Starter */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border-2 border-emerald-500/40 hover:border-emerald-500 transition-all flex flex-col justify-between relative overflow-hidden">
+              <div className="absolute top-0 right-0 bg-emerald-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
+                Más Popular
+              </div>
+              <div>
+                <span className="px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/40 rounded-full uppercase">
+                  Plan Starter
+                </span>
+                <h3 className="text-2xl font-black text-gray-950 dark:text-white mt-3">Starter WhatsApp</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-6">
+                  Ideal para empezar: mensajes programables y la cuota justa de inteligencia artificial.
+                </p>
+                <div className="mb-6">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-black text-gray-950 dark:text-white">.000 COP</span>
+                    <span className="text-gray-500 dark:text-gray-400 text-sm">/ mes</span>
+                  </div>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
+                    *Prueba previa de 20 mensajes gratis incluida
+                  </p>
+                </div>
+                <hr className="border-gray-150 dark:border-gray-700 my-6" />
+                <ul className="space-y-3 mb-8 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <span><strong>50 Mensajes con IA</strong> incluidos al mes</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <span><strong>Mensajes Programables Ilimitados:</strong> menús fijos, bienvenida y horarios</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <span>1 Número oficial de WhatsApp conectado</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <span>Entrevista interactiva con soporte de voz</span>
+                  </li>
+                </ul>
+              </div>
+              <button
+                onClick={() => setIsBotModalOpen(true)}
+                className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4" /> Probar Demo / Activar (k)
+              </button>
+            </div>
+
+            {/* Pro */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border-2 border-transparent hover:border-emerald-500/40 transition-all flex flex-col justify-between">
+              <div>
+                <span className="px-3 py-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-950/40 rounded-full uppercase">
+                  Plan Pro Negocio
+                </span>
+                <h3 className="text-2xl font-black text-gray-950 dark:text-white mt-3">Pro Asistente IA</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-6">
+                  Para personas y negocios con flujo constante de mensajes y consultas diarias.
+                </p>
+                <div className="mb-6">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-black text-gray-950 dark:text-white">.000 COP</span>
+                    <span className="text-gray-500 dark:text-gray-400 text-sm">/ mes</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    *Hasta 10 veces más capacidad de IA
+                  </p>
+                </div>
+                <hr className="border-gray-150 dark:border-gray-700 my-6" />
+                <ul className="space-y-3 mb-8 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <span><strong>500 Mensajes con IA</strong> incluidos al mes</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <span>Catálogo de productos interactivo y respuestas con fotos</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <span>Transcripción de notas de voz recibidas</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <span>Prioridad de servidor 24/7 sin caídas</span>
+                  </li>
+                </ul>
+              </div>
+              <button
+                onClick={() => handleContactWhatsApp('Bot WhatsApp Plan Pro (k/mes)')}
+                className="w-full py-3.5 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
+              >
+                <MessageSquare className="w-4 h-4" /> Solicitar Plan Pro (k)
+              </button>
+            </div>
+
+            {/* Scale */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border-2 border-transparent hover:border-purple-500/40 transition-all flex flex-col justify-between">
+              <div>
+                <span className="px-3 py-1 text-xs font-bold text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-950/40 rounded-full uppercase">
+                  Plan Scale
+                </span>
+                <h3 className="text-2xl font-black text-gray-950 dark:text-white mt-3">Scale & Alto Volumen</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-6">
+                  Para alto tráfico, sincronización con hojas de cálculo y múltiples operadores.
+                </p>
+                <div className="mb-6">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-black text-gray-950 dark:text-white">.000 COP</span>
+                    <span className="text-gray-500 dark:text-gray-400 text-sm">/ mes</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    *Máxima potencia para tu operación
+                  </p>
+                </div>
+                <hr className="border-gray-150 dark:border-gray-700 my-6" />
+                <ul className="space-y-3 mb-8 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <span><strong>2.000 Mensajes con IA</strong> incluidos al mes</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <span>Sincronización con bases de datos Excel / SQL</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <span>Panel multiagente colaborativo Sheerit</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <span>Soporte prioritario directo por WhatsApp</span>
+                  </li>
+                </ul>
+              </div>
+              <button
+                onClick={() => handleContactWhatsApp('Bot WhatsApp Plan Scale (k/mes)')}
+                className="w-full py-3.5 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
+              >
+                <MessageSquare className="w-4 h-4" /> Solicitar Plan Scale (k)
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Pricing Comparison Section */}
       <section id="pricing-comparison" className="py-16 md:py-24 bg-gray-50 dark:bg-gray-900/50">
         <div className="max-w-7xl mx-auto px-4">
@@ -697,6 +930,13 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
           </button>
         </div>
       </section>
+
+      {/* Modal Simulador Interactivo */}
+      <WhatsAppBotSimulatorModal
+        isOpen={isBotModalOpen}
+        onClose={() => setIsBotModalOpen(false)}
+        onSelectPlan={(plan, price) => handleContactWhatsApp()}
+      />
     </div>
   );
 }
