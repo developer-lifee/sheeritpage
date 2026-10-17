@@ -27,6 +27,27 @@ interface PlatformCardProps {
   incident?: string;
 }
 
+
+const getShortPlanLabel = (pl: Plan) => {
+  const n = (pl.name || '').toLowerCase();
+  if (n.includes('starter') || n.includes('50 mensajes')) return 'Starter (50 msgs)';
+  if (n.includes('pro asistente') || n.includes('500 mensajes')) return 'Pro (500 msgs)';
+  if (n.includes('alto volumen') || n.includes('2.000') || n.includes('2000')) return 'Scale (2k msgs)';
+  if (n.includes('team')) return 'Team (4 pers)';
+  if (n.includes('5x')) return 'Pro 5x (4 pers)';
+  if (n.includes('trabajo pesado')) return 'Team / Pro';
+  if (n.includes('scale') || n.includes('200 usd') || n.includes('max')) return 'Max Scale ($200)';
+  if (n.includes('grupo reducido') || n.includes('4 personas')) return '4 personas';
+  if (n.includes('7 personas')) return '7 personas';
+  if (n.includes('estándar') || n.includes('estandar')) return 'Estándar';
+  if (n.includes('platino')) return 'Platino';
+  if (n.includes('premium')) return 'Premium';
+  if (n.includes('duo')) return 'Duo';
+  if (n.includes('familiar')) return 'Familiar';
+  if (n.includes('individual')) return 'Individual';
+  return pl.name.length > 18 ? pl.name.slice(0, 16) + '...' : pl.name;
+};
+
 export function PlatformCard({ 
   id, 
   name, 
@@ -55,7 +76,9 @@ export function PlatformCard({
     const interval = setInterval(() => {
       setActivePlanIndex((prev) => (prev + 1) % sortedPlans.length);
     }, 4500); // Transitions every 4.5 seconds
-    return () => clearInterval(interval);
+  
+
+  return () => clearInterval(interval);
   }, [sortedPlans.length, isHovered]);
 
   const activePlan = hasPlans ? sortedPlans[activePlanIndex] : null;
@@ -225,45 +248,43 @@ export function PlatformCard({
             )}
           </div>
 
-          {/* Plan navigation slot (fixed height) */}
-          <div className="h-8 mb-2 flex items-center justify-center">
-            {sortedPlans.length > 1 && (
-              <div className="w-full flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 py-1 px-2 rounded-lg">
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActivePlanIndex((prev) => (prev - 1 + sortedPlans.length) % sortedPlans.length);
-                  }}
-                  className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <div className="flex items-center gap-1 max-w-[170px]">
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded text-center line-clamp-1 ${
-                    activePlan?.isAvailable === false ? 'text-red-500 line-through' : 'text-brand-primary dark:text-brand-light'
-                  }`}>
-                    {currentPlanName}
-                  </span>
-                  {activePlan?.isAvailable === false && (
-                    <span className="text-[9px] bg-red-100 text-red-700 px-1 py-0.2 rounded font-bold">Agotado</span>
-                  )}
-                </div>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActivePlanIndex((prev) => (prev + 1) % sortedPlans.length);
-                  }}
-                  className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+          {/* Interactive Multi-Plan Selector Chips */}
+          {sortedPlans.length > 1 && (
+            <div className="mb-3">
+              <div className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1.5 flex items-center justify-between">
+                <span>Planes ({sortedPlans.length} opciones):</span>
+                <span className="text-[10px] text-brand-primary dark:text-brand-light font-extrabold max-w-[150px] truncate">
+                  {currentPlanName}
+                </span>
               </div>
-            )}
-          </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {sortedPlans.map((pl, idx) => {
+                  const isSelected = idx === activePlanIndex;
+                  const label = getShortPlanLabel(pl);
+                  return (
+                    <button
+                      key={pl.id || idx}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActivePlanIndex(idx);
+                      }}
+                      className={`px-2 py-1.5 rounded-xl text-[11px] font-bold transition-all flex flex-col items-center justify-center border text-center ${
+                        isSelected
+                          ? 'bg-brand-primary text-white border-brand-primary shadow-sm ring-2 ring-brand-primary/30 scale-[1.02]'
+                          : 'bg-gray-50 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-brand-primary/50 hover:bg-gray-100 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      <span className="truncate w-full leading-tight">{label}</span>
+                      <span className={`text-[10px] font-extrabold mt-0.5 ${isSelected ? 'text-white/95' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                        {formatPrice(pl.price)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Price display */}
           <div className="text-center mb-2">

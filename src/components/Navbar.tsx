@@ -139,14 +139,14 @@ export function Navbar({ isDark, toggleDark, onNavigate, currentView, agentName,
             )}
           </div>
           
-          {/* Mobile: Three-column layout for better centering */}
-          <div className="md:hidden grid grid-cols-3 w-full">
-            {/* Left column - empty or minimal spacer */}
-            <div className="flex items-center justify-start">
+          {/* Mobile: Two-group flex layout to prevent overlap on narrow screens */}
+          <div className="md:hidden flex items-center justify-between w-full">
+            {/* Left: Menu button & Brand Logo */}
+            <div className="flex items-center gap-1 sm:gap-2 min-w-0">
               {isMobileMenuOpen ? (
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-white/10 transition-colors shrink-0"
                   aria-label="Close menu"
                 >
                   <X className="h-6 w-6" />
@@ -154,37 +154,37 @@ export function Navbar({ isDark, toggleDark, onNavigate, currentView, agentName,
               ) : (
                 <button
                   onClick={() => setIsMobileMenuOpen(true)}
-                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-white/10 transition-colors shrink-0"
                   aria-label="Open menu"
                 >
                   <Menu className="h-6 w-6" />
                 </button>
               )}
-            </div>
-            
-            {/* Middle column - centered logo */}
-            <div className="flex items-center justify-center">
-              <div className="flex items-center">
+
+              <div 
+                className="flex items-center cursor-pointer shrink-0" 
+                onClick={() => onNavigate('home')}
+              >
                 <img 
                   src="/faviconsheerit.png" 
                   alt="Sheerit Logo" 
-                  className="h-8 w-auto mr-1" 
+                  className="h-7 w-auto mr-1" 
                 />
-                <span className="text-xl font-bold">HEERIT</span>
+                <span className="text-lg font-bold tracking-tight">HEERIT</span>
               </div>
             </div>
             
-            {/* Right column - theme toggle & cart */}
-            <div className="flex items-center justify-end gap-1.5 sm:gap-2">
+            {/* Right: Currency Toggle, Cart & Theme */}
+            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
               <CurrencyToggle />
               <button
                 onClick={() => setIsComboOpen(true)}
-                className="relative p-2 rounded-lg hover:bg-white/10 transition-colors flex items-center justify-center"
+                className="relative p-1.5 rounded-lg hover:bg-white/10 transition-colors flex items-center justify-center shrink-0"
                 title="Ver mi combo"
               >
                 <ShoppingCart className="h-5 w-5" />
                 {cartCount > 0 && (
-                  <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold rounded-full h-4.5 w-4.5 flex items-center justify-center border border-brand-primary animate-pulse">
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center border border-brand-primary animate-pulse">
                     {cartCount}
                   </span>
                 )}
