@@ -166,18 +166,7 @@ function DataStudioDualScreenViewer({ data, tables, isDetached, onSelectTable, o
     document.body.removeChild(link);
   };
 
-    // SI ESTA VENTANA ES LA SEGUNDA PANTALLA DESACOPLADA, RENDERIZAR VISOR FULL-SCREEN
-  if (isDetachedWindow) {
-    return (
-      <DataStudioDualScreenViewer
-        data={liveDualData}
-        tables={tables}
-        isDetached={true}
-        onSelectTable={handleSelectTableAndSync}
-        onCloseDetached={() => window.close()}
-      />
-    );
-  }
+
 
   return (
     <div className={`flex flex-col bg-slate-950 text-gray-100 font-sans ${isDetached ? 'min-h-screen p-4' : 'h-full rounded-3xl border border-indigo-500/30 p-4 shadow-2xl'}`}>
@@ -572,14 +561,16 @@ export function DataStudioView() {
 
   // Abrir ventana emergente en monitor 2
   const handleOpenDetachedScreen = () => {
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set('datastudio_detached', 'true');
+    const targetUrl = window.location.origin + window.location.pathname + '?datastudio_detached=true';
     window.open(
-      currentUrl.toString(),
+      targetUrl,
       'SheeritDataStudioScreen2',
       'width=1400,height=920,left=120,top=80,menubar=no,toolbar=no,location=no,status=no'
     );
     setDualScreenConnected(true);
+    if (liveDualData) {
+      sendToDualScreen(liveDualData);
+    }
   };
 
   // Consultar tabla y sincronizarla en el visor

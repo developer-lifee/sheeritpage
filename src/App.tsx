@@ -1,3 +1,4 @@
+import { DataStudioDetachedViewer } from './components/DataStudioDetachedViewer';
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
@@ -208,6 +209,12 @@ function AdminLoginOnApp({ onSuccess }: { onSuccess: () => void }) {
 }
 
 function AppContent() {
+  // RUTA DIRECTA MONITOR 2: Si es una ventana desacoplada para segunda pantalla, renderizar visor completo
+  const isDetachedScreen = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('datastudio_detached') === 'true';
+  if (isDetachedScreen) {
+    return <DataStudioDetachedViewer />;
+  }
+
   const { getWaLink } = useWhatsAppContact();
   const [isBotModalOpen, setIsBotModalOpen] = useState(false);
 
