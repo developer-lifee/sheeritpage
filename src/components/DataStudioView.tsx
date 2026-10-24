@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
-  Database, Play, RefreshCw, Download, Table, 
+  Database, Play, RefreshCw, Download, Table, GraduationCap, BookOpen, 
   Search, CheckCircle2, AlertTriangle, XCircle, 
   UploadCloud, FileSpreadsheet, ArrowRight, Layers,
   ChevronRight, ChevronDown, ZoomIn, ZoomOut, Maximize2,
@@ -61,7 +61,7 @@ const PRESET_QUERIES = [
 ];
 
 export function DataStudioView() {
-  const [activeTab, setActiveTab] = useState<'query' | 'er' | 'import'>('query');
+  const [activeTab, setActiveTab] = useState<'query' | 'er' | 'import' | 'tutor'>('query');
   const [tables, setTables] = useState<TableOverview[]>([]);
   const [edges, setEdges] = useState<SchemaEdge[]>([]);
   const [loadingSchema, setLoadingSchema] = useState(false);
@@ -74,6 +74,67 @@ export function DataStudioView() {
   const [runningQuery, setRunningQuery] = useState(false);
   const [queryResult, setQueryResult] = useState<any>(null);
   const [queryError, setQueryError] = useState<string | null>(null);
+
+  // Estados del Tutor SQL
+  const [tutorQuestion, setTutorQuestion] = useState('');
+  const [tutorResult, setTutorResult] = useState<any | null>(null);
+  const [loadingTutor, setLoadingTutor] = useState(false);
+  const [queryExplanation, setQueryExplanation] = useState<any | null>(null);
+  const [loadingExplanation, setLoadingExplanation] = useState(false);
+  const [showExplanationPanel, setShowExplanationPanel] = useState(false);
+  const [expandedLesson, setExpandedLesson] = useState<string | null>('leccion-1');
+
+  // Función para pedir explicación didáctica de la consulta actual
+  const handleExplainCurrentQuery = async (customSql?: string) => {
+    const targetSql = customSql || sqlQuery;
+    if (!targetSql || !targetSql.trim()) return;
+    setLoadingExplanation(true);
+    setShowExplanationPanel(true);
+    try {
+      const res = await fetch(`${getApiUrl()}/api/admin/database/tutor`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'explain', sql: targetSql })
+      });
+      const data = await res.json();
+      if (data.success && data.explanation) {
+        setQueryExplanation(data.explanation);
+      }
+    } catch (e: any) {
+      console.error('Error al explicar consulta:', e);
+    } finally {
+      setLoadingExplanation(false);
+    }
+  };
+
+  // Función para preguntar al Tutor en lenguaje natural
+  const handleAskTutor = async (customQ?: string) => {
+    const q = customQ || tutorQuestion;
+    if (!q || !q.trim()) return;
+    setLoadingTutor(true);
+    try {
+      const res = await fetch(`${getApiUrl()}/api/admin/database/tutor`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'ask', question: q })
+      });
+      const data = await res.json();
+      if (data.success && data.result) {
+        setTutorResult(data.result);
+      }
+    } catch (e: any) {
+      console.error('Error al consultar al tutor:', e);
+    } finally {
+      setLoadingTutor(false);
+    }
+  };
+
+  // Cargar una consulta en el editor y ejecutarla de inmediato
+  const loadAndRunInEditor = (sql: string) => {
+    setSqlQuery(sql);
+    setActiveTab('query');
+    handleExecuteQuery(sql);
+  };
   const [tableSearch, setTableSearch] = useState('');
   const [resultFilter, setResultFilter] = useState('');
 
@@ -406,6 +467,21 @@ export function DataStudioView() {
         </button>
 
         <button
+          onClick={() => setActiveTab('tutor')}
+          className={`flex items-center gap-2 px-5 py-3 font-extrabold text-sm border-b-2 transition-all ${
+            activeTab === 'tutor'
+              ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-indigo-50/40 dark:bg-indigo-950/20'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+          }`}
+        >
+          <GraduationCap className="w-4 h-4 text-amber-500" />
+          <span className="flex items-center gap-1.5">
+            4. 🎓 Tutor SQL Interactivo
+            <span className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase">Didáctico</span>
+          </span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('import')}
           className={`flex items-center gap-2 px-5 py-3 font-extrabold text-sm border-b-2 transition-all ${
             activeTab === 'import'
@@ -517,6 +593,25 @@ export function DataStudioView() {
                   </select>
 
                   <button
+                    onClick={() => handleExplainCurrentQuery()}
+                    disabled={loadingExplanation || !sqlQuery.trim()}
+                    className="px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-extrabold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                    title="El Tutor te explica qué hace esta consulta en español simple"
+                  >
+                    <Sparkles className={`w-3.5 h-3.5 text-amber-500 ${loadingExplanation ? 'animate-spin' : ''}`} />
+                    <span>{loadingExplanation ? 'Explicando...' : '📖 Explicar Consulta'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('tutor')}
+                    className="px-3 py-2 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-extrabold text-xs rounded-xl transition-all flex items-center gap-1.5 active:scale-95"
+                    title="Abrir el Tutor SQL Interactivo"
+                  >
+                    <GraduationCap className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <span>🎓 Tutor SQL</span>
+                  </button>
+
+                  <button
                     onClick={() => handleExecuteQuery()}
                     disabled={runningQuery}
                     className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50"
@@ -543,6 +638,69 @@ export function DataStudioView() {
                   className="w-full p-3 font-mono text-xs rounded-2xl bg-slate-950 text-emerald-300 border border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner resize-y leading-relaxed"
                 />
               </div>
+
+              {/* PANEL EDUCATIVO DE EXPLICACIÓN DEL TUTOR */}
+              {showExplanationPanel && (
+                <div className="p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 space-y-3 animate-fadeIn">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                      <h4 className="font-extrabold text-xs text-amber-950 dark:text-amber-200 uppercase tracking-wider">
+                        Explicación del Tutor SQL: {queryExplanation?.title || 'Analizando...'}
+                      </h4>
+                    </div>
+                    <button 
+                      onClick={() => setShowExplanationPanel(false)}
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs font-bold px-2 py-0.5 rounded-lg hover:bg-amber-100/50"
+                    >
+                      ✕ Cerrar
+                    </button>
+                  </div>
+
+                  {queryExplanation ? (
+                    <div className="space-y-3 text-xs">
+                      <p className="text-gray-700 dark:text-gray-300 font-medium leading-relaxed">
+                        {queryExplanation.overview}
+                      </p>
+
+                      {queryExplanation.steps && queryExplanation.steps.length > 0 && (
+                        <div className="space-y-2 pt-1">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
+                            Desglose de cada parte:
+                          </span>
+                          <div className="grid grid-cols-1 gap-2">
+                            {queryExplanation.steps.map((st: any, idx: number) => (
+                              <div key={idx} className="p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-amber-100 dark:border-gray-700 space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-mono text-[11px] font-bold text-indigo-600 dark:text-indigo-400">{st.clause}</span>
+                                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${st.badge}`}>{st.role}</span>
+                                </div>
+                                <p className="text-[11px] text-gray-600 dark:text-gray-300">{st.explanation}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {queryExplanation.tips && queryExplanation.tips.length > 0 && (
+                        <div className="p-2.5 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-amber-200/50 text-[11px] text-amber-900 dark:text-amber-200 font-medium space-y-1">
+                          {queryExplanation.tips.map((t: string, idx: number) => (
+                            <div key={idx} className="flex items-start gap-1.5">
+                              <span>💡</span>
+                              <span>{t}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400 py-3">
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>El tutor está analizando las cláusulas de tu consulta...</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* MENSAJES DE ERROR O RETORNO DML */}
@@ -1525,6 +1683,390 @@ export function DataStudioView() {
           )}
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* TAB 4: TUTOR SQL INTERACTIVO & ACADEMIA */}
+      {/* ========================================================================= */}
+      {activeTab === 'tutor' && (
+        <div className="space-y-6">
+          {/* HERO EDUCATIVO */}
+          <div className="rounded-3xl p-6 bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-emerald-500/10 border border-amber-200/50 dark:border-amber-900/30 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+            <div className="space-y-2 max-w-2xl">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-black uppercase tracking-wider border border-amber-500/20">
+                <GraduationCap className="w-4 h-4 text-amber-500" />
+                <span>Tutor SQL de Sheerit</span>
+              </div>
+              <h2 className="text-xl md:text-2xl font-black text-gray-900 dark:text-white">
+                Aprende a consultar tu base de datos paso a paso
+              </h2>
+              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
+                No necesitas ser programador ni memorizar comandos. Haz preguntas en español cotidiano o sigue nuestras lecciones interactivas para dominar los datos de clientes, cuentas y ventas de tu negocio.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setActiveTab('query')}
+                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 active:scale-95"
+              >
+                <FileCode className="w-4 h-4" />
+                <span>Ir al Editor SQL</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* COLUMNA IZQUIERDA: PREGÚNTALE AL TUTOR */}
+            <div className="lg:col-span-7 space-y-6">
+              {/* CAJA DE PREGUNTA EN LENGUAJE NATURAL */}
+              <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-amber-500" />
+                  <h3 className="font-black text-sm text-gray-900 dark:text-white">
+                    Pregúntale al Tutor en Español
+                  </h3>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Escribe en tus propias palabras qué información necesitas y el tutor te construirá la consulta explicada paso a paso.
+                </p>
+
+                <div className="flex gap-2">
+                  <div className="relative flex-grow">
+                    <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Ej: ¿Cuáles clientes vencen esta semana? o ¿Cuántos tickets atendió cada asesor hoy?"
+                      value={tutorQuestion}
+                      onChange={(e) => setTutorQuestion(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleAskTutor();
+                        }
+                      }}
+                      className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+                    />
+                  </div>
+                  <button
+                    onClick={() => handleAskTutor()}
+                    disabled={loadingTutor || !tutorQuestion.trim()}
+                    className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                  >
+                    <Sparkles className={`w-3.5 h-3.5 ${loadingTutor ? 'animate-spin' : ''}`} />
+                    <span>{loadingTutor ? 'Generando...' : 'Consultar'}</span>
+                  </button>
+                </div>
+
+                {/* CHIPS DE PREGUNTAS FRECUENTES DEL NEGOCIO */}
+                <div className="space-y-2 pt-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
+                    Consultas frecuentes de Sheerit (Haz clic para probar):
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { label: '⏰ Vencimientos próximos 7 días', q: '¿Cuáles suscripciones se vencen en los próximos 7 días?' },
+                      { label: '👑 Top 10 clientes con más cuentas', q: '¿Quiénes son los clientes que más servicios tienen contratados?' },
+                      { label: '📺 Ocupación cuentas proveedor', q: '¿Cuántos perfiles tiene asignados cada cuenta de streaming vs su capacidad?' },
+                      { label: '⚡ Tickets resueltos hoy por asesor', q: '¿Cuántos tickets ha resuelto cada asesor el día de hoy?' },
+                      { label: '💬 Últimos 50 mensajes de WhatsApp', q: '¿Cuáles son los últimos mensajes que han llegado al bot?' },
+                      { label: '💰 Ventas web por plataforma', q: '¿Cuánto se ha vendido por la página web desglosado por plataforma?' }
+                    ].map((item, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          setTutorQuestion(item.q);
+                          handleAskTutor(item.q);
+                        }}
+                        className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-gray-100 hover:bg-amber-100 dark:bg-gray-700/60 dark:hover:bg-amber-950/40 text-gray-700 dark:text-gray-300 hover:text-amber-800 dark:hover:text-amber-300 border border-transparent hover:border-amber-300 dark:hover:border-amber-800 transition-all text-left"
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* RESULTADO DE LA CONSULTA DEL TUTOR */}
+                {tutorResult && (
+                  <div className="mt-4 p-5 rounded-2xl bg-slate-900 border border-slate-700 text-white space-y-4 animate-fadeIn">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                      <div>
+                        <h4 className="text-sm font-black text-amber-400 flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <span>{tutorResult.title}</span>
+                        </h4>
+                        <span className="text-[10px] text-gray-400 font-mono">
+                          Concepto clave: <strong className="text-indigo-300">{tutorResult.concept}</strong>
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => loadAndRunInEditor(tutorResult.sql)}
+                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow transition-all flex items-center gap-1.5 active:scale-95"
+                      >
+                        <Play className="w-3.5 h-3.5" />
+                        <span>▶️ Probar y Ejecutar en Editor</span>
+                      </button>
+                    </div>
+
+                    {/* BLOQUE SQL */}
+                    <div className="relative">
+                      <pre className="p-3.5 rounded-xl bg-slate-950 text-emerald-300 font-mono text-xs overflow-x-auto border border-slate-800 leading-relaxed">
+                        {tutorResult.sql}
+                      </pre>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(tutorResult.sql);
+                          alert('¡Consulta SQL copiada al portapapeles!');
+                        }}
+                        className="absolute right-2.5 top-2.5 px-2 py-1 text-[10px] font-bold bg-white/10 hover:bg-white/20 rounded-md text-gray-300 transition-colors"
+                      >
+                        Copiar SQL
+                      </button>
+                    </div>
+
+                    {/* EXPLICACIÓN DIDÁCTICA */}
+                    <div className="space-y-2 text-xs text-gray-300">
+                      <div className="font-bold text-amber-300 flex items-center gap-1.5">
+                        <BookOpen className="w-4 h-4 text-amber-400" />
+                        <span>¿Cómo funciona esta consulta?</span>
+                      </div>
+                      <p className="leading-relaxed text-gray-300 bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
+                        {tutorResult.explanation}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* DICCIONARIO DE TABLAS DE SHEERIT */}
+              <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Table className="w-5 h-5 text-indigo-500" />
+                    <h3 className="font-black text-sm text-gray-900 dark:text-white">
+                      Diccionario de Tablas: ¿Dónde vive cada dato?
+                    </h3>
+                  </div>
+                  <span className="text-[10px] text-gray-400 font-mono font-bold">Base de Datos Sheerit</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  {[
+                    {
+                      table: 'customers',
+                      name: 'Clientes & Contactos',
+                      desc: 'Guarda los teléfonos de WhatsApp, nombres completos y saldo a favor de cada cliente.',
+                      badge: 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300',
+                      sampleSql: 'SELECT phone, fullname, saldo FROM customers LIMIT 15;'
+                    },
+                    {
+                      table: 'subscriptions',
+                      name: 'Suscripciones Vendidas',
+                      desc: 'Cada pantalla vendida con su fecha de vencimiento, plataforma, correo asignado y PIN.',
+                      badge: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300',
+                      sampleSql: 'SELECT customer_phone, streaming_platform, expiration_date, status FROM subscriptions LIMIT 15;'
+                    },
+                    {
+                      table: 'stream_accounts',
+                      name: 'Cuentas Madre Proveedor',
+                      desc: 'Cuentas completas compradas a proveedores donde se alojan los perfiles vendidos.',
+                      badge: 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300',
+                      sampleSql: 'SELECT streaming_platform, account_email, status, max_profiles FROM stream_accounts LIMIT 15;'
+                    },
+                    {
+                      table: 'resolved_tickets_log',
+                      name: 'Historial de Soporte Resuelto',
+                      desc: 'Auditoría de tickets resueltos por asesores con categoría y duración en segundos.',
+                      badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
+                      sampleSql: 'SELECT phone, customerName, agent, category, durationSeconds, resolvedAt FROM resolved_tickets_log ORDER BY resolvedAt DESC LIMIT 15;'
+                    },
+                    {
+                      table: 'messages',
+                      name: 'Historial de Mensajes WhatsApp',
+                      desc: 'Todos los mensajes entrantes y salientes intercambiados entre el cliente y el bot.',
+                      badge: 'bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300',
+                      sampleSql: 'SELECT chat_id, sender_name, body, is_from_me, created_at FROM messages ORDER BY created_at DESC LIMIT 15;'
+                    },
+                    {
+                      table: 'web_sales_approved',
+                      name: 'Ventas Aprobadas Web',
+                      desc: 'Transacciones y pedidos cobrados exitosamente a través de la pasarela de pagos web.',
+                      badge: 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300',
+                      sampleSql: 'SELECT orderId, whatsapp, amount, platformName, createdAt FROM web_sales_approved ORDER BY createdAt DESC LIMIT 15;'
+                    }
+                  ].map((item, idx) => (
+                    <div key={idx} className="p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-200/80 dark:border-gray-700/80 space-y-2 flex flex-col justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono font-bold text-gray-900 dark:text-white text-xs">{item.table}</span>
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${item.badge}`}>{item.name}</span>
+                        </div>
+                        <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-snug">{item.desc}</p>
+                      </div>
+                      <button
+                        onClick={() => loadAndRunInEditor(item.sampleSql)}
+                        className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 flex items-center gap-1 self-start pt-1"
+                      >
+                        <span>▶️ Ver datos de ejemplo</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* COLUMNA DERECHA: MINI-CURSO INTERACTIVO DE SQL */}
+            <div className="lg:col-span-5 space-y-6">
+              <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                    <h3 className="font-black text-sm text-gray-900 dark:text-white">
+                      Academia SQL: 6 Lecciones Clave
+                    </h3>
+                  </div>
+                  <span className="text-[10px] bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 font-bold px-2 py-0.5 rounded-full">
+                    Aprende desde cero
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {[
+                    {
+                      id: 'leccion-1',
+                      level: 'Básico',
+                      title: '1. ¿Qué es SELECT y cómo pedir datos?',
+                      analogy: 'Imagina una hoja de Excel. SELECT es elegir qué columnas quieres ver, y FROM es elegir cuál pestaña mirar.',
+                      sql: 'SELECT phone, fullname FROM customers LIMIT 10;',
+                      takeaways: [
+                        'SELECT indica qué columnas mostrar.',
+                        'FROM indica la tabla de origen.',
+                        'LIMIT 10 evita traer miles de filas de golpe.'
+                      ]
+                    },
+                    {
+                      id: 'leccion-2',
+                      level: 'Básico',
+                      title: '2. WHERE: El colador de información',
+                      analogy: 'Es como aplicar un filtro en Excel por columna: solo ves las filas que cumplen exactamente tu condición.',
+                      sql: "SELECT streaming_platform, account_email, expiration_date\nFROM subscriptions\nWHERE status = 'active' AND expiration_date > CURDATE()\nLIMIT 20;",
+                      takeaways: [
+                        'WHERE filtra filas con condiciones.',
+                        'AND exige que ambas condiciones se cumplan.',
+                        'CURDATE() toma la fecha de hoy automáticamente.'
+                      ]
+                    },
+                    {
+                      id: 'leccion-3',
+                      level: 'Intermedio',
+                      title: '3. El Superpoder de los JOINs (Cruzar Tablas)',
+                      analogy: 'Es el equivalente exacto a un BUSCARV de Excel. Conecta clientes con sus cuentas mediante el número de teléfono común.',
+                      sql: 'SELECT c.fullname, c.phone, s.streaming_platform, s.account_email\nFROM customers c\nJOIN subscriptions s ON c.phone = s.customer_phone\nLIMIT 25;',
+                      takeaways: [
+                        'JOIN conecta dos tablas por una columna común.',
+                        'Usamos alias cortos (c y s) para ahorrar escritura.',
+                        'Une dos piezas de lego para ver la foto completa.'
+                      ]
+                    },
+                    {
+                      id: 'leccion-4',
+                      level: 'Intermedio',
+                      title: '4. Totales, Conteos y GROUP BY',
+                      analogy: 'Es como crear una Tabla Dinámica en Excel: agrupas por plataforma y calculas el conteo o la suma.',
+                      sql: 'SELECT streaming_platform, COUNT(*) as total_cuentas\nFROM subscriptions\nGROUP BY streaming_platform\nORDER BY total_cuentas DESC;',
+                      takeaways: [
+                        'COUNT(*) cuenta cuántos registros hay.',
+                        'GROUP BY junta los datos por categoría.',
+                        'ORDER BY DESC pone los mayores números primero.'
+                      ]
+                    },
+                    {
+                      id: 'leccion-5',
+                      level: 'Avanzado',
+                      title: '5. LEFT JOIN: No perder datos invisibles',
+                      analogy: 'Si tienes 100 clientes y solo 60 compraron, un LEFT JOIN te muestra los 100 y deja en blanco los que no tienen compras.',
+                      sql: 'SELECT c.fullname, c.phone, s.id as id_suscripcion\nFROM customers c\nLEFT JOIN subscriptions s ON c.phone = s.customer_phone\nWHERE s.id IS NULL\nLIMIT 20;',
+                      takeaways: [
+                        'Mantiene todas las filas de la tabla izquierda.',
+                        'Filtrar con WHERE s.id IS NULL te da clientes sin compras (inactivos).'
+                      ]
+                    },
+                    {
+                      id: 'leccion-6',
+                      level: 'Seguridad',
+                      title: '6. Regla de Oro: Seguridad en Modificaciones',
+                      analogy: 'Si vas a pintar una pared de una casa, debes decir cuál pared (WHERE). Si no dices cuál, te pintan toda la casa.',
+                      sql: "SELECT * FROM subscriptions WHERE id = 1234; -- Siempre haz SELECT primero antes de un UPDATE",
+                      takeaways: [
+                        'Paso 1: Ejecuta primero un SELECT con el mismo WHERE.',
+                        'Paso 2: Activa la casilla de seguridad antes de modificar.',
+                        'Paso 3: Verifica las filas afectadas reportadas.'
+                      ]
+                    }
+                  ].map((lec) => {
+                    const isOpen = expandedLesson === lec.id;
+                    return (
+                      <div
+                        key={lec.id}
+                        className={`rounded-2xl border transition-all overflow-hidden ${
+                          isOpen
+                            ? 'bg-indigo-50/40 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800/60 shadow-sm'
+                            : 'bg-gray-50 dark:bg-gray-900 border-gray-200/70 dark:border-gray-800 hover:border-gray-300'
+                        }`}
+                      >
+                        <button
+                          onClick={() => setExpandedLesson(isOpen ? null : lec.id)}
+                          className="w-full p-3.5 flex items-center justify-between text-left text-xs font-bold text-gray-900 dark:text-white"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-extrabold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
+                              {lec.level}
+                            </span>
+                            <span>{lec.title}</span>
+                          </div>
+                          {isOpen ? <ChevronDown className="w-4 h-4 text-indigo-500" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                        </button>
+
+                        {isOpen && (
+                          <div className="p-4 pt-0 space-y-3 text-xs border-t border-indigo-100/50 dark:border-indigo-900/30 animate-fadeIn">
+                            {/* ANALOGÍA */}
+                            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 text-[11px] leading-relaxed">
+                              💡 <strong>Analogía:</strong> {lec.analogy}
+                            </div>
+
+                            {/* PUNTOS CLAVE */}
+                            <div className="space-y-1 text-gray-650 dark:text-gray-300 text-[11px]">
+                              {lec.takeaways.map((t, i) => (
+                                <div key={i} className="flex items-start gap-1.5">
+                                  <span className="text-emerald-500 font-bold">✓</span>
+                                  <span>{t}</span>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* CÓDIGO Y BOTÓN */}
+                            <div className="space-y-2 pt-1">
+                              <pre className="p-2.5 rounded-xl bg-slate-950 text-emerald-300 font-mono text-[10px] overflow-x-auto border border-slate-800">
+                                {lec.sql}
+                              </pre>
+                              <button
+                                onClick={() => loadAndRunInEditor(lec.sql)}
+                                className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-95"
+                              >
+                                <Play className="w-3.5 h-3.5" />
+                                <span>▶️ Probar esta lección en Query Studio</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
