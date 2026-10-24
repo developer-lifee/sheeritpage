@@ -165,7 +165,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
    const [metricsData, setMetricsData] = useState<{
      summary: { agent: string; count: number }[];
      summaryToday?: { agent: string; count: number }[];
-     recent: { phone: string; customerName: string; agent: string; resolvedAt: string }[];
+     recent: { id?: number; phone: string; customerName: string; agent: string; category?: string; durationSeconds?: number; claimedAt?: string; resolvedAt: string }[];
      weeklyFlow?: { day_label: string; agent: string; count: number }[];
    } | null>(null);
   const [loadingMetrics, setLoadingMetrics] = useState(false);
@@ -196,6 +196,28 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     } finally {
       setLoadingAccountHistory(false);
     }
+  };
+
+  const openChatFromResolved = (rec: { phone: string; customerName: string; agent: string; category?: string; resolvedAt: string }) => {
+    const rawDigits = String(rec.phone || '').replace(/\D/g, '');
+    if (!rawDigits) return;
+    const tempChat: Ticket = {
+      userId: `${rawDigits}@c.us`,
+      phone: rawDigits,
+      nombre: rec.customerName || `Cliente +${rawDigits}`,
+      state: 'resolved',
+      agent: rec.agent,
+      lastHumanInteraction: new Date(rec.resolvedAt).getTime(),
+      lastMessage: `Ticket resuelto (${rec.category || 'Atención General'})`,
+      lastMessageTime: new Date(rec.resolvedAt).getTime(),
+      summary: `Resuelto por ${rec.agent} (${rec.category || 'Atención General'})`,
+      accounts: []
+    };
+    setTickets(prev => [tempChat, ...prev.filter(t => t.userId !== tempChat.userId)]);
+    setChatFilter('all_chats');
+    setActiveChatTicket(tempChat);
+    setShowMetricsModal(false);
+    setTimeout(() => fetchChatMessages(true), 150);
   };
 
   const fetchMetrics = async () => {
@@ -3380,7 +3402,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       {/* Metrics Modal */}
       {showMetricsModal && (
         <div className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border dark:border-gray-800 shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border dark:border-gray-800 shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
             {/* Modal Header */}
             <div className="p-5 border-b dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
               <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -3558,29 +3580,71 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                         <thead>
                           <tr className="bg-gray-50 dark:bg-gray-850 border-b dark:border-gray-800 text-[10px] text-gray-400 uppercase font-extrabold">
                             <th className="p-3">Cliente</th>
+                            <th className="p-3">Categoría</th>
                             <th className="p-3">Asesor</th>
-                            <th className="p-3">Fecha</th>
+                            <th className="p-3">Resolución</th>
+                            <th className="p-3 text-right">Acción</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                           {metricsData.recent.length === 0 ? (
                             <tr>
-                              <td colSpan={3} className="p-4 text-center text-gray-450 italic">No hay tickets resueltos recientes.</td>
+                              <td colSpan={5} className="p-4 text-center text-gray-450 italic">No hay tickets resueltos recientes.</td>
                             </tr>
                           ) : (
-                            metricsData.recent.map((rec, i) => (
-                              <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-850/30">
-                                <td className="p-3 font-semibold text-gray-800 dark:text-gray-200">
-                                  <div className="truncate max-w-[150px]">{rec.customerName}</div>
-                                  <div className="text-[9px] text-gray-450">+{rec.phone}</div>
-                                </td>
-                                <td className="p-3 text-gray-650 dark:text-gray-300 font-medium">{rec.agent}</td>
-                                <td className="p-3 text-gray-400 text-[10px] whitespace-nowrap">
-                                  {new Date(rec.resolvedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}{' '}
-                                  {new Date(rec.resolvedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </td>
-                              </tr>
-                            ))
+                            metricsData.recent.map((rec, i) => {
+                              const cat = (rec.category || 'Atención General').toLowerCase();
+                              const isChurn = cat.includes('corte') || cat.includes('churn');
+                              const isRenewal = cat.includes('renov') || cat.includes('cobro');
+                              return (
+                                <tr 
+                                  key={i} 
+                                  onClick={() => openChatFromResolved(rec)}
+                                  className="hover:bg-brand-primary/5 dark:hover:bg-brand-primary/10 transition-colors cursor-pointer group"
+                                  title="Haz clic para abrir la conversación completa de este cliente"
+                                >
+                                  <td className="p-3 font-semibold text-gray-800 dark:text-gray-200">
+                                    <div className="truncate max-w-[130px] group-hover:text-brand-primary transition-colors font-bold">{rec.customerName}</div>
+                                    <div className="text-[9px] text-gray-450 font-mono">+{rec.phone}</div>
+                                  </td>
+                                  <td className="p-3 whitespace-nowrap">
+                                    <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                                      isChurn 
+                                        ? 'bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40' 
+                                        : isRenewal 
+                                        ? 'bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/40' 
+                                        : 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40'
+                                    }`}>
+                                      {rec.category || 'Atención General'}
+                                    </span>
+                                  </td>
+                                  <td className="p-3 text-gray-650 dark:text-gray-300 font-medium whitespace-nowrap">{rec.agent}</td>
+                                  <td className="p-3 text-gray-400 text-[10px] whitespace-nowrap">
+                                    <div>
+                                      {new Date(rec.resolvedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}{' '}
+                                      {new Date(rec.resolvedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </div>
+                                    {rec.durationSeconds && rec.durationSeconds > 0 ? (
+                                      <div className="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                                        ⏱️ {Math.floor(rec.durationSeconds / 60)}m {rec.durationSeconds % 60}s
+                                      </div>
+                                    ) : null}
+                                  </td>
+                                  <td className="p-3 text-right">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        openChatFromResolved(rec);
+                                      }}
+                                      className="px-2.5 py-1 text-[10px] font-bold bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white rounded-lg transition-all shadow-sm inline-flex items-center gap-1"
+                                      title="Abrir conversación completa"
+                                    >
+                                      👁️ Ver Chat
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })
                           )}
                         </tbody>
                       </table>
