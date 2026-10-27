@@ -246,9 +246,17 @@ export const ClientsView: React.FC = () => {
         };
     }, []);
 
+    // Helper to normalize streaming service names (trims, collapses multiple spaces, fixes common typos)
+    const normalizeServiceName = (raw?: any): string => {
+        if (!raw) return '';
+        let s = String(raw).trim().replace(/\s+/g, ' ').toUpperCase();
+        s = s.replace(/\b(WONER|ONWER)\b/g, 'OWNER');
+        return s;
+    };
+
     // Extract unique services dynamically for the Excel filter options
     const uniqueServices = Array.from(
-        new Set(clients.map(c => c.Streaming).filter(Boolean))
+        new Set(clients.map(c => normalizeServiceName(c.Streaming)).filter(Boolean))
     ).sort() as string[];
 
     const filtered = clients.filter(c => {
@@ -263,19 +271,25 @@ export const ClientsView: React.FC = () => {
         }
 
         // General search matches
-        // General search matches
         const phoneVal = (c.numero || c.Numero || '').toString();
         const fullName = `${c.Nombre || ''} ${c.apellido || c.Apellido || ''}`.trim();
+        const normStreaming = normalizeServiceName(c.Streaming).toLowerCase();
         const generalMatches = !generalSearch || 
             fullName.toLowerCase().includes(generalSearch.toLowerCase()) || 
             phoneVal.includes(generalSearch) || 
+            normStreaming.includes(generalSearch.toLowerCase()) || 
             String(c.Streaming || '').toLowerCase().includes(generalSearch.toLowerCase()) || 
             String(c.correo || '').toLowerCase().includes(generalSearch.toLowerCase());
 
         // Column level filters matches
         const nameMatches = !filterName || fullName.toLowerCase().includes(filterName.toLowerCase());
         const phoneMatches = !filterPhone || phoneVal.includes(filterPhone);
-        const serviceMatches = !filterService || String(c.Streaming || '').toLowerCase().includes(filterService.toLowerCase());
+
+        // Service matches: exact match on normalized service name so NETFLIX doesn't pull NETFLIX EXTRA
+        const normFilter = normalizeServiceName(filterService);
+        const normClientService = normalizeServiceName(c.Streaming);
+        const serviceMatches = !normFilter || normClientService === normFilter;
+
         const emailMatches = !filterEmail || String(c.correo || '').toLowerCase().includes(filterEmail.toLowerCase());
 
         return statusMatches && generalMatches && nameMatches && phoneMatches && serviceMatches && emailMatches;
@@ -1031,7 +1045,16 @@ export const ClientsView: React.FC = () => {
                                                 <td data-label="Contraseña" className="py-3.5 px-4 text-sm dark:text-gray-200 font-mono">
                                                     {c.contraseña || c.Clave || c.clave || c.password || '-'}
                                                 </td>
-                                                <td data-label="Cuenta / Correo" className="py-3.5 px-4 text-sm text-gray-500 dark:text-gray-400 break-all">{c.correo || '-'}</td>
+                                                <td data-label="Cuenta / Correo" className="py-3.5 px-4 text-sm text-gray-500 dark:text-gray-400 break-all">
+                                                    <div className="flex flex-col gap-0.5">
+                                                        {c.Streaming && (
+                                                            <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary dark:text-brand-light w-fit">
+                                                                {normalizeServiceName(c.Streaming)}
+                                                            </span>
+                                                        )}
+                                                        <span>{c.correo || '-'}</span>
+                                                    </div>
+                                                </td>
                                                 <td data-label="Vencimiento" className="py-3.5 px-4 text-sm font-mono dark:text-gray-300">
                                                      {editingDateClient && editingDateClient.rowKey === `${phone}_${c.Streaming}_${i}` ? (
                                                          <div className="flex flex-col gap-1.5 p-2 bg-purple-50 dark:bg-purple-900/30 rounded-xl border border-purple-300 dark:border-purple-700 animate-fadeIn">

@@ -205,15 +205,24 @@ export const BulkSenderView: React.FC = () => {
     return 999;
   };
 
+  // Helper to normalize streaming service names
+  const normalizeServiceName = (raw?: any): string => {
+    if (!raw) return '';
+    let s = String(raw).trim().replace(/\s+/g, ' ').toUpperCase();
+    s = s.replace(/\b(WONER|ONWER)\b/g, 'OWNER');
+    return s;
+  };
+
   // Get unique streaming services
   const uniqueServices = Array.from(
-    new Set(clients.map(c => (c.Streaming || '').split(' ')[0]).filter(Boolean))
+    new Set(clients.map(c => normalizeServiceName(c.Streaming)).filter(Boolean))
   ).sort() as string[];
 
   // Filtered clients list
   const filteredClients = clients.filter(c => {
-    const serviceVal = (c.Streaming || '').toLowerCase();
-    const serviceMatches = selectedService === 'todos' || serviceVal.includes(selectedService.toLowerCase());
+    const normFilter = selectedService === 'todos' ? '' : normalizeServiceName(selectedService);
+    const normService = normalizeServiceName(c.Streaming);
+    const serviceMatches = !normFilter || normService === normFilter;
 
     const daysLeft = getDaysLeft(c.deben || c.vencimiento);
     let statusMatches = true;
