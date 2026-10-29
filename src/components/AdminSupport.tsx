@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard, Radio, FileText, Smartphone, Settings, Cpu, ShoppingBag, Globe, Bot, Moon, Sun, Power, Layers } from 'lucide-react';
+import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard, Radio, FileText, Smartphone, Settings, Cpu, ShoppingBag, Globe, Bot, Moon, Sun, Power, Layers, Bell } from 'lucide-react';
 import { ClientsView } from './ClientsView';
 import { DataStudioView } from './DataStudioView';
 import { NetflixMatchView } from './NetflixMatchView';
@@ -22,6 +22,7 @@ import PromptsConfigView from './PromptsConfigView';
 import RpaAutomatorView from './RpaAutomatorView';
 import { WebSalesView } from './WebSalesView';
 import { AccountingView } from './AccountingView';
+import { RemindersView } from './RemindersView';
 import { AIPanelAssistant } from './AIPanelAssistant';
 import { isDemoMode, disableDemoMode } from '../utils/demoMode';
 
@@ -76,7 +77,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
       console.error("Failed to write frontend audit log:", e);
     }
   };
-  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'studio' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'payments' | 'streaming' | 'policies' | 'whatsapp' | 'prompts' | 'rpa' | 'web_sales' | 'accounting'>('tickets');
+  const [activeTab, setActiveTab] = useState<'support' | 'db' | 'studio' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'payments' | 'streaming' | 'policies' | 'whatsapp' | 'prompts' | 'rpa' | 'web_sales' | 'accounting' | 'reminders'>('tickets');
   const [activePaymentsSubTab, setActivePaymentsSubTab] = useState<'calendar' | 'payroll'>('calendar');
   const [searchQuery, setSearchQuery] = useState('');
   const [externalQueryDate, setExternalQueryDate] = useState<string | undefined>(undefined);
@@ -508,6 +509,13 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           <Cpu className="w-5 h-5 mr-2" /> RPA Automator
         </button>
 
+        <button 
+          onClick={() => setActiveTab('reminders')}
+          className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'reminders' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+        >
+          <Bell className="w-5 h-5 mr-2" /> Recordatorios
+        </button>
+
         {role === 'admin' && (
           <>
             {/* Separador visual */}
@@ -581,6 +589,10 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           </div>
         </>
       )}
+
+      <div className={activeTab === 'reminders' ? '' : 'hidden'}>
+        <RemindersView />
+      </div>
 
       <div className={activeTab === 'support' ? '' : 'hidden'}>
 
