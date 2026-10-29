@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp, Maximize2, Minimize2, Archive, TrendingUp, Keyboard, Mic, Square, Trash2, Plus, History } from 'lucide-react';
+import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp, Maximize2, Minimize2, Archive, TrendingUp, Keyboard, Mic, Square, Trash2, Plus, History, Clock, Calendar } from 'lucide-react';
 import { isDemoMode, DEMO_TICKETS } from '../utils/demoMode';
 
 interface AccountInfo {
@@ -170,6 +170,37 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
    } | null>(null);
   const [loadingMetrics, setLoadingMetrics] = useState(false);
   const [hiddenChartAgents, setHiddenChartAgents] = useState<Set<string>>(new Set());
+  const [metricsSearch, setMetricsSearch] = useState('');
+  const [metricsAgentFilter, setMetricsAgentFilter] = useState('todos');
+
+  // Helper para formatear fecha y hora de resolución de tickets
+  const formatResolutionTime = (raw: any) => {
+    if (!raw) return { dateStr: '-', timeStr: '-' };
+    try {
+      let d: Date;
+      if (raw instanceof Date) {
+        d = raw;
+      } else {
+        const s = String(raw).trim();
+        d = new Date(s.includes('T') ? s : s.replace(' ', 'T'));
+      }
+      if (isNaN(d.getTime())) return { dateStr: String(raw), timeStr: '' };
+
+      const dateStr = d.toLocaleDateString('es-CO', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+      const timeStr = d.toLocaleTimeString('es-CO', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+      return { dateStr, timeStr };
+    } catch {
+      return { dateStr: String(raw), timeStr: '' };
+    }
+  };
 
   // Account History state
   const [showAccountHistoryModal, setShowAccountHistoryModal] = useState(false);
@@ -3401,10 +3432,10 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
       {/* Metrics Modal */}
       {showMetricsModal && (
-        <div className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border dark:border-gray-800 shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border dark:border-gray-800 shadow-2xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col">
             {/* Modal Header */}
-            <div className="p-5 border-b dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
+            <div className="p-4 sm:p-5 border-b dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
               <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-brand-primary" /> Métricas de Desempeño y Resoluciones
               </h3>
@@ -3534,7 +3565,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                   })()}
 
                   {/* Summary Leaderboard */}
-                  <div className="md:col-span-5 space-y-6">
+                  <div className="col-span-12 lg:col-span-4 space-y-6">
                     <div className="space-y-3">
                       <h4 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
                         ⚡ Resoluciones de Hoy
@@ -3573,83 +3604,157 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                   </div>
 
                   {/* Recent Resolutions */}
-                  <div className="md:col-span-7 space-y-4">
-                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Últimos 100 tickets resueltos</h4>
-                    <div className="border dark:border-gray-800 rounded-xl overflow-hidden text-xs max-h-[300px] overflow-y-auto">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-gray-50 dark:bg-gray-850 border-b dark:border-gray-800 text-[10px] text-gray-400 uppercase font-extrabold">
-                            <th className="p-3">Cliente</th>
-                            <th className="p-3">Categoría</th>
-                            <th className="p-3">Asesor</th>
-                            <th className="p-3">Resolución</th>
-                            <th className="p-3 text-right">Acción</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                          {metricsData.recent.length === 0 ? (
-                            <tr>
-                              <td colSpan={5} className="p-4 text-center text-gray-450 italic">No hay tickets resueltos recientes.</td>
-                            </tr>
-                          ) : (
-                            metricsData.recent.map((rec, i) => {
-                              const cat = (rec.category || 'Atención General').toLowerCase();
-                              const isChurn = cat.includes('corte') || cat.includes('churn');
-                              const isRenewal = cat.includes('renov') || cat.includes('cobro');
-                              return (
-                                <tr 
-                                  key={i} 
-                                  onClick={() => openChatFromResolved(rec)}
-                                  className="hover:bg-brand-primary/5 dark:hover:bg-brand-primary/10 transition-colors cursor-pointer group"
-                                  title="Haz clic para abrir la conversación completa de este cliente"
+                  {(() => {
+                    const uniqueRecentAgents = Array.from(new Set((metricsData.recent || []).map(r => r.agent).filter(Boolean)));
+                    const filteredRecent = (metricsData.recent || []).filter(rec => {
+                      const matchesAgent = metricsAgentFilter === 'todos' || (rec.agent || '').toLowerCase() === metricsAgentFilter.toLowerCase();
+                      if (!matchesAgent) return false;
+                      if (!metricsSearch.trim()) return true;
+                      const q = metricsSearch.toLowerCase().trim();
+                      return (
+                        (rec.customerName || '').toLowerCase().includes(q) ||
+                        (rec.phone || '').includes(q) ||
+                        (rec.agent || '').toLowerCase().includes(q) ||
+                        (rec.category || '').toLowerCase().includes(q)
+                      );
+                    });
+
+                    return (
+                      <div className="col-span-12 lg:col-span-8 space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                              📋 Últimos Tickets Resueltos
+                            </h4>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-brand-primary/10 text-brand-primary">
+                              {filteredRecent.length} de {metricsData.recent?.length || 0}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            {/* Selector de Asesor */}
+                            <select
+                              value={metricsAgentFilter}
+                              onChange={(e) => setMetricsAgentFilter(e.target.value)}
+                              className="px-2.5 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-brand-primary cursor-pointer font-medium"
+                            >
+                              <option value="todos">Todos los asesores</option>
+                              {uniqueRecentAgents.map(a => (
+                                <option key={a} value={a}>👤 {a}</option>
+                              ))}
+                            </select>
+
+                            {/* Buscador */}
+                            <div className="relative">
+                              <input
+                                type="text"
+                                placeholder="Buscar cliente, número..."
+                                value={metricsSearch}
+                                onChange={(e) => setMetricsSearch(e.target.value)}
+                                className="pl-7 pr-6 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand-primary w-40 sm:w-48"
+                              />
+                              <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                              {metricsSearch && (
+                                <button 
+                                  onClick={() => setMetricsSearch('')}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 text-xs"
                                 >
-                                  <td className="p-3 font-semibold text-gray-800 dark:text-gray-200">
-                                    <div className="truncate max-w-[130px] group-hover:text-brand-primary transition-colors font-bold">{rec.customerName}</div>
-                                    <div className="text-[9px] text-gray-450 font-mono">+{rec.phone}</div>
-                                  </td>
-                                  <td className="p-3 whitespace-nowrap">
-                                    <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                                      isChurn 
-                                        ? 'bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40' 
-                                        : isRenewal 
-                                        ? 'bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/40' 
-                                        : 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40'
-                                    }`}>
-                                      {rec.category || 'Atención General'}
-                                    </span>
-                                  </td>
-                                  <td className="p-3 text-gray-650 dark:text-gray-300 font-medium whitespace-nowrap">{rec.agent}</td>
-                                  <td className="p-3 text-gray-400 text-[10px] whitespace-nowrap">
-                                    <div>
-                                      {new Date(rec.resolvedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}{' '}
-                                      {new Date(rec.resolvedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </div>
-                                    {rec.durationSeconds && rec.durationSeconds > 0 ? (
-                                      <div className="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                                        ⏱️ {Math.floor(rec.durationSeconds / 60)}m {rec.durationSeconds % 60}s
-                                      </div>
-                                    ) : null}
-                                  </td>
-                                  <td className="p-3 text-right">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        openChatFromResolved(rec);
-                                      }}
-                                      className="px-2.5 py-1 text-[10px] font-bold bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white rounded-lg transition-all shadow-sm inline-flex items-center gap-1"
-                                      title="Abrir conversación completa"
-                                    >
-                                      👁️ Ver Chat
-                                    </button>
+                                  ✕
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Contenedor de la Tabla con Scroll Horizontal y Altura Cómoda */}
+                        <div className="border dark:border-gray-800 rounded-xl overflow-x-auto text-xs max-h-[460px] overflow-y-auto shadow-sm">
+                          <table className="w-full text-left border-collapse min-w-[620px]">
+                            <thead className="sticky top-0 z-10">
+                              <tr className="bg-gray-100 dark:bg-gray-850 border-b dark:border-gray-800 text-[10px] text-gray-500 dark:text-gray-400 uppercase font-extrabold tracking-wider">
+                                <th className="p-3">Cliente</th>
+                                <th className="p-3">Categoría</th>
+                                <th className="p-3">Asesor</th>
+                                <th className="p-3">Hora & Fecha Resolución</th>
+                                <th className="p-3 text-right">Acción</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                              {filteredRecent.length === 0 ? (
+                                <tr>
+                                  <td colSpan={5} className="p-6 text-center text-gray-450 italic">
+                                    No se encontraron tickets resueltos con los filtros aplicados.
                                   </td>
                                 </tr>
-                              );
-                            })
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                              ) : (
+                                filteredRecent.map((rec, i) => {
+                                  const cat = (rec.category || 'Atención General').toLowerCase();
+                                  const isChurn = cat.includes('corte') || cat.includes('churn');
+                                  const isRenewal = cat.includes('renov') || cat.includes('cobro');
+                                  const { dateStr, timeStr } = formatResolutionTime(rec.resolvedAt);
+
+                                  return (
+                                    <tr 
+                                      key={i} 
+                                      onClick={() => openChatFromResolved(rec)}
+                                      className="hover:bg-brand-primary/5 dark:hover:bg-brand-primary/10 transition-colors cursor-pointer group"
+                                      title="Haz clic para abrir la conversación completa de este cliente"
+                                    >
+                                      <td className="p-3 font-semibold text-gray-800 dark:text-gray-200">
+                                        <div className="truncate max-w-[150px] group-hover:text-brand-primary transition-colors font-bold text-xs">{rec.customerName}</div>
+                                        <div className="text-[10px] text-gray-450 font-mono">+{rec.phone}</div>
+                                      </td>
+                                      <td className="p-3 whitespace-nowrap">
+                                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[9px] font-bold ${
+                                          isChurn 
+                                            ? 'bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40' 
+                                            : isRenewal 
+                                            ? 'bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/40' 
+                                            : 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40'
+                                        }`}>
+                                          {rec.category || 'Atención General'}
+                                        </span>
+                                      </td>
+                                      <td className="p-3 text-gray-700 dark:text-gray-300 font-semibold whitespace-nowrap text-xs">
+                                        👤 {rec.agent}
+                                      </td>
+                                      <td className="p-3 whitespace-nowrap">
+                                        <div className="flex flex-col gap-0.5">
+                                          <div className="flex items-center gap-1.5 font-mono text-xs font-black text-gray-900 dark:text-gray-100">
+                                            <Clock className="w-3.5 h-3.5 text-brand-primary shrink-0" />
+                                            <span className="bg-brand-primary/10 text-brand-primary px-1.5 py-0.5 rounded text-[11px] font-extrabold">{timeStr}</span>
+                                          </div>
+                                          <div className="text-[10px] text-gray-450 dark:text-gray-400 font-medium flex items-center gap-1 pl-5">
+                                            <span>📅 {dateStr}</span>
+                                          </div>
+                                          {rec.durationSeconds && rec.durationSeconds > 0 ? (
+                                            <div className="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold pl-5">
+                                              ⏱️ {Math.floor(rec.durationSeconds / 60)}m {rec.durationSeconds % 60}s atención
+                                            </div>
+                                          ) : null}
+                                        </div>
+                                      </td>
+                                      <td className="p-3 text-right whitespace-nowrap">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openChatFromResolved(rec);
+                                          }}
+                                          className="px-3 py-1.5 text-xs font-bold bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white rounded-lg transition-all shadow-sm inline-flex items-center gap-1"
+                                          title="Abrir conversación completa"
+                                        >
+                                          👁️ Ver Chat
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  );
+                                })
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>
