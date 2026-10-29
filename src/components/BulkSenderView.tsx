@@ -208,7 +208,11 @@ export const BulkSenderView: React.FC = () => {
   // Helper to normalize streaming service names
   const normalizeServiceName = (raw?: any): string => {
     if (!raw) return '';
-    let s = String(raw).trim().replace(/\s+/g, ' ').toUpperCase();
+    let s = String(raw)
+      .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, ' ')
+      .trim()
+      .replace(/\s+/g, ' ')
+      .toUpperCase();
     s = s.replace(/\b(WONER|ONWER)\b/g, 'OWNER');
     return s;
   };
@@ -216,7 +220,7 @@ export const BulkSenderView: React.FC = () => {
   // Get unique streaming services
   const uniqueServices = Array.from(
     new Set(clients.map(c => normalizeServiceName(c.Streaming)).filter(Boolean))
-  ).sort() as string[];
+  ).sort((a, b) => a.localeCompare(b)) as string[];
 
   // Filtered clients list
   const filteredClients = clients.filter(c => {

@@ -249,7 +249,11 @@ export const ClientsView: React.FC = () => {
     // Helper to normalize streaming service names (trims, collapses multiple spaces, fixes common typos)
     const normalizeServiceName = (raw?: any): string => {
         if (!raw) return '';
-        let s = String(raw).trim().replace(/\s+/g, ' ').toUpperCase();
+        let s = String(raw)
+            .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, ' ')
+            .trim()
+            .replace(/\s+/g, ' ')
+            .toUpperCase();
         s = s.replace(/\b(WONER|ONWER)\b/g, 'OWNER');
         return s;
     };
@@ -257,7 +261,7 @@ export const ClientsView: React.FC = () => {
     // Extract unique services dynamically for the Excel filter options
     const uniqueServices = Array.from(
         new Set(clients.map(c => normalizeServiceName(c.Streaming)).filter(Boolean))
-    ).sort() as string[];
+    ).sort((a, b) => a.localeCompare(b)) as string[];
 
     const filtered = clients.filter(c => {
         const daysLeft = getDaysRemaining(c.deben || c.vencimiento);
