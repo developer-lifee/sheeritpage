@@ -277,6 +277,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     nombre: string;
     sharedTickets: { ticket: Ticket; matchingAccounts: AccountInfo[] }[];
   } | null>(null);
+  const [isResolving, setIsResolving] = useState(false);
 
   // Custom assign dialog state
   const [assignDialog, setAssignDialog] = useState<{
@@ -1371,17 +1372,35 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   };
 
   const executeResolve = async (phone: string, resolveAll: boolean) => {
+    if (isResolving) return;
+    setIsResolving(true);
     setResolveDialog(null);
     
+    const targetTicket = tickets.find(t => t.phone === phone);
+    const cleanP = String(phone).replace(/\D/g, '');
+    const last10 = cleanP.slice(-10);
+
     if (resolveAll) {
-      const targetTicket = tickets.find(t => t.phone === phone);
       if (targetTicket) {
         const sharedWithDetails = findSharedTicketsWithDetails(targetTicket);
-        const phonesToRemove = [phone, ...sharedWithDetails.map(s => s.ticket.phone)];
-        setTickets(prev => prev.filter(t => !phonesToRemove.includes(t.phone)));
+        const phonesToRemove = new Set([cleanP, last10, ...sharedWithDetails.map(s => String(s.ticket.phone).replace(/\D/g, ''))]);
+        setTickets(prev => prev.filter(t => {
+          const tClean = String(t.phone).replace(/\D/g, '');
+          return !phonesToRemove.has(tClean) && !phonesToRemove.has(tClean.slice(-10));
+        }));
       }
     } else {
-      setTickets(prev => prev.filter(t => t.phone !== phone));
+      setTickets(prev => prev.filter(t => {
+        const tClean = String(t.phone).replace(/\D/g, '');
+        return tClean !== cleanP && tClean.slice(-10) !== last10;
+      }));
+    }
+
+    if (activeChatTicket) {
+      const activeClean = String(activeChatTicket.phone).replace(/\D/g, '');
+      if (activeClean === cleanP || activeClean.slice(-10) === last10) {
+        setActiveChatTicket(null);
+      }
     }
 
     const apiUrl = getApiUrl();
@@ -1398,12 +1417,11 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         logAuditAction('RESOLVE_TICKET', { ticketPhone: phone, resolveAllShared: resolveAll });
       }
       fetchTickets(true);
-      if (activeChatTicket && activeChatTicket.phone === phone) {
-        setActiveChatTicket(null);
-      }
     } catch (err) {
       alert('❌ Error al conectar con el backend.');
       fetchTickets(true);
+    } finally {
+      setIsResolving(false);
     }
   };
 
@@ -3142,20 +3160,23 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 <div className="flex flex-col gap-2">
                   <button
                     type="button"
+                    disabled={isResolving}
                     onClick={() => executeResolve(resolveDialog.phone, false)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
+                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
                   >
-                    Resolver SOLO el de {resolveDialog.nombre}
+                    {isResolving ? 'Resolviendo...' : `Resolver SOLO el de ${resolveDialog.nombre}`}
                   </button>
                   <button
                     type="button"
+                    disabled={isResolving}
                     onClick={() => executeResolve(resolveDialog.phone, true)}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
+                    className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
                   >
-                    Resolver TODOS en Lote
+                    {isResolving ? 'Resolviendo en lote...' : 'Resolver TODOS en Lote'}
                   </button>
                   <button
                     type="button"
+                    disabled={isResolving}
                     onClick={() => setResolveDialog(null)}
                     className="w-full bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-650 hover:bg-gray-200 text-gray-750 dark:text-gray-200 font-bold py-2.5 rounded-xl text-sm transition-all"
                   >
@@ -3173,6 +3194,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 <div className="flex gap-2">
                   <button
                     type="button"
+                    disabled={isResolving}
                     onClick={() => setResolveDialog(null)}
                     className="flex-1 bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-650 hover:bg-gray-200 text-gray-750 dark:text-gray-200 font-bold py-2.5 rounded-xl text-sm transition-all"
                   >
@@ -3180,10 +3202,11 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                   </button>
                   <button
                     type="button"
+                    disabled={isResolving}
                     onClick={() => executeResolve(resolveDialog.phone, false)}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all flex items-center justify-center gap-1.5 shadow-md shadow-green-600/20"
+                    className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm transition-all flex items-center justify-center gap-1.5 shadow-md shadow-green-600/20"
                   >
-                    <CheckCircle className="w-4 h-4" /> Resolver Ticket
+                    <CheckCircle className="w-4 h-4" /> {isResolving ? 'Resolviendo...' : 'Resolver Ticket'}
                   </button>
                 </div>
               </>
