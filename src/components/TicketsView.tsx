@@ -180,6 +180,9 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       let d: Date;
       if (raw instanceof Date) {
         d = raw;
+      } else if (typeof raw === 'number' || (/^\d+$/.test(String(raw).trim()))) {
+        const num = Number(raw);
+        d = new Date(num < 10000000000 ? num * 1000 : num);
       } else {
         const s = String(raw).trim();
         d = new Date(s.includes('T') ? s : s.replace(' ', 'T'));
@@ -194,6 +197,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       const timeStr = d.toLocaleTimeString('es-CO', {
         hour: '2-digit',
         minute: '2-digit',
+        second: '2-digit',
         hour12: true
       });
       return { dateStr, timeStr };
@@ -3456,7 +3460,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       {/* Metrics Modal */}
       {showMetricsModal && (
         <div className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border dark:border-gray-800 shadow-2xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border dark:border-gray-800 shadow-2xl w-full max-w-7xl max-h-[94vh] overflow-hidden flex flex-col">
             {/* Modal Header */}
             <div className="p-4 sm:p-5 border-b dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
               <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -3521,12 +3525,12 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     }), 1);
 
                     return (
-                      <div className="md:col-span-12 border-b dark:border-gray-800 pb-6 mb-2">
-                        <h4 className="text-xs font-bold text-gray-450 uppercase tracking-wider mb-3">
+                      <div className="col-span-12 lg:col-span-7 space-y-3">
+                        <h4 className="text-xs font-bold text-gray-450 uppercase tracking-wider mb-2">
                           📈 Flujo de Resoluciones Semanal (Últimos 7 Días) — por Asesor
                         </h4>
                         {/* Clickable Legend Toggles */}
-                        <div className="flex flex-wrap gap-2 mb-3">
+                        <div className="flex flex-wrap gap-2 mb-2">
                           {uniqueAgents.map(a => {
                             const isHidden = hiddenChartAgents.has(a);
                             return (
@@ -3549,7 +3553,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                             );
                           })}
                         </div>
-                        <div className="flex items-end justify-between gap-2 h-36 bg-gray-50/50 dark:bg-gray-850/50 p-4 rounded-2xl border dark:border-gray-800">
+                        <div className="flex items-end justify-between gap-2 h-44 bg-gray-50/50 dark:bg-gray-850/50 p-4 rounded-2xl border dark:border-gray-800">
                           {allDayLabels.map((dayLabel, idx) => {
                             const agents = dayMap[dayLabel] || {};
                             const dayTotal = Object.values(agents).reduce((s, v) => s + v, 0);
@@ -3588,37 +3592,37 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                   })()}
 
                   {/* Summary Leaderboard */}
-                  <div className="col-span-12 lg:col-span-4 space-y-6">
-                    <div className="space-y-3">
+                  <div className="col-span-12 lg:col-span-5 space-y-4">
+                    <div className="space-y-2">
                       <h4 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
                         ⚡ Resoluciones de Hoy
                       </h4>
-                      <div className="space-y-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {!metricsData.summaryToday || metricsData.summaryToday.length === 0 ? (
-                          <p className="text-xs text-gray-450 italic">Ningún asesor ha resuelto tickets hoy.</p>
+                          <p className="text-xs text-gray-450 italic col-span-2">Ningún asesor ha resuelto tickets hoy.</p>
                         ) : (
                           metricsData.summaryToday.map((row) => (
-                            <div key={row.agent} className="flex justify-between items-center p-2.5 rounded-xl bg-emerald-50/30 dark:bg-emerald-950/10 border border-emerald-100 dark:border-emerald-900/30 text-xs">
-                              <span className="font-bold text-gray-700 dark:text-gray-300">👤 {row.agent}</span>
-                              <span className="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-black px-2.5 py-0.5 rounded-full">{row.count} hoy</span>
+                            <div key={row.agent} className="flex justify-between items-center p-2 rounded-xl bg-emerald-50/30 dark:bg-emerald-950/10 border border-emerald-100 dark:border-emerald-900/30 text-xs">
+                              <span className="font-bold text-gray-700 dark:text-gray-300 truncate">👤 {row.agent}</span>
+                              <span className="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-black px-2 py-0.5 rounded-full shrink-0">{row.count} hoy</span>
                             </div>
                           ))
                         )}
                       </div>
                     </div>
 
-                    <div className="space-y-3 border-t dark:border-gray-800 pt-4">
+                    <div className="space-y-2 border-t dark:border-gray-800 pt-3">
                       <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                         Historial Acumulado
                       </h4>
-                      <div className="space-y-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {metricsData.summary.length === 0 ? (
-                          <p className="text-xs text-gray-450 italic">Sin registros de resoluciones aún.</p>
+                          <p className="text-xs text-gray-450 italic col-span-3">Sin registros de resoluciones aún.</p>
                         ) : (
                           metricsData.summary.map((row) => (
-                            <div key={row.agent} className="flex justify-between items-center p-2.5 rounded-xl bg-gray-50 dark:bg-gray-850 border dark:border-gray-800 text-xs">
-                              <span className="font-bold text-gray-700 dark:text-gray-300">👤 {row.agent}</span>
-                              <span className="bg-brand-primary/10 text-brand-primary font-black px-2.5 py-0.5 rounded-full">{row.count} resueltos</span>
+                            <div key={row.agent} className="flex flex-col p-2 rounded-xl bg-gray-50 dark:bg-gray-850 border dark:border-gray-800 text-xs">
+                              <span className="font-bold text-gray-700 dark:text-gray-300 truncate text-[11px]">👤 {row.agent}</span>
+                              <span className="text-brand-primary font-black text-xs mt-0.5">{row.count} resueltos</span>
                             </div>
                           ))
                         )}
@@ -3626,7 +3630,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     </div>
                   </div>
 
-                  {/* Recent Resolutions */}
+                  {/* Recent Resolutions Table (Full Width) */}
                   {(() => {
                     const uniqueRecentAgents = Array.from(new Set((metricsData.recent || []).map(r => r.agent).filter(Boolean)));
                     const filteredRecent = (metricsData.recent || []).filter(rec => {
@@ -3643,11 +3647,11 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     });
 
                     return (
-                      <div className="col-span-12 lg:col-span-8 space-y-3">
+                      <div className="col-span-12 space-y-3 pt-3 border-t dark:border-gray-800">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-1">
                           <div className="flex items-center gap-2">
                             <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                              📋 Últimos Tickets Resueltos
+                              📋 Historial de Últimos Tickets Resueltos
                             </h4>
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-brand-primary/10 text-brand-primary">
                               {filteredRecent.length} de {metricsData.recent?.length || 0}
@@ -3690,15 +3694,15 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                         </div>
 
                         {/* Contenedor de la Tabla con Scroll Horizontal y Altura Cómoda */}
-                        <div className="border dark:border-gray-800 rounded-xl overflow-x-auto text-xs max-h-[460px] overflow-y-auto shadow-sm">
-                          <table className="w-full text-left border-collapse min-w-[620px]">
+                        <div className="border dark:border-gray-800 rounded-xl overflow-x-auto text-xs max-h-[480px] overflow-y-auto shadow-sm">
+                          <table className="w-full text-left border-collapse min-w-[820px]">
                             <thead className="sticky top-0 z-10">
                               <tr className="bg-gray-100 dark:bg-gray-850 border-b dark:border-gray-800 text-[10px] text-gray-500 dark:text-gray-400 uppercase font-extrabold tracking-wider">
-                                <th className="p-3">Cliente</th>
-                                <th className="p-3">Categoría</th>
-                                <th className="p-3">Asesor</th>
-                                <th className="p-3">Hora & Fecha Resolución</th>
-                                <th className="p-3 text-right">Acción</th>
+                                <th className="p-3 w-56 min-w-[200px]">Cliente</th>
+                                <th className="p-3 w-40 min-w-[140px]">Categoría</th>
+                                <th className="p-3 w-40 min-w-[140px]">Asesor</th>
+                                <th className="p-3 w-64 min-w-[220px]">Hora & Fecha Resolución</th>
+                                <th className="p-3 text-right w-28 min-w-[100px]">Acción</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
