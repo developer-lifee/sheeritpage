@@ -448,40 +448,63 @@ export const AddSaleForm: React.FC<AddSaleFormProps> = ({
                             setActiveDropdownIndex(index);
                             setSearchTerms(prev => ({ ...prev, [index]: '' }));
                           }}
+                          onClick={() => {
+                            setActiveDropdownIndex(index);
+                            setSearchTerms(prev => ({ ...prev, [index]: '' }));
+                          }}
+                          onBlur={() => {
+                            // Delay para permitir que el click del mouse se registre
+                            setTimeout(() => {
+                              setActiveDropdownIndex(prev => prev === index ? null : prev);
+                            }, 250);
+                          }}
                           onChange={(e) => {
                             const val = e.target.value;
                             setSearchTerms(prev => ({ ...prev, [index]: val }));
                           }}
                           placeholder="Buscar plataforma (ej. Gemini, Disney)..."
-                          className="w-full px-3 py-2.5 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white font-semibold text-sm focus:ring-2 focus:ring-brand-primary focus:outline-none"
+                          className="w-full px-3 py-2.5 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white font-semibold text-sm focus:ring-2 focus:ring-brand-primary focus:outline-none cursor-pointer"
                         />
                         {activeDropdownIndex === index && (
-                          <div className="absolute left-0 right-0 top-full mt-1 max-h-56 overflow-y-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 py-1">
+                          <div 
+                            className="absolute left-0 right-0 top-full mt-1 max-h-64 overflow-y-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[999] py-1"
+                            onMouseDown={(e) => e.preventDefault()}
+                          >
                             {filteredPlatforms.length > 0 ? (
                               filteredPlatforms.map(p => (
                                 <button
                                   key={p.id}
                                   type="button"
-                                  onClick={() => {
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
                                     updateItem(index, 'platformId', String(p.id));
                                     updateItem(index, 'planName', p.plans[0]?.name || '');
                                     updateItem(index, 'preferredEmail', '');
                                     setActiveDropdownIndex(null);
                                   }}
-                                  className={`w-full text-left px-3.5 py-2 text-sm hover:bg-brand-primary/10 dark:hover:bg-brand-primary/20 flex items-center justify-between transition-colors ${
-                                    String(item.platformId) === String(p.id) ? 'bg-brand-primary/5 font-bold text-brand-primary' : 'text-gray-700 dark:text-gray-200'
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    updateItem(index, 'platformId', String(p.id));
+                                    updateItem(index, 'planName', p.plans[0]?.name || '');
+                                    updateItem(index, 'preferredEmail', '');
+                                    setActiveDropdownIndex(null);
+                                  }}
+                                  className={`w-full text-left px-3.5 py-2.5 text-sm hover:bg-brand-primary/10 dark:hover:bg-brand-primary/20 flex items-center justify-between transition-colors cursor-pointer ${
+                                    String(item.platformId) === String(p.id) ? 'bg-brand-primary/10 font-bold text-brand-primary' : 'text-gray-700 dark:text-gray-200'
                                   }`}
                                 >
-                                  <span>{p.name}</span>
+                                  <span className="font-medium">{p.name}</span>
                                   {p.plans && p.plans.length > 0 && (
-                                    <span className="text-[10px] text-gray-400 font-normal">
+                                    <span className="text-[10px] text-gray-400 font-normal ml-2 truncate">
                                       {p.plans.map(pl => pl.name).join(', ')}
                                     </span>
                                   )}
                                 </button>
                               ))
                             ) : (
-                              <div className="px-3 py-2 text-xs text-gray-400 italic">No se encontraron plataformas</div>
+                              <div className="px-3 py-2.5 text-xs text-gray-400 italic">No se encontraron plataformas</div>
                             )}
                           </div>
                         )}
