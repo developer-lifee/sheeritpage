@@ -606,6 +606,40 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
 
       <div className={activeTab === 'support' ? '' : 'hidden'}>
 
+        {/* BANNER WIKI EMPRESARIAL */}
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-800/40 rounded-3xl p-6 sm:p-8 text-white shadow-xl mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-bold">
+              <FileText className="w-3.5 h-3.5" />
+              <span>Base de Conocimientos Oficial (57 Páginas / 113 Capturas)</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-black">
+              Wiki & Manual de Operaciones Sheerit
+            </h3>
+            <p className="text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed">
+              Guía maestra de capacitación para asesores: cortes, cobros, tarjetas temporales, manejo de columnas de Excel, códigos 2FA y procedimientos detallados para las 22 plataformas. Totalmente integrada con el <b>Asistente IA</b> flotante.
+            </p>
+          </div>
+          <div className="flex flex-wrap sm:flex-nowrap gap-3 flex-shrink-0">
+            <a 
+              href="/docs/wiki_sheerit_completa.pdf" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Abrir PDF Completo</span>
+            </a>
+            <a 
+              href="/docs/wiki_sheerit_completa.pdf" 
+              download="wiki_sheerit_completa.pdf"
+              className="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 font-bold text-xs transition-all flex items-center gap-2"
+            >
+              <span>Descargar (5.5 MB)</span>
+            </a>
+          </div>
+        </div>
+
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold dark:text-white">Editar Guías de Soporte</h2>
           <button 
