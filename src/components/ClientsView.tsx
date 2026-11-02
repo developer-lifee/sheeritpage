@@ -1,7 +1,58 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle, Calendar, Plus, CreditCard, ShoppingBag } from 'lucide-react';
+import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle, Calendar, Plus, CreditCard, ShoppingBag, ChevronDown } from 'lucide-react';
 import { isDemoMode } from '../utils/demoMode';
 import { AddSaleForm } from './AddSaleForm';
+
+const ACCOUNT_COLOR_PALETTES = [
+    {
+        bg: 'bg-blue-50/50 dark:bg-blue-950/25',
+        borderLeft: 'border-l-4 border-l-blue-500',
+        dot: 'bg-blue-500',
+        text: 'text-blue-700 dark:text-blue-400'
+    },
+    {
+        bg: 'bg-purple-50/50 dark:bg-purple-950/25',
+        borderLeft: 'border-l-4 border-l-purple-500',
+        dot: 'bg-purple-500',
+        text: 'text-purple-700 dark:text-purple-400'
+    },
+    {
+        bg: 'bg-emerald-50/50 dark:bg-emerald-950/25',
+        borderLeft: 'border-l-4 border-l-emerald-500',
+        dot: 'bg-emerald-500',
+        text: 'text-emerald-700 dark:text-emerald-400'
+    },
+    {
+        bg: 'bg-amber-50/50 dark:bg-amber-950/25',
+        borderLeft: 'border-l-4 border-l-amber-500',
+        dot: 'bg-amber-500',
+        text: 'text-amber-700 dark:text-amber-400'
+    },
+    {
+        bg: 'bg-rose-50/50 dark:bg-rose-950/25',
+        borderLeft: 'border-l-4 border-l-rose-500',
+        dot: 'bg-rose-500',
+        text: 'text-rose-700 dark:text-rose-400'
+    },
+    {
+        bg: 'bg-cyan-50/50 dark:bg-cyan-950/25',
+        borderLeft: 'border-l-4 border-l-cyan-500',
+        dot: 'bg-cyan-500',
+        text: 'text-cyan-700 dark:text-cyan-400'
+    },
+    {
+        bg: 'bg-indigo-50/50 dark:bg-indigo-950/25',
+        borderLeft: 'border-l-4 border-l-indigo-500',
+        dot: 'bg-indigo-500',
+        text: 'text-indigo-700 dark:text-indigo-400'
+    },
+    {
+        bg: 'bg-teal-50/50 dark:bg-teal-950/25',
+        borderLeft: 'border-l-4 border-l-teal-500',
+        dot: 'bg-teal-500',
+        text: 'text-teal-700 dark:text-teal-400'
+    }
+];
 
 function formatExcelDate(excelDate: any): string {
     if (!excelDate) return '-';
@@ -110,6 +161,21 @@ export const ClientsView: React.FC = () => {
 
     // Expiration Status Filter (Excel selector style)
     const [filterPaymentStatus, setFilterPaymentStatus] = useState('todos');
+
+    // Searchable Service Combobox States
+    const [serviceSearchQuery, setServiceSearchQuery] = useState('');
+    const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false);
+    const serviceDropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (serviceDropdownRef.current && !serviceDropdownRef.current.contains(event.target as Node)) {
+                setIsServiceDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // Customer History States
     const [expandedClient, setExpandedClient] = useState<number | null>(null);
@@ -631,17 +697,99 @@ export const ClientsView: React.FC = () => {
                         <option value="vencidos">🚨 Vencidos</option>
                     </select>
 
-                    {/* Streaming/Service Filter */}
-                    <select
-                        value={filterService}
-                        onChange={(e) => setFilterService(e.target.value)}
-                        className="px-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary cursor-pointer font-medium"
-                    >
-                        <option value="">Todos los Servicios</option>
-                        {uniqueServices.map((service) => (
-                            <option key={service} value={service}>{service}</option>
-                        ))}
-                    </select>
+                    {/* Searchable Streaming/Service Combobox */}
+                    <div className="relative min-w-[200px]" ref={serviceDropdownRef}>
+                        <div className="relative flex items-center">
+                            <input
+                                type="text"
+                                value={isServiceDropdownOpen ? serviceSearchQuery : (filterService || '')}
+                                placeholder={filterService ? filterService : "Todos los Servicios"}
+                                onFocus={() => {
+                                    setIsServiceDropdownOpen(true);
+                                    setServiceSearchQuery('');
+                                }}
+                                onChange={(e) => {
+                                    setServiceSearchQuery(e.target.value);
+                                    if (!isServiceDropdownOpen) setIsServiceDropdownOpen(true);
+                                }}
+                                className={`w-full px-3 py-2 pr-8 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary font-medium cursor-pointer transition-all ${
+                                    filterService ? 'border-brand-primary bg-brand-primary/5 dark:bg-brand-primary/10 text-brand-primary font-bold' : ''
+                                }`}
+                            />
+                            {filterService ? (
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setFilterService('');
+                                        setServiceSearchQuery('');
+                                        setIsServiceDropdownOpen(false);
+                                    }}
+                                    className="absolute right-2.5 text-gray-400 hover:text-red-500 p-0.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer"
+                                    title="Quitar filtro de servicio"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                            ) : (
+                                <ChevronDown 
+                                    onClick={() => setIsServiceDropdownOpen(!isServiceDropdownOpen)}
+                                    className="w-4 h-4 absolute right-2.5 text-gray-400 cursor-pointer hover:text-gray-600 dark:hover:text-gray-200" 
+                                />
+                            )}
+                        </div>
+
+                        {isServiceDropdownOpen && (
+                            <div className="absolute z-50 mt-1 w-full min-w-[230px] max-h-64 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-2xl py-1 text-sm animate-fadeIn">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setFilterService('');
+                                        setServiceSearchQuery('');
+                                        setIsServiceDropdownOpen(false);
+                                    }}
+                                    className={`w-full text-left px-3 py-2 flex items-center justify-between hover:bg-brand-primary/10 hover:text-brand-primary transition-colors cursor-pointer ${
+                                        !filterService ? 'font-bold text-brand-primary bg-brand-primary/10' : 'text-gray-700 dark:text-gray-200'
+                                    }`}
+                                >
+                                    <span>🌐 Todos los Servicios</span>
+                                    {!filterService && <Check className="w-4 h-4 text-brand-primary" />}
+                                </button>
+                                <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+                                {(() => {
+                                    const filteredSrvs = uniqueServices.filter(s =>
+                                        s.toLowerCase().includes(serviceSearchQuery.toLowerCase().trim())
+                                    );
+                                    if (filteredSrvs.length === 0) {
+                                        return (
+                                            <div className="px-3 py-3 text-xs text-gray-400 text-center">
+                                                No se encontró "{serviceSearchQuery}"
+                                            </div>
+                                        );
+                                    }
+                                    return filteredSrvs.map(srv => {
+                                        const isSelected = filterService === srv;
+                                        return (
+                                            <button
+                                                key={srv}
+                                                type="button"
+                                                onClick={() => {
+                                                    setFilterService(srv);
+                                                    setServiceSearchQuery('');
+                                                    setIsServiceDropdownOpen(false);
+                                                }}
+                                                className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-brand-primary/10 hover:text-brand-primary transition-colors cursor-pointer ${
+                                                    isSelected ? 'font-bold text-brand-primary bg-brand-primary/10' : 'text-gray-700 dark:text-gray-200'
+                                                }`}
+                                            >
+                                                <span className="truncate">{srv}</span>
+                                                {isSelected && <Check className="w-4 h-4 text-brand-primary flex-shrink-0 ml-2" />}
+                                            </button>
+                                        );
+                                    });
+                                })()}
+                            </div>
+                        )}
+                    </div>
 
                     <button
                         onClick={() => {
@@ -990,25 +1138,34 @@ export const ClientsView: React.FC = () => {
                                     return nameA.localeCompare(nameB);
                                 });
 
-                                // Pre-calculate email coloring groups
-                                let isAlt = false;
-                                let lastEmail = "";
-                                const emailGroupColors = sortedFiltered.map(c => {
+                                // Pre-calculate email coloring groups like in Excel
+                                let groupCounter = 0;
+                                const emailGroupMap = new Map<string, number>();
+                                sortedFiltered.forEach(c => {
                                     const email = (c.correo || '').toString().trim().toLowerCase();
-                                    if (email && email !== lastEmail) {
-                                        isAlt = !isAlt;
-                                        lastEmail = email;
+                                    if (email && !emailGroupMap.has(email)) {
+                                        emailGroupMap.set(email, groupCounter % ACCOUNT_COLOR_PALETTES.length);
+                                        groupCounter++;
                                     }
-                                    return isAlt;
                                 });
 
                                 return sortedFiltered.slice(0, 50).map((c, i) => {
                                     const phone = c.numero || c.Numero;
                                     const daysLeft = getDaysRemaining(c.deben || c.vencimiento);
-                                    const isAltColor = emailGroupColors[i];
-                                    const rowBgClass = isAltColor 
-                                        ? 'bg-gray-50/70 dark:bg-gray-900/10' 
-                                        : 'bg-white dark:bg-gray-800';
+                                    const email = (c.correo || '').toString().trim().toLowerCase();
+                                    const paletteIndex = email ? emailGroupMap.get(email) : undefined;
+                                    const palette = paletteIndex !== undefined ? ACCOUNT_COLOR_PALETTES[paletteIndex] : null;
+
+                                    const prevEmail = i > 0 ? (sortedFiltered[i - 1].correo || '').toString().trim().toLowerCase() : '';
+                                    const isNewAccountBlock = i > 0 && email && email !== prevEmail;
+
+                                    const rowBgClass = palette 
+                                        ? `${palette.bg} ${palette.borderLeft}` 
+                                        : 'bg-white dark:bg-gray-800 border-l-4 border-l-transparent';
+
+                                    const blockDividerClass = isNewAccountBlock 
+                                        ? 'border-t-2 border-t-gray-300 dark:border-t-gray-600' 
+                                        : '';
                                     
                                     // Color badges setup based on expiration days
                                     let badgeColor = "text-gray-500 dark:text-gray-400";
@@ -1031,7 +1188,7 @@ export const ClientsView: React.FC = () => {
 
                                     return (
                                         <React.Fragment key={i}>
-                                            <tr className={`border-b dark:border-gray-700 hover:bg-gray-150/40 dark:hover:bg-gray-750/50 transition-all ${rowBgClass}`}>
+                                            <tr className={`border-b dark:border-gray-700/60 hover:bg-gray-150/60 dark:hover:bg-gray-700/40 transition-all ${rowBgClass} ${blockDividerClass}`}>
                                                 {showBulkSender && (
                                                     <td className="py-3.5 px-4 text-center">
                                                         <input 
@@ -1049,14 +1206,21 @@ export const ClientsView: React.FC = () => {
                                                 <td data-label="Contraseña" className="py-3.5 px-4 text-sm dark:text-gray-200 font-mono">
                                                     {c.contraseña || c.Clave || c.clave || c.password || '-'}
                                                 </td>
-                                                <td data-label="Cuenta / Correo" className="py-3.5 px-4 text-sm text-gray-500 dark:text-gray-400 break-all">
-                                                    <div className="flex flex-col gap-0.5">
+                                                <td data-label="Cuenta / Correo" className="py-3.5 px-4 text-sm break-all font-mono">
+                                                    <div className="flex flex-col gap-1">
                                                         {c.Streaming && (
                                                             <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary dark:text-brand-light w-fit">
                                                                 {normalizeServiceName(c.Streaming)}
                                                             </span>
                                                         )}
-                                                        <span>{c.correo || '-'}</span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            {palette && (
+                                                                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${palette.dot} shadow-2xs`} title="Cuenta agrupada por color" />
+                                                            )}
+                                                            <span className={`truncate text-xs ${palette ? `${palette.text} font-bold` : 'text-gray-600 dark:text-gray-300'}`}>
+                                                                {c.correo || '-'}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td data-label="Vencimiento" className="py-3.5 px-4 text-sm font-mono dark:text-gray-300">
