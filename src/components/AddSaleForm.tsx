@@ -53,7 +53,7 @@ export const AddSaleForm: React.FC<AddSaleFormProps> = ({
   isModal = false 
 }) => {
   const [platforms, setPlatforms] = useState<Platform[]>([]);
-  const [selectedItems, setSelectedItems] = useState<{ platformId: string, planName: string }[]>([]);
+  const [selectedItems, setSelectedItems] = useState<{ platformId: string, planName: string, preferredEmail?: string }[]>([]);
   const [phone, setPhone] = useState(initialPhone);
   const [name, setName] = useState(initialName);
   const [duration, setDuration] = useState<string>('1');
@@ -70,12 +70,26 @@ export const AddSaleForm: React.FC<AddSaleFormProps> = ({
   const [selectedServiceToRenew, setSelectedServiceToRenew] = useState<any | null>(null);
   const [paymentMethod, setPaymentMethod] = useState('Nequi');
 
+  // Available stock accounts per service
+  const [availableAccounts, setAvailableAccounts] = useState<any[]>([]);
+  const [searchTerms, setSearchTerms] = useState<Record<number, string>>({});
+  const [activeDropdownIndex, setActiveDropdownIndex] = useState<number | null>(null);
+
   useEffect(() => {
     const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
     fetch(`${apiUrl}/api/public/platforms`)
       .then(res => res.json())
       .then(data => setPlatforms(data))
       .catch(err => console.error("Error loading platforms:", err));
+
+    fetch(`${apiUrl}/api/admin/available-accounts`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.success && Array.isArray(data.accounts)) {
+          setAvailableAccounts(data.accounts);
+        }
+      })
+      .catch(err => console.error("Error loading available accounts:", err));
   }, []);
 
   useEffect(() => {
@@ -125,8 +139,9 @@ export const AddSaleForm: React.FC<AddSaleFormProps> = ({
   };
 
   const handleVerifyClientPhone = async (phoneToVerify: string) => {
-    const cleanSearchPhone = phoneToVerify.replace(/\D/g, '');
-    if (!cleanSearchPhone) return;
+    const rawSearch = phoneToVerify.replace(/\D/g, '');
+    if (!rawSearch) return;
+    const cleanSearchPhone = rawSearch.length >= 10 ? rawSearch.slice(-10) : rawSearch;
     setIsVerifying(true);
     setMessage('');
     
@@ -136,14 +151,16 @@ export const AddSaleForm: React.FC<AddSaleFormProps> = ({
       const allClients = await response.json();
       
       const filtered = allClients.filter((c: any) => {
-        const cPhone = String(c.whatsapp || c.numero || '').replace(/\D/g, '');
-        return cPhone && cPhone.includes(cleanSearchPhone);
+        const numPhone = String(c.numero || c.Numero || '').replace(/\D/g, '');
+        const waPhone = String(c.whatsapp || c.WhatsApp || '').replace(/\D/g, '');
+        return (numPhone && numPhone.includes(cleanSearchPhone)) || (waPhone && waPhone.includes(cleanSearchPhone));
       });
       
       setCustomerServices(filtered);
       if (filtered.length > 0) {
-        setName(filtered[0].Nombre || filtered[0].nombre || initialName || '');
-        setMessage(`🔍 Encontrado cliente con ${filtered.length} servicio(s) activo(s).`);
+        const foundName = filtered[0].Nombre || filtered[0].nombre || filtered[0].whatsapp || initialName || '';
+        setName(foundName);
+        setMessage(`🔍 Encontrado cliente: ${foundName} con ${filtered.length} servicio(s) registrado(s).`);
       } else {
         setMessage('ℹ️ No se encontraron servicios activos para este número. Procediendo como Venta Nueva.');
         setCustomerServices([]);
@@ -202,8 +219,12 @@ export const AddSaleForm: React.FC<AddSaleFormProps> = ({
       }];
     } else {
       requestItems = selectedItems.map(item => {
-        const p = platforms.find(plt => plt.id === item.platformId);
-        return { platformName: p?.name };
+        const p = platforms.find(plt => String(plt.id) === String(item.platformId));
+        return { 
+          platformName: p?.name,
+          planName: item.planName,
+          preferredEmail: item.preferredEmail || undefined
+        };
       });
     }
 
@@ -394,26 +415,136 @@ export const AddSaleForm: React.FC<AddSaleFormProps> = ({
               </button>
             </div>
 
-            {selectedItems.map((item, index) => (
-              <div key={index} className="flex gap-4 items-end animate-in slide-in-from-left duration-300">
-                <div className="flex-grow">
-                  <select 
-                    value={item.platformId}
-                    onChange={(e) => updateItem(index, 'platformId', e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  >
-                    {platforms.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
+            {selectedItems.map((item, index) => {
+              const currentPlat = platforms.find(p => String(p.id) === String(item.platformId));
+              const availablePlans = currentPlat?.plans || [];
+              const platName = currentPlat?.name || '';
+              
+              // Filtrar cuentas en stock que coincidan con la plataforma elegida
+              const matchedAccounts = availableAccounts.filter(acc => {
+                const accStream = (acc.streaming || '').toLowerCase();
+                const pName = platName.toLowerCase();
+                return accStream.includes(pName) || pName.includes(accStream);
+              });
+
+              const currentSearch = searchTerms[index] ?? '';
+              const filteredPlatforms = platforms.filter(p => {
+                if (!currentSearch) return true;
+                const term = currentSearch.toLowerCase();
+                return p.name.toLowerCase().includes(term) || (p.plans || []).some(pl => pl.name.toLowerCase().includes(term));
+              });
+
+              return (
+                <div key={index} className="p-4 rounded-2xl bg-gray-50/70 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700/80 space-y-3 animate-in slide-in-from-left duration-200">
+                  <div className="flex gap-3 items-start">
+                    {/* Buscador y selector de Plataforma */}
+                    <div className="flex-1 min-w-[180px] relative">
+                      <label className="text-[10px] uppercase font-bold text-gray-400 block mb-1">Plataforma / Servicio</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={activeDropdownIndex === index ? currentSearch : (currentPlat?.name || '')}
+                          onFocus={() => {
+                            setActiveDropdownIndex(index);
+                            setSearchTerms(prev => ({ ...prev, [index]: '' }));
+                          }}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSearchTerms(prev => ({ ...prev, [index]: val }));
+                          }}
+                          placeholder="Buscar plataforma (ej. Gemini, Disney)..."
+                          className="w-full px-3 py-2.5 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white font-semibold text-sm focus:ring-2 focus:ring-brand-primary focus:outline-none"
+                        />
+                        {activeDropdownIndex === index && (
+                          <div className="absolute left-0 right-0 top-full mt-1 max-h-56 overflow-y-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 py-1">
+                            {filteredPlatforms.length > 0 ? (
+                              filteredPlatforms.map(p => (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  onClick={() => {
+                                    updateItem(index, 'platformId', String(p.id));
+                                    updateItem(index, 'planName', p.plans[0]?.name || '');
+                                    updateItem(index, 'preferredEmail', '');
+                                    setActiveDropdownIndex(null);
+                                  }}
+                                  className={`w-full text-left px-3.5 py-2 text-sm hover:bg-brand-primary/10 dark:hover:bg-brand-primary/20 flex items-center justify-between transition-colors ${
+                                    String(item.platformId) === String(p.id) ? 'bg-brand-primary/5 font-bold text-brand-primary' : 'text-gray-700 dark:text-gray-200'
+                                  }`}
+                                >
+                                  <span>{p.name}</span>
+                                  {p.plans && p.plans.length > 0 && (
+                                    <span className="text-[10px] text-gray-400 font-normal">
+                                      {p.plans.map(pl => pl.name).join(', ')}
+                                    </span>
+                                  )}
+                                </button>
+                              ))
+                            ) : (
+                              <div className="px-3 py-2 text-xs text-gray-400 italic">No se encontraron plataformas</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Selector de Plan / Perfil (si la plataforma tiene planes) */}
+                    {availablePlans.length > 0 && (
+                      <div className="w-44">
+                        <label className="text-[10px] uppercase font-bold text-gray-400 block mb-1">Plan / Modalidad</label>
+                        <select
+                          value={item.planName}
+                          onChange={(e) => updateItem(index, 'planName', e.target.value)}
+                          className="w-full px-3 py-2.5 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white font-medium text-sm focus:ring-2 focus:ring-brand-primary focus:outline-none"
+                        >
+                          {availablePlans.map((pl, plIdx) => (
+                            <option key={plIdx} value={pl.name}>
+                              {pl.name} {pl.price ? `($${pl.price.toLocaleString()})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Botón eliminar servicio */}
+                    <div className="pt-5">
+                      <button 
+                        type="button" 
+                        onClick={() => removeItem(index)}
+                        className="p-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
+                        title="Eliminar servicio"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Asignación específica de Cuenta/Correo (Stock en Excel) */}
+                  <div className="bg-white/80 dark:bg-gray-750/70 p-3 rounded-xl border border-gray-150 dark:border-gray-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500 dark:text-gray-400 font-semibold">📍 Asignar a cuenta específica:</span>
+                      <select
+                        value={item.preferredEmail || ''}
+                        onChange={(e) => updateItem(index, 'preferredEmail', e.target.value)}
+                        className="px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white font-medium text-xs focus:ring-2 focus:ring-brand-primary"
+                      >
+                        <option value="">Automático (Primer cupo disponible en stock)</option>
+                        {matchedAccounts.map((acc, aIdx) => (
+                          <option key={aIdx} value={acc.email}>
+                            {acc.email} ({acc.freeSlots} libres de {acc.totalSlots})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {matchedAccounts.length > 0 && (
+                      <span className="text-[11px] text-green-600 dark:text-green-400 font-medium">
+                        ✓ {matchedAccounts.reduce((sum, a) => sum + (a.freeSlots || 0), 0)} cupos libres en Excel
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <button 
-                  type="button" 
-                  onClick={() => removeItem(index)}
-                  className="p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
