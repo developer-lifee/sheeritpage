@@ -21,6 +21,7 @@ import { RayTracingPrivacyPage } from './components/RayTracingPrivacyPage';
 import { PueblappSupportPage } from './components/PueblappSupportPage';
 import { PueblappPrivacyPage } from './components/PueblappPrivacyPage';
 import PortfolioShowcasePage from './components/PortfolioShowcasePage';
+import { AdvisorSkillTest } from './components/AdvisorSkillTest';
 import ErrorBoundary from './components/ErrorBoundary';
 import ClientLoginView from './components/ClientLoginView';
 import { useDarkMode } from './hooks/useDarkMode';
@@ -51,7 +52,7 @@ interface Platform {
   incident?: string;
 }
 
-export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software' | 'raytracing-support' | 'raytracing-privacy' | 'pueblapp-support' | 'pueblapp-privacy' | 'portafolio';
+export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software' | 'raytracing-support' | 'raytracing-privacy' | 'pueblapp-support' | 'pueblapp-privacy' | 'portafolio' | 'evaluacion';
 
 const AUTHORIZED_ADVISORS: { [email: string]: string } = {
   'esclepiades@hotmail.com': 'Esclepiades',
@@ -236,6 +237,7 @@ function AppContent() {
     if (path === '/support/raytracinggame/privacy') return 'raytracing-privacy';
     if (path === '/support/pueblapp' || path === '/support/puebloapp' || path === '/support/yaconecta') return 'pueblapp-support';
     if (path === '/support/pueblapp/privacy' || path === '/support/puebloapp/privacy' || path === '/support/yaconecta/privacy') return 'pueblapp-privacy';
+    if (path === '/evaluacion' || path === '/test-asesor' || path === '/test-asesores' || path === '/simulador') return 'evaluacion';
     return 'home';
   });
   const [isAdminAuth, setIsAdminAuth] = useState(() => {
@@ -307,6 +309,8 @@ function AppContent() {
       setCurrentView('pueblapp-support');
     } else if (path === '/support/pueblapp/privacy' || path === '/support/puebloapp/privacy' || path === '/support/yaconecta/privacy') {
       setCurrentView('pueblapp-privacy');
+    } else if (path === '/evaluacion' || path === '/test-asesor' || path === '/test-asesores' || path === '/simulador') {
+      setCurrentView('evaluacion');
     } else {
       setCurrentView('home');
     }
@@ -336,6 +340,8 @@ function AppContent() {
         setCurrentView('pueblapp-support');
       } else if (currentPath === '/support/pueblapp/privacy' || currentPath === '/support/puebloapp/privacy' || currentPath === '/support/yaconecta/privacy') {
         setCurrentView('pueblapp-privacy');
+      } else if (currentPath === '/evaluacion' || currentPath === '/test-asesor' || currentPath === '/test-asesores' || currentPath === '/simulador') {
+        setCurrentView('evaluacion');
       } else {
         setCurrentView('home');
       }
@@ -358,6 +364,7 @@ function AppContent() {
     else if (view === 'raytracing-privacy') path = '/support/raytracinggame/privacy';
     else if (view === 'pueblapp-support') path = '/support/pueblapp';
     else if (view === 'pueblapp-privacy') path = '/support/pueblapp/privacy';
+    else if (view === 'evaluacion') path = '/evaluacion';
     window.history.pushState({}, '', path);
     window.scrollTo(0, 0);
   };
@@ -668,6 +675,12 @@ function AppContent() {
       {currentView === 'portafolio' && (
         <ErrorBoundary fallbackTitle="Portafolio de Desarrollos">
           <PortfolioShowcasePage />
+        </ErrorBoundary>
+      )}
+
+      {currentView === 'evaluacion' && (
+        <ErrorBoundary fallbackTitle="Simulador y Evaluación de Asesores">
+          <AdvisorSkillTest />
         </ErrorBoundary>
       )}
 

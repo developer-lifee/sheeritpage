@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard, Radio, FileText, Smartphone, Settings, Cpu, ShoppingBag, Globe, Bot, Moon, Sun, Power, Layers, Bell } from 'lucide-react';
+import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard, Radio, FileText, Smartphone, Settings, Cpu, ShoppingBag, Globe, Bot, Moon, Sun, Power, Layers, Bell, Award } from 'lucide-react';
 import { ClientsView } from './ClientsView';
 import { DataStudioView } from './DataStudioView';
 import { NetflixMatchView } from './NetflixMatchView';
@@ -515,6 +515,16 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
         >
           <Bell className="w-5 h-5 mr-2" /> Recordatorios
         </button>
+
+        <a 
+          href="/evaluacion" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-all bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-sm"
+          title="Abrir Simulador y Evaluación de Habilidades con tiempo y casos reales"
+        >
+          <Award className="w-5 h-5 mr-2" /> Test Asesores (Simulador)
+        </a>
 
         {role === 'admin' && (
           <>
