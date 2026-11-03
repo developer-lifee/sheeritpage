@@ -706,6 +706,28 @@ export const AdvisorSkillTest: React.FC = () => {
     setFinalAccuracy(accuracy);
     setPassedCleanly(accuracy >= 80 && !hasDyslexia && tabSwitchesCount < 3);
 
+    const questionsBreakdown = casesTaken.map((c, idx) => {
+      const selectedIdx = answers[idx];
+      const isCorrect = selectedIdx !== undefined && selectedIdx !== -1 && c.options[selectedIdx]?.isCorrect;
+      const chosenLabel = (selectedIdx !== undefined && selectedIdx !== -1)
+        ? c.options[selectedIdx]?.label
+        : 'Sin respuesta (Tiempo agotado)';
+      const correctOpt = c.options.find(o => o.isCorrect);
+
+      return {
+        id: c.id,
+        category: c.category,
+        clientName: c.clientName,
+        isAudio: c.isAudioCase,
+        prompt: c.clientMessage || c.audioTranscript || '',
+        chosenAnswer: chosenLabel,
+        isCorrect: Boolean(isCorrect),
+        correctAnswer: correctOpt?.label || '',
+        explanation: correctOpt?.explanation || '',
+        timeSpentSeconds: times[idx] || 0
+      };
+    });
+
     // Preparar payload para la base de datos de contratación
     const payload = {
       candidateName: advisorName,
@@ -726,7 +748,8 @@ export const AdvisorSkillTest: React.FC = () => {
         raw: answers,
         timesSpent: times,
         cheatingTabSwitches: tabSwitchesCount,
-        caseIdsTaken: casesTaken.map(c => c.id)
+        caseIdsTaken: casesTaken.map(c => c.id),
+        detailedBreakdown: questionsBreakdown
       }
     };
 
@@ -1082,6 +1105,13 @@ export const AdvisorSkillTest: React.FC = () => {
                 </button>
               ))}
             </div>
+
+            {currentCaseIndex === activeSessionCases.length - 1 && (
+              <div className="p-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/60 text-xs text-indigo-700 dark:text-indigo-300 font-bold flex items-center gap-2.5 animate-pulse">
+                <Sparkles className="w-4 h-4 shrink-0 text-indigo-500" />
+                <span>Último Caso (8 de 8): Al hacer clic en tu respuesta, la prueba se procesará y enviará automáticamente.</span>
+              </div>
+            )}
           </div>
         </div>
       )}

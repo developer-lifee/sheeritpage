@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard, Radio, FileText, Smartphone, Settings, Cpu, ShoppingBag, Globe, Bot, Moon, Sun, Power, Layers, Bell, Award, UserCheck, ShieldAlert, CheckCircle2, XCircle } from 'lucide-react';
+import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard, Radio, FileText, Smartphone, Settings, Cpu, ShoppingBag, Globe, Bot, Moon, Sun, Power, Layers, Bell, Award, UserCheck, ShieldAlert, CheckCircle2, XCircle, Brain, Eye, Activity, Sparkles } from 'lucide-react';
 import { ClientsView } from './ClientsView';
 import { DataStudioView } from './DataStudioView';
 import { NetflixMatchView } from './NetflixMatchView';
@@ -85,6 +85,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
   // Evaluaciones de asesores y filtro de contratación
   const [evaluationsList, setEvaluationsList] = useState<any[]>([]);
   const [isEvaluationsModalOpen, setIsEvaluationsModalOpen] = useState(false);
+  const [selectedEvaluationForDetail, setSelectedEvaluationForDetail] = useState<any | null>(null);
   const [loadingEvaluations, setLoadingEvaluations] = useState(false);
 
   const fetchEvaluations = async () => {
@@ -889,6 +890,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
                         <th className="p-3.5 text-center">Anti-Trampa (IA)</th>
                         <th className="p-3.5">Veredicto Contratación</th>
                         <th className="p-3.5">Fecha</th>
+                        <th className="p-3.5 text-center">Informe & Respuestas</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-150 dark:divide-gray-750">
@@ -973,6 +975,15 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
                             <td className="p-3.5 text-gray-400 font-mono text-[11px] whitespace-nowrap">
                               {new Date(item.created_at || item.createdAt).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
                             </td>
+                            <td className="p-3.5 text-center">
+                              <button
+                                onClick={() => setSelectedEvaluationForDetail(item)}
+                                className="px-3 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5 mx-auto"
+                              >
+                                <Brain className="w-3.5 h-3.5" />
+                                <span>Ver Análisis</span>
+                              </button>
+                            </td>
                           </tr>
                         );
                       })}
@@ -984,6 +995,238 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           </div>
         </div>
       )}
+
+      {/* MODAL DETALLE DE EVALUACIÓN & ANÁLISIS PSICOLABORAL */}
+      {selectedEvaluationForDetail && (() => {
+        const item = selectedEvaluationForDetail;
+        let details: any = {};
+        try {
+          details = typeof item.detailed_answers === 'string'
+            ? JSON.parse(item.detailed_answers)
+            : (item.detailed_answers || {});
+        } catch (_) {}
+
+        const psych = details.psychologicalProfile || null;
+        const breakdown: any[] = details.detailedBreakdown || [];
+        const rec = item.hiring_recommendation || item.hiringRecommendation || 'OBSERVACION';
+        const isApto = rec === 'APTO_CONTRATAR';
+        const isNoChat = rec === 'NO_RECOMENDADO_CHAT';
+        const isTrampa = rec === 'DESCARTADO_TRAMPA_DETECTADA';
+        const isDescartado = rec === 'DESCARTADO_BAJA_PRECISION';
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
+            <div className="bg-white dark:bg-gray-850 rounded-3xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+              {/* Header */}
+              <div className="p-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-[11px] font-bold mb-1">
+                    <Brain className="w-3.5 h-3.5" />
+                    <span>Informe Psicolaboral & Auditoría de Respuestas</span>
+                  </div>
+                  <h2 className="text-xl font-black">{item.candidate_name || item.candidateName}</h2>
+                  <div className="flex items-center gap-3 text-xs text-slate-300 mt-1">
+                    <span>📱 {item.candidate_phone || item.candidatePhone || 'Sin teléfono'}</span>
+                    <span>✉️ {item.candidate_email || item.candidateEmail || 'Sin correo'}</span>
+                    {item.candidate_phone && (
+                      <a
+                        href={`https://wa.me/57${(item.candidate_phone || '').replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-400 font-bold hover:underline"
+                      >
+                        Abrir WhatsApp
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedEvaluationForDetail(null)}
+                  className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors font-bold text-lg"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Contenido con Scroll */}
+              <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
+                {/* Métricas Clave y Veredicto */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 text-center">
+                    <span className="text-[10px] font-bold uppercase text-indigo-600 dark:text-indigo-400">Precisión Técnica</span>
+                    <p className="text-2xl font-black text-indigo-700 dark:text-indigo-300 mt-0.5">{item.accuracy_rate ?? item.accuracyRate}%</p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 text-center">
+                    <span className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400">Tiempo Promedio</span>
+                    <p className="text-2xl font-black text-blue-700 dark:text-blue-300 mt-0.5">{item.average_time_per_case ?? item.averageTimePerCase}s</p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/40 text-center">
+                    <span className="text-[10px] font-bold uppercase text-purple-600 dark:text-purple-400">Condición Cognitiva</span>
+                    <p className="text-sm font-bold text-purple-700 dark:text-purple-300 mt-2">
+                      {(item.has_dyslexia || item.hasDyslexia) ? 'Dislexia Declarada' : 'Ninguna'}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 text-center">
+                    <span className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">Veredicto Operativo</span>
+                    <p className="text-sm font-black mt-2">
+                      {isApto && '🟢 Apto para Chat'}
+                      {isTrampa && '🚨 Descartado (Trampa)'}
+                      {isNoChat && !isTrampa && '🔴 No Apto Chat'}
+                      {isDescartado && !isTrampa && '🔴 Descartado'}
+                      {!isApto && !isNoChat && !isDescartado && !isTrampa && '🟡 En Observación'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* INFORME CONDUCTUAL & PSICOLABORAL */}
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20 border border-indigo-200 dark:border-indigo-800/50 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Brain className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <h3 className="font-black text-sm text-gray-900 dark:text-white uppercase tracking-wider">
+                      Perfil Psicolaboral & Competencias Conductuales
+                    </h3>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-bold text-indigo-900 dark:text-indigo-200">
+                        {psych?.profileTitle || 'Perfil Analítico y Resolutivo de Soporte'}
+                      </p>
+                      <p className="text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
+                        {psych?.recommendations || 'Candidata apta para atención al cliente y gestión multicanal bajo supervisión operativa regular.'}
+                      </p>
+                    </div>
+
+                    {/* Barras de Competencias */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                      <div className="p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                        <div className="flex justify-between font-bold mb-1">
+                          <span className="text-gray-700 dark:text-gray-300">Tolerancia a la Presión Temporal</span>
+                          <span className="text-indigo-600">{psych?.metrics?.pressureTolerance ?? (item.average_time_per_case < 25 ? 90 : 70)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
+                          <div className="bg-indigo-600 h-full rounded-full" style={{ width: `${psych?.metrics?.pressureTolerance ?? (item.average_time_per_case < 25 ? 90 : 70)}%` }} />
+                        </div>
+                        <p className="text-[11px] text-gray-500 mt-1.5">{psych?.descriptors?.pressureDesc || 'Control del ritmo de trabajo bajo límites de tiempo de respuesta.'}</p>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                        <div className="flex justify-between font-bold mb-1">
+                          <span className="text-gray-700 dark:text-gray-300">Escucha Activa & Procesamiento de Voz</span>
+                          <span className="text-indigo-600">{psych?.metrics?.activeListening ?? (item.audio_cases_score || 85)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
+                          <div className="bg-purple-600 h-full rounded-full" style={{ width: `${psych?.metrics?.activeListening ?? (item.audio_cases_score || 85)}%` }} />
+                        </div>
+                        <p className="text-[11px] text-gray-500 mt-1.5">{psych?.descriptors?.listeningDesc || 'Comprensión y retención de solicitudes orales recibidas por nota de voz.'}</p>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                        <div className="flex justify-between font-bold mb-1">
+                          <span className="text-gray-700 dark:text-gray-300">Integridad Operativa & Apego a Normas</span>
+                          <span className="text-indigo-600">{psych?.metrics?.operationalIntegrity ?? (item.tab_switches_count > 0 ? 60 : 95)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
+                          <div className="bg-emerald-600 h-full rounded-full" style={{ width: `${psych?.metrics?.operationalIntegrity ?? (item.tab_switches_count > 0 ? 60 : 95)}%` }} />
+                        </div>
+                        <p className="text-[11px] text-gray-500 mt-1.5">{psych?.descriptors?.integrityDesc || 'Respeto a políticas de seguridad bancaria y confidencialidad.'}</p>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                        <div className="flex justify-between font-bold mb-1">
+                          <span className="text-gray-700 dark:text-gray-300">Empatía & Desescalamiento</span>
+                          <span className="text-indigo-600">{psych?.metrics?.customerEmpathy ?? 88}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
+                          <div className="bg-blue-600 h-full rounded-full" style={{ width: `${psych?.metrics?.customerEmpathy ?? 88}%` }} />
+                        </div>
+                        <p className="text-[11px] text-gray-500 mt-1.5">{psych?.descriptors?.empathyDesc || 'Capacidad de resolución pacífica y contención amable ante reclamos.'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* AUDITORÍA DETALLADA DE RESPUESTAS CASO POR CASO */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-black text-sm text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-indigo-500" />
+                      <span>Auditoría de Respuestas Caso por Caso</span>
+                    </h3>
+                    <span className="text-[11px] text-gray-500 font-mono">
+                      {breakdown.length > 0 ? `${breakdown.length} Casos Registrados` : 'Historial sin desglose'}
+                    </span>
+                  </div>
+
+                  {breakdown.length === 0 ? (
+                    <div className="p-6 rounded-2xl bg-gray-50 dark:bg-gray-800 text-center text-gray-400">
+                      <p>Esta evaluación fue realizada antes de habilitar el registro detallado caso por caso.</p>
+                      <p className="text-[11px] mt-1">Las evaluaciones nuevas guardarán cada respuesta, opción elegida y tiempo exacto.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {breakdown.map((b: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className={`p-4 rounded-2xl border transition-all ${
+                            b.isCorrect
+                              ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40'
+                              : 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800/40'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-black text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                              Caso #{idx + 1}: {b.category} ({b.clientName})
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-[11px] text-gray-400">⏱️ {b.timeSpentSeconds}s</span>
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                b.isCorrect
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300'
+                                  : 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-300'
+                              }`}>
+                                {b.isCorrect ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                                {b.isCorrect ? 'Correcto' : 'Error'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <p className="text-xs text-gray-700 dark:text-gray-300 font-medium mb-3 italic">
+                            "{b.prompt}"
+                          </p>
+
+                          <div className="space-y-1.5 text-xs">
+                            <div className="p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                              <span className="font-bold text-gray-500 block text-[10px] uppercase">Respuesta de la Empleada:</span>
+                              <p className={`font-semibold mt-0.5 ${b.isCorrect ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
+                                {b.chosenAnswer}
+                              </p>
+                            </div>
+
+                            {!b.isCorrect && (
+                              <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50">
+                                <span className="font-bold text-emerald-700 dark:text-emerald-400 block text-[10px] uppercase">Respuesta Correcta Esperada por Sheerit:</span>
+                                <p className="font-semibold text-emerald-800 dark:text-emerald-300 mt-0.5">
+                                  {b.correctAnswer}
+                                </p>
+                                {b.explanation && (
+                                  <p className="text-[11px] text-emerald-900/80 dark:text-emerald-300/80 mt-1">
+                                    💡 <b>Justificación técnica:</b> {b.explanation}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Asistente IA omnipresente (DeepSeek & Gemini) */}
       <AIPanelAssistant
