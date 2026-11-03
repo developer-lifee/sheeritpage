@@ -886,6 +886,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
                         <th className="p-3.5 text-center">Precisión</th>
                         <th className="p-3.5 text-center">Tiempo Prom.</th>
                         <th className="p-3.5 text-center">Condiciones</th>
+                        <th className="p-3.5 text-center">Anti-Trampa (IA)</th>
                         <th className="p-3.5">Veredicto Contratación</th>
                         <th className="p-3.5">Fecha</th>
                       </tr>
@@ -896,6 +897,8 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
                         const isApto = rec === 'APTO_CONTRATAR';
                         const isNoChat = rec === 'NO_RECOMENDADO_CHAT';
                         const isDescartado = rec === 'DESCARTADO_BAJA_PRECISION';
+                        const isTrampa = rec === 'DESCARTADO_TRAMPA_DETECTADA';
+                        const tabSwitches = item.tab_switches_count ?? item.tabSwitchesCount ?? 0;
 
                         return (
                           <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40 transition-colors">
@@ -934,18 +937,32 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
                                 <span className="text-gray-400 text-[11px]">Ninguna</span>
                               )}
                             </td>
+                            <td className="p-3.5 text-center">
+                              {tabSwitches > 0 ? (
+                                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  tabSwitches >= 3 
+                                    ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300' 
+                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
+                                }`}>
+                                  ⚠️ {tabSwitches} {tabSwitches === 1 ? 'salida' : 'salidas'}
+                                </span>
+                              ) : (
+                                <span className="text-emerald-500 font-bold text-[11px]">🛡️ Limpio</span>
+                              )}
+                            </td>
                             <td className="p-3.5">
                               <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
                                 isApto
                                   ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                                  : (isNoChat || isDescartado
+                                  : (isTrampa || isNoChat || isDescartado
                                       ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
                                       : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300')
                               }`}>
                                 {isApto && '🟢 Apto para Chat'}
-                                {isNoChat && '🔴 No Contratar para Chat'}
-                                {isDescartado && '🔴 Descartado'}
-                                {!isApto && !isNoChat && !isDescartado && '🟡 En Observación'}
+                                {isTrampa && '🚨 Descartado (Trampa / IA)'}
+                                {isNoChat && !isTrampa && '🔴 No Contratar para Chat'}
+                                {isDescartado && !isTrampa && '🔴 Descartado'}
+                                {!isApto && !isNoChat && !isDescartado && !isTrampa && '🟡 En Observación'}
                               </span>
                               {(item.rejection_reasons || item.rejectionReasons) && (
                                 <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 max-w-xs" title={item.rejection_reasons || item.rejectionReasons}>
