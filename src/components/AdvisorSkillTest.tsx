@@ -222,6 +222,8 @@ export const AdvisorSkillTest: React.FC = () => {
   const [caseStartTime, setCaseStartTime] = useState<number>(Date.now());
   const [secondsRemaining, setSecondsRemaining] = useState<number>(45);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [finalAccuracy, setFinalAccuracy] = useState(0);
+  const [passedCleanly, setPassedCleanly] = useState(false);
 
   // Ajuste de tiempo por dislexia/condición cognitiva (45s base vs 65s adaptado)
   const baseSecondsPerQuestion = hasDyslexia ? 65 : 45;
@@ -390,6 +392,9 @@ export const AdvisorSkillTest: React.FC = () => {
     const accuracy = Math.round((correctCount / REAL_CASES.length) * 100);
     const audioScore = Math.round((audioCorrectCount / 3) * 100);
     const avgTime = Math.round(totalTime / REAL_CASES.length);
+
+    setFinalAccuracy(accuracy);
+    setPassedCleanly(accuracy >= 80 && !hasDyslexia && tabSwitchesCount < 3);
 
     // Preparar payload para la base de datos de contratación
     const payload = {
@@ -785,23 +790,47 @@ export const AdvisorSkillTest: React.FC = () => {
             </p>
           </div>
 
-          <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 text-xs text-gray-600 dark:text-gray-300 text-left space-y-3 max-w-lg mx-auto">
-            <div className="flex items-center gap-2 font-bold text-gray-900 dark:text-white">
-              <ShieldCheck className="w-4 h-4 text-indigo-500" />
-              <span>Proceso de Selección Sheerit</span>
+          {/* Tarjeta de Aprobación y Enlace de Contacto Inmediato */}
+          {passedCleanly ? (
+            <div className="p-6 rounded-3xl bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-300 dark:border-emerald-700 max-w-lg mx-auto space-y-4">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-xs font-black">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>¡PUNTAJE DESTACADO: {finalAccuracy}% DE PRECISIÓN!</span>
+              </div>
+              <p className="text-xs text-gray-700 dark:text-gray-200 leading-relaxed font-medium">
+                Has superado con éxito todos los casos técnicos y notas de voz. Comunícate directamente con nuestro equipo de Talento Humano para continuar con tu proceso:
+              </p>
+              <a
+                href={`https://wa.me/573118587974?text=${encodeURIComponent(
+                  `¡Hola! Acabo de finalizar la prueba técnica de selección en sheerit.co/evaluacion con un puntaje del ${finalAccuracy}%. Mi nombre es ${advisorName} (+57 ${advisorPhone}). Quedo atento a la entrevista técnica.`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 w-full py-3.5 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm shadow-lg shadow-emerald-600/30 transition-transform active:scale-95"
+              >
+                <MessageSquare className="w-5 h-5 fill-current" />
+                <span>Contactar a Selección por WhatsApp</span>
+              </a>
             </div>
-            <p>
-              Tus respuestas, tiempo de respuesta por nota de voz y precisión en credenciales han sido transmitidos de forma segura y confidencial a la base de datos del equipo evaluador.
-            </p>
-            <p className="text-gray-500 dark:text-gray-400">
-              Por políticas de seguridad y transparencia del proceso de selección, los resultados numéricos y auditoría de casos son de uso exclusivo del comité de contratación. Si tu perfil cumple con los estándares del cargo, te contactaremos directamente a tu WhatsApp.
-            </p>
-          </div>
+          ) : (
+            <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 text-xs text-gray-600 dark:text-gray-300 text-left space-y-3 max-w-lg mx-auto">
+              <div className="flex items-center gap-2 font-bold text-gray-900 dark:text-white">
+                <ShieldCheck className="w-4 h-4 text-indigo-500" />
+                <span>Proceso de Selección Sheerit</span>
+              </div>
+              <p>
+                Tus respuestas, tiempo de respuesta por nota de voz y precisión en credenciales han sido transmitidos de forma segura y confidencial a la base de datos del equipo evaluador.
+              </p>
+              <p className="text-gray-500 dark:text-gray-400">
+                Por políticas de seguridad y transparencia del proceso de selección, los resultados numéricos y auditoría de casos son de uso exclusivo del comité de contratación. Si tu perfil cumple con los estándares del cargo, te contactaremos directamente a tu WhatsApp.
+              </p>
+            </div>
+          )}
 
-          <div className="pt-4">
+          <div className="pt-2">
             <a
               href="https://sheerit.co"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-700 dark:hover:bg-gray-600 font-bold text-xs transition-all shadow-md"
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-750 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs transition-all"
             >
               Volver al Portal Sheerit
             </a>
