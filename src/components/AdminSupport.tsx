@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard, Radio, FileText, Smartphone, Settings, Cpu, ShoppingBag, Globe, Bot, Moon, Sun, Power, Layers, Bell, Award } from 'lucide-react';
+import { Save, Plus, Trash2, LogOut, Database, Tv, LifeBuoy, TrendingUp, Calculator, MessageSquare, Key, Mail, Shield, AlertCircle, Clock, Send, CreditCard, Radio, FileText, Smartphone, Settings, Cpu, ShoppingBag, Globe, Bot, Moon, Sun, Power, Layers, Bell, Award, UserCheck, ShieldAlert, CheckCircle2, XCircle } from 'lucide-react';
 import { ClientsView } from './ClientsView';
 import { DataStudioView } from './DataStudioView';
 import { NetflixMatchView } from './NetflixMatchView';
@@ -81,6 +81,26 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
   const [activePaymentsSubTab, setActivePaymentsSubTab] = useState<'calendar' | 'payroll'>('calendar');
   const [searchQuery, setSearchQuery] = useState('');
   const [externalQueryDate, setExternalQueryDate] = useState<string | undefined>(undefined);
+
+  // Evaluaciones de asesores y filtro de contratación
+  const [evaluationsList, setEvaluationsList] = useState<any[]>([]);
+  const [isEvaluationsModalOpen, setIsEvaluationsModalOpen] = useState(false);
+  const [loadingEvaluations, setLoadingEvaluations] = useState(false);
+
+  const fetchEvaluations = async () => {
+    setLoadingEvaluations(true);
+    try {
+      const res = await fetch(`${getApiUrl()}/api/admin/advisor-evaluations`);
+      const data = await res.json();
+      if (data && data.success) {
+        setEvaluationsList(data.evaluations || []);
+      }
+    } catch (e) {
+      console.error("Error al obtener evaluaciones:", e);
+    } finally {
+      setLoadingEvaluations(false);
+    }
+  };
 
 
   // Platforms to recycle logos from
@@ -526,6 +546,17 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           <Award className="w-5 h-5 mr-2" /> Test Asesores (Simulador)
         </a>
 
+        <button 
+          onClick={() => {
+            fetchEvaluations();
+            setIsEvaluationsModalOpen(true);
+          }}
+          className="flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-all bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shadow-sm"
+          title="Ver candidatos evaluados, tiempos, condiciones y filtro de contratación"
+        >
+          <UserCheck className="w-5 h-5 mr-2 text-indigo-400" /> Resultados & Filtro
+        </button>
+
         {role === 'admin' && (
           <>
             {/* Separador visual */}
@@ -622,17 +653,17 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           </div>
           <div className="flex flex-wrap sm:flex-nowrap gap-3 flex-shrink-0">
             <a 
-              href="/docs/wiki_sheerit_completa.pdf" 
+              href={`${getApiUrl()}/api/admin/docs/wiki-pdf?pass=${encodeURIComponent(adminPassword)}`} 
               target="_blank" 
               rel="noopener noreferrer"
               className="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2"
             >
               <FileText className="w-4 h-4" />
-              <span>Abrir PDF Completo</span>
+              <span>Abrir PDF Protegido (Admin)</span>
             </a>
             <a 
-              href="/docs/wiki_sheerit_completa.pdf" 
-              download="wiki_sheerit_completa.pdf"
+              href={`${getApiUrl()}/api/admin/docs/wiki-pdf?pass=${encodeURIComponent(adminPassword)}`} 
+              download="wiki_sheerit_operaciones.pdf"
               className="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 font-bold text-xs transition-all flex items-center gap-2"
             >
               <span>Descargar (5.5 MB)</span>
@@ -799,6 +830,143 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           Agregar Nueva Plataforma
         </button>
       </div>
+
+      {/* MODAL DE RESULTADOS DE EVALUACIÓN Y FILTRO DE CONTRATACIÓN */}
+      {isEvaluationsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-gray-200 dark:border-gray-700">
+            {/* Header del Modal */}
+            <div className="p-6 border-b border-gray-150 dark:border-gray-700 flex items-center justify-between bg-slate-900 text-white">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-indigo-500/20 text-indigo-400">
+                  <UserCheck className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold">Filtro de Contratación & Evaluaciones de Asesores</h3>
+                  <p className="text-xs text-slate-400">
+                    Historial de pruebas en tiempo real, detección de dislexia/condiciones y diagnóstico operativo para chat.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsEvaluationsModalOpen(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Contenido / Tabla */}
+            <div className="p-6 overflow-y-auto flex-1">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Total de Postulantes Evaluados: {evaluationsList.length}
+                </span>
+                <button
+                  onClick={fetchEvaluations}
+                  disabled={loadingEvaluations}
+                  className="px-3 py-1.5 text-xs font-bold bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-xl transition-all"
+                >
+                  {loadingEvaluations ? 'Actualizando...' : '🔄 Recargar Datos'}
+                </button>
+              </div>
+
+              {evaluationsList.length === 0 ? (
+                <div className="text-center py-12 text-gray-400">
+                  <p className="text-sm">No hay evaluaciones registradas aún.</p>
+                  <p className="text-xs mt-1">Comparte el enlace <b>sheerit.co/evaluacion</b> con los postulantes.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-gray-50 dark:bg-gray-800 text-gray-500 font-bold uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
+                      <tr>
+                        <th className="p-3.5">Candidato / Contacto</th>
+                        <th className="p-3.5 text-center">Puntaje</th>
+                        <th className="p-3.5 text-center">Precisión</th>
+                        <th className="p-3.5 text-center">Tiempo Prom.</th>
+                        <th className="p-3.5 text-center">Condiciones</th>
+                        <th className="p-3.5">Veredicto Contratación</th>
+                        <th className="p-3.5">Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-150 dark:divide-gray-750">
+                      {evaluationsList.map((item: any) => {
+                        const rec = item.hiring_recommendation || item.hiringRecommendation || 'OBSERVACION';
+                        const isApto = rec === 'APTO_CONTRATAR';
+                        const isNoChat = rec === 'NO_RECOMENDADO_CHAT';
+                        const isDescartado = rec === 'DESCARTADO_BAJA_PRECISION';
+
+                        return (
+                          <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40 transition-colors">
+                            <td className="p-3.5">
+                              <p className="font-bold text-gray-900 dark:text-white text-sm">{item.candidate_name || item.candidateName}</p>
+                              <div className="flex items-center gap-2 mt-0.5 text-gray-500 dark:text-gray-400">
+                                <span>{item.candidate_phone || item.candidatePhone || 'Sin tel'}</span>
+                                {item.candidate_phone && (
+                                  <a
+                                    href={`https://wa.me/57${(item.candidate_phone || '').replace(/\D/g, '')}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-emerald-500 hover:underline font-bold"
+                                  >
+                                    WhatsApp
+                                  </a>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-3.5 text-center font-bold text-sm">
+                              {item.total_score ?? item.totalScore}%
+                            </td>
+                            <td className="p-3.5 text-center font-bold text-sm">
+                              {item.accuracy_rate ?? item.accuracyRate}%
+                            </td>
+                            <td className="p-3.5 text-center font-mono">
+                              {item.average_time_per_case ?? item.averageTimePerCase}s
+                            </td>
+                            <td className="p-3.5 text-center">
+                              {(item.has_dyslexia || item.hasDyslexia) && (
+                                <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300">
+                                  Dislexia
+                                </span>
+                              )}
+                              {!(item.has_dyslexia || item.hasDyslexia) && (
+                                <span className="text-gray-400 text-[11px]">Ninguna</span>
+                              )}
+                            </td>
+                            <td className="p-3.5">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
+                                isApto
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                  : (isNoChat || isDescartado
+                                      ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                                      : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300')
+                              }`}>
+                                {isApto && '🟢 Apto para Chat'}
+                                {isNoChat && '🔴 No Contratar para Chat'}
+                                {isDescartado && '🔴 Descartado'}
+                                {!isApto && !isNoChat && !isDescartado && '🟡 En Observación'}
+                              </span>
+                              {(item.rejection_reasons || item.rejectionReasons) && (
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 max-w-xs" title={item.rejection_reasons || item.rejectionReasons}>
+                                  {item.rejection_reasons || item.rejectionReasons}
+                                </p>
+                              )}
+                            </td>
+                            <td className="p-3.5 text-gray-400 font-mono text-[11px] whitespace-nowrap">
+                              {new Date(item.created_at || item.createdAt).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Asistente IA omnipresente (DeepSeek & Gemini) */}
       <AIPanelAssistant

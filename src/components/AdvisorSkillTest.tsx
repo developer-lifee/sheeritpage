@@ -238,6 +238,7 @@ export const AdvisorSkillTest: React.FC = () => {
   // Datos del asesor y condiciones especiales
   const [advisorName, setAdvisorName] = useState('');
   const [advisorEmail, setAdvisorEmail] = useState('');
+  const [advisorPhone, setAdvisorPhone] = useState('');
   const [hasDyslexia, setHasDyslexia] = useState(false);
   const [hasADHD, setHasADHD] = useState(false);
   const [hasVisualFatigue, setHasVisualFatigue] = useState(false);
@@ -251,10 +252,12 @@ export const AdvisorSkillTest: React.FC = () => {
   const [secondsRemaining, setSecondsRemaining] = useState<number>(60);
   const [isTimerPaused, setIsTimerPaused] = useState(false);
   
-  // Métricas finales
+  // Métricas finales y veredicto de selección
   const [finalScore, setFinalScore] = useState(0);
   const [totalTimeTaken, setTotalTimeTaken] = useState(0);
   const [accuracyRate, setAccuracyRate] = useState(0);
+  const [hiringVerdict, setHiringVerdict] = useState<{ recommendation: string; rejectionReasons: string } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Ajuste de tiempo por dislexia/condición (50% más de tiempo para lectura cómoda)
   const baseSecondsPerQuestion = hasDyslexia ? 90 : 60;
@@ -323,10 +326,50 @@ export const AdvisorSkillTest: React.FC = () => {
     });
 
     const score = Math.round((correctCount / REAL_CASES.length) * 100);
+    const accuracy = Math.round((correctCount / REAL_CASES.length) * 100);
     setFinalScore(score);
     setTotalTimeTaken(totalTime);
-    setAccuracyRate(Math.round((correctCount / REAL_CASES.length) * 100));
+    setAccuracyRate(accuracy);
     setStep('results');
+
+    // Enviar a la base de datos (Backend whatbot / MySQL)
+    const apiUrl = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+      ? 'http://localhost:3000'
+      : window.location.origin;
+
+    setIsSubmitting(true);
+    fetch(`${apiUrl}/api/public/advisor-test/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        candidateName: advisorName,
+        candidateEmail: advisorEmail,
+        candidatePhone: advisorPhone,
+        hasDyslexia,
+        hasADHD,
+        hasVisualFatigue,
+        medicalNotes,
+        totalScore: score,
+        accuracyRate: accuracy,
+        totalTimeTaken: totalTime,
+        casesCount: REAL_CASES.length,
+        answers: times
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      setIsSubmitting(false);
+      if (data && data.success) {
+        setHiringVerdict({
+          recommendation: data.recommendation,
+          rejectionReasons: data.rejectionReasons
+        });
+      }
+    })
+    .catch(err => {
+      console.warn("Error enviando evaluación a BD:", err);
+      setIsSubmitting(false);
+    });
   };
 
   return (
@@ -363,7 +406,7 @@ export const AdvisorSkillTest: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
                 Nombre Completo *
@@ -373,6 +416,20 @@ export const AdvisorSkillTest: React.FC = () => {
                 value={advisorName}
                 onChange={e => setAdvisorName(e.target.value)}
                 placeholder="Ej. Melissa Diagama / Camilo / Esteban"
+                required
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white font-medium text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
+                WhatsApp / Celular *
+              </label>
+              <input
+                type="tel"
+                value={advisorPhone}
+                onChange={e => setAdvisorPhone(e.target.value)}
+                placeholder="Ej. 3123456789"
                 required
                 className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white font-medium text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               />
@@ -401,14 +458,14 @@ export const AdvisorSkillTest: React.FC = () => {
               </h3>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Queremos una evaluación justa y empática. Al activar una condición, el sistema otorga <b>+50% de tiempo por pregunta (90 seg en vez de 60 seg)</b>, usa tipografía espaciada y evalúa la calidad de resolución sobre la velocidad de tecleo.
+              Evaluación técnica y operativa. La digitación precisa de credenciales alfanuméricas, cuentas y fechas es un requisito indispensable del cargo.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <label className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between ${
                 hasDyslexia 
-                  ? 'bg-purple-50 dark:bg-purple-950/30 border-purple-300 dark:border-purple-700' 
-                  : 'bg-gray-50 dark:bg-gray-750 border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                ? 'bg-purple-50 dark:bg-purple-950/30 border-purple-300 dark:border-purple-700' 
+                : 'bg-gray-50 dark:bg-gray-750 border-gray-200 dark:border-gray-700 hover:border-gray-300'
               }`}>
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-sm text-gray-800 dark:text-gray-200">Dislexia</span>
@@ -420,7 +477,7 @@ export const AdvisorSkillTest: React.FC = () => {
                   />
                 </div>
                 <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-2">
-                  Dificultad para lectura rápida de textos o números en espejo.
+                  Dificultad neurobiológica en procesamiento fonológico, reconocimiento preciso de palabras, ortografía y decodificación de secuencias numéricas y alfanuméricas.
                 </span>
               </label>
 
@@ -615,6 +672,35 @@ export const AdvisorSkillTest: React.FC = () => {
               </span>
             </div>
           </div>
+
+          {/* Veredicto de Filtro de Selección / Contratación */}
+          {hiringVerdict && (
+            <div className={`p-6 rounded-3xl border ${
+              hiringVerdict.recommendation === 'APTO_CONTRATAR'
+                ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-700'
+                : (hiringVerdict.recommendation === 'OBSERVACION_PRUEBA'
+                    ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700'
+                    : 'bg-rose-50 dark:bg-rose-950/30 border-rose-300 dark:border-rose-700')
+            }`}>
+              <div className="flex items-center gap-2 mb-2">
+                <ShieldAlert className={`w-5 h-5 ${
+                  hiringVerdict.recommendation === 'APTO_CONTRATAR' ? 'text-emerald-600' : 'text-rose-600'
+                }`} />
+                <h4 className="font-black text-sm uppercase tracking-wider text-gray-900 dark:text-white">
+                  Diagnóstico del Filtro de Selección de Personal
+                </h4>
+              </div>
+              <p className="font-bold text-base mb-2 text-gray-800 dark:text-gray-100">
+                {hiringVerdict.recommendation === 'APTO_CONTRATAR' && '🟢 APTO: Perfil compatible para atención al cliente y gestión de credenciales'}
+                {hiringVerdict.recommendation === 'OBSERVACION_PRUEBA' && '🟡 EN OBSERVACIÓN: Requiere prueba técnica adicional y evaluación de velocidad'}
+                {hiringVerdict.recommendation === 'NO_RECOMENDADO_CHAT' && '🔴 NO RECOMENDADO PARA CHAT: Alto riesgo de errores en credenciales y cuentas'}
+                {hiringVerdict.recommendation === 'DESCARTADO_BAJA_PRECISION' && '🔴 DESCARTADO: Baja precisión técnica en resolución de incidencias'}
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-line leading-relaxed">
+                {hiringVerdict.rejectionReasons}
+              </p>
+            </div>
+          )}
 
           {/* Análisis Detallado Caso por Caso */}
           <div className="space-y-4 pt-4 border-t border-gray-150 dark:border-gray-700">
