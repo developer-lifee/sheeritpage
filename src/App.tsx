@@ -210,9 +210,30 @@ function AdminLoginOnApp({ onSuccess }: { onSuccess: () => void }) {
 }
 
 function AppContent() {
-  // RUTA DIRECTA MONITOR 2: Si es una ventana desacoplada para segunda pantalla, renderizar visor completo
+  const [isAdminAuth, setIsAdminAuth] = useState(() => {
+    const email = localStorage.getItem('ticket_agent_email') || '';
+    const pass = localStorage.getItem('ticket_agent_password') || '';
+    const cleanEmail = email.trim().toLowerCase();
+    const hasValidEmail = !!cleanEmail;
+    const isDemo = isDemoMode() || cleanEmail === 'demo@sheerit.com.co';
+    const hasValidPass = pass.toLowerCase() === 'admin123' || pass.toLowerCase() === 'demo123' || isDemo;
+    
+    if (hasValidEmail && hasValidPass) {
+      if (!localStorage.getItem('ticket_agent_name')) {
+        const fallbackName = isDemo ? 'Asesor Demo Comercial' : (AUTHORIZED_ADVISORS[cleanEmail] || cleanEmail.split('@')[0]);
+        localStorage.setItem('ticket_agent_name', fallbackName);
+      }
+      return true;
+    }
+    return false;
+  });
+
+  // RUTA DIRECTA MONITOR 2: Si es una ventana desacoplada para segunda pantalla, renderizar visor completo SOLO si es Administrador
   const isDetachedScreen = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('datastudio_detached') === 'true';
   if (isDetachedScreen) {
+    if (!isAdminAuth) {
+      return <AdminLoginOnApp onSuccess={() => setIsAdminAuth(true)} />;
+    }
     return <DataStudioDetachedViewer />;
   }
 
@@ -239,23 +260,6 @@ function AppContent() {
     if (path === '/support/pueblapp/privacy' || path === '/support/puebloapp/privacy' || path === '/support/yaconecta/privacy') return 'pueblapp-privacy';
     if (path === '/evaluacion' || path === '/test-asesor' || path === '/test-asesores' || path === '/simulador') return 'evaluacion';
     return 'home';
-  });
-  const [isAdminAuth, setIsAdminAuth] = useState(() => {
-    const email = localStorage.getItem('ticket_agent_email') || '';
-    const pass = localStorage.getItem('ticket_agent_password') || '';
-    const cleanEmail = email.trim().toLowerCase();
-    const hasValidEmail = !!cleanEmail;
-    const isDemo = isDemoMode() || cleanEmail === 'demo@sheerit.com.co';
-    const hasValidPass = pass.toLowerCase() === 'admin123' || pass.toLowerCase() === 'demo123' || isDemo;
-    
-    if (hasValidEmail && hasValidPass) {
-      if (!localStorage.getItem('ticket_agent_name')) {
-        const fallbackName = isDemo ? 'Asesor Demo Comercial' : (AUTHORIZED_ADVISORS[cleanEmail] || cleanEmail.split('@')[0]);
-        localStorage.setItem('ticket_agent_name', fallbackName);
-      }
-      return true;
-    }
-    return false;
   });
 
   useEffect(() => {
