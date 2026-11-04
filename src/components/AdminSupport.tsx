@@ -930,12 +930,15 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
                               {item.average_time_per_case ?? item.averageTimePerCase}s
                             </td>
                             <td className="p-3.5 text-center">
-                              {(item.has_dyslexia || item.hasDyslexia) && (
-                                <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300">
-                                  Dislexia
+                              {Number(item.transposition_errors_count || item.transpositionErrorsCount || 0) >= 2 ? (
+                                <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-800">
+                                  🚨 Dislexia Detectada ({item.transposition_errors_count || item.transpositionErrorsCount} fallas)
                                 </span>
-                              )}
-                              {!(item.has_dyslexia || item.hasDyslexia) && (
+                              ) : (item.has_dyslexia || item.hasDyslexia) ? (
+                                <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300">
+                                  Dislexia Declarada
+                                </span>
+                              ) : (
                                 <span className="text-gray-400 text-[11px]">Ninguna</span>
                               )}
                             </td>
@@ -1061,9 +1064,11 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
                     <p className="text-2xl font-black text-blue-700 dark:text-blue-300 mt-0.5">{item.average_time_per_case ?? item.averageTimePerCase}s</p>
                   </div>
                   <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/40 text-center">
-                    <span className="text-[10px] font-bold uppercase text-purple-600 dark:text-purple-400">Condición Cognitiva</span>
+                    <span className="text-[10px] font-bold uppercase text-purple-600 dark:text-purple-400">Condición Cognitiva / Dislexia</span>
                     <p className="text-sm font-bold text-purple-700 dark:text-purple-300 mt-2">
-                      {(item.has_dyslexia || item.hasDyslexia) ? 'Dislexia Declarada' : 'Ninguna'}
+                      {Number(item.transposition_errors_count || item.transpositionErrorsCount || 0) >= 2
+                        ? `🚨 Dislexia Detectada (${item.transposition_errors_count || item.transpositionErrorsCount} fallas)`
+                        : (item.has_dyslexia || item.hasDyslexia) ? 'Dislexia Declarada' : 'Sin alteraciones'}
                     </p>
                   </div>
                   <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 text-center">

@@ -11,7 +11,8 @@ interface RealCase {
   category: string;
   clientName: string;
   isAudioCase: boolean;
-  audioDuration: string;
+  isTranspositionTrap?: boolean; // Evalúa transposición alfanumérica y dislexia empírica
+  audioDuration?: string;
   audioTranscript?: string; // Solo reproducido por voz (TTS), no mostrado en pantalla
   clientMessage?: string;   // Mostrado solo en casos de texto
   realContext: string;
@@ -24,8 +25,142 @@ interface RealCase {
   difficulty: 'Fácil' | 'Medio' | 'Difícil';
 }
 
-// BANCO MAESTRO DE 16 CASOS REALES Y CONFIDENCIALES DE SHEERIT
+// BANCO MAESTRO DE CASOS REALES, AUDIO Y PRUEBAS ANTI-DISLEXIA DE SHEERIT
 const MASTER_CASES_BANK: RealCase[] = [
+  // --- CASOS PSICOMÉTRICOS DE COTEJO ALFANUMÉRICO (DETECCIÓN EMPÍRICA DE DISLEXIA) ---
+  {
+    id: 'case_transposition_password',
+    category: 'Cotejo Alfanumérico & Transposición (Anti-Dislexia)',
+    clientName: 'Entrega de Contraseña de Reemplazo (Netflix)',
+    isAudioCase: false,
+    isTranspositionTrap: true,
+    clientMessage: 'El cliente Cristian Prieto solicita con urgencia la clave de reemplazo para prime44544@gmail.com. En la base de datos de Sheerit, la contraseña registrada en el inventario es exactamente: "panini26col". ¿Cuál es la contraseña idéntica que debes copiar y entregarle al cliente?',
+    realContext: 'Prueba psicométrica de discriminación visual rápida y detección de inversión de letras y números (dislexia/transposición).',
+    idealResponse: 'Entregar "panini26col" sin alterar números ni transponer letras.',
+    options: [
+      {
+        label: 'panini26col',
+        isCorrect: true,
+        explanation: '¡Precisión exacta! Coincide carácter por carácter con la credencial de inventario.'
+      },
+      {
+        label: 'panini62col (Inversión numérica: 62 en lugar de 26)',
+        isCorrect: false,
+        explanation: 'Error de transposición numérica (26 -> 62). Bloqueará el acceso del cliente a Netflix.'
+      },
+      {
+        label: 'panini26clo (Inversión de letras: clo en lugar de col)',
+        isCorrect: false,
+        explanation: 'Error de transposición fonológica/escrita (col -> clo). La contraseña será rechazada.'
+      },
+      {
+        label: 'panini26coI (Sustitución de letra "l" por "I" mayúscula)',
+        isCorrect: false,
+        explanation: 'Confusión de caracteres homólogos (l minúscula vs I mayúscula).'
+      }
+    ],
+    difficulty: 'Medio'
+  },
+  {
+    id: 'case_transposition_brev_key',
+    category: 'Validación de Dígitos Bancarios (Anti-Dislexia)',
+    clientName: 'Confirmación de Llave Bre-V Bancolombia / Nequi',
+    isAudioCase: false,
+    isTranspositionTrap: true,
+    clientMessage: 'Un cliente frecuente te escribe: "Compa, antes de enviar los $40.000 por Nequi/Bre-V confírmame el número porque no quiero mandar la plata mal". La Llave Bre-V oficial registrada de Sheerit es: "0087387259". ¿Cuál de las siguientes opciones coincide exactamente dígito por dígito?',
+    realContext: 'Prueba de transposición de secuencias numéricas bancarias largas.',
+    idealResponse: 'Cotejar con precisión absoluta el número 0087387259.',
+    options: [
+      {
+        label: '0087387259',
+        isCorrect: true,
+        explanation: '¡Exacto! Llave Bre-V oficial sin dígitos transpuestos.'
+      },
+      {
+        label: '0078387259 (Inversión de dígitos iniciales: 78 en lugar de 87)',
+        isCorrect: false,
+        explanation: 'Transposición de dígitos iniciales (87 -> 78). La plata iría a otra persona o daría error bancario.'
+      },
+      {
+        label: '0087382759 (Inversión de dígitos intermedios: 27 en lugar de 72)',
+        isCorrect: false,
+        explanation: 'Transposición intermedia (72 -> 27). Error común de inversión en secuencias numéricas.'
+      },
+      {
+        label: '0087387295 (Inversión de dígitos finales: 95 en lugar de 59)',
+        isCorrect: false,
+        explanation: 'Transposición final (59 -> 95). Descuadre bancario.'
+      }
+    ],
+    difficulty: 'Difícil'
+  },
+  {
+    id: 'case_transposition_2fa_code',
+    category: 'Códigos 2FA Rápidos & Transposición (Anti-Dislexia)',
+    clientName: 'Extracción 2FA Amazon Prime (Smart TV)',
+    isAudioCase: false,
+    isTranspositionTrap: true,
+    clientMessage: 'Acaba de llegar al panel de extracción el código 2FA de 6 dígitos para Amazon Prime: "492817". El cliente está frente a su televisor con solo 15 segundos antes de que el código caduque. ¿Cuál código debes tipear de inmediato en el chat?',
+    realContext: 'Decodificación rápida de tokens de 6 dígitos bajo presión temporal.',
+    idealResponse: 'Tipear 492817 sin inversión de pares de dígitos.',
+    options: [
+      {
+        label: '492817',
+        isCorrect: true,
+        explanation: '¡Correcto! Token idéntico al emitido por la plataforma.'
+      },
+      {
+        label: '429817 (Inversión de los primeros dígitos: 29 en lugar de 92)',
+        isCorrect: false,
+        explanation: 'Inversión de dígitos (92 -> 29). El televisor arrojará código inválido.'
+      },
+      {
+        label: '492871 (Inversión de los dígitos finales: 71 en lugar de 17)',
+        isCorrect: false,
+        explanation: 'Inversión de dígitos finales (17 -> 71). El cliente perderá el intento de inicio.'
+      },
+      {
+        label: '492187 (Inversión intermedia: 18 en lugar de 81)',
+        isCorrect: false,
+        explanation: 'Inversión intermedia de caracteres.'
+      }
+    ],
+    difficulty: 'Medio'
+  },
+  {
+    id: 'case_transposition_email_long',
+    category: 'Cotejo de Correos Extensos (Anti-Dislexia)',
+    clientName: 'Asignación de Correo Maestro Gemini en Excel',
+    isAudioCase: false,
+    isTranspositionTrap: true,
+    clientMessage: 'Al revisar el Excel de cuentas de Gemini compartido, debes escribir la cuenta oficial de la empresa: "discoveryrelesbiana@gmail.com". ¿Cuál de las siguientes direcciones coincide exactamente sin letras cambiadas de posición?',
+    realContext: 'Prueba de discriminación de secuencias largas de texto con fonemas similares.',
+    idealResponse: 'discoveryrelesbiana@gmail.com exacto.',
+    options: [
+      {
+        label: 'discoveryrelesbiana@gmail.com',
+        isCorrect: true,
+        explanation: '¡Impecable! Correo oficial idéntico sin trasposiciones ni omisiones.'
+      },
+      {
+        label: 'discoveryrelesbinaa@gmail.com (Transposición de letras: "inaa" en lugar de "iana")',
+        isCorrect: false,
+        explanation: 'Transposición de letras dentro del dominio del correo.'
+      },
+      {
+        label: 'dicsoveryrelesbiana@gmail.com (Inversión de consonantes iniciales: "cs" en lugar de "sc")',
+        isCorrect: false,
+        explanation: 'Inversión visual al inicio de la palabra.'
+      },
+      {
+        label: 'discoveryrelesbiana@gmai.com (Omisión de letra "l" en el dominio final)',
+        isCorrect: false,
+        explanation: 'Omisión de letra en el dominio (gmai.com no existe y rebotará).'
+      }
+    ],
+    difficulty: 'Difícil'
+  },
+  // --- CASOS SITUACIONALES Y NOTAS DE VOZ WHATSAPP ---
   {
     id: 'case_audio_tony',
     category: 'Pagos & Cobros (Nota de Voz WhatsApp)',
@@ -496,6 +631,8 @@ export const AdvisorSkillTest: React.FC = () => {
 
   // Reproductor de Audio
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const isPlayingAudioRef = useRef(false);
+  const [showAudioTranscript, setShowAudioTranscript] = useState(false);
   const [audioPlaybackRate, setAudioPlaybackRate] = useState<number>(1.0);
   const [audioProgressSeconds, setAudioProgressSeconds] = useState(0);
   const audioIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -513,8 +650,12 @@ export const AdvisorSkillTest: React.FC = () => {
   const [finalAccuracy, setFinalAccuracy] = useState(0);
   const [passedCleanly, setPassedCleanly] = useState(false);
 
-  // Ajuste de tiempo por dislexia/condición cognitiva (45s base vs 65s adaptado)
-  const baseSecondsPerQuestion = hasDyslexia ? 65 : 45;
+  const currentCase = activeSessionCases[currentCaseIndex] || MASTER_CASES_BANK[0];
+
+  // Ajuste de tiempo dinámico: los casos de audio otorgan más tiempo base (65s / 75s) y los de texto (45s / 65s)
+  const baseSecondsPerQuestion = currentCase?.isAudioCase
+    ? (hasDyslexia ? 75 : 65)
+    : (hasDyslexia ? 65 : 45);
 
   // DETECCIÓN ANTI-TRAMPA: Escuchar pérdida de visibilidad o cambio de pestaña
   useEffect(() => {
@@ -547,18 +688,24 @@ export const AdvisorSkillTest: React.FC = () => {
     };
   }, [step]);
 
-  // CRONÓMETRO DE PREGUNTAS
+  // CRONÓMETRO DE PREGUNTAS (Se pausa inteligentemente mientras la nota de voz se está reproduciendo)
   useEffect(() => {
     if (step !== 'test') return;
 
     // Detener cualquier audio previo al cambiar de caso
     stopSpeechAudio();
+    setShowAudioTranscript(false);
 
     setSecondsRemaining(baseSecondsPerQuestion);
     setCaseStartTime(Date.now());
 
     const interval = setInterval(() => {
       setSecondsRemaining(prev => {
+        // Pausar el cronómetro mientras el asesor escucha el audio para no penalizar el tiempo de lectura
+        if (isPlayingAudioRef.current) {
+          return prev;
+        }
+
         if (prev <= 1) {
           // Auto avance por tiempo agotado
           handleSelectOption(-1);
@@ -574,22 +721,34 @@ export const AdvisorSkillTest: React.FC = () => {
     };
   }, [step, currentCaseIndex, baseSecondsPerQuestion]);
 
-  // FUNCIÓN DE REPRODUCCIÓN POR VOZ (Web Speech API)
+  // FUNCIÓN DE REPRODUCCIÓN POR VOZ (Web Speech API optimizada para español natural)
   const playSpeechAudio = (text: string) => {
     if (!('speechSynthesis' in window)) {
-      alert("Tu navegador no soporta síntesis de voz. Por favor usa Google Chrome, Edge o Safari.");
+      alert("Tu navegador no soporta síntesis de voz. Por favor activa la transcripción de texto.");
       return;
     }
 
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'es-CO'; // Español Colombia
+    utterance.lang = 'es-CO'; // Español Colombia preferente
     utterance.rate = audioPlaybackRate;
     utterance.pitch = 1.0;
 
+    // Selección de voz natural en español si está disponible en el dispositivo
+    const voices = window.speechSynthesis.getVoices();
+    const naturalSpanishVoice = voices.find(v => 
+      (v.lang.includes('es-CO') || v.lang.includes('es-419') || v.lang.startsWith('es')) &&
+      (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Sabina') || v.name.includes('Helena') || v.name.includes('Paulina') || v.name.includes('Sofia'))
+    ) || voices.find(v => v.lang.startsWith('es'));
+
+    if (naturalSpanishVoice) {
+      utterance.voice = naturalSpanishVoice;
+    }
+
     utterance.onstart = () => {
       setIsPlayingAudio(true);
+      isPlayingAudioRef.current = true;
       setAudioProgressSeconds(0);
       if (audioIntervalRef.current) clearInterval(audioIntervalRef.current);
       audioIntervalRef.current = setInterval(() => {
@@ -599,11 +758,13 @@ export const AdvisorSkillTest: React.FC = () => {
 
     utterance.onend = () => {
       setIsPlayingAudio(false);
+      isPlayingAudioRef.current = false;
       if (audioIntervalRef.current) clearInterval(audioIntervalRef.current);
     };
 
     utterance.onerror = () => {
       setIsPlayingAudio(false);
+      isPlayingAudioRef.current = false;
       if (audioIntervalRef.current) clearInterval(audioIntervalRef.current);
     };
 
@@ -615,6 +776,7 @@ export const AdvisorSkillTest: React.FC = () => {
       window.speechSynthesis.cancel();
     }
     setIsPlayingAudio(false);
+    isPlayingAudioRef.current = false;
     if (audioIntervalRef.current) clearInterval(audioIntervalRef.current);
     setAudioProgressSeconds(0);
   };
@@ -636,16 +798,22 @@ export const AdvisorSkillTest: React.FC = () => {
       return;
     }
 
-    // 1. Separar casos de audio y texto
+    // 1. Separar casos por competencias: Audio, Transposición (Anti-Dislexia) y Situacionales
     const audioCases = MASTER_CASES_BANK.filter(c => c.isAudioCase);
-    const textCases = MASTER_CASES_BANK.filter(c => !c.isAudioCase);
+    const transpositionCases = MASTER_CASES_BANK.filter(c => c.isTranspositionTrap);
+    const standardCases = MASTER_CASES_BANK.filter(c => !c.isAudioCase && !c.isTranspositionTrap);
 
-    // 2. Barajar y tomar 3 de audio y 5 de texto (8 casos en total por intento)
-    const shuffledAudio = shuffleArray(audioCases).slice(0, 3);
-    const shuffledText = shuffleArray(textCases).slice(0, 5);
+    // 2. Barajar y tomar: 2 de audio, 2 de cotejo alfanumérico (anti-dislexia), y 4 de políticas operativas
+    const selectedAudio = shuffleArray(audioCases).slice(0, 2);
+    const selectedTransposition = shuffleArray(transpositionCases).slice(0, 2);
+    const selectedStandard = shuffleArray(standardCases).slice(0, 4);
 
-    // 3. Unir y barajar el orden de los casos
-    const combinedSessionCases = shuffleArray([...shuffledAudio, ...shuffledText]).map(c => ({
+    // 3. Unir y barajar el orden de los casos para que la prueba sea impredecible
+    const combinedSessionCases = shuffleArray([
+      ...selectedAudio, 
+      ...selectedTransposition, 
+      ...selectedStandard
+    ]).map(c => ({
       ...c,
       // Barajar dinámicamente las opciones de cada pregunta para que la respuesta correcta nunca esté en la misma letra
       options: shuffleArray(c.options)
@@ -657,6 +825,7 @@ export const AdvisorSkillTest: React.FC = () => {
     setAnswersTimeSpent({});
     setTabSwitchesCount(0);
     setShowCheatingWarning(false);
+    setShowAudioTranscript(false);
     setStep('test');
   };
 
@@ -687,6 +856,7 @@ export const AdvisorSkillTest: React.FC = () => {
 
     let correctCount = 0;
     let audioCorrectCount = 0;
+    let transpositionErrorsCount = 0;
     let totalTime = 0;
 
     casesTaken.forEach((c, idx) => {
@@ -695,16 +865,20 @@ export const AdvisorSkillTest: React.FC = () => {
       if (isCorrect) {
         correctCount++;
         if (c.isAudioCase) audioCorrectCount++;
+      } else {
+        if (c.isTranspositionTrap) {
+          transpositionErrorsCount++;
+        }
       }
       totalTime += (times[idx] || 0);
     });
 
     const accuracy = Math.round((correctCount / casesTaken.length) * 100);
-    const audioScore = Math.round((audioCorrectCount / 3) * 100);
+    const audioScore = Math.round((audioCorrectCount / 2) * 100);
     const avgTime = Math.round(totalTime / casesTaken.length);
 
     setFinalAccuracy(accuracy);
-    setPassedCleanly(accuracy >= 80 && !hasDyslexia && tabSwitchesCount < 3);
+    setPassedCleanly(accuracy >= 80 && !hasDyslexia && transpositionErrorsCount < 2 && tabSwitchesCount < 3);
 
     const questionsBreakdown = casesTaken.map((c, idx) => {
       const selectedIdx = answers[idx];
@@ -719,6 +893,7 @@ export const AdvisorSkillTest: React.FC = () => {
         category: c.category,
         clientName: c.clientName,
         isAudio: c.isAudioCase,
+        isTranspositionTrap: Boolean(c.isTranspositionTrap),
         prompt: c.clientMessage || c.audioTranscript || '',
         chosenAnswer: chosenLabel,
         isCorrect: Boolean(isCorrect),
@@ -743,11 +918,13 @@ export const AdvisorSkillTest: React.FC = () => {
       averageTimePerCase: avgTime,
       tabSwitchesCount,
       audioCasesScore: audioScore,
+      transpositionErrorsCount,
       casesCount: casesTaken.length,
       answers: {
         raw: answers,
         timesSpent: times,
         cheatingTabSwitches: tabSwitchesCount,
+        transpositionErrorsCount,
         caseIdsTaken: casesTaken.map(c => c.id),
         detailedBreakdown: questionsBreakdown
       }
@@ -770,8 +947,6 @@ export const AdvisorSkillTest: React.FC = () => {
       setStep('completed');
     }
   };
-
-  const currentCase = activeSessionCases[currentCaseIndex] || MASTER_CASES_BANK[0];
 
   return (
     <div 
@@ -1064,9 +1239,29 @@ export const AdvisorSkillTest: React.FC = () => {
                 </button>
               </div>
 
-              <p className="text-xs text-emerald-900/80 dark:text-emerald-300/80 font-medium text-center">
-                Presiona <b>Reproducir</b> para escuchar la solicitud hablada del cliente y resolver el caso.
-              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1">
+                <p className="text-xs text-emerald-900/80 dark:text-emerald-300/80 font-medium">
+                  Presiona <b>Reproducir</b> para escuchar la solicitud (el cronómetro se pausa mientras escuchas).
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowAudioTranscript(prev => !prev)}
+                  className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1 shrink-0"
+                >
+                  <span>{showAudioTranscript ? '🙈 Ocultar transcripción' : '📝 ¿Audio poco claro o robot? Ver texto'}</span>
+                </button>
+              </div>
+
+              {showAudioTranscript && (
+                <div className="p-3.5 rounded-xl bg-white/90 dark:bg-gray-900/90 border border-emerald-300 dark:border-emerald-700/60 shadow-sm animate-fadeIn">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block mb-1">
+                    Transcripción exacta del mensaje de voz del cliente:
+                  </span>
+                  <p className="text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-200 italic leading-relaxed">
+                    "{currentCase.audioTranscript}"
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="p-5 rounded-2xl bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700">
