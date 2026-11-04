@@ -282,7 +282,9 @@ export const ClientsView: React.FC = () => {
     const [cutReason, setCutReason] = useState<string>('Mora > 3 días / No renovó');
     const [customCutReason, setCustomCutReason] = useState<string>('');
     const [resetDevices, setResetDevices] = useState<boolean>(true); // El límite de códigos no aplica a cuando sacamos todas las sesiones
+    const [leaveSlotVirgin, setLeaveSlotVirgin] = useState<boolean>(true); // Dejar casilla "virgen" / libre en Excel para nueva venta
     const [isCuttingService, setIsCuttingService] = useState<boolean>(false);
+    const [visibleRowsCount, setVisibleRowsCount] = useState<number>(100);
 
     const executeCutService = async () => {
         if (!cutModalClient) return;
@@ -300,6 +302,7 @@ export const ClientsView: React.FC = () => {
                     email: cutModalClient.accountEmail,
                     reason: finalReason,
                     resetDevices,
+                    leaveSlotVirgin,
                     password: 'admin123'
                 })
             });
@@ -307,7 +310,24 @@ export const ClientsView: React.FC = () => {
             if (data.success) {
                 setClients(prev => prev.map(c => {
                     const cPhone = (c.numero || c.Numero || '').toString().replace(/\D/g, '');
-                    if (cPhone === cutModalClient.phone && c.Streaming === cutModalClient.streaming) {
+                    const rowMatch = cutModalClient.rowNumber ? c._rowNumber === cutModalClient.rowNumber : false;
+                    const phoneMatch = cPhone && cutModalClient.phone && cPhone === cutModalClient.phone && c.Streaming === cutModalClient.streaming;
+                    if (rowMatch || phoneMatch) {
+                        if (data.leaveSlotVirgin) {
+                            return {
+                                ...c,
+                                Nombre: 'libre',
+                                nombre: 'libre',
+                                Apellido: '',
+                                apellido: '',
+                                numero: '',
+                                Numero: '',
+                                whatsapp: '',
+                                deben: '',
+                                vencimiento: '',
+                                observaciones: ''
+                            };
+                        }
                         return { ...c, observaciones: data.observaciones || 'cortar' };
                     }
                     return c;
@@ -1177,49 +1197,69 @@ export const ClientsView: React.FC = () => {
                         </thead>
                         <tbody>
                             {(() => {
-                                // Sort by email / correo to group accounts together
+                                // Ordenar idéntico a Excel: Nivel 1: streaming (A a Z) -> Nivel 2: correo (A a Z) -> Nivel 3: orden de fila / perfiles
                                 const sortedFiltered = [...filtered].sort((a, b) => {
-                                    const emailA = (a.correo || '').toString().trim().toLowerCase();
-                                    const emailB = (b.correo || '').toString().trim().toLowerCase();
-                                    if (!emailA && emailB) return 1;
-                                    if (emailA && !emailB) return -1;
+                                    const streamA = (a.Streaming || a.Plataforma || '').toString().trim().toUpperCase();
+                                    const streamB = (b.Streaming || b.Plataforma || '').toString().trim().toUpperCase();
+                                    if (streamA !== streamB) {
+                                        if (!streamA && streamB) return 1;
+                                        if (streamA && !streamB) return -1;
+                                        return streamA.localeCompare(streamB);
+                                    }
+
+                                    const emailA = (a.correo || a.Correo || a.account_email || '').toString().trim().toLowerCase();
+                                    const emailB = (b.correo || b.Correo || b.account_email || '').toString().trim().toLowerCase();
                                     if (emailA !== emailB) {
+                                        if (!emailA && emailB) return 1;
+                                        if (emailA && !emailB) return -1;
                                         return emailA.localeCompare(emailB);
                                     }
-                                    // Secondary sort by Nombre
-                                    const nameA = (a.Nombre || '').toString().trim().toLowerCase();
-                                    const nameB = (b.Nombre || '').toString().trim().toLowerCase();
-                                    return nameA.localeCompare(nameB);
+
+                                    // Tercer nivel: respetar el orden de perfiles / filas tal como están en Excel
+                                    const rowA = a._rowNumber || a.rowNumber || 0;
+                                    const rowB = b._rowNumber || b.rowNumber || 0;
+                                    return rowA - rowB;
                                 });
 
-                                // Pre-calculate email coloring groups like in Excel
+                                // Pre-calcular grupos de cuentas por servicio + correo para paletas visuales de color
                                 let groupCounter = 0;
-                                const emailGroupMap = new Map<string, number>();
+                                const accountGroupMap = new Map<string, number>();
                                 sortedFiltered.forEach(c => {
-                                    const email = (c.correo || '').toString().trim().toLowerCase();
-                                    if (email && !emailGroupMap.has(email)) {
-                                        emailGroupMap.set(email, groupCounter % ACCOUNT_COLOR_PALETTES.length);
+                                    const stream = (c.Streaming || c.Plataforma || '').toString().trim().toUpperCase();
+                                    const email = (c.correo || c.Correo || c.account_email || '').toString().trim().toLowerCase();
+                                    const groupKey = `${stream}:::${email}`;
+                                    if (email && !accountGroupMap.has(groupKey)) {
+                                        accountGroupMap.set(groupKey, groupCounter % ACCOUNT_COLOR_PALETTES.length);
                                         groupCounter++;
                                     }
                                 });
 
-                                return sortedFiltered.slice(0, 50).map((c, i) => {
+                                return sortedFiltered.slice(0, visibleRowsCount).map((c, i) => {
                                     const phone = c.numero || c.Numero;
                                     const daysLeft = getDaysRemaining(c.deben || c.vencimiento);
-                                    const email = (c.correo || '').toString().trim().toLowerCase();
-                                    const paletteIndex = email ? emailGroupMap.get(email) : undefined;
+                                    const stream = (c.Streaming || c.Plataforma || '').toString().trim().toUpperCase();
+                                    const email = (c.correo || c.Correo || c.account_email || '').toString().trim().toLowerCase();
+                                    const groupKey = `${stream}:::${email}`;
+                                    const paletteIndex = email ? accountGroupMap.get(groupKey) : undefined;
                                     const palette = paletteIndex !== undefined ? ACCOUNT_COLOR_PALETTES[paletteIndex] : null;
 
-                                    const prevEmail = i > 0 ? (sortedFiltered[i - 1].correo || '').toString().trim().toLowerCase() : '';
-                                    const isNewAccountBlock = i > 0 && email && email !== prevEmail;
+                                    const prevClient = i > 0 ? sortedFiltered[i - 1] : null;
+                                    const prevStream = prevClient ? (prevClient.Streaming || prevClient.Plataforma || '').toString().trim().toUpperCase() : '';
+                                    const prevEmail = prevClient ? (prevClient.correo || prevClient.Correo || prevClient.account_email || '').toString().trim().toLowerCase() : '';
+                                    const prevGroupKey = `${prevStream}:::${prevEmail}`;
+
+                                    const isNewPlatform = i > 0 && stream !== prevStream;
+                                    const isNewAccountBlock = i > 0 && groupKey !== prevGroupKey;
 
                                     const rowBgClass = palette 
                                         ? `${palette.bg} ${palette.borderLeft}` 
                                         : 'bg-white dark:bg-gray-800 border-l-4 border-l-transparent';
 
-                                    const blockDividerClass = isNewAccountBlock 
-                                        ? 'border-t-2 border-t-gray-300 dark:border-t-gray-600' 
-                                        : '';
+                                    const blockDividerClass = isNewPlatform 
+                                        ? 'border-t-4 border-t-brand-primary/50 dark:border-t-brand-primary/60' 
+                                        : isNewAccountBlock 
+                                            ? 'border-t-2 border-t-gray-300 dark:border-t-gray-600' 
+                                            : '';
                                     
                                     // Color badges setup based on expiration days or cut status
                                     let badgeColor = "text-gray-500 dark:text-gray-400";
@@ -1571,7 +1611,25 @@ export const ClientsView: React.FC = () => {
                             })()}
                         </tbody>
                     </table>
-                    {filtered.length > 50 && <p className="text-center text-sm text-gray-500 mt-4">Mostrando 50 resultados...</p>}
+                    {filtered.length > visibleRowsCount && (
+                        <div className="flex flex-wrap items-center justify-center gap-3 mt-4 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                            <span>Mostrando {Math.min(visibleRowsCount, filtered.length)} de {filtered.length} cuentas registradas</span>
+                            <button
+                                type="button"
+                                onClick={() => setVisibleRowsCount(prev => prev + 100)}
+                                className="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 transition-colors shadow-2xs font-bold"
+                            >
+                                + Cargar 100 más
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setVisibleRowsCount(filtered.length)}
+                                className="px-3 py-1.5 rounded-xl bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary dark:text-brand-light transition-colors shadow-2xs font-bold"
+                            >
+                                Mostrar todas ({filtered.length})
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -1660,6 +1718,26 @@ export const ClientsView: React.FC = () => {
                                         </span>
                                         <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 leading-relaxed">
                                             El límite de 3 dispositivos <b>no aplica</b> cuando sacamos todas las sesiones de la cuenta. Al marcar esta opción, se liberará el contador para que los usuarios válidos puedan solicitar códigos sin bloqueo.
+                                        </p>
+                                    </div>
+                                </label>
+                            </div>
+
+                            {/* CONDICIÓN: DEJAR CASILLA LIBRE ("VIRGEN") EN EXCEL */}
+                            <div className="p-4 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 space-y-2">
+                                <label className="flex items-start gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={leaveSlotVirgin}
+                                        onChange={(e) => setLeaveSlotVirgin(e.target.checked)}
+                                        className="mt-0.5 w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                    />
+                                    <div className="space-y-1">
+                                        <span className="font-bold text-emerald-900 dark:text-emerald-200 text-xs flex items-center gap-1.5">
+                                            ✨ Dejar casilla libre ("virgen") en Excel para nueva venta
+                                        </span>
+                                        <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80 leading-relaxed">
+                                            Limpia el teléfono, fecha y marca el Nombre como <b>"libre"</b> en Excel para que el cupo quede inmediatamente disponible en el inventario sin dejar filas fantasmas.
                                         </p>
                                     </div>
                                 </label>
