@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle, Calendar, Plus, CreditCard, ShoppingBag, ChevronDown } from 'lucide-react';
+import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle, Calendar, Plus, CreditCard, ShoppingBag, ChevronDown, Scissors } from 'lucide-react';
 import { isDemoMode } from '../utils/demoMode';
 import { AddSaleForm } from './AddSaleForm';
 
@@ -269,6 +269,60 @@ export const ClientsView: React.FC = () => {
     // Modal de Venta Directa / Renovación
     const [saleModalOpen, setSaleModalOpen] = useState(false);
     const [saleModalClient, setSaleModalClient] = useState<{ phone: string; name: string } | null>(null);
+
+    // Modal de Corte de Servicio
+    const [cutModalClient, setCutModalClient] = useState<{
+        clientRow: any;
+        phone: string;
+        name: string;
+        streaming: string;
+        accountEmail: string;
+        rowNumber?: number;
+    } | null>(null);
+    const [cutReason, setCutReason] = useState<string>('Mora > 3 días / No renovó');
+    const [customCutReason, setCustomCutReason] = useState<string>('');
+    const [resetDevices, setResetDevices] = useState<boolean>(true); // El límite de códigos no aplica a cuando sacamos todas las sesiones
+    const [isCuttingService, setIsCuttingService] = useState<boolean>(false);
+
+    const executeCutService = async () => {
+        if (!cutModalClient) return;
+        setIsCuttingService(true);
+        const finalReason = cutReason === 'OTRO' ? (customCutReason || 'Corte manual') : cutReason;
+        try {
+            const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
+            const res = await fetch(`${apiUrl}/api/admin/client/cut-service`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    rowNumber: cutModalClient.rowNumber || cutModalClient.clientRow?._rowNumber,
+                    phone: cutModalClient.phone,
+                    streaming: cutModalClient.streaming,
+                    email: cutModalClient.accountEmail,
+                    reason: finalReason,
+                    resetDevices,
+                    password: 'admin123'
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setClients(prev => prev.map(c => {
+                    const cPhone = (c.numero || c.Numero || '').toString().replace(/\D/g, '');
+                    if (cPhone === cutModalClient.phone && c.Streaming === cutModalClient.streaming) {
+                        return { ...c, observaciones: data.observaciones || 'cortar' };
+                    }
+                    return c;
+                }));
+                alert(`✅ ${data.message}`);
+                setCutModalClient(null);
+            } else {
+                alert(`❌ Error al cortar servicio: ${data.message || data.error}`);
+            }
+        } catch (e: any) {
+            alert(`❌ Error de conexión: ${e.message}`);
+        } finally {
+            setIsCuttingService(false);
+        }
+    };
 
     const fetchClientsData = useCallback(() => {
         if (isDemoMode()) {
@@ -1167,12 +1221,19 @@ export const ClientsView: React.FC = () => {
                                         ? 'border-t-2 border-t-gray-300 dark:border-t-gray-600' 
                                         : '';
                                     
-                                    // Color badges setup based on expiration days
+                                    // Color badges setup based on expiration days or cut status
                                     let badgeColor = "text-gray-500 dark:text-gray-400";
                                     let badgeBg = "bg-gray-100 dark:bg-gray-700/50";
                                     let statusText = "";
 
-                                    if (daysLeft <= 0) {
+                                    const obs = String(c.observaciones || c.Observaciones || '').toLowerCase();
+                                    const isCut = obs.includes('cortar') || obs.includes('corte');
+
+                                    if (isCut) {
+                                        badgeColor = "text-rose-700 dark:text-rose-300";
+                                        badgeBg = "bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800";
+                                        statusText = "✂️ Cortado";
+                                    } else if (daysLeft <= 0) {
                                         badgeColor = "text-red-700 dark:text-red-300";
                                         badgeBg = "bg-red-50 dark:bg-red-950/45 border border-red-200 dark:border-red-900/50";
                                         statusText = "🔴 Vencido";
@@ -1299,6 +1360,29 @@ export const ClientsView: React.FC = () => {
                                                         >
                                                             <CreditCard className="w-3.5 h-3.5" />
                                                             <span>Venta / Renovar</span>
+                                                        </button>
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const rawPhone = (c.numero || c.Numero || c.whatsapp || '').toString().replace(/\D/g, '');
+                                                                const rawName = `${c.Nombre || ''} ${c.apellido || c.Apellido || ''}`.trim() || 'Cliente';
+                                                                setCutModalClient({
+                                                                    clientRow: c,
+                                                                    phone: rawPhone,
+                                                                    name: rawName,
+                                                                    streaming: c.Streaming || '',
+                                                                    accountEmail: c.correo || '',
+                                                                    rowNumber: c._rowNumber
+                                                                });
+                                                                setCutReason('Mora > 3 días / No renovó');
+                                                                setCustomCutReason('');
+                                                                setResetDevices(true);
+                                                            }}
+                                                            className="p-2 rounded-xl text-xs font-bold transition-all border bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 dark:text-rose-300 border-rose-200/60 dark:border-rose-800/50 flex items-center gap-1 shadow-2xs"
+                                                            title="Aplicar corte de servicio a este cliente y gestionar reinicio de dispositivos si se sacan todas las sesiones"
+                                                        >
+                                                            <Scissors className="w-3.5 h-3.5" />
+                                                            <span>Cortar</span>
                                                         </button>
                                                         <button 
                                                             onClick={() => toggleExpandHistory(phone, i, c)}
@@ -1488,6 +1572,130 @@ export const ClientsView: React.FC = () => {
                         </tbody>
                     </table>
                     {filtered.length > 50 && <p className="text-center text-sm text-gray-500 mt-4">Mostrando 50 resultados...</p>}
+                </div>
+            )}
+
+            {/* MODAL DE CORTE DE SERVICIO */}
+            {cutModalClient && (
+                <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+                    <div className="w-full max-w-lg bg-white dark:bg-gray-850 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        {/* Header */}
+                        <div className="p-6 bg-gradient-to-r from-slate-900 via-rose-950 to-slate-900 text-white flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-rose-500/20 border border-rose-400/30 flex items-center justify-center text-rose-300">
+                                    <Scissors className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black">Corte de Servicio</h3>
+                                    <p className="text-xs text-rose-200">
+                                        {cutModalClient.name} · {cutModalClient.streaming || 'Servicio'}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setCutModalClient(null)}
+                                disabled={isCuttingService}
+                                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-sm font-bold transition-colors"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-6 space-y-4 text-xs">
+                            {/* Detalles del Cliente */}
+                            <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 space-y-1.5 font-medium text-gray-700 dark:text-gray-300">
+                                <div className="flex justify-between">
+                                    <span className="text-gray-400">WhatsApp:</span>
+                                    <span className="font-mono font-bold">+{cutModalClient.phone || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-400">Cuenta / Correo:</span>
+                                    <span className="font-mono text-gray-900 dark:text-white truncate max-w-[240px]">
+                                        {cutModalClient.accountEmail || 'Sin correo asignado'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Motivo del Corte */}
+                            <div className="space-y-1.5">
+                                <label className="font-bold text-gray-800 dark:text-gray-200 block">
+                                    Motivo del Corte:
+                                </label>
+                                <select
+                                    value={cutReason}
+                                    onChange={(e) => setCutReason(e.target.value)}
+                                    className="w-full p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-rose-500"
+                                >
+                                    <option value="Mora > 3 días / No renovó">Mora &gt; 3 días / No renovó</option>
+                                    <option value="Cancelación solicitada por el cliente">Cancelación solicitada por el cliente</option>
+                                    <option value="Cambio de cuenta o perfil">Cambio de cuenta o perfil</option>
+                                    <option value="Incumplimiento de políticas / Sobreuso">Incumplimiento de políticas / Sobreuso</option>
+                                    <option value="OTRO">Otro motivo personalizado...</option>
+                                </select>
+
+                                {cutReason === 'OTRO' && (
+                                    <input
+                                        type="text"
+                                        placeholder="Escribe la razón detallada..."
+                                        value={customCutReason}
+                                        onChange={(e) => setCustomCutReason(e.target.value)}
+                                        className="w-full mt-2 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-rose-500"
+                                    />
+                                )}
+                            </div>
+
+                            {/* CONDICIÓN CLAVE: PREGUNTAR SI REINICIAR DISPOSITIVOS/SESIONES */}
+                            <div className="p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 space-y-2">
+                                <label className="flex items-start gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={resetDevices}
+                                        onChange={(e) => setResetDevices(e.target.checked)}
+                                        className="mt-0.5 w-4 h-4 rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
+                                    />
+                                    <div className="space-y-1">
+                                        <span className="font-bold text-amber-900 dark:text-amber-200 text-xs flex items-center gap-1.5">
+                                            🔄 Reiniciar contador de códigos y dispositivos (Si sacaste todas las sesiones)
+                                        </span>
+                                        <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 leading-relaxed">
+                                            El límite de 3 dispositivos <b>no aplica</b> cuando sacamos todas las sesiones de la cuenta. Al marcar esta opción, se liberará el contador para que los usuarios válidos puedan solicitar códigos sin bloqueo.
+                                        </p>
+                                    </div>
+                                </label>
+                            </div>
+
+                            {/* Botones de Acción */}
+                            <div className="flex gap-2.5 pt-2">
+                                <button
+                                    type="button"
+                                    disabled={isCuttingService}
+                                    onClick={() => setCutModalClient(null)}
+                                    className="flex-1 py-2.5 px-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={isCuttingService}
+                                    onClick={executeCutService}
+                                    className="flex-1 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-bold transition-all shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2"
+                                >
+                                    {isCuttingService ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 animate-spin" />
+                                            <span>Aplicando Corte...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Scissors className="w-4 h-4" />
+                                            <span>Confirmar Corte</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 
