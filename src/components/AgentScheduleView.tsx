@@ -349,8 +349,11 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
   const [payrollLoading, setPayrollLoading] = useState(false);
   const [bonusModalOpen, setBonusModalOpen] = useState(false);
   const [bonusAgent, setBonusAgent] = useState<PayrollAgent | null>(null);
+  const [bonusType, setBonusType] = useState<'bonus' | 'advance'>('advance');
   const [bonusAmount, setBonusAmount] = useState<string>('');
   const [bonusReason, setBonusReason] = useState<string>('');
+  const [advanceChargeCommission, setAdvanceChargeCommission] = useState<boolean>(true);
+  const [advanceCommissionAmount, setAdvanceCommissionAmount] = useState<string>('10000');
   const [bonusSaving, setBonusSaving] = useState(false);
 
   // Pay Stub & History Modals State
@@ -1014,10 +1017,37 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
     }
   };
 
-  // Add Bonus (Only for Esteban)
+  // Add Bonus or Advance / Deduction (Only for Esteban)
   const handleSaveBonus = async () => {
-    if (!bonusAgent || !bonusAmount || !bonusReason) return;
+    if (!bonusAgent || !bonusAmount) return;
     setBonusSaving(true);
+
+    const rawVal = Math.abs(parseFloat(bonusAmount.toString().replace(/\./g, '').replace(/,/g, '')) || 0);
+    if (rawVal <= 0) {
+      alert('Ingresa un monto válido mayor a 0.');
+      setBonusSaving(false);
+      return;
+    }
+
+    let finalAmount = rawVal;
+    let finalReason = bonusReason.trim();
+
+    if (bonusType === 'advance') {
+      const commVal = advanceChargeCommission
+        ? Math.abs(parseFloat(advanceCommissionAmount.toString().replace(/\./g, '')) || 0)
+        : 0;
+      finalAmount = -(rawVal + commVal);
+      if (!finalReason) {
+        finalReason = commVal > 0
+          ? `Adelanto de nómina ($${rawVal.toLocaleString('es-CO')}) + Comisión ($${commVal.toLocaleString('es-CO')})`
+          : `Adelanto de nómina ($${rawVal.toLocaleString('es-CO')})`;
+      } else if (commVal > 0 && !finalReason.toLowerCase().includes('comisión')) {
+        finalReason = `${finalReason} (Adelanto: $${rawVal.toLocaleString('es-CO')} + Comisión: $${commVal.toLocaleString('es-CO')})`;
+      }
+    } else {
+      if (!finalReason) finalReason = 'Bono / Incentivo por desempeño';
+    }
+
     const apiUrl = getApiUrl();
     try {
       const res = await fetch(`${apiUrl}/api/admin/bonuses/save`, {
@@ -1025,8 +1055,8 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: bonusAgent.email,
-          amount: parseFloat(bonusAmount),
-          reason: bonusReason,
+          amount: finalAmount,
+          reason: finalReason,
           bonus_month: selectedMonth
         })
       });
@@ -1038,10 +1068,10 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         setBonusAgent(null);
         fetchPayrollData();
       } else {
-        alert(data.message || 'Error al guardar bono.');
+        alert(data.message || 'Error al guardar ajuste.');
       }
     } catch (err) {
-      console.error('Error saving bonus:', err);
+      console.error('Error saving bonus/advance:', err);
     } finally {
       setBonusSaving(false);
     }
@@ -2266,7 +2296,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                     <th className="py-3 px-4 text-center">Progreso Trial</th>
                     <th className="py-3 px-4 text-center">Horas en Período</th>
                     <th className="py-3 px-4 text-center">Valor Hora</th>
-                    <th className="py-3 px-4">Bonos Aplicados</th>
+                    <th className="py-3 px-4">Bonos y Adelantos</th>
                     <th className="py-3 px-4 text-right">Total a Pagar</th>
                     <th className="py-3 px-4 text-center">Estado</th>
                     <th className="py-3 px-4 text-center">Acciones</th>
@@ -2379,35 +2409,75 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                           )}
                         </td>
 
-                        {/* Bonuses List */}
+                        {/* Bonuses and Advances List */}
                         <td className="py-4 px-4">
-                          <div className="flex flex-col gap-1.5 max-w-[200px]">
+                          <div className="flex flex-col gap-1.5 max-w-[220px]">
                             {(!agent.bonuses || agent.bonuses.length === 0) ? (
-                              <span className="text-xxs text-gray-400 italic">Sin bonos</span>
+                              <span className="text-xxs text-gray-400 italic">Sin ajustes</span>
                             ) : (
-                              (agent.bonuses || []).map(b => (
-                                <div key={b.id} className="flex items-center justify-between bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-lg px-2 py-1 text-xxs text-emerald-800 dark:text-emerald-300">
-                                  <span>{b.reason} (+${b.amount})</span>
-                                  {agent.status !== 'paid' && (
-                                    <button
-                                      onClick={() => handleDeleteBonus(b.id)}
-                                      className="text-red-500 hover:text-red-700 ml-1.5"
-                                      title="Eliminar bono"
-                                    >
-                                      ✕
-                                    </button>
-                                  )}
-                                </div>
-                              ))
+                              (agent.bonuses || []).map(b => {
+                                const numAmount = parseFloat(b.amount as any) || 0;
+                                const isDeduction = numAmount < 0;
+                                return (
+                                  <div 
+                                    key={b.id} 
+                                    className={`flex items-center justify-between border rounded-lg px-2 py-1 text-xxs transition-colors ${
+                                      isDeduction
+                                        ? 'bg-rose-50/70 dark:bg-rose-950/30 border-rose-200/60 dark:border-rose-900/40 text-rose-800 dark:text-rose-300'
+                                        : 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200/60 dark:border-emerald-900/40 text-emerald-800 dark:text-emerald-300'
+                                    }`}
+                                  >
+                                    <span className="truncate max-w-[160px]" title={b.reason}>
+                                      {isDeduction ? '💸' : '🎁'} {b.reason} <strong className={isDeduction ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}>
+                                        ({isDeduction ? `-$${Math.abs(numAmount).toLocaleString('es-CO')}` : `+$${numAmount.toLocaleString('es-CO')}`})
+                                      </strong>
+                                    </span>
+                                    {agent.status !== 'paid' && (
+                                      <button
+                                        onClick={() => handleDeleteBonus(b.id)}
+                                        className="text-red-500 hover:text-red-700 ml-1.5 font-bold cursor-pointer"
+                                        title="Eliminar ajuste"
+                                      >
+                                        ✕
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              })
                             )}
                             {agent.status !== 'paid' && (
-                              <button
-                                type="button"
-                                onClick={() => { setBonusAgent(agent); setBonusModalOpen(true); }}
-                                className="text-xxs font-bold text-emerald-700 dark:text-emerald-450 hover:underline flex items-center mt-1"
-                              >
-                                <Gift className="w-3 h-3 mr-1" /> + Agregar Bono
-                              </button>
+                              <div className="flex items-center gap-2 mt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => { 
+                                    setBonusAgent(agent); 
+                                    setBonusType('advance'); 
+                                    setBonusAmount('');
+                                    setBonusReason('');
+                                    setAdvanceChargeCommission(true);
+                                    setBonusModalOpen(true); 
+                                  }}
+                                  className="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:underline flex items-center cursor-pointer"
+                                  title="Registrar adelanto de nómina o deducción"
+                                >
+                                  💸 - Adelanto
+                                </button>
+                                <span className="text-gray-300 dark:text-gray-600 text-xxs">|</span>
+                                <button
+                                  type="button"
+                                  onClick={() => { 
+                                    setBonusAgent(agent); 
+                                    setBonusType('bonus'); 
+                                    setBonusAmount('');
+                                    setBonusReason('');
+                                    setBonusModalOpen(true); 
+                                  }}
+                                  className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center cursor-pointer"
+                                  title="Registrar bono o incentivo"
+                                >
+                                  🎁 + Bono
+                                </button>
+                              </div>
                             )}
                           </div>
                         </td>
@@ -2761,44 +2831,138 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         </div>
       )}
 
-      {/* Bonus Modal (Esteban Only) */}
+      {/* Bonus / Advance Modal (Esteban Only) */}
       {bonusModalOpen && bonusAgent && (
-        <div className="fixed inset-0 bg-black/55 flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full border dark:border-gray-700 shadow-2xl p-6 relative">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl max-w-md w-full border border-gray-200 dark:border-gray-700 shadow-2xl p-6 relative">
             <button
               onClick={() => { setBonusModalOpen(false); setBonusAgent(null); }}
-              className="absolute top-4 right-4 p-1.5 hover:bg-gray-150 dark:hover:bg-gray-700 rounded-lg text-gray-400 dark:text-gray-300"
+              className="absolute top-4 right-4 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-400 dark:text-gray-300 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="text-lg font-bold dark:text-white mb-2 flex items-center gap-1.5">
-              <Gift className="text-emerald-500" /> Registrar Bono
+            <h3 className="text-lg font-black dark:text-white mb-1 flex items-center gap-2">
+              {bonusType === 'advance' ? (
+                <>
+                  <span className="p-1.5 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400">💸</span>
+                  <span>Registrar Adelanto / Deducción</span>
+                </>
+              ) : (
+                <>
+                  <span className="p-1.5 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">🎁</span>
+                  <span>Registrar Bono / Incentivo</span>
+                </>
+              )}
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-              Asigna un incentivo o bono a <strong>{bonusAgent.fullname}</strong> para el mes de <strong>{selectedMonth}</strong>.
+              Colaborador: <strong>{bonusAgent.fullname}</strong> · Período: <strong>{selectedMonth}</strong>
             </p>
 
-            <div className="flex flex-col gap-4">
+            {/* Type Switcher Tabs */}
+            <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-gray-900 rounded-2xl mb-4">
+              <button
+                type="button"
+                onClick={() => setBonusType('advance')}
+                className={`py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  bonusType === 'advance'
+                    ? 'bg-rose-600 text-white shadow-md'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                💸 Adelanto (-)
+              </button>
+              <button
+                type="button"
+                onClick={() => setBonusType('bonus')}
+                className={`py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  bonusType === 'bonus'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                🎁 Bono (+)
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-4 text-xs">
               <div>
-                <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Monto (COP):</label>
-                <input
-                  type="number"
-                  placeholder="Ej. 50000"
-                  value={bonusAmount}
-                  onChange={(e) => setBonusAmount(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-xl dark:bg-gray-850 dark:border-gray-700 dark:text-white text-sm"
-                />
+                <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">
+                  {bonusType === 'advance' ? 'Monto Solicitado del Adelanto (COP):' : 'Monto del Bono (COP):'}
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-gray-400">$</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Ej. 50000 o 900000"
+                    value={bonusAmount}
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(/[^0-9]/g, '');
+                      setBonusAmount(clean ? parseInt(clean, 10).toLocaleString('es-CO') : '');
+                    }}
+                    className="w-full pl-7 pr-3 py-2.5 border rounded-xl dark:bg-gray-850 dark:border-gray-700 dark:text-white text-sm font-bold font-mono focus:ring-2 focus:ring-brand-primary outline-none"
+                  />
+                </div>
               </div>
 
+              {/* Si es adelanto: Opción de Comisión $10k */}
+              {bonusType === 'advance' && (
+                <div className="p-3.5 rounded-2xl bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/40 space-y-2.5">
+                  <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={advanceChargeCommission}
+                      onChange={(e) => setAdvanceChargeCommission(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
+                    />
+                    <div>
+                      <span className="font-bold text-amber-950 dark:text-amber-200 text-xs">
+                        Cobrar comisión por adelanto (+${parseInt(advanceCommissionAmount || '10000', 10).toLocaleString('es-CO')} COP)
+                      </span>
+                      <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 leading-relaxed mt-0.5">
+                        Suma automáticamente la tarifa de $10.000 COP al descuento de la nómina.
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* Resumen en vivo */}
+                  {(() => {
+                    const base = Math.abs(parseFloat(bonusAmount.replace(/\./g, '')) || 0);
+                    const comm = advanceChargeCommission ? Math.abs(parseFloat(advanceCommissionAmount.replace(/\./g, '')) || 0) : 0;
+                    const total = base + comm;
+                    return (
+                      <div className="pt-2 border-t border-amber-200/60 dark:border-amber-900/40 text-[11px] font-medium space-y-1">
+                        <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                          <span>Adelanto entregado:</span>
+                          <span className="font-mono font-bold">${base.toLocaleString('es-CO')} COP</span>
+                        </div>
+                        {advanceChargeCommission && (
+                          <div className="flex justify-between text-amber-700 dark:text-amber-300">
+                            <span>Comisión por trámite:</span>
+                            <span className="font-mono font-bold">+${comm.toLocaleString('es-CO')} COP</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between font-black text-rose-600 dark:text-rose-400 pt-1 border-t border-amber-200/40">
+                          <span>Total a Descontar:</span>
+                          <span className="font-mono text-sm">-${total.toLocaleString('es-CO')} COP</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
               <div>
-                <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Motivo / Descripción:</label>
+                <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">
+                  Motivo / Concepto:
+                </label>
                 <input
                   type="text"
-                  placeholder="Ej. Excelente desempeño dominical"
+                  placeholder={bonusType === 'advance' ? "Ej. Adelanto brackets, abono 31 oct, comida, etc." : "Ej. Excelente desempeño dominical"}
                   value={bonusReason}
                   onChange={(e) => setBonusReason(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-xl dark:bg-gray-850 dark:border-gray-700 dark:text-white text-sm"
+                  className="w-full px-3 py-2.5 border rounded-xl dark:bg-gray-850 dark:border-gray-700 dark:text-white text-xs outline-none focus:ring-2 focus:ring-brand-primary"
                 />
               </div>
             </div>
@@ -2807,18 +2971,22 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
               <button
                 type="button"
                 onClick={() => { setBonusModalOpen(false); setBonusAgent(null); }}
-                className="px-4 py-2 border rounded-xl hover:bg-gray-50 dark:hover:bg-gray-755 text-gray-700 dark:text-gray-300 text-xs font-bold transition-all"
+                className="px-4 py-2.5 border rounded-xl hover:bg-gray-50 dark:hover:bg-gray-755 text-gray-700 dark:text-gray-300 text-xs font-bold transition-all cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleSaveBonus}
-                disabled={bonusSaving || !bonusAmount || !bonusReason}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center transition-all disabled:opacity-50"
+                disabled={bonusSaving || !bonusAmount}
+                className={`px-5 py-2.5 rounded-xl text-xs font-black flex items-center transition-all disabled:opacity-50 text-white shadow-md cursor-pointer ${
+                  bonusType === 'advance'
+                    ? 'bg-rose-600 hover:bg-rose-700'
+                    : 'bg-emerald-600 hover:bg-emerald-700'
+                }`}
               >
                 <Save className="w-4 h-4 mr-1.5" />
-                {bonusSaving ? 'Guardando...' : 'Asignar Bono'}
+                {bonusSaving ? 'Guardando...' : (bonusType === 'advance' ? 'Descontar Adelanto' : 'Asignar Bono')}
               </button>
             </div>
           </div>
@@ -2913,20 +3081,33 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                     </tr>
                   )}
 
-                  {/* Bonuses rows */}
+                  {/* Bonuses & Advances rows */}
                   {selectedStubAgent.bonuses && selectedStubAgent.bonuses.length > 0 && (
-                    selectedStubAgent.bonuses.map(b => (
-                      <tr key={b.id} className="bg-emerald-50/20 dark:bg-emerald-950/20 text-gray-900 dark:text-slate-100">
-                        <td className="py-2 px-4 font-sans text-emerald-700 dark:text-emerald-300 font-semibold">
-                          Bono: {b.reason}
-                        </td>
-                        <td className="py-2 px-4 text-center text-gray-400 dark:text-gray-400">-</td>
-                        <td className="py-2 px-4 text-center text-gray-400 dark:text-gray-400">-</td>
-                        <td className="py-2 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400">
-                          +${parseFloat(b.amount as any).toLocaleString('es-CO')}
-                        </td>
-                      </tr>
-                    ))
+                    selectedStubAgent.bonuses.map(b => {
+                      const numVal = parseFloat(b.amount as any) || 0;
+                      const isDeduction = numVal < 0;
+                      return (
+                        <tr 
+                          key={b.id} 
+                          className={`text-gray-900 dark:text-slate-100 ${
+                            isDeduction ? 'bg-rose-50/40 dark:bg-rose-950/20' : 'bg-emerald-50/20 dark:bg-emerald-950/20'
+                          }`}
+                        >
+                          <td className={`py-2 px-4 font-sans font-semibold ${
+                            isDeduction ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300'
+                          }`}>
+                            {isDeduction ? '💸 Adelanto / Deducción:' : '🎁 Bono / Incentivo:'} {b.reason}
+                          </td>
+                          <td className="py-2 px-4 text-center text-gray-400 dark:text-gray-400">-</td>
+                          <td className="py-2 px-4 text-center text-gray-400 dark:text-gray-400">-</td>
+                          <td className={`py-2 px-4 text-right font-bold ${
+                            isDeduction ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
+                          }`}>
+                            {isDeduction ? `-$${Math.abs(numVal).toLocaleString('es-CO')}` : `+$${numVal.toLocaleString('es-CO')}`}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
 
                   {/* Total Row */}
