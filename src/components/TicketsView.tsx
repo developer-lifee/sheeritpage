@@ -280,7 +280,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     phone: string;
     nombre: string;
     sharedTickets: { ticket: Ticket; matchingAccounts: AccountInfo[] }[];
-    isClaudeClient?: boolean;
+    showResetDevicesOption?: boolean;
   } | null>(null);
   const [resolveResetDevices, setResolveResetDevices] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
@@ -1368,31 +1368,48 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     executeClaim(phone, targetAgent);
   };
 
-  const isClaudeTicket = (t: Ticket | null): boolean => {
+  const isAiLimitedTicket = (t: Ticket | null): boolean => {
     if (!t) return false;
-    if (t.accounts && t.accounts.some(acc => (acc.streaming || '').toLowerCase().includes('claude'))) {
+    if (t.accounts && t.accounts.some(acc => {
+      const s = String(acc.streaming || '').toLowerCase();
+      return s.includes('claude') || s.includes('gpt') || s.includes('chatgpt');
+    })) {
       return true;
     }
     const text = `${t.category || ''} ${t.summary || ''} ${t.lastMessage || ''}`.toLowerCase();
-    return text.includes('claude');
+    return text.includes('claude') || text.includes('gpt') || text.includes('chatgpt');
+  };
+
+  const isCutOrChurnTicket = (t: Ticket | null): boolean => {
+    if (!t) return false;
+    const text = `${t.category || ''} ${t.summary || ''} ${(t as any).advisorReason || ''} ${(t as any).reason || ''}`.toLowerCase();
+    return text.includes('corte') || text.includes('cortar') || text.includes('churn') || text.includes('cancel');
   };
 
   const handleResolveClick = (t: Ticket) => {
     const sharedWithDetails = findSharedTicketsWithDetails(t);
-    const hasClaude = isClaudeTicket(t) || sharedWithDetails.some(s => s.matchingAccounts.some(a => (a.streaming || '').toLowerCase().includes('claude')));
-    setResolveResetDevices(hasClaude);
+    const isAi = isAiLimitedTicket(t) || sharedWithDetails.some(s => s.matchingAccounts.some(a => {
+      const sName = (a.streaming || '').toLowerCase();
+      return sName.includes('claude') || sName.includes('gpt');
+    }));
+    const isCut = isCutOrChurnTicket(t);
+
+    // Solo tiene sentido la opción si el ticket es explícitamente de CORTAR y pertenece a una cuenta con límite de códigos (GPT / Claude)
+    const canResetDevices = Boolean(isCut && isAi);
+
+    setResolveResetDevices(canResetDevices);
     setResolveDialog({
       phone: t.phone,
       nombre: t.nombre || 'Cliente WhatsApp',
       sharedTickets: sharedWithDetails,
-      isClaudeClient: hasClaude
+      showResetDevicesOption: canResetDevices
     });
   };
 
   const executeResolve = async (phone: string, resolveAll: boolean) => {
     if (isResolving) return;
     setIsResolving(true);
-    const shouldResetDevs = resolveDialog?.isClaudeClient ? resolveResetDevices : false;
+    const shouldResetDevs = resolveDialog?.showResetDevicesOption ? resolveResetDevices : false;
     setResolveDialog(null);
     
     const targetTicket = tickets.find(t => t.phone === phone);
@@ -3185,7 +3202,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                   💡 <strong>Nota:</strong> A veces la falla es individual. Compara los resúmenes antes de decidir resolver en lote.
                 </p>
                 
-                {resolveDialog.isClaudeClient && (
+                {resolveDialog.showResetDevicesOption && (
                   <div className="mb-4 p-3 bg-amber-50/80 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-900/40 text-xs">
                     <label className="flex items-start gap-2.5 cursor-pointer">
                       <input 
@@ -3241,7 +3258,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                   </p>
                 </div>
 
-                {resolveDialog.isClaudeClient && (
+                {resolveDialog.showResetDevicesOption && (
                   <div className="mb-6 p-3.5 bg-amber-50/80 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-900/40 text-xs">
                     <label className="flex items-start gap-2.5 cursor-pointer">
                       <input 
