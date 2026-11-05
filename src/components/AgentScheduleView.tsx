@@ -349,12 +349,19 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
   const [payrollLoading, setPayrollLoading] = useState(false);
   const [bonusModalOpen, setBonusModalOpen] = useState(false);
   const [bonusAgent, setBonusAgent] = useState<PayrollAgent | null>(null);
+  const [editingBonusId, setEditingBonusId] = useState<number | null>(null);
   const [bonusType, setBonusType] = useState<'bonus' | 'advance'>('advance');
   const [bonusAmount, setBonusAmount] = useState<string>('');
   const [bonusReason, setBonusReason] = useState<string>('');
   const [advanceChargeCommission, setAdvanceChargeCommission] = useState<boolean>(true);
   const [advanceCommissionAmount, setAdvanceCommissionAmount] = useState<string>('10000');
   const [bonusSaving, setBonusSaving] = useState(false);
+
+  // Bonus Edit History Modal State (Only for Esteban)
+  const [bonusHistoryModalOpen, setBonusHistoryModalOpen] = useState<boolean>(false);
+  const [selectedBonusHistory, setSelectedBonusHistory] = useState<any[]>([]);
+  const [selectedBonusHistoryLoading, setSelectedBonusHistoryLoading] = useState<boolean>(false);
+  const [selectedBonusInfo, setSelectedBonusInfo] = useState<any>(null);
 
   // Pay Stub & History Modals State
   const [stubModalOpen, setStubModalOpen] = useState<boolean>(false);
@@ -1054,15 +1061,18 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id: editingBonusId || undefined,
           email: bonusAgent.email,
           amount: finalAmount,
           reason: finalReason,
-          bonus_month: selectedMonth
+          bonus_month: selectedMonth,
+          performed_by: agentEmail || 'estebanavila182@outlook.com'
         })
       });
       const data = await res.json();
       if (data.success) {
         setBonusModalOpen(false);
+        setEditingBonusId(null);
         setBonusAmount('');
         setBonusReason('');
         setBonusAgent(null);
@@ -1077,19 +1087,65 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
     }
   };
 
+  // Open Edit Bonus Modal (Only for Esteban)
+  const handleOpenEditBonus = (bonus: { id: number; amount: number; reason: string }, agent: PayrollAgent) => {
+    if (!isEsteban) return;
+    setBonusAgent(agent);
+    setEditingBonusId(bonus.id);
+    const num = parseFloat(bonus.amount as any) || 0;
+    if (num < 0) {
+      setBonusType('advance');
+      setAdvanceChargeCommission(false);
+      setBonusAmount(Math.abs(num).toLocaleString('es-CO'));
+    } else {
+      setBonusType('bonus');
+      setBonusAmount(num.toLocaleString('es-CO'));
+    }
+    setBonusReason(bonus.reason);
+    setBonusModalOpen(true);
+  };
+
+  // Open Bonus History Modal (Only for Esteban)
+  const handleOpenBonusHistory = async (bonus: { id: number; amount: number; reason: string }, agent: PayrollAgent) => {
+    if (!isEsteban) return;
+    setSelectedBonusInfo({ ...bonus, agentName: agent.fullname });
+    setSelectedBonusHistoryLoading(true);
+    setBonusHistoryModalOpen(true);
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/bonuses/${bonus.id}/history`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.history)) {
+        setSelectedBonusHistory(data.history);
+      } else {
+        setSelectedBonusHistory([]);
+      }
+    } catch (err) {
+      console.error('Error fetching bonus history:', err);
+      setSelectedBonusHistory([]);
+    } finally {
+      setSelectedBonusHistoryLoading(false);
+    }
+  };
+
   // Delete Bonus (Only for Esteban)
   const handleDeleteBonus = async (bonusId: number) => {
-    if (!window.confirm('¿Seguro de eliminar este bono?')) return;
+    if (!window.confirm('¿Seguro de eliminar este ajuste de nómina? Quedará registrado en la auditoría.')) return;
     const apiUrl = getApiUrl();
     try {
       const res = await fetch(`${apiUrl}/api/admin/bonuses/delete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: bonusId })
+        body: JSON.stringify({ 
+          id: bonusId,
+          performed_by: agentEmail || 'estebanavila182@outlook.com'
+        })
       });
       const data = await res.json();
       if (data.success) {
         fetchPayrollData();
+      } else {
+        alert(data.message || 'Error al eliminar ajuste.');
       }
     } catch (err) {
       console.error('Error deleting bonus:', err);
@@ -2433,13 +2489,36 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                                       </strong>
                                     </span>
                                     {agent.status !== 'paid' && (
-                                      <button
-                                        onClick={() => handleDeleteBonus(b.id)}
-                                        className="text-red-500 hover:text-red-700 ml-1.5 font-bold cursor-pointer"
-                                        title="Eliminar ajuste"
-                                      >
-                                        ✕
-                                      </button>
+                                      <div className="flex items-center gap-1 ml-1.5 flex-shrink-0">
+                                        {isEsteban && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleOpenEditBonus(b, agent)}
+                                            className="text-gray-400 hover:text-amber-500 font-bold cursor-pointer p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                                            title="Editar este ajuste (Solo Esteban)"
+                                          >
+                                            ✏️
+                                          </button>
+                                        )}
+                                        {isEsteban && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleOpenBonusHistory(b, agent)}
+                                            className="text-gray-400 hover:text-indigo-500 font-bold cursor-pointer p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                                            title="Ver historial de cambios y auditoría"
+                                          >
+                                            📜
+                                          </button>
+                                        )}
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteBonus(b.id)}
+                                          className="text-red-500 hover:text-red-700 font-bold cursor-pointer p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                                          title="Eliminar ajuste"
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
                                     )}
                                   </div>
                                 );
@@ -2836,14 +2915,19 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
           <div className="bg-white dark:bg-gray-800 rounded-3xl max-w-md w-full border border-gray-200 dark:border-gray-700 shadow-2xl p-6 relative">
             <button
-              onClick={() => { setBonusModalOpen(false); setBonusAgent(null); }}
+              onClick={() => { setBonusModalOpen(false); setBonusAgent(null); setEditingBonusId(null); }}
               className="absolute top-4 right-4 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-400 dark:text-gray-300 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
             <h3 className="text-lg font-black dark:text-white mb-1 flex items-center gap-2">
-              {bonusType === 'advance' ? (
+              {editingBonusId ? (
+                <>
+                  <span className="p-1.5 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">✏️</span>
+                  <span>Editar {bonusType === 'advance' ? 'Adelanto / Deducción' : 'Bono / Incentivo'}</span>
+                </>
+              ) : bonusType === 'advance' ? (
                 <>
                   <span className="p-1.5 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400">💸</span>
                   <span>Registrar Adelanto / Deducción</span>
@@ -2857,6 +2941,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
               Colaborador: <strong>{bonusAgent.fullname}</strong> · Período: <strong>{selectedMonth}</strong>
+              {editingBonusId && <span className="ml-2 text-xxs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 px-2 py-0.5 rounded-full">Modo Edición</span>}
             </p>
 
             {/* Type Switcher Tabs */}
@@ -2970,7 +3055,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
             <div className="flex justify-end gap-2 mt-6 pt-4 border-t dark:border-gray-700">
               <button
                 type="button"
-                onClick={() => { setBonusModalOpen(false); setBonusAgent(null); }}
+                onClick={() => { setBonusModalOpen(false); setBonusAgent(null); setEditingBonusId(null); }}
                 className="px-4 py-2.5 border rounded-xl hover:bg-gray-50 dark:hover:bg-gray-755 text-gray-700 dark:text-gray-300 text-xs font-bold transition-all cursor-pointer"
               >
                 Cancelar
@@ -2986,7 +3071,102 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                 }`}
               >
                 <Save className="w-4 h-4 mr-1.5" />
-                {bonusSaving ? 'Guardando...' : (bonusType === 'advance' ? 'Descontar Adelanto' : 'Asignar Bono')}
+                {bonusSaving ? 'Guardando...' : (editingBonusId ? 'Actualizar Ajuste' : (bonusType === 'advance' ? 'Descontar Adelanto' : 'Asignar Bono'))}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bonus Audit History Modal (Only for Esteban) */}
+      {bonusHistoryModalOpen && selectedBonusInfo && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl max-w-lg w-full border border-gray-200 dark:border-gray-700 shadow-2xl p-6 relative">
+            <button
+              onClick={() => { setBonusHistoryModalOpen(false); setSelectedBonusInfo(null); }}
+              className="absolute top-4 right-4 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-400 dark:text-gray-300 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="text-lg font-black dark:text-white mb-1 flex items-center gap-2">
+              <span className="p-1.5 rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-400">📜</span>
+              <span>Historial y Auditoría de Ajuste</span>
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+              Asesor: <strong>{selectedBonusInfo.agentName}</strong> · Concepto: <em>"{selectedBonusInfo.reason}"</em>
+            </p>
+
+            <div className="max-h-80 overflow-y-auto space-y-3 pr-1 text-xs">
+              {selectedBonusHistoryLoading ? (
+                <div className="text-center py-8 text-gray-400 font-bold">
+                  Cargando trazabilidad de cambios...
+                </div>
+              ) : selectedBonusHistory.length === 0 ? (
+                <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-850 border dark:border-gray-700 text-center text-gray-400">
+                  No hay modificaciones previas registradas para este ajuste.
+                </div>
+              ) : (
+                selectedBonusHistory.map((h, idx) => (
+                  <div key={h.id || idx} className="p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-850 border border-gray-200 dark:border-gray-700 space-y-1.5">
+                    <div className="flex items-center justify-between text-xxs">
+                      <span className={`px-2 py-0.5 rounded-md font-bold uppercase ${
+                        h.action === 'edit'
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                          : h.action === 'create'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                          : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                      }`}>
+                        {h.action === 'edit' ? '✏️ Modificación' : h.action === 'create' ? '✨ Registro Inicial' : '🗑️ Eliminación'}
+                      </span>
+                      <span className="text-gray-400 font-mono">
+                        {h.created_at ? new Date(h.created_at).toLocaleString('es-CO') : ''}
+                      </span>
+                    </div>
+
+                    <div className="text-xs text-gray-800 dark:text-gray-200 font-medium">
+                      {h.action === 'edit' ? (
+                        <div className="space-y-1">
+                          <div>
+                            <span className="text-gray-400 text-xxs block">Monto:</span>
+                            <span className="line-through text-gray-400 mr-2">${parseFloat(h.old_amount).toLocaleString('es-CO')}</span>
+                            <span className="font-bold text-brand-primary">➜ ${parseFloat(h.new_amount).toLocaleString('es-CO')} COP</span>
+                          </div>
+                          {h.old_reason !== h.new_reason && (
+                            <div>
+                              <span className="text-gray-400 text-xxs block">Motivo:</span>
+                              <span className="line-through text-gray-400 mr-2">{h.old_reason}</span>
+                              <span className="font-bold text-gray-700 dark:text-gray-300">➜ {h.new_reason}</span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <span>Monto: </span>
+                          <strong className="font-mono text-emerald-600 dark:text-emerald-400">
+                            ${parseFloat(h.new_amount || h.old_amount).toLocaleString('es-CO')} COP
+                          </strong>
+                          <p className="text-gray-500 text-xxs mt-0.5">{h.new_reason || h.old_reason}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-1 text-[10px] text-gray-400 flex items-center justify-between border-t border-gray-200 dark:border-gray-800">
+                      <span>Autor: <strong className="text-gray-700 dark:text-gray-300">{h.performed_by}</strong></span>
+                      <span className="text-emerald-600 font-bold">Verificado</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="flex justify-end mt-4 pt-3 border-t dark:border-gray-700">
+              <button
+                type="button"
+                onClick={() => { setBonusHistoryModalOpen(false); setSelectedBonusInfo(null); }}
+                className="px-5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold text-xs cursor-pointer"
+              >
+                Cerrar
               </button>
             </div>
           </div>
