@@ -353,7 +353,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
   const [bonusType, setBonusType] = useState<'bonus' | 'advance'>('advance');
   const [bonusAmount, setBonusAmount] = useState<string>('');
   const [bonusReason, setBonusReason] = useState<string>('');
-  const [advanceChargeCommission, setAdvanceChargeCommission] = useState<boolean>(true);
+  const [advanceChargeCommission, setAdvanceChargeCommission] = useState<boolean>(false);
   const [advanceCommissionAmount, setAdvanceCommissionAmount] = useState<string>('10000');
   const [bonusSaving, setBonusSaving] = useState(false);
 
@@ -1056,6 +1056,10 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
     }
 
     const apiUrl = getApiUrl();
+    const commToPass = (bonusType === 'advance' && advanceChargeCommission)
+      ? Math.abs(parseFloat(advanceCommissionAmount.toString().replace(/\./g, '')) || 0)
+      : 0;
+
     try {
       const res = await fetch(`${apiUrl}/api/admin/bonuses/save`, {
         method: 'POST',
@@ -1066,7 +1070,9 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
           amount: finalAmount,
           reason: finalReason,
           bonus_month: selectedMonth,
-          performed_by: agentEmail || 'estebanavila182@outlook.com'
+          performed_by: agentEmail || 'estebanavila182@outlook.com',
+          advance_base: bonusType === 'advance' ? rawVal : undefined,
+          commission_amount: commToPass
         })
       });
       const data = await res.json();
@@ -2533,13 +2539,13 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                                     setBonusType('advance'); 
                                     setBonusAmount('');
                                     setBonusReason('');
-                                    setAdvanceChargeCommission(true);
+                                    setAdvanceChargeCommission(false);
                                     setBonusModalOpen(true); 
                                   }}
                                   className="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:underline flex items-center cursor-pointer"
-                                  title="Registrar adelanto de nómina o deducción"
+                                  title="Registrar adelanto de nómina o deducción/abono"
                                 >
-                                  💸 - Adelanto
+                                  💸 - Adelanto / Abono
                                 </button>
                                 <span className="text-gray-300 dark:text-gray-600 text-xxs">|</span>
                                 <button
@@ -3006,7 +3012,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                         Cobrar comisión por adelanto (+${parseInt(advanceCommissionAmount || '10000', 10).toLocaleString('es-CO')} COP)
                       </span>
                       <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 leading-relaxed mt-0.5">
-                        Suma automáticamente la tarifa de $10.000 COP al descuento de la nómina.
+                        Marca esta casilla únicamente si es un adelanto solicitado por el asesor (ej. Melissa). Si es un abono de nómina, pago parcial o ajuste de la empresa (ej. Carol), déjala desmarcada ($0 comisión).
                       </p>
                     </div>
                   </label>
