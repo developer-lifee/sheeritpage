@@ -280,6 +280,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     phone: string;
     nombre: string;
     sharedTickets: { ticket: Ticket; matchingAccounts: AccountInfo[] }[];
+    isClaudeClient?: boolean;
   } | null>(null);
   const [resolveResetDevices, setResolveResetDevices] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
@@ -1367,24 +1368,31 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     executeClaim(phone, targetAgent);
   };
 
+  const isClaudeTicket = (t: Ticket | null): boolean => {
+    if (!t) return false;
+    if (t.accounts && t.accounts.some(acc => (acc.streaming || '').toLowerCase().includes('claude'))) {
+      return true;
+    }
+    const text = `${t.category || ''} ${t.summary || ''} ${t.lastMessage || ''}`.toLowerCase();
+    return text.includes('claude');
+  };
+
   const handleResolveClick = (t: Ticket) => {
     const sharedWithDetails = findSharedTicketsWithDetails(t);
-    const isChurn = (t.category || '').toLowerCase().includes('corte') || 
-                    (t.category || '').toLowerCase().includes('churn') || 
-                    (t.summary || '').toLowerCase().includes('corte') ||
-                    (t.advisorReason || '').toLowerCase().includes('corte');
-    setResolveResetDevices(Boolean(isChurn));
+    const hasClaude = isClaudeTicket(t) || sharedWithDetails.some(s => s.matchingAccounts.some(a => (a.streaming || '').toLowerCase().includes('claude')));
+    setResolveResetDevices(hasClaude);
     setResolveDialog({
       phone: t.phone,
       nombre: t.nombre || 'Cliente WhatsApp',
-      sharedTickets: sharedWithDetails
+      sharedTickets: sharedWithDetails,
+      isClaudeClient: hasClaude
     });
   };
 
   const executeResolve = async (phone: string, resolveAll: boolean) => {
     if (isResolving) return;
     setIsResolving(true);
-    const shouldResetDevs = resolveResetDevices;
+    const shouldResetDevs = resolveDialog?.isClaudeClient ? resolveResetDevices : false;
     setResolveDialog(null);
     
     const targetTicket = tickets.find(t => t.phone === phone);
@@ -3177,24 +3185,26 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                   💡 <strong>Nota:</strong> A veces la falla es individual. Compara los resúmenes antes de decidir resolver en lote.
                 </p>
                 
-                <div className="mb-4 p-3 bg-amber-50/80 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-900/40 text-xs">
-                  <label className="flex items-start gap-2.5 cursor-pointer">
-                    <input 
-                      type="checkbox"
-                      checked={resolveResetDevices}
-                      onChange={e => setResolveResetDevices(e.target.checked)}
-                      className="mt-0.5 rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
-                    />
-                    <div>
-                      <span className="font-bold text-amber-900 dark:text-amber-200">
-                        ¿Sacaste todas las sesiones? Reiniciar contador de dispositivos/códigos (3/3)
-                      </span>
-                      <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 mt-0.5">
-                        El límite de 3 dispositivos no aplica cuando se sacan todas las sesiones de la cuenta.
-                      </p>
-                    </div>
-                  </label>
-                </div>
+                {resolveDialog.isClaudeClient && (
+                  <div className="mb-4 p-3 bg-amber-50/80 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-900/40 text-xs">
+                    <label className="flex items-start gap-2.5 cursor-pointer">
+                      <input 
+                        type="checkbox"
+                        checked={resolveResetDevices}
+                        onChange={e => setResolveResetDevices(e.target.checked)}
+                        className="mt-0.5 rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
+                      />
+                      <div>
+                        <span className="font-bold text-amber-900 dark:text-amber-200">
+                          ¿Sacaste todas las sesiones? Reiniciar contador de dispositivos/códigos (3/3)
+                        </span>
+                        <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 mt-0.5">
+                          El límite de 3 dispositivos no aplica cuando se sacan todas las sesiones de la cuenta.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                )}
 
                 <div className="flex flex-col gap-2">
                   <button
@@ -3231,24 +3241,26 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                   </p>
                 </div>
 
-                <div className="mb-6 p-3.5 bg-amber-50/80 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-900/40 text-xs">
-                  <label className="flex items-start gap-2.5 cursor-pointer">
-                    <input 
-                      type="checkbox"
-                      checked={resolveResetDevices}
-                      onChange={e => setResolveResetDevices(e.target.checked)}
-                      className="mt-0.5 rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
-                    />
-                    <div>
-                      <span className="font-bold text-amber-900 dark:text-amber-200">
-                        ¿Sacaste todas las sesiones? Reiniciar contador de dispositivos/códigos (3/3)
-                      </span>
-                      <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 mt-0.5">
-                        El límite de 3 dispositivos no aplica cuando se sacan todas las sesiones de la cuenta.
-                      </p>
-                    </div>
-                  </label>
-                </div>
+                {resolveDialog.isClaudeClient && (
+                  <div className="mb-6 p-3.5 bg-amber-50/80 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-900/40 text-xs">
+                    <label className="flex items-start gap-2.5 cursor-pointer">
+                      <input 
+                        type="checkbox"
+                        checked={resolveResetDevices}
+                        onChange={e => setResolveResetDevices(e.target.checked)}
+                        className="mt-0.5 rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
+                      />
+                      <div>
+                        <span className="font-bold text-amber-900 dark:text-amber-200">
+                          ¿Sacaste todas las sesiones? Reiniciar contador de dispositivos/códigos (3/3)
+                        </span>
+                        <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 mt-0.5">
+                          El límite de 3 dispositivos no aplica cuando se sacan todas las sesiones de la cuenta.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <button
                     type="button"
