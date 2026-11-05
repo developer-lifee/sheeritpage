@@ -7,6 +7,7 @@ interface Plan {
   id: number; 
   name: string; 
   price: number; 
+  originalPrice?: number;
   characteristics: string[]; 
   isPersonalEmail?: boolean; 
   isAvailable?: boolean;
@@ -64,6 +65,7 @@ export function PlatformCard({
 
   const activePlan = hasPlans ? sortedPlans[activePlanIndex] : null;
   const currentPrice = activePlan ? activePlan.price : (price || 0);
+  const originalPrice = activePlan ? activePlan.originalPrice : undefined;
   const currentCharacteristics = activePlan ? activePlan.characteristics : (characteristics || []);
   const currentPlanName = activePlan ? activePlan.name : '';
   const currentId = activePlan ? activePlan.id : (id * 1000);
@@ -273,13 +275,29 @@ export function PlatformCard({
             )}
           </div>
 
-          {/* Price display */}
+          {/* Price display with discount support */}
           <div className="text-center mb-2">
-            <p className={`text-2xl font-bold transition-all duration-300 ${
-              !isPlanAvailable ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-brand-primary dark:text-brand-light'
-            }`}>
-              {formatPrice(currentPrice)}/mes
-            </p>
+            {originalPrice && originalPrice > currentPrice ? (
+              <div className="flex flex-col items-center justify-center">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className="text-sm font-bold text-gray-400 dark:text-gray-500 line-through">
+                    {formatPrice(originalPrice)}
+                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 px-1.5 py-0.2 rounded font-mono animate-pulse">
+                    🔥 Promo
+                  </span>
+                </div>
+                <p className="text-2xl font-black text-rose-600 dark:text-rose-400 transition-all duration-300">
+                  {formatPrice(currentPrice)}/mes
+                </p>
+              </div>
+            ) : (
+              <p className={`text-2xl font-bold transition-all duration-300 ${
+                !isPlanAvailable ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-brand-primary dark:text-brand-light'
+              }`}>
+                {formatPrice(currentPrice)}/mes
+              </p>
+            )}
           </div>
 
           {/* Characteristics list container with fixed height */}

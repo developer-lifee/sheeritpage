@@ -685,13 +685,19 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                 </p>
 
                 <div className="mb-8">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-sm font-bold text-gray-400 dark:text-gray-500 line-through">$150.000 COP</span>
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 px-2 py-0.5 rounded-full animate-pulse">
+                      🔥 Promo por unos días
+                    </span>
+                  </div>
                   <div className="flex items-baseline gap-2">
                     <span className="text-gray-500 dark:text-gray-400 text-sm font-bold">Desde</span>
-                    <span className="text-4xl font-black text-gray-950 dark:text-white">$150.000 COP</span>
+                    <span className="text-4xl font-black text-rose-600 dark:text-rose-400">$120.000 COP</span>
                     <span className="text-gray-500 dark:text-gray-400 text-sm">/ año</span>
                   </div>
                   <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
-                    *Incluye Dominio .com.co + Hosting + Accesos directos
+                    *Incluye Dominio .com.co + Hosting + Accesos directos (Antes $150.000)
                   </p>
                 </div>
 
@@ -726,7 +732,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
               </div>
 
               <button
-                onClick={() => handleContactWhatsApp('Construcción Web Básica ($150k/año)')}
+                onClick={() => handleContactWhatsApp('Construcción Web Básica (Promoción $120k/año - Antes $150k)')}
                 className="w-full py-4 px-6 bg-brand-primary hover:bg-brand-dark text-white font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2"
               >
                 Solicitar Página Web <MessageSquare className="w-4 h-4" />
@@ -887,7 +893,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
 
         <div className="space-y-6">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-150 dark:border-gray-700">
-            <h3 className="font-bold text-gray-900 dark:text-white mb-2">¿Qué incluye el plan de Construcción Web Básica de $150.000/año?</h3>
+            <h3 className="font-bold text-gray-900 dark:text-white mb-2">¿Qué incluye el plan de Construcción Web Básica en promoción de $120.000/año (precio regular $150.000)?</h3>
             <p className="text-sm text-gray-600 dark:text-gray-300">
               Incluye el diseño y construcción a medida de tu sitio web (landing page o sitio corporativo), el registro de tu propio dominio .com.co por 1 año completo, hospedaje/hosting en servidor rápido por 1 año, botón directo a WhatsApp y la entrega total de accesos al hosting y dominio sin ataduras.
             </p>
