@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useWhatsAppContact } from '../hooks/useWhatsAppContact';
 import { WhatsAppBotSimulatorModal } from './WhatsAppBotSimulatorModal';
+import { InteractiveAppWebStudio } from './InteractiveAppWebStudio';
 import { Bot, Heart, MessageCircle, Film } from 'lucide-react';
 import { Shield, Sparkles, Server, Clock, Code, Award, CheckCircle2, MessageSquare, ArrowRight, Database, Settings, Zap, ArrowLeftRight, Check, ChevronLeft, ChevronRight, Laptop, Globe, Smartphone, ExternalLink } from 'lucide-react';
 
@@ -94,6 +95,12 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4">
+            <a 
+              href="#constructor-interactivo"
+              className="px-8 py-4 bg-gradient-to-r from-rose-500 via-pink-600 to-indigo-600 hover:from-rose-600 hover:to-indigo-700 text-white font-black rounded-2xl shadow-xl transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
+            >
+              <span>🛠️ Diseña tu App o Web ($200k / $79k)</span> <Sparkles className="w-4 h-4" />
+            </a>
             <button
               onClick={() => {
                 if (onNavigate) {
@@ -105,7 +112,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
               }}
               className="px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-2xl shadow-lg transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2 cursor-pointer"
             >
-              <span>🎨 Ver Portafolio de Trabajos</span> <ArrowRight className="w-4 h-4" />
+              <span>🎨 Portafolio</span> <ArrowRight className="w-4 h-4" />
             </button>
             <a 
               href="#mobile-apps"
@@ -123,7 +130,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
               href="#pricing-comparison"
               className="px-8 py-4 bg-brand-primary hover:bg-brand-dark text-white font-bold rounded-2xl shadow-lg hover:shadow-brand-primary/20 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
             >
-              Ver Planes de Inversión
+              Ver Planes
             </a>
           </div>
         </div>
@@ -648,234 +655,281 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
         </div>
       </section>
 
+      {/* CONSTRUCTOR & ESTUDIO INTERACTIVO (APP $200k / WEB $79k) */}
+      <InteractiveAppWebStudio />
+
       {/* Pricing Comparison Section */}
       <section id="pricing-comparison" className="py-16 md:py-24 bg-gray-50 dark:bg-gray-900/50">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-extrabold text-gray-950 dark:text-white">
-              Opciones de Desarrollo & Esquemas de Negocio
+              Opciones de Desarrollo & Esquemas de Inversión
             </h2>
             <p className="text-sm md:text-base text-gray-500 dark:text-gray-400 mt-2 max-w-3xl mx-auto">
-              Elige el modelo que mejor se alinee con tu estrategia: desde páginas web a medida ultra económicas por año, hasta plataformas SaaS y licenciamiento de software propio.
+              Elige el modelo que mejor se alinee con tu estrategia: aplicaciones nativas para celulares, páginas web ultra económicas por año, suscripciones SaaS o licenciamiento de software propio.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
-            {/* Opción 1: Construcción Web Básica (Anual) */}
-            <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border-2 border-brand-primary/40 hover:border-brand-primary transition-all duration-300 flex flex-col justify-between transform hover:-translate-y-1 relative overflow-hidden">
-              <div className="absolute top-0 right-0 bg-brand-primary text-white text-[10px] font-bold px-4 py-1 rounded-bl-xl uppercase tracking-wider">
-                Recomendado para PYMEs
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+            
+            {/* Opción 1: Construcción Web Ultra Económica (Anual) */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-xl border-2 border-brand-primary/40 hover:border-brand-primary transition-all duration-300 flex flex-col justify-between transform hover:-translate-y-1 relative overflow-hidden">
+              <div className="absolute top-0 right-0 bg-brand-primary text-gray-950 text-[10px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-wider">
+                Ultra Económica
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <span className="px-3 py-1 text-xs font-extrabold tracking-wider text-brand-primary dark:text-brand-light bg-brand-primary/10 dark:bg-brand-primary/25 rounded-full uppercase">
-                      Desarrollo Web / Anual
+                    <span className="px-2.5 py-0.5 text-[10px] font-extrabold tracking-wider text-brand-primary dark:text-brand-light bg-brand-primary/10 dark:bg-brand-primary/25 rounded-full uppercase">
+                      Web / Anual
                     </span>
-                    <h3 className="text-2xl font-black text-gray-900 dark:text-white mt-3">Construcción Web Básica</h3>
+                    <h3 className="text-xl font-black text-gray-900 dark:text-white mt-2">Página Web Básica</h3>
                   </div>
-                  <div className="p-3 bg-brand-primary/10 rounded-2xl text-brand-primary">
-                    <Globe className="w-8 h-8" />
+                  <div className="p-2.5 bg-brand-primary/10 rounded-2xl text-brand-primary">
+                    <Globe className="w-6 h-6" />
                   </div>
                 </div>
 
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
-                  Desarrollamos tu página o sitio web a medida con un costo por año súper económico. Todo listo para proyectar tu empresa en internet con control total.
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
+                  Tu sitio o landing page a medida con costo por año súper accesible. Todo listo para proyectar tu empresa en internet con control total.
                 </p>
 
-                <div className="mb-8">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="text-sm font-bold text-gray-400 dark:text-gray-500 line-through">$150.000 COP</span>
-                    <span className="text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 px-2 py-0.5 rounded-full animate-pulse">
-                      🔥 Promo por unos días
+                <div className="mb-6">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-xs font-bold text-gray-400 line-through">$150.000 COP</span>
+                    <span className="text-[9px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 px-2 py-0.5 rounded-full animate-pulse">
+                      🔥 -47% Promo
                     </span>
                   </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-gray-500 dark:text-gray-400 text-sm font-bold">Desde</span>
-                    <span className="text-4xl font-black text-rose-600 dark:text-rose-400">$120.000 COP</span>
-                    <span className="text-gray-500 dark:text-gray-400 text-sm">/ año</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-gray-500 text-xs font-bold">Desde</span>
+                    <span className="text-3xl font-black text-rose-600 dark:text-rose-400">$79.000 COP</span>
+                    <span className="text-gray-500 text-xs">/ año</span>
                   </div>
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
-                    *Incluye Dominio .com.co + Hosting + Accesos directos (Antes $150.000)
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
+                    *Incluye Dominio .com.co + Hosting + Botón WhatsApp
                   </p>
                 </div>
 
-                <hr className="border-gray-150 dark:border-gray-700 my-6" />
+                <hr className="border-gray-150 dark:border-gray-700 my-4" />
 
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      <strong>Dominio .com.co Incluido:</strong> Registro oficial de tu dominio propio por 1 año.
-                    </span>
+                <ul className="space-y-3 mb-6 text-xs text-gray-600 dark:text-gray-300">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-brand-primary flex-shrink-0 mt-0.5" />
+                    <span><strong>Dominio .com.co Incluido:</strong> 1 año oficial.</span>
                   </li>
-                  <li className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      <strong>Hosting / Alojamiento Web:</strong> Servidor rápido y seguro incluido por 1 año.
-                    </span>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-brand-primary flex-shrink-0 mt-0.5" />
+                    <span><strong>Hosting Rápido:</strong> Alojamiento seguro por 1 año.</span>
                   </li>
-                  <li className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      <strong>Entrega de Accesos Totales:</strong> Te entregamos credenciales de hosting y dominio (100% tuyo).
-                    </span>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-brand-primary flex-shrink-0 mt-0.5" />
+                    <span><strong>Accesos Totales:</strong> Credenciales 100% tuyas.</span>
                   </li>
-                  <li className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      <strong>Diseño a Medida & WhatsApp:</strong> Diseño adaptado a móviles con enlace y botón directo a tu WhatsApp.
-                    </span>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-brand-primary flex-shrink-0 mt-0.5" />
+                    <span><strong>WhatsApp Integrado:</strong> Botón directo a tu chat.</span>
                   </li>
                 </ul>
               </div>
 
               <button
-                onClick={() => handleContactWhatsApp('Construcción Web Básica (Promoción $120k/año - Antes $150k)')}
-                className="w-full py-4 px-6 bg-brand-primary hover:bg-brand-dark text-white font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2"
+                onClick={() => handleContactWhatsApp('Página Web Básica (Promoción $79k/año - Antes $150k)')}
+                className="w-full py-3 px-4 bg-brand-primary hover:bg-brand-dark text-gray-950 font-black rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 text-xs"
               >
-                Solicitar Página Web <MessageSquare className="w-4 h-4" />
+                Solicitar Web ($79k/año) <MessageSquare className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            {/* Opción 2: SaaS Suscripción Mensual */}
-            <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border-2 border-transparent hover:border-emerald-500/30 transition-all duration-300 flex flex-col justify-between transform hover:-translate-y-1">
+            {/* Opción 2: App Móvil Nativa (Android & iOS) - Oferta Irresistible */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-2xl border-2 border-indigo-500/80 hover:border-indigo-400 transition-all duration-300 flex flex-col justify-between transform hover:-translate-y-1 relative overflow-hidden ring-2 ring-indigo-500/20">
+              <div className="absolute top-0 right-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-amber-300 text-[10px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-wider animate-pulse">
+                ⚡ Irresistible (-83%)
+              </div>
+
               <div>
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <span className="px-3 py-1 text-xs font-extrabold tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/40 rounded-full uppercase">
-                      Modelo SaaS / Suscripción
+                    <span className="px-2.5 py-0.5 text-[10px] font-extrabold tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-950/40 rounded-full uppercase">
+                      App Nativa iOS & Android
                     </span>
-                    <h3 className="text-2xl font-black text-gray-900 dark:text-white mt-3">Suscripción Mensual</h3>
+                    <h3 className="text-xl font-black text-gray-900 dark:text-white mt-2">App Móvil Nativa</h3>
                   </div>
-                  <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-500">
-                    <Clock className="w-8 h-8" />
+                  <div className="p-2.5 bg-indigo-500/10 rounded-2xl text-indigo-500">
+                    <Smartphone className="w-6 h-6" />
                   </div>
                 </div>
 
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
-                  Paga solo una tarifa mensual económica mientras uses la plataforma. Ideal para iniciar sin inversión inicial de desarrollo y probar rápido el flujo.
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
+                  Construimos tu aplicación móvil nativa para instalar en teléfonos Android o iOS con catálogo, pedidos directos y panel.
                 </p>
 
-                <div className="mb-8">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-gray-500 dark:text-gray-400 text-sm font-bold">Desde</span>
-                    <span className="text-4xl font-black text-gray-950 dark:text-white">$20.000 COP</span>
-                    <span className="text-gray-500 dark:text-gray-400 text-sm">/ mes</span>
+                <div className="mb-6">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-xs font-bold text-gray-400 line-through">$1.200.000 COP</span>
+                    <span className="text-[9px] font-black uppercase tracking-wider bg-amber-400 text-gray-950 px-2 py-0.5 rounded-full font-mono">
+                      🔥 Ahorras $1.000.000
+                    </span>
                   </div>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                    *Tarifa ajustada de acuerdo con el volumen de datos o usuarios del sistema.
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-gray-500 text-xs font-bold">Inversión:</span>
+                    <span className="text-3xl font-black text-indigo-600 dark:text-indigo-400">$200.000 COP</span>
+                  </div>
+                  <p className="text-[11px] text-indigo-600 dark:text-indigo-300 font-bold mt-1">
+                    *Pago único de lanzamiento con APK entregada
                   </p>
                 </div>
 
-                <hr className="border-gray-150 dark:border-gray-700 my-6" />
+                <hr className="border-gray-150 dark:border-gray-700 my-4" />
 
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      <strong>Cero costo inicial:</strong> No requieres inversión en desarrollo de software.
-                    </span>
+                <ul className="space-y-3 mb-6 text-xs text-gray-600 dark:text-gray-300">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
+                    <span><strong>Android & iOS:</strong> APK instalable y compilación lista.</span>
                   </li>
-                  <li className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      <strong>Soporte y actualizaciones gratis:</strong> Todo mantenimiento técnico y correctivos están 100% incluidos en la mensualidad.
-                    </span>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
+                    <span><strong>Catálogo Interactivo:</strong> Muestra productos y precios.</span>
                   </li>
-                  <li className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      <strong>Puesta en marcha veloz:</strong> Implementación e inicio de operaciones en tiempo récord.
-                    </span>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
+                    <span><strong>Pedidos a WhatsApp:</strong> Carrito conectado directo a tu chat.</span>
                   </li>
-                  <li className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      <strong>Control de datos:</strong> Información propia exportable a Excel en cualquier momento.
-                    </span>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
+                    <span><strong>Publicación Asistida:</strong> Te guiamos a Play Store / App Store.</span>
                   </li>
                 </ul>
               </div>
 
               <button
-                onClick={() => handleContactWhatsApp('Suscripción SaaS')}
-                className="w-full py-4 px-6 bg-gray-100 hover:bg-emerald-500 dark:bg-gray-700 dark:hover:bg-emerald-600 text-gray-800 dark:text-white hover:text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-2"
+                onClick={() => handleContactWhatsApp('App Móvil Nativa Android/iOS (Promoción $200.000 COP)')}
+                className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black rounded-xl shadow-lg shadow-indigo-500/25 transition-all flex items-center justify-center gap-1.5 text-xs"
               >
-                Solicitar Modelo SaaS <MessageSquare className="w-4 h-4" />
+                Construir App ($200k) <Sparkles className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            {/* Opción 3: Desarrollo a Medida / Licencia de Propiedad */}
-            <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border-2 border-purple-500/30 hover:border-purple-500/60 transition-all duration-300 flex flex-col justify-between transform hover:-translate-y-1 relative overflow-hidden">
+            {/* Opción 3: SaaS Suscripción Mensual */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-xl border-2 border-transparent hover:border-emerald-500/30 transition-all duration-300 flex flex-col justify-between transform hover:-translate-y-1">
               <div>
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <span className="px-3 py-1 text-xs font-extrabold tracking-wider text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-950/40 rounded-full uppercase">
-                      Software Propio / A Medida
+                    <span className="px-2.5 py-0.5 text-[10px] font-extrabold tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/40 rounded-full uppercase">
+                      SaaS / Mensual
                     </span>
-                    <h3 className="text-2xl font-black text-gray-900 dark:text-white mt-3">Licencia de Propiedad</h3>
+                    <h3 className="text-xl font-black text-gray-900 dark:text-white mt-2">Suscripción SaaS</h3>
                   </div>
-                  <div className="p-3 bg-purple-500/10 rounded-2xl text-purple-500">
-                    <Code className="w-8 h-8" />
+                  <div className="p-2.5 bg-emerald-500/10 rounded-2xl text-emerald-500">
+                    <Clock className="w-6 h-6" />
                   </div>
                 </div>
 
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
-                  El software es de ustedes para siempre. Se realiza una cotización previa según el alcance del proyecto. Puedes hospedarlo en tu propio servidor.
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
+                  Paga solo una tarifa mensual económica mientras uses la plataforma. Ideal para iniciar sin inversión inicial de desarrollo.
                 </p>
 
-                <div className="mb-8">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-gray-500 dark:text-gray-400 text-sm font-bold">Inversión:</span>
-                      <span className="text-3xl font-black text-gray-950 dark:text-white">A convenir</span>
-                    </div>
-                    <div className="flex items-baseline gap-2 mt-1">
-                      <span className="text-gray-500 dark:text-gray-400 text-xs font-bold">Servidor:</span>
-                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Cotización previa según requerimientos</span>
-                    </div>
+                <div className="mb-6">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-gray-500 text-xs font-bold">Desde</span>
+                    <span className="text-3xl font-black text-gray-950 dark:text-white">$20.000 COP</span>
+                    <span className="text-gray-500 text-xs">/ mes</span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    *Mantenimiento y servidor 100% incluidos
+                  </p>
+                </div>
+
+                <hr className="border-gray-150 dark:border-gray-700 my-4" />
+
+                <ul className="space-y-3 mb-6 text-xs text-gray-600 dark:text-gray-300">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <span><strong>Cero costo inicial:</strong> Sin inversión en desarrollo.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <span><strong>Actualizaciones Gratis:</strong> Todo correctivo incluido.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <span><strong>Puesta en Marcha:</strong> En tiempo récord.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <span><strong>Exportable:</strong> Datos a Excel cuando desees.</span>
+                  </li>
+                </ul>
+              </div>
+
+              <button
+                onClick={() => handleContactWhatsApp('Suscripción SaaS ($20.000 COP/mes)')}
+                className="w-full py-3 px-4 bg-gray-100 hover:bg-emerald-500 dark:bg-gray-700 dark:hover:bg-emerald-600 text-gray-800 dark:text-white hover:text-white font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs"
+              >
+                Solicitar SaaS ($20k/mes) <MessageSquare className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Opción 4: Desarrollo a Medida / Licencia de Propiedad */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-xl border-2 border-purple-500/30 hover:border-purple-500/60 transition-all duration-300 flex flex-col justify-between transform hover:-translate-y-1 relative overflow-hidden">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <span className="px-2.5 py-0.5 text-[10px] font-extrabold tracking-wider text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-950/40 rounded-full uppercase">
+                      Software Propio
+                    </span>
+                    <h3 className="text-xl font-black text-gray-900 dark:text-white mt-2">Licencia Propia</h3>
+                  </div>
+                  <div className="p-2.5 bg-purple-500/10 rounded-2xl text-purple-500">
+                    <Code className="w-6 h-6" />
                   </div>
                 </div>
 
-                <hr className="border-gray-150 dark:border-gray-700 my-6" />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
+                  El software es de ustedes para siempre. Se realiza cotización previa según el alcance. Puedes hospedarlo en tu servidor.
+                </p>
 
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      <strong>Propiedad Intelectual:</strong> El sistema se construye bajo especificaciones de su empresa y es un activo de su propiedad.
-                    </span>
+                <div className="mb-6">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-gray-500 text-xs font-bold">Inversión:</span>
+                    <span className="text-2xl font-black text-gray-950 dark:text-white">A convenir</span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    *Entrega de código fuente y propiedad
+                  </p>
+                </div>
+
+                <hr className="border-gray-150 dark:border-gray-700 my-4" />
+
+                <ul className="space-y-3 mb-6 text-xs text-gray-600 dark:text-gray-300">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
+                    <span><strong>Propiedad Intelectual:</strong> Activo 100% propio.</span>
                   </li>
-                  <li className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      <strong>Personalización total:</strong> Ajustes exactos en el diseño, flujo de validación y formatos de exportación de tu banco y contabilidad.
-                    </span>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
+                    <span><strong>Personalización Total:</strong> Flujos bancarios y APIs.</span>
                   </li>
-                  <li className="flex items-start gap-3">
-                    <Laptop className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      <strong>Servidor Propio Opcional:</strong> Si lo deseas, instalamos el sistema en tus propios servidores (AWS, VPS, etc.). Una vez entregado, eres 100% autónomo y no pagas mensualidad.
-                    </span>
+                  <li className="flex items-start gap-2">
+                    <Laptop className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
+                    <span><strong>Servidor Propio:</strong> Sin pagos de mensualidad obligatorios.</span>
                   </li>
-                  <li className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      <strong>Mantenimiento opcional:</strong> Si prefieres que nosotros administremos la nube, solo pagas el consumo mínimo de servidor.
-                    </span>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
+                    <span><strong>Autonomía Completa:</strong> Sin restricciones de uso.</span>
                   </li>
                 </ul>
               </div>
 
               <button
                 onClick={() => handleContactWhatsApp('Desarrollo a Medida')}
-                className="w-full py-4 px-6 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-1.5 text-xs"
               >
-                Solicitar Software Propio <MessageSquare className="w-4 h-4" />
+                Solicitar Propio <MessageSquare className="w-3.5 h-3.5" />
               </button>
             </div>
+
           </div>
         </div>
       </section>
@@ -893,9 +947,16 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
 
         <div className="space-y-6">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-150 dark:border-gray-700">
-            <h3 className="font-bold text-gray-900 dark:text-white mb-2">¿Qué incluye el plan de Construcción Web Básica en promoción de $120.000/año (precio regular $150.000)?</h3>
+            <h3 className="font-bold text-gray-900 dark:text-white mb-2">¿Cómo funciona la promoción de App Móvil Nativa en $200.000 COP?</h3>
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              Incluye el diseño y construcción a medida de tu sitio web (landing page o sitio corporativo), el registro de tu propio dominio .com.co por 1 año completo, hospedaje/hosting en servidor rápido por 1 año, botón directo a WhatsApp y la entrega total de accesos al hosting y dominio sin ataduras.
+              Es una oferta irresistible de lanzamiento con un 83% de descuento (precio habitual $1.200.000 COP). Construimos tu aplicación móvil nativa para Android y/o iOS con catálogo interactivo, módulo de pedidos a WhatsApp, pasarela PSE/Nequi opcional, te entregamos el paquete APK instalable y te asistimos en la publicación oficial en tiendas (Google Play y App Store).
+            </p>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-150 dark:border-gray-700">
+            <h3 className="font-bold text-gray-900 dark:text-white mb-2">¿Qué incluye el plan de Construcción Web Básica en promoción de $79.000/año (precio regular $150.000)?</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Incluye el diseño y construcción a medida de tu sitio web (landing page o catálogo), el registro oficial de tu propio dominio .com.co por 1 año, hospedaje web en servidor de alta velocidad por 1 año, botón directo a WhatsApp y la entrega completa de credenciales y accesos (100% de tu propiedad).
             </p>
           </div>
 
