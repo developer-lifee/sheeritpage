@@ -615,7 +615,7 @@ export function AccountingView() {
                   {/* Desglose de clientes alojados en la cuenta */}
                   <div className="space-y-1 mb-3 max-h-32 overflow-y-auto pr-1">
                     {flag.clients && flag.clients.map((cl: any, cIdx: number) => {
-                      const isUnderpaid = cl.paid_amount < flag.expected_slot_price;
+                      const isUnderpaid = cl.paid_amount < (flag.expected_slot_price - 6000);
                       return (
                         <div key={cIdx} className="flex items-center justify-between text-[11px] py-0.5 border-b border-gray-100 dark:border-gray-700/60 last:border-0">
                           <span className="truncate max-w-[140px] font-semibold text-gray-700 dark:text-gray-300">
