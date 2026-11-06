@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, Save, Plus, Trash2, Edit2, TrendingUp, CreditCard, RefreshCcw, DollarSign, Calendar, Eye, EyeOff } from 'lucide-react';
+import { Calculator, Save, Plus, Trash2, Edit2, TrendingUp, CreditCard, RefreshCcw, DollarSign, Calendar, Eye, EyeOff, Receipt, CheckCircle2, X } from 'lucide-react';
 import { isDemoMode, DEMO_ACCOUNTING } from '../utils/demoMode';
 import {
   ResponsiveContainer,
@@ -54,11 +54,29 @@ interface CostConfig {
   id?: number;
   platform: string;
   email: string;
+  provider?: string | null;
   total_cost: number;
   profile_slots: number;
   duration_days: number;
   expiration_date: string | null;
   payment_method?: string | null;
+}
+
+interface AccountRenewal {
+  id: number;
+  platform: string;
+  account_email: string;
+  provider: string | null;
+  payment_method: string | null;
+  amount_paid: number;
+  renewal_date: string;
+  expiration_date: string;
+  duration_days: number;
+  profile_slots: number;
+  notes: string | null;
+  registered_by: string | null;
+  sync_to_cash_flow: number;
+  created_at: string;
 }
 
 export function AccountingView() {
@@ -69,6 +87,10 @@ export function AccountingView() {
   const [realData, setRealData] = useState<RealCashFlowData | null>(null);
   const [prices, setPrices] = useState<PriceConfig[]>([]);
   const [costs, setCosts] = useState<CostConfig[]>([]);
+  const [renewals, setRenewals] = useState<AccountRenewal[]>([]);
+  const [showRenewalModal, setShowRenewalModal] = useState(false);
+  const [submittingRenewal, setSubmittingRenewal] = useState(false);
+  const [renewalFilterPlat, setRenewalFilterPlat] = useState('');
 
   // Form states
   const [editingPrice, setEditingPrice] = useState<Record<string, number>>({});
@@ -85,11 +107,27 @@ export function AccountingView() {
   const [newCost, setNewCost] = useState<CostConfig>({
     platform: '',
     email: '',
+    provider: '',
     total_cost: 0,
     profile_slots: 5,
     duration_days: 30,
     expiration_date: '',
     payment_method: ''
+  });
+
+  const [newRenewal, setNewRenewal] = useState({
+    platform: '',
+    account_email: '',
+    provider: '',
+    payment_method: '',
+    amount_paid: '',
+    renewal_date: new Date().toISOString().slice(0, 10),
+    expiration_date: '',
+    duration_days: 30,
+    profile_slots: 5,
+    notes: '',
+    sync_to_cash_flow: true,
+    sync_to_excel: false
   });
 
   const getApiUrl = () => {
@@ -106,6 +144,7 @@ export function AccountingView() {
       id: cost.id,
       platform: cost.platform,
       email: cost.email || '',
+      provider: cost.provider || '',
       total_cost: cost.total_cost || 0,
       profile_slots: cost.profile_slots || 1,
       duration_days: cost.duration_days || 30,
@@ -124,6 +163,7 @@ export function AccountingView() {
     setNewCost({
       platform: '',
       email: '',
+      provider: '',
       total_cost: 0,
       profile_slots: 5,
       duration_days: 30,
@@ -173,6 +213,13 @@ export function AccountingView() {
       const costRes = await fetch(`${apiUrl}/api/admin/costs`);
       const costData = await costRes.json();
       setCosts(costData);
+
+      // 4. Fetch renewals history
+      const renRes = await fetch(`${apiUrl}/api/admin/accounting/renewals`);
+      const renData = await renRes.json();
+      if (Array.isArray(renData)) {
+        setRenewals(renData);
+      }
     } catch (e) {
       console.error('Error fetching accounting data:', e);
     } finally {
@@ -183,6 +230,75 @@ export function AccountingView() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleSaveRenewal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRenewal.platform || !newRenewal.account_email || !newRenewal.amount_paid || !newRenewal.expiration_date) {
+      alert('Por favor completa todos los campos requeridos (Plataforma, Correo, Monto, Vencimiento).');
+      return;
+    }
+    setSubmittingRenewal(true);
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/accounting/renewals/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          renewalData: {
+            ...newRenewal,
+            amount_paid: parseFloat(newRenewal.amount_paid) || 0
+          },
+          password: adminPassword
+        })
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert('✅ Renovación de cuenta registrada con éxito' + (result.excel_updated_rows ? ` (y ${result.excel_updated_rows} fila(s) actualizadas en Excel Online)` : ''));
+        setShowRenewalModal(false);
+        setNewRenewal({
+          platform: '',
+          account_email: '',
+          provider: '',
+          payment_method: '',
+          amount_paid: '',
+          renewal_date: new Date().toISOString().slice(0, 10),
+          expiration_date: '',
+          duration_days: 30,
+          profile_slots: 5,
+          notes: '',
+          sync_to_cash_flow: true,
+          sync_to_excel: false
+        });
+        fetchData();
+      } else {
+        alert('Error: ' + (result.message || result.error));
+      }
+    } catch (e: any) {
+      alert('Error de red al registrar la renovación');
+    } finally {
+      setSubmittingRenewal(false);
+    }
+  };
+
+  const handleDeleteRenewal = async (id: number) => {
+    if (!confirm('¿Estás seguro de eliminar este registro de renovación? (También se revertirá su egreso del flujo de caja si estaba vinculado)')) return;
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/accounting/renewals/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, password: adminPassword })
+      });
+      const result = await res.json();
+      if (result.success) {
+        fetchData();
+      } else {
+        alert('Error: ' + (result.message || result.error));
+      }
+    } catch (e) {
+      alert('Error de red al eliminar la renovación');
+    }
+  };
 
   const handleSavePrice = async (platform: string) => {
     const apiUrl = getApiUrl();
@@ -910,10 +1026,20 @@ export function AccountingView() {
             />
           </div>
           <div>
-            <label className="block text-2xs text-gray-400 uppercase font-bold mb-1">Método Pago</label>
+            <label className="block text-2xs text-gray-400 uppercase font-bold mb-1">Proveedor</label>
             <input
               type="text"
-              placeholder="ej. Tarjeta, Proveedor"
+              placeholder="Net, Directo..."
+              value={newCost.provider || ''}
+              onChange={(e) => setNewCost({ ...newCost, provider: e.target.value })}
+              className="w-full px-2 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white"
+            />
+          </div>
+          <div>
+            <label className="block text-2xs text-gray-400 uppercase font-bold mb-1">Método / Tarjeta</label>
+            <input
+              type="text"
+              placeholder="Tarjeta temporal, CCV..."
               value={newCost.payment_method || ''}
               onChange={(e) => setNewCost({ ...newCost, payment_method: e.target.value })}
               className="w-full px-2 py-1.5 border rounded-lg text-xs dark:bg-gray-750 dark:text-white"
@@ -953,12 +1079,13 @@ export function AccountingView() {
               <tr className="bg-gray-150 dark:bg-gray-900/60 font-bold text-gray-500 uppercase">
                 <th className="px-3 py-2">Plataforma</th>
                 <th className="px-3 py-2">Correo Cuenta</th>
-                <th className="px-3 py-2">Costo Cuenta</th>
+                <th className="px-3 py-2">Proveedor</th>
+                <th className="px-3 py-2">Costo Base</th>
                 <th className="px-3 py-2">Cupos</th>
                 <th className="px-3 py-2">Costo Perfil</th>
                 <th className="px-3 py-2">Días</th>
                 <th className="px-3 py-2">Vencimiento</th>
-                <th className="px-3 py-2">Método Pago</th>
+                <th className="px-3 py-2">Tarjeta / Método</th>
                 <th className="px-3 py-2">Costo Diario</th>
                 <th className="px-3 py-2 text-center">Acciones</th>
               </tr>
@@ -976,14 +1103,19 @@ export function AccountingView() {
                     }`}
                   >
                     <td className="px-3 py-2 font-bold dark:text-white uppercase">{cost.platform}</td>
-                    <td className="px-3 py-2 text-gray-400">{cost.email}</td>
+                    <td className="px-3 py-2 text-gray-400 font-mono">{cost.email}</td>
+                    <td className="px-3 py-2">
+                      <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 font-bold rounded-md">
+                        {cost.provider || 'Directo'}
+                      </span>
+                    </td>
                     <td className="px-3 py-2 text-red-650 dark:text-red-400 font-semibold">
                       ${cost.total_cost.toLocaleString()}
                     </td>
                     <td className="px-3 py-2 text-gray-500">{cost.profile_slots}</td>
                     <td className="px-3 py-2 text-gray-500">${costPerProfile.toFixed(0)}</td>
                     <td className="px-3 py-2 text-gray-500">{cost.duration_days} d</td>
-                    <td className="px-3 py-2 text-gray-500">
+                    <td className="px-3 py-2 text-gray-500 font-mono">
                       {cost.expiration_date ? new Date(cost.expiration_date).toISOString().slice(0, 10) : 'Sin vencimiento'}
                     </td>
                     <td className="px-3 py-2 text-gray-500">{cost.payment_method || 'N/A'}</td>
@@ -992,14 +1124,14 @@ export function AccountingView() {
                       <div className="flex items-center justify-center space-x-1.5">
                         <button
                           onClick={() => handleEditCost(cost)}
-                          className="p-1.5 text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                          className="p-1.5 text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors cursor-pointer"
                           title="Editar costo y valores"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => cost.id && handleDeleteCost(cost.id)}
-                          className="p-1.5 text-red-500 hover:text-red-650 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                          className="p-1.5 text-red-500 hover:text-red-650 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors cursor-pointer"
                           title="Eliminar costo"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -1013,6 +1145,361 @@ export function AccountingView() {
           </table>
         </div>
       </div>
+
+      {/* Account Renewals and Exact Outflow Log */}
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                <Receipt className="w-5 h-5" />
+              </span>
+              <div>
+                <h3 className="font-bold dark:text-white text-base">Historial de Renovaciones y Salidas Reales de Cuentas Matriz</h3>
+                <p className="text-xs text-gray-400">
+                  Registro exacto de desembolsos a proveedores (Net, transferencias, tarjetas temporales) considerando promociones y alimentando la contabilidad real.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <select
+              value={renewalFilterPlat}
+              onChange={(e) => setRenewalFilterPlat(e.target.value)}
+              className="px-3 py-2 border rounded-xl dark:bg-gray-750 dark:text-white dark:border-gray-700 text-xs font-semibold"
+            >
+              <option value="">Todas las Plataformas</option>
+              {Array.from(new Set(renewals.map(r => r.platform))).sort().map(p => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => setShowRenewalModal(true)}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer ml-auto"
+            >
+              <Plus className="w-4 h-4" /> Registrar Pago de Renovación
+            </button>
+          </div>
+        </div>
+
+        {/* Resumen Métrico */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+          <div className="bg-gray-50 dark:bg-gray-850 p-4 rounded-xl border dark:border-gray-700">
+            <span className="text-[11px] font-bold text-gray-400 uppercase">Total Renovaciones Registradas</span>
+            <div className="text-xl font-black text-gray-800 dark:text-white mt-1">
+              {renewals.length} desembolsos
+            </div>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-850 p-4 rounded-xl border dark:border-gray-700">
+            <span className="text-[11px] font-bold text-gray-400 uppercase">Total Salidas Pagadas (COP)</span>
+            <div className="text-xl font-black text-rose-500 mt-1">
+              ${renewals
+                .reduce((acc, r) => acc + (parseFloat(r.amount_paid as any) || 0), 0)
+                .toLocaleString()}
+            </div>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-850 p-4 rounded-xl border dark:border-gray-700">
+            <span className="text-[11px] font-bold text-gray-400 uppercase">Proveedores Identificados</span>
+            <div className="text-xl font-black text-indigo-500 mt-1">
+              {new Set(renewals.map(r => r.provider).filter(Boolean)).size} proveedores
+            </div>
+          </div>
+        </div>
+
+        {/* Tabla de Renovaciones */}
+        <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-150 dark:bg-gray-900/60 font-bold text-gray-500 uppercase sticky top-0">
+                <th className="px-3.5 py-2.5">Fecha Pago</th>
+                <th className="px-3.5 py-2.5">Plataforma</th>
+                <th className="px-3.5 py-2.5">Correo Cuenta</th>
+                <th className="px-3.5 py-2.5">Proveedor</th>
+                <th className="px-3.5 py-2.5">Tarjeta / Método Pago</th>
+                <th className="px-3.5 py-2.5 text-right">Monto Pagado ($)</th>
+                <th className="px-3.5 py-2.5">Vencimiento Cuenta</th>
+                <th className="px-3.5 py-2.5 text-center">Flujo de Caja</th>
+                <th className="px-3.5 py-2.5 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y dark:divide-gray-700">
+              {renewals.filter(r => !renewalFilterPlat || r.platform === renewalFilterPlat).length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-400 italic">
+                    No hay renovaciones registradas todavía. Haz clic en "Registrar Pago de Renovación" para asentar el primer pago con tarjeta temporal y proveedor.
+                  </td>
+                </tr>
+              ) : (
+                renewals
+                  .filter(r => !renewalFilterPlat || r.platform === renewalFilterPlat)
+                  .map((ren) => (
+                    <tr key={ren.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-750/30 transition-colors">
+                      <td className="px-3.5 py-2.5 font-mono text-gray-600 dark:text-gray-300">
+                        {ren.renewal_date ? new Date(ren.renewal_date).toISOString().slice(0, 10) : 'N/A'}
+                      </td>
+                      <td className="px-3.5 py-2.5 font-bold dark:text-white uppercase">
+                        <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-750 rounded-md">
+                          {ren.platform}
+                        </span>
+                      </td>
+                      <td className="px-3.5 py-2.5 text-gray-500 dark:text-gray-400 font-mono">
+                        {ren.account_email}
+                      </td>
+                      <td className="px-3.5 py-2.5">
+                        <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 font-bold rounded-md">
+                          {ren.provider || 'Directo'}
+                        </span>
+                      </td>
+                      <td className="px-3.5 py-2.5 text-gray-600 dark:text-gray-300">
+                        {ren.payment_method || 'Sin detalle'}
+                      </td>
+                      <td className="px-3.5 py-2.5 text-right font-black text-rose-500">
+                        -${Math.round(ren.amount_paid).toLocaleString()}
+                      </td>
+                      <td className="px-3.5 py-2.5 font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                        {ren.expiration_date ? new Date(ren.expiration_date).toISOString().slice(0, 10) : 'N/A'}
+                      </td>
+                      <td className="px-3.5 py-2.5 text-center">
+                        {ren.sync_to_cash_flow ? (
+                          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 text-[10px] font-bold rounded-full">
+                            ✓ Asentado
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] rounded-full">
+                            No vinculado
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3.5 py-2.5 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRenewal(ren.id)}
+                          className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors cursor-pointer"
+                          title="Eliminar registro y revertir flujo de caja"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modal Registrar Pago de Renovación de Cuenta */}
+      {showRenewalModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-xl w-full border dark:border-gray-700 shadow-2xl p-6 relative">
+            <button
+              onClick={() => setShowRenewalModal(false)}
+              className="absolute top-4 right-4 p-1.5 hover:bg-gray-100 dark:hover:bg-gray-750 rounded-lg text-gray-400 dark:text-gray-300 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="text-base font-extrabold dark:text-white mb-1 flex items-center gap-2">
+              <Receipt className="text-emerald-500 w-5 h-5" /> Registrar Pago de Renovación de Cuenta Matriz
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
+              Registra el desembolso exacto pagado al proveedor por la cuenta matriz, especificando tarjeta temporal y nueva fecha de vencimiento.
+            </p>
+
+            <form onSubmit={handleSaveRenewal} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* Plataforma */}
+                <div>
+                  <label className="block text-2xs font-bold text-gray-500 uppercase mb-1">
+                    Plataforma Streaming *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    list="plat-list-options"
+                    placeholder="Ej. NETFLIX, AMAZON..."
+                    value={newRenewal.platform}
+                    onChange={(e) => {
+                      const plat = e.target.value.toUpperCase();
+                      const matchedCost = costs.find(c => c.platform === plat);
+                      setNewRenewal({
+                        ...newRenewal,
+                        platform: plat,
+                        amount_paid: matchedCost && !newRenewal.amount_paid ? String(matchedCost.total_cost) : newRenewal.amount_paid,
+                        profile_slots: matchedCost ? matchedCost.profile_slots : newRenewal.profile_slots
+                      });
+                    }}
+                    className="w-full px-3 py-2 border rounded-xl text-xs dark:bg-gray-750 dark:text-white dark:border-gray-700 font-bold"
+                  />
+                  <datalist id="plat-list-options">
+                    {Array.from(new Set(costs.map(c => c.platform))).map(p => (
+                      <option key={p} value={p} />
+                    ))}
+                  </datalist>
+                </div>
+
+                {/* Correo Cuenta Matriz */}
+                <div>
+                  <label className="block text-2xs font-bold text-gray-500 uppercase mb-1">
+                    Correo Cuenta Matriz *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="correo@proveedor.com"
+                    value={newRenewal.account_email}
+                    onChange={(e) => setNewRenewal({ ...newRenewal, account_email: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-xl text-xs dark:bg-gray-750 dark:text-white dark:border-gray-700 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* Proveedor */}
+                <div>
+                  <label className="block text-2xs font-bold text-gray-500 uppercase mb-1">
+                    Proveedor (Separado) *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Net, Miguel Botero, Transferencia, Directo"
+                    value={newRenewal.provider}
+                    onChange={(e) => setNewRenewal({ ...newRenewal, provider: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-xl text-xs dark:bg-gray-750 dark:text-white dark:border-gray-700 font-semibold"
+                  />
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {['Net', 'Directo', 'Transferencia', 'Miguel Botero', 'Nu'].map(chip => (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => setNewRenewal({ ...newRenewal, provider: chip })}
+                        className="px-2 py-0.5 text-3xs font-bold bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded text-gray-600 dark:text-gray-300 cursor-pointer"
+                      >
+                        +{chip}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Método de Pago / Tarjeta Temporal */}
+                <div>
+                  <label className="block text-2xs font-bold text-gray-500 uppercase mb-1">
+                    Método / Tarjeta Temporal (CCV, Fecha) *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Mastercard 6833 CCV 791 exp 08/28"
+                    value={newRenewal.payment_method}
+                    onChange={(e) => setNewRenewal({ ...newRenewal, payment_method: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-xl text-xs dark:bg-gray-750 dark:text-white dark:border-gray-700"
+                  />
+                  <span className="text-[10px] text-gray-400 mt-1 block">
+                    Aquí se guarda el número, CCV y fecha de la tarjeta temporal.
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                {/* Monto Real Pagado */}
+                <div>
+                  <label className="block text-2xs font-bold text-gray-500 uppercase mb-1">
+                    Monto Real Pagado ($ COP) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    placeholder="Ej. 14000 o promo"
+                    value={newRenewal.amount_paid}
+                    onChange={(e) => setNewRenewal({ ...newRenewal, amount_paid: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-xl text-xs dark:bg-gray-750 dark:text-white dark:border-gray-700 font-black text-rose-500"
+                  />
+                  <span className="text-[10px] text-gray-400 mt-1 block">
+                    Precio exacto con o sin promoción.
+                  </span>
+                </div>
+
+                {/* Fecha del Pago / Renovación */}
+                <div>
+                  <label className="block text-2xs font-bold text-gray-500 uppercase mb-1">
+                    Fecha de Pago *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={newRenewal.renewal_date}
+                    onChange={(e) => {
+                      const payDate = e.target.value;
+                      const d = new Date(payDate);
+                      d.setDate(d.getDate() + (newRenewal.duration_days || 30));
+                      setNewRenewal({
+                        ...newRenewal,
+                        renewal_date: payDate,
+                        expiration_date: d.toISOString().slice(0, 10)
+                      });
+                    }}
+                    className="w-full px-3 py-2 border rounded-xl text-xs dark:bg-gray-750 dark:text-white dark:border-gray-700"
+                  />
+                </div>
+
+                {/* Nueva Fecha de Vencimiento */}
+                <div>
+                  <label className="block text-2xs font-bold text-gray-500 uppercase mb-1">
+                    Nuevo Vencimiento Cuenta *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={newRenewal.expiration_date}
+                    onChange={(e) => setNewRenewal({ ...newRenewal, expiration_date: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-xl text-xs dark:bg-gray-750 dark:text-white dark:border-gray-700 font-bold text-emerald-600 dark:text-emerald-400"
+                  />
+                </div>
+              </div>
+
+              {/* Switches automáticos */}
+              <div className="bg-gray-50 dark:bg-gray-850 p-3.5 rounded-xl border dark:border-gray-700 space-y-2.5">
+                <label className="flex items-center gap-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newRenewal.sync_to_cash_flow}
+                    onChange={(e) => setNewRenewal({ ...newRenewal, sync_to_cash_flow: e.target.checked })}
+                    className="rounded text-brand-primary focus:ring-brand-primary w-4 h-4 cursor-pointer"
+                  />
+                  <span>💰 Registrar automáticamente como salida en el <strong>Flujo de Caja Real</strong> de Contabilidad</span>
+                </label>
+
+                <label className="flex items-center gap-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newRenewal.sync_to_excel}
+                    onChange={(e) => setNewRenewal({ ...newRenewal, sync_to_excel: e.target.checked })}
+                    className="rounded text-brand-primary focus:ring-brand-primary w-4 h-4 cursor-pointer"
+                  />
+                  <span>📊 Actualizar fecha de vencimiento en las filas de esta cuenta en el <strong>Excel Online (OneDrive)</strong></span>
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowRenewalModal(false)}
+                  className="px-4 py-2 border dark:border-gray-700 rounded-xl text-xs font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingRenewal}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {submittingRenewal ? 'Guardando Renovación...' : '💾 Confirmar y Asentar Renovación'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
