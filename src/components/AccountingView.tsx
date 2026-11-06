@@ -469,16 +469,16 @@ export function AccountingView() {
                     <td className="px-6 py-3.5 text-center text-gray-500 font-semibold">{row.active_profiles}</td>
                     <td className="px-6 py-3.5 text-center text-indigo-400 font-bold">{row.accounts_needed || Math.ceil(row.active_profiles / 5)}</td>
                     <td className="px-6 py-3.5 text-right text-green-600 dark:text-green-400 font-semibold">
-                      ${Math.round(row.ingreso_total * 30).toLocaleString()}
+                      ${Math.round(row.monthly_income || row.monthly_client_income || (row.ingreso_total * 30)).toLocaleString()}
                     </td>
                     <td className="px-6 py-3.5 text-right text-red-650 dark:text-red-400 font-medium">
-                      ${Math.round(row.monthly_inventory_cost || (row.egreso_total * 30)).toLocaleString()}
+                      ${Math.round(row.monthly_expense || row.monthly_inventory_cost || (row.egreso_total * 30)).toLocaleString()}
                     </td>
                     <td className={`px-6 py-3.5 text-center font-bold ${row.indicador_gan >= 30 ? 'text-green-500' : 'text-yellow-500'}`}>
                       {row.indicador_gan.toFixed(0)}%
                     </td>
                     <td className="px-6 py-3.5 text-right font-bold text-brand-primary">
-                      ${Math.round((row.ingreso_total * 30) - (row.monthly_inventory_cost || (row.egreso_total * 30))).toLocaleString()}
+                      ${Math.round((row.monthly_income || row.monthly_client_income || (row.ingreso_total * 30)) - (row.monthly_expense || row.monthly_inventory_cost || (row.egreso_total * 30))).toLocaleString()}
                     </td>
                     <td className="px-6 py-3.5 text-right font-semibold dark:text-gray-300">
                       ${Math.round(row.utilidad_total).toLocaleString()} / día
