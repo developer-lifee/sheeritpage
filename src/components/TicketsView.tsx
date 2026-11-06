@@ -397,6 +397,24 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const lastActivePhoneRef = useRef<string>('');
+  const recentlyResolvedPhonesRef = useRef<Map<string, number>>(new Map());
+
+  const isRecentlyResolvedLocally = (rawPhone: string) => {
+    if (!rawPhone) return false;
+    const clean = String(rawPhone).replace(/\D/g, '');
+    const last10 = clean.slice(-10);
+    const now = Date.now();
+    for (const [p, timestamp] of recentlyResolvedPhonesRef.current.entries()) {
+      if (now - timestamp > 60000) {
+        recentlyResolvedPhonesRef.current.delete(p);
+        continue;
+      }
+      if (p === clean || p === last10 || (clean.length >= 10 && clean.endsWith(p)) || (p.length >= 10 && p.endsWith(clean))) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   const fetchTickets = (isSilent = false, currentFilter = chatFilter) => {
     if (!agentEmail) return;
@@ -435,7 +453,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
           return res.json();
         })
         .then((data) => {
-          setTickets(Array.isArray(data) ? data : []);
+          const list = Array.isArray(data) ? data : [];
+          setTickets(list.filter(t => !isRecentlyResolvedLocally(t.phone)));
           setLoading(false);
         })
         .catch((err) => {
@@ -1387,6 +1406,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   };
 
   const handleResolveClick = (t: Ticket) => {
+    setIsResolving(false);
     const sharedWithDetails = findSharedTicketsWithDetails(t);
     const isAi = isAiLimitedTicket(t) || sharedWithDetails.some(s => s.matchingAccounts.some(a => {
       const sName = (a.streaming || '').toLowerCase();
@@ -1415,11 +1435,19 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     const targetTicket = tickets.find(t => t.phone === phone);
     const cleanP = String(phone).replace(/\D/g, '');
     const last10 = cleanP.slice(-10);
+    const now = Date.now();
+
+    recentlyResolvedPhonesRef.current.set(cleanP, now);
+    if (last10) recentlyResolvedPhonesRef.current.set(last10, now);
 
     if (resolveAll) {
       if (targetTicket) {
         const sharedWithDetails = findSharedTicketsWithDetails(targetTicket);
         const phonesToRemove = new Set([cleanP, last10, ...sharedWithDetails.map(s => String(s.ticket.phone).replace(/\D/g, ''))]);
+        phonesToRemove.forEach(p => {
+          recentlyResolvedPhonesRef.current.set(p, now);
+          if (p.length >= 10) recentlyResolvedPhonesRef.current.set(p.slice(-10), now);
+        });
         setTickets(prev => prev.filter(t => {
           const tClean = String(t.phone).replace(/\D/g, '');
           return !phonesToRemove.has(tClean) && !phonesToRemove.has(tClean.slice(-10));
@@ -1440,6 +1468,10 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     }
 
     const apiUrl = getApiUrl();
+    const resolveTimeout = setTimeout(() => {
+      setIsResolving(false);
+    }, 8000);
+
     try {
       if (shouldResetDevs) {
         // El límite de códigos no aplica a cuando sacamos todas las sesiones
@@ -1466,6 +1498,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
       alert('❌ Error al conectar con el backend.');
       fetchTickets(true);
     } finally {
+      clearTimeout(resolveTimeout);
       setIsResolving(false);
     }
   };
