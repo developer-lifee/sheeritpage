@@ -416,18 +416,28 @@ export const ClientsView: React.FC = () => {
 
         // General search matches
         const phoneVal = (c.numero || c.Numero || '').toString();
+        const cleanPhoneVal = phoneVal.replace(/\D/g, '');
+        const cleanGeneral = generalSearch.replace(/\D/g, '');
         const fullName = `${c.Nombre || ''} ${c.apellido || c.Apellido || ''}`.trim();
         const normStreaming = normalizeServiceName(c.Streaming).toLowerCase();
+        
+        const phoneMatchesSearch = phoneVal.toLowerCase().includes(generalSearch.toLowerCase()) || 
+            (cleanGeneral.length >= 4 && cleanPhoneVal.includes(cleanGeneral));
+
         const generalMatches = !generalSearch || 
             fullName.toLowerCase().includes(generalSearch.toLowerCase()) || 
-            phoneVal.includes(generalSearch) || 
+            phoneMatchesSearch || 
             normStreaming.includes(generalSearch.toLowerCase()) || 
             String(c.Streaming || '').toLowerCase().includes(generalSearch.toLowerCase()) || 
-            String(c.correo || '').toLowerCase().includes(generalSearch.toLowerCase());
+            String(c.correo || '').toLowerCase().includes(generalSearch.toLowerCase()) ||
+            String(c.rowNumber || '').includes(generalSearch);
 
         // Column level filters matches
         const nameMatches = !filterName || fullName.toLowerCase().includes(filterName.toLowerCase());
-        const phoneMatches = !filterPhone || phoneVal.includes(filterPhone);
+        const cleanFilterPhone = filterPhone.replace(/\D/g, '');
+        const phoneMatches = !filterPhone || 
+            phoneVal.includes(filterPhone) || 
+            (cleanFilterPhone.length >= 4 && cleanPhoneVal.includes(cleanFilterPhone));
 
         // Service matches: exact match on normalized service name so NETFLIX doesn't pull NETFLIX EXTRA
         const normFilter = normalizeServiceName(filterService);
