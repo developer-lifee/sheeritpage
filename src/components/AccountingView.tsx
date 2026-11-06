@@ -583,7 +583,15 @@ export function AccountingView() {
                   <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-750/30 text-xs">
                     <td className="px-6 py-3.5 font-bold dark:text-white uppercase">{row.platform}</td>
                     <td className="px-6 py-3.5 text-center text-gray-500 font-semibold">{row.active_profiles}</td>
-                    <td className="px-6 py-3.5 text-center text-indigo-400 font-bold">{row.accounts_needed || Math.ceil(row.active_profiles / 5)}</td>
+                    <td className="px-6 py-3.5 text-center text-indigo-400 font-bold">
+                      {row.is_implicit_cost || row.accounts_needed === 0 ? (
+                        <span className="text-[10px] px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded font-semibold" title="Costo de cuenta matriz ya incluido en el plan principal">
+                          0 (En Matriz)
+                        </span>
+                      ) : (
+                        row.accounts_needed ?? Math.ceil(row.active_profiles / 5)
+                      )}
+                    </td>
                     <td className="px-6 py-3.5 text-right text-green-600 dark:text-green-400 font-semibold">
                       ${Math.round(row.monthly_income || row.monthly_client_income || (row.ingreso_total * 30)).toLocaleString()}
                     </td>
@@ -591,7 +599,7 @@ export function AccountingView() {
                       ${Math.round(row.monthly_expense || row.monthly_inventory_cost || (row.egreso_total * 30)).toLocaleString()}
                     </td>
                     <td className={`px-6 py-3.5 text-center font-bold ${row.indicador_gan >= 30 ? 'text-green-500' : 'text-yellow-500'}`}>
-                      {row.indicador_gan.toFixed(0)}%
+                      {row.is_implicit_cost ? '100% (Matriz)' : `${row.indicador_gan.toFixed(0)}%`}
                     </td>
                     <td className="px-6 py-3.5 text-right font-bold text-brand-primary">
                       ${Math.round((row.monthly_income || row.monthly_client_income || (row.ingreso_total * 30)) - (row.monthly_expense || row.monthly_inventory_cost || (row.egreso_total * 30))).toLocaleString()}
@@ -666,7 +674,7 @@ export function AccountingView() {
                     </td>
                     <td className="px-6 py-3.5 text-center text-gray-500">{row.egreso_porcentaje.toFixed(1)}%</td>
                     <td className={`px-6 py-3.5 text-center font-bold ${row.indicador_gan >= 30 ? 'text-green-500' : 'text-yellow-500'}`}>
-                      {row.indicador_gan.toFixed(0)}%
+                      {(row as any).is_implicit_cost ? '100% (Matriz)' : `${row.indicador_gan.toFixed(0)}%`}
                     </td>
                     <td className="px-6 py-3.5 text-right font-bold dark:text-white">
                       ${Math.round(row.utilidad_total).toLocaleString()}
