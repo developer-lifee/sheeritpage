@@ -316,8 +316,8 @@ export const ClientsView: React.FC = () => {
                         if (data.leaveSlotVirgin) {
                             return {
                                 ...c,
-                                Nombre: 'libre',
-                                nombre: 'libre',
+                                Nombre: '',
+                                nombre: '',
                                 Apellido: '',
                                 apellido: '',
                                 numero: '',
