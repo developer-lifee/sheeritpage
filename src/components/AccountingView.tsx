@@ -83,6 +83,7 @@ export function AccountingView() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'excel' | 'projections' | 'real'>('excel');
   const [rows, setRows] = useState<AccountingRow[]>([]);
+  const [redFlags, setRedFlags] = useState<any[]>([]);
   const [totals, setTotals] = useState<AccountingTotals | null>(null);
   const [realData, setRealData] = useState<RealCashFlowData | null>(null);
   const [prices, setPrices] = useState<PriceConfig[]>([]);
@@ -188,6 +189,7 @@ export function AccountingView() {
       if (accData.rows) {
         setRows(accData.rows);
         setTotals(accData.totals);
+        setRedFlags(Array.isArray(accData.red_flags) ? accData.red_flags : []);
       }
 
       // 1b. Fetch real cash flow
@@ -557,6 +559,103 @@ export function AccountingView() {
         </div>
       )}
 
+      {/* Alertas de Red Flags en Cuentas de Alto Costo ($100 USD / $200 USD) y Subplanes IA */}
+      {(viewMode === 'excel' || viewMode === 'projections') && redFlags.length > 0 && (
+        <div className="bg-rose-50/70 dark:bg-rose-950/20 rounded-2xl border border-rose-200 dark:border-rose-900/50 p-5 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+            <div className="flex items-center gap-2.5">
+              <span className="px-2.5 py-1 bg-rose-600 text-white text-xs font-black rounded-lg uppercase tracking-wider animate-pulse">
+                🚨 RED FLAGS ({redFlags.length})
+              </span>
+              <div>
+                <h3 className="text-sm font-extrabold text-rose-900 dark:text-rose-200">
+                  Auditoría de Subplanes Claude & ChatGPT (Cuentas de $100 USD y $200 USD en Déficit / Sub-facturadas)
+                </h3>
+                <p className="text-xs text-rose-700 dark:text-rose-300/80">
+                  Detecta cuentas matriz de alto valor donde el recaudo real de los clientes alojados no cubre el costo en dólares o tienen clientes de planes menores.
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="text-[10px] font-bold uppercase text-rose-500 block">Fuga Mensual Detectada</span>
+              <span className="text-lg font-black text-rose-600 dark:text-rose-400">
+                ${Math.round(redFlags.filter(f => f.net_balance < 0).reduce((s, f) => s + f.net_balance, 0)).toLocaleString()} COP/mes
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {redFlags.map((flag, idx) => (
+              <div
+                key={idx}
+                className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-rose-200 dark:border-rose-900/60 shadow-xs flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <span className="text-xs font-black uppercase text-gray-900 dark:text-white">
+                      {flag.platform}
+                    </span>
+                    <span className={`px-2 py-0.5 text-[10px] font-black rounded-full ${
+                      flag.usd_tier === '$200 USD'
+                        ? 'bg-rose-600 text-white'
+                        : flag.usd_tier === '$100 USD'
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300'
+                    }`}>
+                      Costo: {flag.usd_tier}
+                    </span>
+                  </div>
+                  <div className="text-xs font-mono text-gray-500 dark:text-gray-400 mb-2 truncate" title={flag.email}>
+                    📧 {flag.email} ({flag.occupied_slots}/{flag.total_slots} cupos)
+                  </div>
+                  <p className="text-[11px] text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 p-2 rounded-lg border border-rose-100 dark:border-rose-900/40 mb-3 leading-snug font-medium">
+                    ⚠️ {flag.reason}
+                  </p>
+
+                  {/* Desglose de clientes alojados en la cuenta */}
+                  <div className="space-y-1 mb-3 max-h-32 overflow-y-auto pr-1">
+                    {flag.clients && flag.clients.map((cl: any, cIdx: number) => {
+                      const isUnderpaid = cl.paid_amount < flag.expected_slot_price;
+                      return (
+                        <div key={cIdx} className="flex items-center justify-between text-[11px] py-0.5 border-b border-gray-100 dark:border-gray-700/60 last:border-0">
+                          <span className="truncate max-w-[140px] font-semibold text-gray-700 dark:text-gray-300">
+                            #{cl.rowNumber} {cl.name}
+                          </span>
+                          <span className={`font-mono font-bold ${isUnderpaid ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                            ${Math.round(cl.paid_amount).toLocaleString()} {isUnderpaid ? '⚠️' : '✓'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="pt-2.5 border-t dark:border-gray-700 grid grid-cols-3 gap-2 text-center text-[11px]">
+                  <div>
+                    <span className="text-[9px] uppercase text-gray-400 block font-bold">Recaudo Real</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                      ${Math.round(flag.real_monthly_income).toLocaleString()}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase text-gray-400 block font-bold">Costo Cuenta</span>
+                    <span className="font-bold text-rose-600 dark:text-rose-400">
+                      -${Math.round(flag.monthly_cost).toLocaleString()}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase text-gray-400 block font-bold">Balance Neto</span>
+                    <span className={`font-black ${flag.net_balance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600'}`}>
+                      {flag.net_balance < 0 ? '' : '+'}${Math.round(flag.net_balance).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Main Table View */}
       {viewMode === 'excel' ? (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 overflow-hidden">
@@ -598,13 +697,17 @@ export function AccountingView() {
                     <td className="px-6 py-3.5 text-right text-red-650 dark:text-red-400 font-medium">
                       ${Math.round(row.monthly_expense || row.monthly_inventory_cost || (row.egreso_total * 30)).toLocaleString()}
                     </td>
-                    <td className={`px-6 py-3.5 text-center font-bold ${row.indicador_gan >= 30 ? 'text-green-500' : 'text-yellow-500'}`}>
+                    <td className={`px-6 py-3.5 text-center font-bold ${row.indicador_gan < 0 ? 'text-rose-600 dark:text-rose-400' : row.indicador_gan >= 30 ? 'text-green-500' : 'text-yellow-500'}`}>
                       {row.is_implicit_cost ? '100% (Matriz)' : `${row.indicador_gan.toFixed(0)}%`}
                     </td>
-                    <td className="px-6 py-3.5 text-right font-bold text-brand-primary">
+                    <td className={`px-6 py-3.5 text-right font-bold ${
+                      ((row.monthly_income || row.monthly_client_income || (row.ingreso_total * 30)) - (row.monthly_expense || row.monthly_inventory_cost || (row.egreso_total * 30))) < 0
+                        ? 'text-rose-600 dark:text-rose-400'
+                        : 'text-brand-primary'
+                    }`}>
                       ${Math.round((row.monthly_income || row.monthly_client_income || (row.ingreso_total * 30)) - (row.monthly_expense || row.monthly_inventory_cost || (row.egreso_total * 30))).toLocaleString()}
                     </td>
-                    <td className="px-6 py-3.5 text-right font-semibold dark:text-gray-300">
+                    <td className={`px-6 py-3.5 text-right font-semibold ${row.utilidad_total < 0 ? 'text-rose-600 dark:text-rose-400' : 'dark:text-gray-300'}`}>
                       ${Math.round(row.utilidad_total).toLocaleString()} / día
                     </td>
                   </tr>
