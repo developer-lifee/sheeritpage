@@ -311,6 +311,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
   const [trialHoursTarget, setTrialHoursTarget] = useState<number>(80);
   const [allowOvertime, setAllowOvertime] = useState<boolean>(true);
   const [maxHoursLimit, setMaxHoursLimit] = useState<number>(10);
+  const [maxGroupHoursLimit, setMaxGroupHoursLimit] = useState<number>(10);
   const [shiftStartLimit, setShiftStartLimit] = useState<string>('08:00');
   const [shiftEndLimit, setShiftEndLimit] = useState<string>('22:00');
   const [whatsappContactNumber, setWhatsappContactNumber] = useState<string>('573118587974');
@@ -570,6 +571,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         setTrialHourlyRate(Number(data.trial_hourly_rate || 5000));
         setTrialHoursTarget(Number(data.trial_hours_target || 80));
         setMaxHoursLimit(Number(data.max_hours_limit || 10));
+        setMaxGroupHoursLimit(Number(data.max_group_hours_limit || 10));
         setShiftStartLimit(data.shift_start_limit || '08:00');
         setShiftEndLimit(data.shift_end_limit || '22:00');
         setWhatsappContactNumber(data.whatsapp_contact_number || '573118587974');
@@ -843,6 +845,30 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
     }));
   };
 
+  const applyShiftPreset = (startTime: string, endTime: string, breakType: 'none' | 'break_30' | 'lunch_60' | 'lunch_120', breakStart: string) => {
+    if (!editingDay) return;
+    if (editingSlots.length === 0) {
+      setEditingSlots([{
+        day_of_week: editingDay.value,
+        start_time: startTime,
+        end_time: endTime,
+        break_type: breakType,
+        break_start: breakStart
+      }]);
+    } else {
+      const updated = [...editingSlots];
+      updated[0] = {
+        ...updated[0],
+        day_of_week: editingDay.value,
+        start_time: startTime,
+        end_time: endTime,
+        break_type: breakType,
+        break_start: breakStart
+      };
+      setEditingSlots(updated);
+    }
+  };
+
   const handleSaveModal = async () => {
     if (!editingAgent || !editingDay) return;
 
@@ -999,6 +1025,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         trial_hourly_rate: trialHourlyRate,
         trial_hours_target: trialHoursTarget,
         max_hours_limit: maxHoursLimit,
+        max_group_hours_limit: maxGroupHoursLimit,
         shift_start_limit: shiftStartLimit,
         shift_end_limit: shiftEndLimit,
         whatsapp_contact_number: whatsappContactNumber
@@ -2738,6 +2765,25 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                     Tarifa por hora para los primeros 80h de prueba ($4,000/h).
                   </p>
                 </div>
+
+                {/* Intercalación / Bolsa Grupal Diaria */}
+                <div className="bg-gray-50 dark:bg-gray-850 p-4 rounded-xl border dark:border-gray-700">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-200 mb-1">
+                    ⏱️ Intercalación de Turnos / Bolsa Grupal Diaria
+                  </label>
+                  <select
+                    value={maxGroupHoursLimit}
+                    onChange={(e) => setMaxGroupHoursLimit(Number(e.target.value))}
+                    className="w-full p-2.5 text-xs font-bold rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-white outline-none focus:ring-1 focus:ring-brand-primary"
+                  >
+                    <option value={10}>Estándar: 10h grupales (2h intercalación: Turno 2 desde las 5:00 PM)</option>
+                    <option value={11}>Alta Demanda: 11h grupales (1h intercalación: Turno 2 desde las 4:00 PM)</option>
+                    <option value={12}>Máxima Demanda: 12h grupales (Sin intercalación: Turno 2 continuo desde las 3:00 PM)</option>
+                  </select>
+                  <p className="text-[10px] text-gray-400 mt-1.5 leading-relaxed">
+                    Controla cuándo puede iniciar el segundo turno vespertino tras terminar el primer turno a las 3:00 PM.
+                  </p>
+                </div>
               </div>
 
               <div className="mt-5 flex justify-end">
@@ -2784,6 +2830,47 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
               <div className="text-center py-8 text-gray-500">Cargando turnos actuales...</div>
             ) : (
               <>
+                {/* Atajos Rápidos de Turnos */}
+                <div className="mb-3.5 bg-gray-50/80 dark:bg-gray-850/80 p-2.5 rounded-xl border border-gray-200/60 dark:border-gray-700/60">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5">
+                    ⚡ Turnos Predefinidos (1 Clic)
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => applyShiftPreset('10:00', '15:00', 'none', '')}
+                      className="px-2.5 py-1 text-xxs font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 rounded-lg border border-amber-500/20 hover:bg-amber-500/20 transition-all cursor-pointer"
+                      title="Turno mañana (10:00 AM a 3:00 PM - 5 horas)"
+                    >
+                      🌅 Mañana (10:00 - 15:00)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyShiftPreset('17:00', '22:00', 'none', '')}
+                      className="px-2.5 py-1 text-xxs font-bold bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 rounded-lg border border-indigo-500/20 hover:bg-indigo-500/20 transition-all cursor-pointer"
+                      title="Turno tarde normal (5:00 PM a 10:00 PM - 2h intercalación)"
+                    >
+                      🌆 Tarde Normal (17:00 - 22:00)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyShiftPreset('16:00', '22:00', 'break_30', '19:00')}
+                      className="px-2.5 py-1 text-xxs font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 rounded-lg border border-emerald-500/20 hover:bg-emerald-500/20 transition-all cursor-pointer"
+                      title="Alta demanda: 1h menos de intercalación (4:00 PM a 10:00 PM)"
+                    >
+                      ⚡ Tarde Alta Demanda (16:00 - 22:00)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyShiftPreset('15:00', '22:00', 'lunch_60', '18:00')}
+                      className="px-2.5 py-1 text-xxs font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 rounded-lg border border-purple-500/20 hover:bg-purple-500/20 transition-all cursor-pointer"
+                      title="Máxima demanda: Continuo desde las 3:00 PM"
+                    >
+                      🔥 Tarde Continuo (15:00 - 22:00)
+                    </button>
+                  </div>
+                </div>
+
                 <div className="flex flex-col gap-4 max-h-[300px] overflow-y-auto pr-1">
                   {editingSlots.length === 0 ? (
                     <div className="text-center py-8 border border-dashed dark:border-gray-700 rounded-xl text-gray-400 dark:text-gray-500 italic text-sm">
