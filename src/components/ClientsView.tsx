@@ -122,10 +122,17 @@ const getDaysRemaining = (excelDate: any) => {
     let date: Date | null = null;
     if (!isNaN(str as any)) {
         const serial = parseFloat(str);
-        date = new Date((serial - 25569) * 86400 * 1000);
+        const utcDate = new Date((serial - 25569) * 86400 * 1000);
+        if (!isNaN(utcDate.getTime())) {
+            // Construir fecha usando año, mes y día de UTC para evitar desfases horarios locales (GMT-5)
+            date = new Date(utcDate.getUTCFullYear(), utcDate.getUTCMonth(), utcDate.getUTCDate());
+        }
     } else {
         if (str.includes('-')) {
-            date = new Date(str + 'T12:00:00');
+            const parts = str.split('T')[0].split('-');
+            if (parts.length === 3) {
+                date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            }
         } else if (str.includes('/')) {
             const parts = str.split('/');
             if (parts.length === 3) {
@@ -138,7 +145,7 @@ const getDaysRemaining = (excelDate: any) => {
         today.setHours(0, 0, 0, 0);
         date.setHours(0, 0, 0, 0);
         const diff = date.getTime() - today.getTime();
-        return Math.ceil(diff / (1000 * 60 * 60 * 24));
+        return Math.round(diff / (1000 * 60 * 60 * 24));
     }
     return 999;
 };
@@ -409,9 +416,9 @@ export const ClientsView: React.FC = () => {
         // Expiration payment filter matches
         let statusMatches = true;
         if (filterPaymentStatus === 'proximos') {
-            statusMatches = daysLeft <= 7 && daysLeft > 0;
+            statusMatches = daysLeft <= 7 && daysLeft >= 0;
         } else if (filterPaymentStatus === 'vencidos') {
-            statusMatches = daysLeft <= 0;
+            statusMatches = daysLeft < 0;
         }
 
         // General search matches
@@ -1310,10 +1317,18 @@ export const ClientsView: React.FC = () => {
                                         badgeColor = "text-rose-700 dark:text-rose-300";
                                         badgeBg = "bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800";
                                         statusText = "✂️ Cortado";
-                                    } else if (daysLeft <= 0) {
+                                    } else if (daysLeft < 0) {
                                         badgeColor = "text-red-700 dark:text-red-300";
                                         badgeBg = "bg-red-50 dark:bg-red-950/45 border border-red-200 dark:border-red-900/50";
-                                        statusText = "🔴 Vencido";
+                                        statusText = `🔴 Vencido (${Math.abs(daysLeft)}d)`;
+                                    } else if (daysLeft === 0) {
+                                        badgeColor = "text-red-700 dark:text-red-300";
+                                        badgeBg = "bg-red-50 dark:bg-red-950/45 border border-red-200 dark:border-red-900/50";
+                                        statusText = "⚠️ Vence hoy";
+                                    } else if (daysLeft === 1) {
+                                        badgeColor = "text-amber-700 dark:text-amber-300";
+                                        badgeBg = "bg-amber-50 dark:bg-amber-950/45 border border-amber-200 dark:border-amber-900/50";
+                                        statusText = "⚠️ Vence mañana";
                                     } else if (daysLeft <= 7) {
                                         badgeColor = "text-amber-700 dark:text-amber-300";
                                         badgeBg = "bg-amber-50 dark:bg-amber-950/45 border border-amber-200 dark:border-amber-900/50";
