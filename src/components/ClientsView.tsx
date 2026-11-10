@@ -150,6 +150,18 @@ const getDaysRemaining = (excelDate: any) => {
     return 999;
 };
 
+// Helper to normalize streaming service names (trims, collapses multiple spaces, fixes common typos)
+const normalizeServiceName = (raw?: any): string => {
+    if (!raw) return '';
+    let s = String(raw)
+        .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, ' ')
+        .trim()
+        .replace(/\s+/g, ' ')
+        .toUpperCase();
+    s = s.replace(/\b(WONER|ONWER)\b/g, 'OWNER');
+    return s;
+};
+
 export const ClientsView: React.FC = () => {
     const [clients, setClients] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -683,18 +695,6 @@ export const ClientsView: React.FC = () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, []);
-
-    // Helper to normalize streaming service names (trims, collapses multiple spaces, fixes common typos)
-    const normalizeServiceName = (raw?: any): string => {
-        if (!raw) return '';
-        let s = String(raw)
-            .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, ' ')
-            .trim()
-            .replace(/\s+/g, ' ')
-            .toUpperCase();
-        s = s.replace(/\b(WONER|ONWER)\b/g, 'OWNER');
-        return s;
-    };
 
     // Extract unique services dynamically for the Excel filter options
     const uniqueServices = Array.from(
