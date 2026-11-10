@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Key, RefreshCw, X, Search, CheckCircle, AlertTriangle, ShieldAlert, Smartphone, Globe, ExternalLink, Clock } from 'lucide-react';
+import { Key, RefreshCw, X, Search, CheckCircle, AlertTriangle, ShieldAlert, Smartphone, Globe, ExternalLink, Clock, Activity, LogIn, ShoppingBag } from 'lucide-react';
 
 interface OtpLog {
   id: number;
@@ -8,7 +8,7 @@ interface OtpLog {
   platform: string;
   account_email?: string;
   request_source?: string;
-  status: 'success' | 'not_found' | 'limit_reached' | 'manual_required' | 'unautomated' | 'error' | string;
+  status: 'success' | 'not_found' | 'limit_reached' | 'manual_required' | 'unautomated' | 'error' | 'portal_access' | 'otp_verified' | string;
   code_or_link?: string;
   message?: string;
   created_at: string;
@@ -43,7 +43,7 @@ export const OtpLogsModal: React.FC<OtpLogsModalProps> = ({ isOpen, onClose }) =
         }
       }
     } catch (e) {
-      console.error('Error fetching 2FA logs:', e);
+      console.error('Error fetching 2FA and portal logs:', e);
     } finally {
       if (!silent) setLoading(false);
     }
@@ -62,6 +62,7 @@ export const OtpLogsModal: React.FC<OtpLogsModalProps> = ({ isOpen, onClose }) =
   if (!isOpen) return null;
 
   const filteredLogs = logs.filter(log => {
+    if (filterStatus === 'portal' && !['portal_access', 'otp_verified'].includes(log.status)) return false;
     if (filterStatus === 'success' && log.status !== 'success') return false;
     if (filterStatus === 'not_found' && log.status !== 'not_found') return false;
     if (filterStatus === 'issues' && !['limit_reached', 'manual_required', 'unautomated', 'error'].includes(log.status)) return false;
@@ -75,6 +76,7 @@ export const OtpLogsModal: React.FC<OtpLogsModalProps> = ({ isOpen, onClose }) =
       (log.platform || '').toLowerCase().includes(q) ||
       (log.account_email || '').toLowerCase().includes(q) ||
       (log.code_or_link || '').toLowerCase().includes(q) ||
+      (log.message || '').toLowerCase().includes(q) ||
       (cleanSearch.length >= 4 && phone.includes(cleanSearch)) ||
       (log.phone || '').includes(q)
     );
@@ -91,6 +93,11 @@ export const OtpLogsModal: React.FC<OtpLogsModalProps> = ({ isOpen, onClose }) =
     }
   };
 
+  const portalCount = logs.filter(l => ['portal_access', 'otp_verified'].includes(l.status)).length;
+  const successCount = logs.filter(l => l.status === 'success').length;
+  const notFoundCount = logs.filter(l => l.status === 'not_found').length;
+  const issuesCount = logs.filter(l => ['limit_reached', 'manual_required', 'unautomated', 'error'].includes(l.status)).length;
+
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
       <div className="relative w-full max-w-5xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
@@ -99,17 +106,17 @@ export const OtpLogsModal: React.FC<OtpLogsModalProps> = ({ isOpen, onClose }) =
         <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/50">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-brand-primary/10 text-brand-primary border border-brand-primary/20">
-              <Key className="w-5 h-5" />
+              <Activity className="w-5 h-5 text-emerald-500" />
             </div>
             <div>
               <h3 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
-                Monitor de Códigos 2FA en Vivo
+                Monitor de Actividad en el Portal de Clientes
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                   En tiempo real
                 </span>
               </h3>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Historial de clientes que solicitaron códigos en la web o WhatsApp, errores de buzón y estados de entrega.
+                Historial en vivo de accesos al portal de cuentas, recepción post-compra y solicitudes de códigos 2FA.
               </p>
             </div>
           </div>
@@ -140,7 +147,7 @@ export const OtpLogsModal: React.FC<OtpLogsModalProps> = ({ isOpen, onClose }) =
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Buscar por cliente, teléfono, cuenta o servicio..."
+                placeholder="Buscar por cliente, teléfono, cuenta, servicio o mensaje..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-gray-200 dark:border-gray-750 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-primary font-medium"
@@ -156,22 +163,28 @@ export const OtpLogsModal: React.FC<OtpLogsModalProps> = ({ isOpen, onClose }) =
               Todos ({logs.length})
             </button>
             <button
+              onClick={() => setFilterStatus('portal')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${filterStatus === 'portal' ? 'bg-cyan-600 text-white shadow-xs' : 'bg-gray-100 dark:bg-gray-800 text-cyan-600 dark:text-cyan-400'}`}
+            >
+              🌐 Accesos Portal ({portalCount})
+            </button>
+            <button
               onClick={() => setFilterStatus('success')}
               className={`px-3 py-1.5 rounded-lg transition-all ${filterStatus === 'success' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-gray-100 dark:bg-gray-800 text-emerald-600 dark:text-emerald-400'}`}
             >
-              🟢 Entregados ({logs.filter(l => l.status === 'success').length})
+              🟢 2FA Entregados ({successCount})
             </button>
             <button
               onClick={() => setFilterStatus('not_found')}
               className={`px-3 py-1.5 rounded-lg transition-all ${filterStatus === 'not_found' ? 'bg-rose-600 text-white shadow-xs' : 'bg-gray-100 dark:bg-gray-800 text-rose-600 dark:text-rose-400'}`}
             >
-              🔴 No Encontrado ({logs.filter(l => l.status === 'not_found').length})
+              🔴 Sin Códigos ({notFoundCount})
             </button>
             <button
               onClick={() => setFilterStatus('issues')}
               className={`px-3 py-1.5 rounded-lg transition-all ${filterStatus === 'issues' ? 'bg-amber-600 text-white shadow-xs' : 'bg-gray-100 dark:bg-gray-800 text-amber-600 dark:text-amber-400'}`}
             >
-              ⚠️ Límites / Asesor ({logs.filter(l => ['limit_reached', 'manual_required', 'unautomated', 'error'].includes(l.status)).length})
+              ⚠️ Límites / Asesor ({issuesCount})
             </button>
           </div>
         </div>
@@ -180,8 +193,8 @@ export const OtpLogsModal: React.FC<OtpLogsModalProps> = ({ isOpen, onClose }) =
         <div className="flex-grow overflow-y-auto p-4">
           {filteredLogs.length === 0 ? (
             <div className="py-16 text-center text-gray-400 dark:text-gray-500">
-              <Key className="w-10 h-10 mx-auto mb-2 opacity-30" />
-              <p className="text-sm font-semibold">No se encontraron solicitudes 2FA registradas con estos filtros.</p>
+              <Activity className="w-10 h-10 mx-auto mb-2 opacity-30 text-emerald-500" />
+              <p className="text-sm font-semibold">No se encontraron actividades de clientes con estos filtros.</p>
             </div>
           ) : (
             <div className="overflow-x-auto rounded-2xl border border-gray-100 dark:border-gray-800">
@@ -192,7 +205,7 @@ export const OtpLogsModal: React.FC<OtpLogsModalProps> = ({ isOpen, onClose }) =
                     <th className="py-3 px-4">Cliente</th>
                     <th className="py-3 px-4">Servicio / Buzón</th>
                     <th className="py-3 px-4">Canal</th>
-                    <th className="py-3 px-4">Resultado / Código</th>
+                    <th className="py-3 px-4">Acción / Resultado</th>
                     <th className="py-3 px-4">Detalle</th>
                   </tr>
                 </thead>
@@ -202,6 +215,8 @@ export const OtpLogsModal: React.FC<OtpLogsModalProps> = ({ isOpen, onClose }) =
                     const isSuccess = log.status === 'success';
                     const isNotFound = log.status === 'not_found';
                     const isLimit = log.status === 'limit_reached';
+                    const isPortalAccess = log.status === 'portal_access';
+                    const isOtpVerified = log.status === 'otp_verified';
 
                     return (
                       <tr key={log.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40 transition-colors">
@@ -232,7 +247,7 @@ export const OtpLogsModal: React.FC<OtpLogsModalProps> = ({ isOpen, onClose }) =
                             {log.platform}
                           </span>
                           <span className="text-[11px] font-mono text-gray-500 dark:text-gray-400 block truncate max-w-[200px]" title={log.account_email}>
-                            {log.account_email || 'Sin correo'}
+                            {log.account_email || (isPortalAccess || isOtpVerified ? 'Portal Sheerit' : 'Sin correo')}
                           </span>
                         </td>
 
@@ -249,7 +264,15 @@ export const OtpLogsModal: React.FC<OtpLogsModalProps> = ({ isOpen, onClose }) =
                         </td>
 
                         <td className="py-3 px-4">
-                          {isSuccess ? (
+                          {isPortalAccess ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-300/40 font-bold text-xs">
+                              <ShoppingBag className="w-3.5 h-3.5" /> Acceso Post-Compra
+                            </span>
+                          ) : isOtpVerified ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-300/40 font-bold text-xs">
+                              <LogIn className="w-3.5 h-3.5" /> Login Portal (OTP)
+                            </span>
+                          ) : isSuccess ? (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40 font-mono font-bold text-xs">
                               <CheckCircle className="w-3.5 h-3.5" />
                               {log.code_or_link ? `Código: ${log.code_or_link}` : 'Entregado'}
@@ -269,7 +292,7 @@ export const OtpLogsModal: React.FC<OtpLogsModalProps> = ({ isOpen, onClose }) =
                           )}
                         </td>
 
-                        <td className="py-3 px-4 text-gray-500 dark:text-gray-400 text-[11px] max-w-xs truncate" title={log.message}>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-300 text-[11px] max-w-xs truncate" title={log.message}>
                           {log.message || '-'}
                         </td>
                       </tr>
@@ -283,7 +306,7 @@ export const OtpLogsModal: React.FC<OtpLogsModalProps> = ({ isOpen, onClose }) =
 
         {/* FOOTER */}
         <div className="px-6 py-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/60 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-          <span>Mostrando {filteredLogs.length} de {logs.length} solicitudes recientes.</span>
+          <span>Mostrando {filteredLogs.length} de {logs.length} actividades registradas.</span>
           <label className="flex items-center gap-2 cursor-pointer font-bold">
             <input
               type="checkbox"
@@ -299,3 +322,5 @@ export const OtpLogsModal: React.FC<OtpLogsModalProps> = ({ isOpen, onClose }) =
     </div>
   );
 };
+
+

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp, Maximize2, Minimize2, Archive, TrendingUp, Keyboard, Mic, Square, Trash2, Plus, History, Clock, Calendar } from 'lucide-react';
+import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp, Maximize2, Minimize2, Archive, TrendingUp, Keyboard, Mic, Square, Trash2, Plus, History, Clock, Calendar, Activity } from 'lucide-react';
 import { isDemoMode, DEMO_TICKETS } from '../utils/demoMode';
 import { OtpLogsModal } from './OtpLogsModal';
 
@@ -2073,10 +2073,10 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
           <button
             onClick={() => setShowOtpLogsModal(true)}
             className="p-2 text-gray-660 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors border dark:border-gray-700 flex items-center gap-1.5 text-xs font-bold"
-            title="Ver Solicitudes de Códigos 2FA en Vivo (Web y WhatsApp)"
+            title="Ver Actividad de Clientes en Vivo (Portal, Recepción de Cuentas y Códigos 2FA)"
           >
-            <Key className="w-4 h-4 text-amber-500" />
-            <span>Monitor 2FA</span>
+            <Activity className="w-4 h-4 text-emerald-500" />
+            <span>Actividad Clientes</span>
           </button>
           <button
             onClick={() => {

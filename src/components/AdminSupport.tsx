@@ -552,10 +552,10 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
 
         <button 
           onClick={() => setIsOtpLogsModalOpen(true)}
-          className="flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-all bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 shadow-xs"
-          title="Ver registro en vivo de clientes solicitando códigos 2FA y errores"
+          className="flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-all bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 shadow-xs"
+          title="Ver registro en vivo de actividad de clientes en el portal, entrega de cuentas y códigos 2FA"
         >
-          <Key className="w-5 h-5 mr-2" /> Monitor 2FA
+          <Activity className="w-5 h-5 mr-2 text-emerald-500" /> Actividad Clientes
         </button>
 
         <a 
