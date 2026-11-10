@@ -145,11 +145,14 @@ function AdminLoginOnApp({ onSuccess }: { onSuccess: () => void }) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
+            <label htmlFor="admin-login-email" className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
               Correo Electrónico
             </label>
             <input
+              id="admin-login-email"
+              name="email"
               type="email"
+              autoComplete="email"
               required
               placeholder="ejemplo@outlook.com"
               value={email}
@@ -159,11 +162,14 @@ function AdminLoginOnApp({ onSuccess }: { onSuccess: () => void }) {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
+            <label htmlFor="admin-login-password" className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
               Contraseña
             </label>
             <input
+              id="admin-login-password"
+              name="password"
               type="password"
+              autoComplete="current-password"
               required
               placeholder="••••••••"
               value={password}

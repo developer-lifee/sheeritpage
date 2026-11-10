@@ -184,10 +184,10 @@ export function CustomerFormModal({ platformName, platformPrice, onClose }: Cust
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-                <input type="text" name="firstName" placeholder="Nombre" value={customer.firstName} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
-                <input type="text" name="lastName" placeholder="Apellido" value={customer.lastName} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
-                <input type="email" name="email" placeholder="Email" value={customer.email} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
-                <input type="tel" name="whatsapp" placeholder="WhatsApp (Ej: 3001234567 o +52...)" value={customer.whatsapp} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
+                <input type="text" id="cust-first-name" name="firstName" autoComplete="given-name" placeholder="Nombre" value={customer.firstName} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
+                <input type="text" id="cust-last-name" name="lastName" autoComplete="family-name" placeholder="Apellido" value={customer.lastName} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
+                <input type="email" id="cust-email" name="email" autoComplete="email" placeholder="Email" value={customer.email} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
+                <input type="tel" id="cust-whatsapp" name="whatsapp" autoComplete="tel" placeholder="WhatsApp (Ej: 3001234567 o +52...)" value={customer.whatsapp} onChange={handleInputChange} className="w-full p-2 border rounded bg-white text-gray-800 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
                 <button 
                     type="submit" 
                     className="w-full py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-brand-dark disabled:opacity-50" 
