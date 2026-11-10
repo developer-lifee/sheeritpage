@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, User, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, Users, Columns, LogOut, Lock, Search, Send, Smile, Key, Home, ArrowLeft, ShieldAlert, Bot, Unlock, ChevronDown, ChevronUp, Maximize2, Minimize2, Archive, TrendingUp, Keyboard, Mic, Square, Trash2, Plus, History, Clock, Calendar } from 'lucide-react';
 import { isDemoMode, DEMO_TICKETS } from '../utils/demoMode';
+import { OtpLogsModal } from './OtpLogsModal';
 
 interface AccountInfo {
   streaming: string;
@@ -142,6 +143,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showOtpLogsModal, setShowOtpLogsModal] = useState(false);
 
   // States for Heavy Tickets (Internal Tasks)
   const [heavyTickets, setHeavyTickets] = useState<any[]>([]);
@@ -2068,6 +2070,14 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto">
+          <button
+            onClick={() => setShowOtpLogsModal(true)}
+            className="p-2 text-gray-660 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors border dark:border-gray-700 flex items-center gap-1.5 text-xs font-bold"
+            title="Ver Solicitudes de Códigos 2FA en Vivo (Web y WhatsApp)"
+          >
+            <Key className="w-4 h-4 text-amber-500" />
+            <span>Monitor 2FA</span>
+          </button>
           <button
             onClick={() => {
               setShowMetricsModal(true);
@@ -4503,6 +4513,12 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
           </div>
         </div>
       )}
+
+      {/* MODAL MONITOR DE SOLICITUDES 2FA / CÓDIGOS EN VIVO */}
+      <OtpLogsModal
+        isOpen={showOtpLogsModal}
+        onClose={() => setShowOtpLogsModal(false)}
+      />
     </div>
   );
 };

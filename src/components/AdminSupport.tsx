@@ -25,6 +25,7 @@ import { AccountingView } from './AccountingView';
 import { RemindersView } from './RemindersView';
 import { AIPanelAssistant } from './AIPanelAssistant';
 import { ErrorBoundary } from './ErrorBoundary';
+import { OtpLogsModal } from './OtpLogsModal';
 import { isDemoMode, disableDemoMode } from '../utils/demoMode';
 
 interface Step {
@@ -92,6 +93,7 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
   const [activePaymentsSubTab, setActivePaymentsSubTab] = useState<'calendar' | 'payroll'>('calendar');
   const [searchQuery, setSearchQuery] = useState('');
   const [externalQueryDate, setExternalQueryDate] = useState<string | undefined>(undefined);
+  const [isOtpLogsModalOpen, setIsOtpLogsModalOpen] = useState(false);
 
   // Evaluaciones de asesores y filtro de contratación
   const [evaluationsList, setEvaluationsList] = useState<any[]>([]);
@@ -546,6 +548,14 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           className={`flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'reminders' ? 'bg-brand-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}
         >
           <Bell className="w-5 h-5 mr-2" /> Recordatorios
+        </button>
+
+        <button 
+          onClick={() => setIsOtpLogsModalOpen(true)}
+          className="flex-shrink-0 flex items-center px-4 py-2 rounded-lg font-bold transition-all bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 shadow-xs"
+          title="Ver registro en vivo de clientes solicitando códigos 2FA y errores"
+        >
+          <Key className="w-5 h-5 mr-2" /> Monitor 2FA
         </button>
 
         <a 
@@ -1361,6 +1371,12 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
           setActiveTab('payments');
           setExternalQueryDate(dateStr || '2026-07-15');
         }}
+      />
+
+      {/* MODAL MONITOR 2FA EN VIVO */}
+      <OtpLogsModal
+        isOpen={isOtpLogsModalOpen}
+        onClose={() => setIsOtpLogsModalOpen(false)}
       />
     </div>
   );
