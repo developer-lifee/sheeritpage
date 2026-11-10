@@ -24,6 +24,7 @@ import { WebSalesView } from './WebSalesView';
 import { AccountingView } from './AccountingView';
 import { RemindersView } from './RemindersView';
 import { AIPanelAssistant } from './AIPanelAssistant';
+import { ErrorBoundary } from './ErrorBoundary';
 import { isDemoMode, disableDemoMode } from '../utils/demoMode';
 
 interface Step {
@@ -78,6 +79,16 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
     }
   };
   const [activeTab, setActiveTab] = useState<'support' | 'db' | 'studio' | 'netflix' | 'stats' | 'sales' | 'tickets' | 'gpt' | 'emails' | 'inventory' | 'availability' | 'alerts' | 'schedule' | 'payments' | 'streaming' | 'policies' | 'whatsapp' | 'prompts' | 'rpa' | 'web_sales' | 'accounting' | 'reminders'>('tickets');
+  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(new Set(['tickets']));
+
+  useEffect(() => {
+    setVisitedTabs(prev => {
+      if (prev.has(activeTab)) return prev;
+      const next = new Set(prev);
+      next.add(activeTab);
+      return next;
+    });
+  }, [activeTab]);
   const [activePaymentsSubTab, setActivePaymentsSubTab] = useState<'calendar' | 'payroll'>('calendar');
   const [searchQuery, setSearchQuery] = useState('');
   const [externalQueryDate, setExternalQueryDate] = useState<string | undefined>(undefined);
@@ -580,55 +591,162 @@ export function AdminSupport({ agentEmail, agentName, adminPassword = 'admin123'
         )}
       </div>
 
-      <div className={activeTab === 'tickets' ? '' : 'hidden'}><TicketsView agentEmail={agentEmail} agentName={agentName} onLogout={onLogout} /></div>
-      <div className={activeTab === 'db' ? '' : 'hidden'}><ClientsView /></div>
-      <div className={activeTab === 'studio' ? '' : 'hidden'}><DataStudioView /></div>
-      <div className={activeTab === 'netflix' ? '' : 'hidden'}><NetflixMatchView /></div>
-      <div className={activeTab === 'stats' ? '' : 'hidden'}><AnalyticsDashboard /></div>
-      <div className={activeTab === 'sales' ? '' : 'hidden'}><AddSaleForm /></div>
-      <div className={activeTab === 'web_sales' ? '' : 'hidden'}><WebSalesView /></div>
-      <div className={activeTab === 'accounting' ? '' : 'hidden'}><AccountingView /></div>
-      <div className={activeTab === 'gpt' ? 'space-y-8' : 'hidden'}>
-        <GptAccountsView />
-        <ManagedEmailsView />
-        <ProviderEmailsView />
+      <div className={activeTab === 'tickets' ? '' : 'hidden'}>
+        <ErrorBoundary fallbackTitle="Centro de Tickets">
+          <TicketsView agentEmail={agentEmail} agentName={agentName} onLogout={onLogout} />
+        </ErrorBoundary>
       </div>
-      <div className={activeTab === 'inventory' ? '' : 'hidden'}><InventoryAccountsView /></div>
-      <div className={activeTab === 'availability' ? '' : 'hidden'}><AvailabilityView /></div>
-      <div className={activeTab === 'alerts' ? '' : 'hidden'}><AccountAlertsView /></div>
-      <div className={activeTab === 'payments' ? 'space-y-8' : 'hidden'}>
-        <AgentScheduleView 
-          agentEmail={agentEmail} 
-          role={role} 
-          activeMainTab={activePaymentsSubTab} 
-          setActiveMainTab={setActivePaymentsSubTab} 
-          externalQueryDate={externalQueryDate}
-          onClearExternalQueryDate={() => setExternalQueryDate(undefined)}
-        />
-        {activePaymentsSubTab === 'payroll' && (
-          <>
-            <SupportScheduleView />
-            <PaymentConfigView />
-          </>
-        )}
-      </div>
-      <div className={activeTab === 'streaming' ? '' : 'hidden'}>
-        <StreamingView adminPassword={adminPassword} />
-      </div>
-      <div className={activeTab === 'policies' ? '' : 'hidden'}>
-        <PoliciesView />
-      </div>
+
+      {visitedTabs.has('db') && (
+        <div className={activeTab === 'db' ? '' : 'hidden'}>
+          <ErrorBoundary fallbackTitle="Base de Datos de Clientes">
+            <ClientsView />
+          </ErrorBoundary>
+        </div>
+      )}
+
+      {visitedTabs.has('studio') && (
+        <div className={activeTab === 'studio' ? '' : 'hidden'}>
+          <ErrorBoundary fallbackTitle="Data Studio (ER & SQL)">
+            <DataStudioView />
+          </ErrorBoundary>
+        </div>
+      )}
+
+      {visitedTabs.has('netflix') && (
+        <div className={activeTab === 'netflix' ? '' : 'hidden'}>
+          <ErrorBoundary fallbackTitle="Emparejador Netflix">
+            <NetflixMatchView />
+          </ErrorBoundary>
+        </div>
+      )}
+
+      {visitedTabs.has('stats') && (
+        <div className={activeTab === 'stats' ? '' : 'hidden'}>
+          <ErrorBoundary fallbackTitle="Analítica y Métricas">
+            <AnalyticsDashboard />
+          </ErrorBoundary>
+        </div>
+      )}
+
+      {visitedTabs.has('sales') && (
+        <div className={activeTab === 'sales' ? '' : 'hidden'}>
+          <ErrorBoundary fallbackTitle="Nueva Venta">
+            <AddSaleForm />
+          </ErrorBoundary>
+        </div>
+      )}
+
+      {visitedTabs.has('web_sales') && (
+        <div className={activeTab === 'web_sales' ? '' : 'hidden'}>
+          <ErrorBoundary fallbackTitle="Ventas Web">
+            <WebSalesView />
+          </ErrorBoundary>
+        </div>
+      )}
+
+      {visitedTabs.has('accounting') && (
+        <div className={activeTab === 'accounting' ? '' : 'hidden'}>
+          <ErrorBoundary fallbackTitle="Contabilidad y Flujo de Caja">
+            <AccountingView />
+          </ErrorBoundary>
+        </div>
+      )}
+
+      {visitedTabs.has('gpt') && (
+        <div className={activeTab === 'gpt' ? 'space-y-8' : 'hidden'}>
+          <ErrorBoundary fallbackTitle="Gestión de Cuentas GPT y Proveedores">
+            <GptAccountsView />
+            <ManagedEmailsView />
+            <ProviderEmailsView />
+          </ErrorBoundary>
+        </div>
+      )}
+
+      {visitedTabs.has('inventory') && (
+        <div className={activeTab === 'inventory' ? '' : 'hidden'}>
+          <ErrorBoundary fallbackTitle="Inventario de Cuentas">
+            <InventoryAccountsView />
+          </ErrorBoundary>
+        </div>
+      )}
+
+      {visitedTabs.has('availability') && (
+        <div className={activeTab === 'availability' ? '' : 'hidden'}>
+          <ErrorBoundary fallbackTitle="Disponibilidad y Cupos">
+            <AvailabilityView />
+          </ErrorBoundary>
+        </div>
+      )}
+
+      {visitedTabs.has('alerts') && (
+        <div className={activeTab === 'alerts' ? '' : 'hidden'}>
+          <ErrorBoundary fallbackTitle="Alertas de Cuentas">
+            <AccountAlertsView />
+          </ErrorBoundary>
+        </div>
+      )}
+
+      {visitedTabs.has('payments') && (
+        <div className={activeTab === 'payments' ? 'space-y-8' : 'hidden'}>
+          <ErrorBoundary fallbackTitle="Turnos y Liquidación">
+            <AgentScheduleView 
+              agentEmail={agentEmail} 
+              role={role} 
+              activeMainTab={activePaymentsSubTab} 
+              setActiveMainTab={setActivePaymentsSubTab} 
+              externalQueryDate={externalQueryDate}
+              onClearExternalQueryDate={() => setExternalQueryDate(undefined)}
+            />
+            {activePaymentsSubTab === 'payroll' && (
+              <>
+                <SupportScheduleView />
+                <PaymentConfigView />
+              </>
+            )}
+          </ErrorBoundary>
+        </div>
+      )}
+
+      {visitedTabs.has('streaming') && (
+        <div className={activeTab === 'streaming' ? '' : 'hidden'}>
+          <ErrorBoundary fallbackTitle="Streaming">
+            <StreamingView adminPassword={adminPassword} />
+          </ErrorBoundary>
+        </div>
+      )}
+
+      {visitedTabs.has('policies') && (
+        <div className={activeTab === 'policies' ? '' : 'hidden'}>
+          <ErrorBoundary fallbackTitle="Políticas">
+            <PoliciesView />
+          </ErrorBoundary>
+        </div>
+      )}
+
       {role === 'admin' && (
         <>
-          <div className={activeTab === 'whatsapp' ? '' : 'hidden'}>
-            <ConnectionView />
-          </div>
-          <div className={activeTab === 'prompts' ? '' : 'hidden'}>
-            <PromptsConfigView />
-          </div>
-          <div className={activeTab === 'rpa' ? '' : 'hidden'}>
-            <RpaAutomatorView />
-          </div>
+          {visitedTabs.has('whatsapp') && (
+            <div className={activeTab === 'whatsapp' ? '' : 'hidden'}>
+              <ErrorBoundary fallbackTitle="Conexión WhatsApp">
+                <ConnectionView />
+              </ErrorBoundary>
+            </div>
+          )}
+          {visitedTabs.has('prompts') && (
+            <div className={activeTab === 'prompts' ? '' : 'hidden'}>
+              <ErrorBoundary fallbackTitle="Prompts IA">
+                <PromptsConfigView />
+              </ErrorBoundary>
+            </div>
+          )}
+          {visitedTabs.has('rpa') && (
+            <div className={activeTab === 'rpa' ? '' : 'hidden'}>
+              <ErrorBoundary fallbackTitle="Automatización RPA">
+                <RpaAutomatorView />
+              </ErrorBoundary>
+            </div>
+          )}
         </>
       )}
 

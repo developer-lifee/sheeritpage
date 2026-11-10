@@ -553,6 +553,7 @@ export const ClientsView: React.FC = () => {
         }
         setSubmittingRenewal(true);
         const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
+        const currentAgent = localStorage.getItem('ticket_agent_name') || localStorage.getItem('ticket_agent_email') || 'Esteban';
         try {
             const res = await fetch(`${apiUrl}/api/admin/accounting/renewals/save`, {
                 method: 'POST',
@@ -560,6 +561,8 @@ export const ClientsView: React.FC = () => {
                 body: JSON.stringify({
                     renewalData: {
                         ...renewalForm,
+                        registered_by: currentAgent,
+                        payment_method: renewalForm.payment_method.trim() || (renewalForm.provider.toLowerCase().includes('net') ? 'Transferencia Bancaria' : 'Directo / Tarjeta'),
                         amount_paid: parseFloat(renewalForm.amount_paid as any) || 0
                     },
                     password: 'admin123'
@@ -2215,43 +2218,73 @@ export const ClientsView: React.FC = () => {
                         {/* Contenido del Formulario */}
                         <form onSubmit={handleSaveAccountRenewal} className="relative p-6 space-y-5">
                             {/* LIVE VIRTUAL CARD PREVIEW */}
-                            <div className="bg-gradient-to-tr from-slate-950 via-gray-900 to-emerald-950 border border-emerald-500/40 rounded-2xl p-5 shadow-2xl text-white relative overflow-hidden font-mono">
-                                <div className="bg-emerald-400/15 blur-xl w-32 h-32 rounded-full absolute -top-8 -right-8 pointer-events-none" />
+                            {(() => {
+                                const isTransfer = (renewalForm.provider || '').toLowerCase().includes('net') ||
+                                    (renewalForm.provider || '').toLowerCase().includes('transferencia') ||
+                                    (renewalForm.payment_method || '').toLowerCase().includes('transferencia') ||
+                                    (renewalForm.payment_method || '').toLowerCase().includes('nequi') ||
+                                    (renewalForm.payment_method || '').toLowerCase().includes('bancolombia');
 
-                                <div className="flex justify-between items-center mb-4 relative z-10">
-                                    {/* Chip metálico */}
-                                    <div className="w-10 h-7 rounded-md bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-600 shadow-md border border-amber-200/50 flex items-center justify-center">
-                                        <div className="w-8 h-5 border border-amber-700/30 rounded-xs flex flex-col justify-around py-0.5">
-                                            <div className="h-px bg-amber-800/40 w-full" />
-                                            <div className="h-px bg-amber-800/40 w-full" />
+                                return (
+                                    <div className={`border rounded-2xl p-5 shadow-2xl text-white relative overflow-hidden font-mono transition-all ${
+                                        isTransfer
+                                            ? 'bg-gradient-to-tr from-slate-950 via-blue-950 to-indigo-950 border-blue-500/40'
+                                            : 'bg-gradient-to-tr from-slate-950 via-gray-900 to-emerald-950 border-emerald-500/40'
+                                    }`}>
+                                        <div className={`blur-xl w-32 h-32 rounded-full absolute -top-8 -right-8 pointer-events-none ${
+                                            isTransfer ? 'bg-blue-400/15' : 'bg-emerald-400/15'
+                                        }`} />
+
+                                        <div className="flex justify-between items-center mb-4 relative z-10">
+                                            {isTransfer ? (
+                                                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-xs font-black">
+                                                    <span>📲 TRANSFERENCIA BANCARIA</span>
+                                                </div>
+                                            ) : (
+                                                /* Chip metálico */
+                                                <div className="w-10 h-7 rounded-md bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-600 shadow-md border border-amber-200/50 flex items-center justify-center">
+                                                    <div className="w-8 h-5 border border-amber-700/30 rounded-xs flex flex-col justify-around py-0.5">
+                                                        <div className="h-px bg-amber-800/40 w-full" />
+                                                        <div className="h-px bg-amber-800/40 w-full" />
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <span className={`px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase border shadow-xs ${
+                                                isTransfer
+                                                    ? 'bg-blue-500/20 text-blue-300 border-blue-400/30'
+                                                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30'
+                                            }`}>
+                                                {renewalForm.platform || 'PLATAFORMA'}
+                                            </span>
+                                        </div>
+
+                                        {/* Número / Detalle del método */}
+                                        <div className="text-sm sm:text-base font-bold tracking-widest text-emerald-100/90 mb-4 truncate drop-shadow-sm">
+                                            {renewalForm.payment_method || (isTransfer ? '📲 Transferencia Bancaria Directa (Sin tarjeta)' : '•••• •••• •••• •••• (Escribe la tarjeta abajo)')}
+                                        </div>
+
+                                        {/* Pie de la tarjeta */}
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 text-[11px] text-gray-300 border-t border-gray-700/60 pt-3 relative z-10">
+                                            <div className="truncate max-w-[240px]">
+                                                <span className="text-[9px] uppercase tracking-wider text-gray-400 block">Cuenta</span>
+                                                <span className="font-bold text-white truncate block">{renewalForm.account_email || 'correo@proveedor.com'}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-[9px] uppercase tracking-wider text-gray-400 block">Proveedor</span>
+                                                <span className={`font-bold ${isTransfer ? 'text-blue-300' : 'text-emerald-400'}`}>
+                                                    {renewalForm.provider || 'Directo'}
+                                                </span>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-[9px] uppercase tracking-wider text-gray-400 block">Nuevo Vencimiento</span>
+                                                <span className={`font-black ${isTransfer ? 'text-blue-200' : 'text-emerald-300'}`}>
+                                                    {renewalForm.expiration_date || 'AAAA-MM-DD'}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <span className="px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 shadow-xs">
-                                        {renewalForm.platform || 'PLATAFORMA'}
-                                    </span>
-                                </div>
-
-                                {/* Número / Detalle de la tarjeta */}
-                                <div className="text-sm sm:text-base font-bold tracking-widest text-emerald-100/90 mb-4 truncate drop-shadow-sm">
-                                    {renewalForm.payment_method || '•••• •••• •••• •••• (Escribe la tarjeta temporal abajo)'}
-                                </div>
-
-                                {/* Pie de la tarjeta */}
-                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 text-[11px] text-gray-300 border-t border-gray-700/60 pt-3 relative z-10">
-                                    <div className="truncate max-w-[240px]">
-                                        <span className="text-[9px] uppercase tracking-wider text-gray-400 block">Cuenta</span>
-                                        <span className="font-bold text-white truncate block">{renewalForm.account_email || 'correo@proveedor.com'}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-[9px] uppercase tracking-wider text-gray-400 block">Proveedor</span>
-                                        <span className="font-bold text-emerald-400">{renewalForm.provider || 'Directo'}</span>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="text-[9px] uppercase tracking-wider text-gray-400 block">Nuevo Vencimiento</span>
-                                        <span className="font-black text-emerald-300">{renewalForm.expiration_date || 'AAAA-MM-DD'}</span>
-                                    </div>
-                                </div>
-                            </div>
+                                );
+                            })()}
 
                             {/* Aviso de coincidencias en Excel */}
                             {matchingAccountRows.length > 0 && (
@@ -2323,24 +2356,46 @@ export const ClientsView: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* FILA 2: DATOS DE LA TARJETA TEMPORAL Y PROVEEDOR */}
+                            {/* FILA 2: DATOS DE MÉTODO DE PAGO / TARJETA TEMPORAL Y PROVEEDOR */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1.5">
-                                        Tarjeta Temporal / CCV / Expiración *
-                                    </label>
+                                    <div className="flex justify-between items-center mb-1.5">
+                                        <label className="text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                                            Método de Pago / Tarjeta
+                                        </label>
+                                        <span className="text-[10px] text-gray-400">
+                                            {(renewalForm.provider || '').toLowerCase().includes('net') ? 'Opcional si es transferencia' : 'Tarjeta o Medio'}
+                                        </span>
+                                    </div>
                                     <input
                                         type="text"
-                                        required
-                                        autoFocus
-                                        placeholder="Ej. Mastercard 6833 CCV 791 exp 08/28"
+                                        placeholder={(renewalForm.provider || '').toLowerCase().includes('net') ? "Ej. Transferencia Bancaria / Nequi / Comprobante" : "Ej. Mastercard 6833 CCV 791 exp 08/28"}
                                         value={renewalForm.payment_method}
                                         onChange={(e) => setRenewalForm({ ...renewalForm, payment_method: e.target.value })}
                                         className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium shadow-2xs"
                                     />
-                                    <span className="text-[10px] text-gray-400 mt-1 block">
-                                        Guarda número, CCV y fecha de la tarjeta temporal.
-                                    </span>
+                                    {/* Pills rápidas de método */}
+                                    <div className="flex flex-wrap gap-1.5 mt-2">
+                                        {[
+                                            { label: '💳 Tarjeta Virtual', val: 'Tarjeta Virtual' },
+                                            { label: '📲 Transferencia', val: 'Transferencia Bancaria' },
+                                            { label: '⚡ Nequi', val: 'Nequi' },
+                                            { label: '🏦 Bancolombia', val: 'Bancolombia' }
+                                        ].map(m => (
+                                            <button
+                                                key={m.val}
+                                                type="button"
+                                                onClick={() => setRenewalForm(prev => ({ ...prev, payment_method: m.val }))}
+                                                className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                                                    renewalForm.payment_method.includes(m.val)
+                                                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-blue-400'
+                                                }`}
+                                            >
+                                                {m.label}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
 
                                 <div>
@@ -2352,7 +2407,15 @@ export const ClientsView: React.FC = () => {
                                         required
                                         placeholder="Ej. Net, Transferencia, Directo..."
                                         value={renewalForm.provider}
-                                        onChange={(e) => setRenewalForm({ ...renewalForm, provider: e.target.value })}
+                                        onChange={(e) => {
+                                            const p = e.target.value;
+                                            const isNet = p.toLowerCase().includes('net');
+                                            setRenewalForm(prev => ({
+                                                ...prev,
+                                                provider: p,
+                                                payment_method: (isNet && !prev.payment_method) ? 'Transferencia Bancaria' : prev.payment_method
+                                            }));
+                                        }}
                                         className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
                                     />
                                     {/* Pills rápidas de proveedor */}
@@ -2361,7 +2424,14 @@ export const ClientsView: React.FC = () => {
                                             <button
                                                 key={p}
                                                 type="button"
-                                                onClick={() => setRenewalForm({ ...renewalForm, provider: p })}
+                                                onClick={() => {
+                                                    const isNet = p.toLowerCase().includes('net') || p.toLowerCase().includes('transferencia');
+                                                    setRenewalForm(prev => ({
+                                                        ...prev,
+                                                        provider: p,
+                                                        payment_method: (isNet && (!prev.payment_method || prev.payment_method.includes('Tarjeta'))) ? 'Transferencia Bancaria' : prev.payment_method
+                                                    }));
+                                                }}
                                                 className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${renewalForm.provider === p
                                                         ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
                                                         : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-emerald-500'

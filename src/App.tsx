@@ -690,17 +690,19 @@ function AppContent() {
 
       {currentView === 'admin' && (
         isAdminAuth ? (
-          <AdminSupport 
-            agentEmail={localStorage.getItem('ticket_agent_email') || ''}
-            agentName={localStorage.getItem('ticket_agent_name') || ''}
-            adminPassword={localStorage.getItem('ticket_agent_password') || ''}
-            onLogout={() => {
-              localStorage.removeItem('ticket_agent_email');
-              localStorage.removeItem('ticket_agent_name');
-              localStorage.removeItem('ticket_agent_password');
-              setIsAdminAuth(false);
-            }}
-          />
+          <ErrorBoundary fallbackTitle="Panel de Control y Administración">
+            <AdminSupport 
+              agentEmail={localStorage.getItem('ticket_agent_email') || ''}
+              agentName={localStorage.getItem('ticket_agent_name') || ''}
+              adminPassword={localStorage.getItem('ticket_agent_password') || ''}
+              onLogout={() => {
+                localStorage.removeItem('ticket_agent_email');
+                localStorage.removeItem('ticket_agent_name');
+                localStorage.removeItem('ticket_agent_password');
+                setIsAdminAuth(false);
+              }}
+            />
+          </ErrorBoundary>
         ) : (
           <AdminLoginOnApp onSuccess={() => setIsAdminAuth(true)} />
         )
