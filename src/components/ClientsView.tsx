@@ -158,13 +158,170 @@ export const ClientsView: React.FC = () => {
     const [generalSearch, setGeneralSearch] = useState('');
 
     // Column Popover States
-    const [activePopover, setActivePopover] = useState<string | null>(null);
+    const [activePopover, setActivePopover] = useState<'nombre' | 'numero' | 'correo' | null>(null);
 
-    // Column Filters States
-    const [filterName, setFilterName] = useState('');
-    const [filterPhone, setFilterPhone] = useState('');
+    // Column Filters States (Supports dual-conditions: Term 1 + OR/AND + Term 2)
+    interface DualColumnFilter {
+        term1: string;
+        operator: 'OR' | 'AND';
+        term2: string;
+    }
+
+    const [filterName, setFilterName] = useState<DualColumnFilter>({ term1: '', operator: 'OR', term2: '' });
+    const [filterPhone, setFilterPhone] = useState<DualColumnFilter>({ term1: '', operator: 'OR', term2: '' });
     const [filterServices, setFilterServices] = useState<string[]>([]);
-    const [filterEmail, setFilterEmail] = useState('');
+    const [filterEmail, setFilterEmail] = useState<DualColumnFilter>({ term1: '', operator: 'OR', term2: '' });
+
+    // Draft State for whichever filter popover is currently open
+    const [draftFilter, setDraftFilter] = useState<DualColumnFilter>({ term1: '', operator: 'OR', term2: '' });
+
+    const openFilterPopover = (column: 'nombre' | 'numero' | 'correo') => {
+        if (activePopover === column) {
+            setActivePopover(null);
+            return;
+        }
+        if (column === 'nombre') setDraftFilter({ ...filterName });
+        if (column === 'numero') setDraftFilter({ ...filterPhone });
+        if (column === 'correo') setDraftFilter({ ...filterEmail });
+        setActivePopover(column);
+    };
+
+    const handleApplyFilter = (column: 'nombre' | 'numero' | 'correo') => {
+        if (column === 'nombre') setFilterName({ ...draftFilter });
+        if (column === 'numero') setFilterPhone({ ...draftFilter });
+        if (column === 'correo') setFilterEmail({ ...draftFilter });
+        setActivePopover(null);
+    };
+
+    const handleClearFilter = (column: 'nombre' | 'numero' | 'correo') => {
+        const empty: DualColumnFilter = { term1: '', operator: 'OR', term2: '' };
+        setDraftFilter(empty);
+        if (column === 'nombre') setFilterName(empty);
+        if (column === 'numero') setFilterPhone(empty);
+        if (column === 'correo') setFilterEmail(empty);
+        setActivePopover(null);
+    };
+
+    const isFilterActive = (f: DualColumnFilter) => Boolean(f.term1.trim() || f.term2.trim());
+
+    const renderColumnFilterPopover = (
+        columnKey: 'nombre' | 'numero' | 'correo',
+        title: string,
+        alignRight = false,
+        placeholder1 = 'Primer valor a buscar...',
+        placeholder2 = 'Segundo valor (opcional)...'
+    ) => (
+        <div 
+            ref={columnPopoverRef}
+            className={`absolute ${alignRight ? 'right-0' : 'left-0'} mt-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl p-3.5 z-50 animate-fadeIn text-left font-normal`}
+        >
+            <div className="flex justify-between items-center mb-2.5">
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider flex items-center gap-1.5">
+                    <Filter className="w-3.5 h-3.5 text-brand-primary" /> Filtro: {title}
+                </span>
+                <button 
+                    type="button" 
+                    onClick={() => setActivePopover(null)} 
+                    className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                >
+                    <X className="w-3.5 h-3.5" />
+                </button>
+            </div>
+
+            <div className="space-y-1 mb-2">
+                <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Condición 1:
+                </label>
+                <div className="relative">
+                    <input
+                        type="text"
+                        value={draftFilter.term1}
+                        onChange={(e) => setDraftFilter(prev => ({ ...prev, term1: e.target.value }))}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleApplyFilter(columnKey);
+                            if (e.key === 'Escape') setActivePopover(null);
+                        }}
+                        placeholder={placeholder1}
+                        className="px-3 py-1.5 text-xs w-full border rounded-lg dark:bg-gray-750 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-primary font-medium pr-7"
+                        autoFocus
+                    />
+                    {draftFilter.term1 && (
+                        <button
+                            type="button"
+                            onClick={() => setDraftFilter(prev => ({ ...prev, term1: '' }))}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 cursor-pointer"
+                            title="Borrar texto"
+                        >
+                            <X className="w-3.5 h-3.5" />
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-1.5 py-1 mb-2 bg-gray-50 dark:bg-gray-900/60 rounded-lg p-1 border border-gray-100 dark:border-gray-700/60">
+                <button
+                    type="button"
+                    onClick={() => setDraftFilter(prev => ({ ...prev, operator: 'OR' }))}
+                    className={`flex-1 py-1 text-[11px] font-bold rounded-md transition-all cursor-pointer ${draftFilter.operator === 'OR' ? 'bg-brand-primary text-white shadow-xs' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'}`}
+                >
+                    O (Cualquiera)
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setDraftFilter(prev => ({ ...prev, operator: 'AND' }))}
+                    className={`flex-1 py-1 text-[11px] font-bold rounded-md transition-all cursor-pointer ${draftFilter.operator === 'AND' ? 'bg-brand-primary text-white shadow-xs' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'}`}
+                >
+                    Y (Ambos)
+                </button>
+            </div>
+
+            <div className="space-y-1 mb-3">
+                <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Condición 2 (Opcional):
+                </label>
+                <div className="relative">
+                    <input
+                        type="text"
+                        value={draftFilter.term2}
+                        onChange={(e) => setDraftFilter(prev => ({ ...prev, term2: e.target.value }))}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleApplyFilter(columnKey);
+                            if (e.key === 'Escape') setActivePopover(null);
+                        }}
+                        placeholder={placeholder2}
+                        className="px-3 py-1.5 text-xs w-full border rounded-lg dark:bg-gray-750 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-primary font-medium pr-7"
+                    />
+                    {draftFilter.term2 && (
+                        <button
+                            type="button"
+                            onClick={() => setDraftFilter(prev => ({ ...prev, term2: '' }))}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 cursor-pointer"
+                            title="Borrar texto"
+                        >
+                            <X className="w-3.5 h-3.5" />
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            <div className="pt-2.5 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
+                <button 
+                    type="button"
+                    onClick={() => handleClearFilter(columnKey)} 
+                    className="text-xs text-red-500 hover:text-red-600 hover:underline font-semibold cursor-pointer px-1"
+                >
+                    Limpiar
+                </button>
+                <button
+                    type="button"
+                    onClick={() => handleApplyFilter(columnKey)}
+                    className="px-3.5 py-1.5 bg-brand-primary hover:bg-brand-primary/90 text-white rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
+                >
+                    <Check className="w-3.5 h-3.5" /> Aplicar Filtro
+                </button>
+            </div>
+        </div>
+    );
 
     // Expiration Status Filter (Excel selector style)
     const [filterPaymentStatus, setFilterPaymentStatus] = useState('todos');
@@ -446,19 +603,67 @@ export const ClientsView: React.FC = () => {
             String(c.correo || '').toLowerCase().includes(generalSearch.toLowerCase()) ||
             String(c.rowNumber || '').includes(generalSearch);
 
+        // Helper to check text against DualColumnFilter
+        const checkDualText = (value: any, filter: DualColumnFilter) => {
+            const t1 = filter.term1.trim().toLowerCase();
+            const t2 = filter.term2.trim().toLowerCase();
+            if (!t1 && !t2) return true;
+            const text = String(value || '').toLowerCase();
+
+            const matchSingle = (term: string) => {
+                if (!term) return false;
+                const subs = term.split(',').map(s => s.trim()).filter(Boolean);
+                if (subs.length > 1) return subs.some(s => text.includes(s));
+                return text.includes(term);
+            };
+
+            if (t1 && !t2) return matchSingle(t1);
+            if (!t1 && t2) return matchSingle(t2);
+
+            const m1 = matchSingle(t1);
+            const m2 = matchSingle(t2);
+            return filter.operator === 'AND' ? (m1 && m2) : (m1 || m2);
+        };
+
+        // Helper to check phone against DualColumnFilter
+        const checkDualPhone = (phone: any, filter: DualColumnFilter) => {
+            const t1 = filter.term1.trim().toLowerCase();
+            const t2 = filter.term2.trim().toLowerCase();
+            if (!t1 && !t2) return true;
+            const rawPhone = String(phone || '').toLowerCase();
+            const cleanDigits = rawPhone.replace(/\D/g, '');
+
+            const matchSingle = (term: string) => {
+                if (!term) return false;
+                const subs = term.split(',').map(s => s.trim()).filter(Boolean);
+                if (subs.length > 1) {
+                    return subs.some(s => {
+                        const cleanS = s.replace(/\D/g, '');
+                        return rawPhone.includes(s) || (cleanS.length >= 4 && cleanDigits.includes(cleanS));
+                    });
+                }
+                const cleanT = term.replace(/\D/g, '');
+                return rawPhone.includes(term) || (cleanT.length >= 4 && cleanDigits.includes(cleanT));
+            };
+
+            if (t1 && !t2) return matchSingle(t1);
+            if (!t1 && t2) return matchSingle(t2);
+
+            const m1 = matchSingle(t1);
+            const m2 = matchSingle(t2);
+            return filter.operator === 'AND' ? (m1 && m2) : (m1 || m2);
+        };
+
         // Column level filters matches
-        const nameMatches = !filterName || fullName.toLowerCase().includes(filterName.toLowerCase());
-        const cleanFilterPhone = filterPhone.replace(/\D/g, '');
-        const phoneMatches = !filterPhone || 
-            phoneVal.includes(filterPhone) || 
-            (cleanFilterPhone.length >= 4 && cleanPhoneVal.includes(cleanFilterPhone));
+        const nameMatches = checkDualText(fullName, filterName);
+        const phoneMatches = checkDualPhone(phoneVal, filterPhone);
 
         // Service matches: exact match on normalized service name (supports multi-selection, e.g. APPLE TV and APPLE ONE)
         const normClientService = normalizeServiceName(c.Streaming);
         const serviceMatches = filterServices.length === 0 || 
             filterServices.some(s => normalizeServiceName(s) === normClientService);
 
-        const emailMatches = !filterEmail || String(c.correo || '').toLowerCase().includes(filterEmail.toLowerCase());
+        const emailMatches = checkDualText(c.correo, filterEmail);
 
         return statusMatches && generalMatches && nameMatches && phoneMatches && serviceMatches && emailMatches;
     });
@@ -1136,154 +1341,36 @@ export const ClientsView: React.FC = () => {
                                 <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300 relative">
                                     <div className="flex items-center justify-between gap-1.5">
                                         <span>Nombre</span>
-                                        <Filter 
-                                            className={`w-3.5 h-3.5 cursor-pointer transition-colors column-filter-btn ${filterName ? 'text-brand-primary fill-brand-primary/20' : 'text-gray-450 hover:text-brand-primary'}`} 
-                                            onClick={() => setActivePopover(activePopover === 'nombre' ? null : 'nombre')} 
-                                            title="Filtrar por nombre"
-                                        />
-                                    </div>
-                                    {activePopover === 'nombre' && (
-                                        <div 
-                                            ref={columnPopoverRef}
-                                            className="absolute left-0 mt-2 w-64 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-xl shadow-2xl p-3.5 z-50 animate-fadeIn"
-                                        >
-                                            <div className="flex justify-between items-center mb-2.5">
-                                                <span className="text-xs font-bold text-gray-600 dark:text-gray-350 uppercase tracking-wider flex items-center gap-1.5">
-                                                    <Filter className="w-3.5 h-3.5 text-brand-primary" /> Filtro por Nombre
-                                                </span>
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => setActivePopover(null)} 
-                                                    className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                                                >
-                                                    <X className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-                                            <div className="relative">
-                                                <input
-                                                    type="text"
-                                                    value={filterName}
-                                                    onChange={(e) => setFilterName(e.target.value)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' || e.key === 'Escape') setActivePopover(null);
-                                                    }}
-                                                    placeholder="Buscar por nombre..."
-                                                    className="px-3 py-2 text-xs w-full border rounded-lg dark:bg-gray-750 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-primary font-medium pr-7"
-                                                    autoFocus
-                                                />
-                                                {filterName && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setFilterName('')}
-                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 cursor-pointer"
-                                                        title="Borrar texto"
-                                                    >
-                                                        <X className="w-3.5 h-3.5" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                                                <span className="text-[11px] text-gray-400 dark:text-gray-400 font-medium">
-                                                    {filtered.length} {filtered.length === 1 ? 'resultado' : 'resultados'}
-                                                </span>
-                                                <div className="flex items-center gap-2">
-                                                    {filterName && (
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => setFilterName('')} 
-                                                            className="text-xs text-red-500 hover:underline font-medium cursor-pointer"
-                                                        >
-                                                            Limpiar
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setActivePopover(null)}
-                                                        className="px-3 py-1 bg-brand-primary hover:bg-brand-primary/90 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer"
-                                                    >
-                                                        Listo
-                                                    </button>
-                                                </div>
-                                            </div>
+                                        <div className="flex items-center gap-1">
+                                            {isFilterActive(filterName) && (
+                                                <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" title="Filtro activo" />
+                                            )}
+                                            <Filter 
+                                                className={`w-3.5 h-3.5 cursor-pointer transition-colors column-filter-btn ${isFilterActive(filterName) ? 'text-brand-primary fill-brand-primary/20' : 'text-gray-450 hover:text-brand-primary'}`} 
+                                                onClick={() => openFilterPopover('nombre')} 
+                                                title="Filtrar por nombre"
+                                            />
                                         </div>
-                                    )}
+                                    </div>
+                                    {activePopover === 'nombre' && renderColumnFilterPopover('nombre', 'Nombre', false, 'Buscar por nombre ej: Juan...', 'Segundo nombre o apellido...')}
                                 </th>
 
                                 {/* NUMERO COLUMN HEADER */}
                                 <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300 relative">
                                     <div className="flex items-center justify-between gap-1.5">
                                         <span>Número</span>
-                                        <Filter 
-                                            className={`w-3.5 h-3.5 cursor-pointer transition-colors column-filter-btn ${filterPhone ? 'text-brand-primary fill-brand-primary/20' : 'text-gray-450 hover:text-brand-primary'}`} 
-                                            onClick={() => setActivePopover(activePopover === 'numero' ? null : 'numero')} 
-                                            title="Filtrar por teléfono"
-                                        />
-                                    </div>
-                                    {activePopover === 'numero' && (
-                                        <div 
-                                            ref={columnPopoverRef}
-                                            className="absolute left-0 mt-2 w-64 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-xl shadow-2xl p-3.5 z-50 animate-fadeIn"
-                                        >
-                                            <div className="flex justify-between items-center mb-2.5">
-                                                <span className="text-xs font-bold text-gray-600 dark:text-gray-350 uppercase tracking-wider flex items-center gap-1.5">
-                                                    <Filter className="w-3.5 h-3.5 text-brand-primary" /> Filtro por Número
-                                                </span>
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => setActivePopover(null)} 
-                                                    className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                                                >
-                                                    <X className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-                                            <div className="relative">
-                                                <input
-                                                    type="text"
-                                                    value={filterPhone}
-                                                    onChange={(e) => setFilterPhone(e.target.value)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' || e.key === 'Escape') setActivePopover(null);
-                                                    }}
-                                                    placeholder="Buscar por número..."
-                                                    className="px-3 py-2 text-xs w-full border rounded-lg dark:bg-gray-750 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-primary font-medium pr-7"
-                                                    autoFocus
-                                                />
-                                                {filterPhone && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setFilterPhone('')}
-                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 cursor-pointer"
-                                                        title="Borrar texto"
-                                                    >
-                                                        <X className="w-3.5 h-3.5" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                                                <span className="text-[11px] text-gray-400 dark:text-gray-400 font-medium">
-                                                    {filtered.length} {filtered.length === 1 ? 'resultado' : 'resultados'}
-                                                </span>
-                                                <div className="flex items-center gap-2">
-                                                    {filterPhone && (
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => setFilterPhone('')} 
-                                                            className="text-xs text-red-500 hover:underline font-medium cursor-pointer"
-                                                        >
-                                                            Limpiar
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setActivePopover(null)}
-                                                        className="px-3 py-1 bg-brand-primary hover:bg-brand-primary/90 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer"
-                                                    >
-                                                        Listo
-                                                    </button>
-                                                </div>
-                                            </div>
+                                        <div className="flex items-center gap-1">
+                                            {isFilterActive(filterPhone) && (
+                                                <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" title="Filtro activo" />
+                                            )}
+                                            <Filter 
+                                                className={`w-3.5 h-3.5 cursor-pointer transition-colors column-filter-btn ${isFilterActive(filterPhone) ? 'text-brand-primary fill-brand-primary/20' : 'text-gray-450 hover:text-brand-primary'}`} 
+                                                onClick={() => openFilterPopover('numero')} 
+                                                title="Filtrar por teléfono"
+                                            />
                                         </div>
-                                    )}
+                                    </div>
+                                    {activePopover === 'numero' && renderColumnFilterPopover('numero', 'Número', false, 'Buscar por número ej: 300...', 'Segundo número alternativo...')}
                                 </th>
 
                                 {/* CONTRASEÑA COLUMN HEADER */}
@@ -1295,77 +1382,18 @@ export const ClientsView: React.FC = () => {
                                 <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300 relative">
                                     <div className="flex items-center justify-between gap-1.5">
                                         <span>Cuenta / Correo</span>
-                                        <Filter 
-                                            className={`w-3.5 h-3.5 cursor-pointer transition-colors column-filter-btn ${filterEmail ? 'text-brand-primary fill-brand-primary/20' : 'text-gray-450 hover:text-brand-primary'}`} 
-                                            onClick={() => setActivePopover(activePopover === 'correo' ? null : 'correo')} 
-                                            title="Filtrar por correo"
-                                        />
-                                    </div>
-                                    {activePopover === 'correo' && (
-                                        <div 
-                                            ref={columnPopoverRef}
-                                            className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-xl shadow-2xl p-3.5 z-50 animate-fadeIn"
-                                        >
-                                            <div className="flex justify-between items-center mb-2.5">
-                                                <span className="text-xs font-bold text-gray-600 dark:text-gray-350 uppercase tracking-wider flex items-center gap-1.5">
-                                                    <Filter className="w-3.5 h-3.5 text-brand-primary" /> Filtro por Correo
-                                                </span>
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => setActivePopover(null)} 
-                                                    className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                                                >
-                                                    <X className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-                                            <div className="relative">
-                                                <input
-                                                    type="text"
-                                                    value={filterEmail}
-                                                    onChange={(e) => setFilterEmail(e.target.value)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' || e.key === 'Escape') setActivePopover(null);
-                                                    }}
-                                                    placeholder="Buscar por correo..."
-                                                    className="px-3 py-2 text-xs w-full border rounded-lg dark:bg-gray-750 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-primary font-medium pr-7"
-                                                    autoFocus
-                                                />
-                                                {filterEmail && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setFilterEmail('')}
-                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 cursor-pointer"
-                                                        title="Borrar texto"
-                                                    >
-                                                        <X className="w-3.5 h-3.5" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                                                <span className="text-[11px] text-gray-400 dark:text-gray-400 font-medium">
-                                                    {filtered.length} {filtered.length === 1 ? 'resultado' : 'resultados'}
-                                                </span>
-                                                <div className="flex items-center gap-2">
-                                                    {filterEmail && (
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => setFilterEmail('')} 
-                                                            className="text-xs text-red-500 hover:underline font-medium cursor-pointer"
-                                                        >
-                                                            Limpiar
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setActivePopover(null)}
-                                                        className="px-3 py-1 bg-brand-primary hover:bg-brand-primary/90 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer"
-                                                    >
-                                                        Listo
-                                                    </button>
-                                                </div>
-                                            </div>
+                                        <div className="flex items-center gap-1">
+                                            {isFilterActive(filterEmail) && (
+                                                <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" title="Filtro activo" />
+                                            )}
+                                            <Filter 
+                                                className={`w-3.5 h-3.5 cursor-pointer transition-colors column-filter-btn ${isFilterActive(filterEmail) ? 'text-brand-primary fill-brand-primary/20' : 'text-gray-450 hover:text-brand-primary'}`} 
+                                                onClick={() => openFilterPopover('correo')} 
+                                                title="Filtrar por correo"
+                                            />
                                         </div>
-                                    )}
+                                    </div>
+                                    {activePopover === 'correo' && renderColumnFilterPopover('correo', 'Cuenta / Correo', true, 'Buscar correo ej: sheers...', 'Segundo correo o dominio...')}
                                 </th>
 
                                 <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">Vencimiento</th>
