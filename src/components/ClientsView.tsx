@@ -2272,44 +2272,62 @@ export const ClientsView: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* FILA 1: PLATAFORMA Y CORREO */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1.5">
-                                        Plataforma Streaming *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="Ej. AMAZON, NETFLIX, SPOTIFY..."
-                                        value={renewalForm.platform}
-                                        onChange={(e) => setRenewalForm({ ...renewalForm, platform: e.target.value.toUpperCase() })}
-                                        className="w-full px-3.5 py-2.5 text-xs font-bold rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 uppercase"
-                                    />
+                            {/* SECCIÓN CUENTA MATRIZ: AHORRA LOS 2 INPUTS SI YA VIENE SELECCIONADA */}
+                            {renewalForm.account_email ? (
+                                <div className="p-3.5 bg-gradient-to-r from-gray-50 via-gray-100 to-emerald-50/30 dark:from-gray-800/90 dark:via-gray-800 dark:to-emerald-950/20 border border-gray-200 dark:border-gray-700/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <span className="px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs flex-shrink-0">
+                                            {renewalForm.platform || 'STREAMING'}
+                                        </span>
+                                        <div className="min-w-0">
+                                            <span className="text-xs font-mono font-bold text-gray-900 dark:text-white block truncate">
+                                                {renewalForm.account_email}
+                                            </span>
+                                            {matchingAccountRows.length > 0 ? (
+                                                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block">
+                                                    ✨ {matchingAccountRows.length} cupo(s) en Excel se actualizarán automáticamente con este pago.
+                                                </span>
+                                            ) : (
+                                                <span className="text-[10px] text-gray-400 block">Cuenta matriz lista para renovar</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setRenewalForm(prev => ({ ...prev, account_email: '', platform: '' }))}
+                                        className="text-[11px] font-bold text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline cursor-pointer flex-shrink-0 ml-auto"
+                                    >
+                                        Cambiar cuenta
+                                    </button>
                                 </div>
-
-                                <div>
-                                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1.5">
-                                        Correo de Cuenta Matriz *
+                            ) : (
+                                /* Selector de cuenta si abrió el modal desde el botón general */
+                                <div className="p-4 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-2xl space-y-2">
+                                    <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                                        Selecciona la Cuenta Matriz a Renovar *
                                     </label>
-                                    <input
-                                        type="email"
-                                        required
-                                        list="unique-accounts-list"
-                                        placeholder="Ej. sheerit102@gmail.com"
-                                        value={renewalForm.account_email}
-                                        onChange={(e) => setRenewalForm({ ...renewalForm, account_email: e.target.value.toLowerCase().trim() })}
-                                        className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                    />
-                                    <datalist id="unique-accounts-list">
+                                    <select
+                                        value={renewalForm.account_email ? `${renewalForm.platform}:::${renewalForm.account_email}` : ''}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (!val) {
+                                                setRenewalForm(prev => ({ ...prev, platform: '', account_email: '' }));
+                                                return;
+                                            }
+                                            const [plat, em] = val.split(':::');
+                                            setRenewalForm(prev => ({ ...prev, platform: plat, account_email: em }));
+                                        }}
+                                        className="w-full px-3.5 py-2.5 text-xs font-semibold rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-750 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                                    >
+                                        <option value="">-- Elige una cuenta existente ({uniqueAccountOptions.length} cuentas) --</option>
                                         {uniqueAccountOptions.map((acc, idx) => (
-                                            <option key={idx} value={acc.email}>
-                                                {acc.platform} ({acc.count} perfiles)
+                                            <option key={idx} value={`${acc.platform}:::${acc.email}`}>
+                                                [{acc.platform}] {acc.email} ({acc.count} perfiles en Excel)
                                             </option>
                                         ))}
-                                    </datalist>
+                                    </select>
                                 </div>
-                            </div>
+                            )}
 
                             {/* FILA 2: DATOS DE LA TARJETA TEMPORAL Y PROVEEDOR */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2320,13 +2338,14 @@ export const ClientsView: React.FC = () => {
                                     <input
                                         type="text"
                                         required
+                                        autoFocus
                                         placeholder="Ej. Mastercard 6833 CCV 791 exp 08/28"
                                         value={renewalForm.payment_method}
                                         onChange={(e) => setRenewalForm({ ...renewalForm, payment_method: e.target.value })}
-                                        className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                                        className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium shadow-2xs"
                                     />
                                     <span className="text-[10px] text-gray-400 mt-1 block">
-                                        Guarda aquí número, CCV y fecha de la tarjeta temporal.
+                                        Guarda número, CCV y fecha de la tarjeta temporal.
                                     </span>
                                 </div>
 
@@ -2374,7 +2393,7 @@ export const ClientsView: React.FC = () => {
                                         placeholder="Ej. 14000"
                                         value={renewalForm.amount_paid}
                                         onChange={(e) => setRenewalForm({ ...renewalForm, amount_paid: e.target.value })}
-                                        className="w-full px-3.5 py-2.5 text-sm font-black text-rose-500 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                                        className="w-full px-3.5 py-2.5 text-sm font-black text-rose-500 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-rose-500 shadow-2xs"
                                     />
                                 </div>
 
@@ -2427,48 +2446,27 @@ export const ClientsView: React.FC = () => {
                                         required
                                         value={renewalForm.expiration_date}
                                         onChange={(e) => setRenewalForm({ ...renewalForm, expiration_date: e.target.value })}
-                                        className="w-full px-3.5 py-2.5 text-xs font-black text-emerald-600 dark:text-emerald-400 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                                        className="w-full px-3.5 py-2.5 text-xs font-black text-emerald-600 dark:text-emerald-400 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono shadow-2xs"
                                     />
                                 </div>
                             </div>
 
-                            {/* FILA 4: AUTOMATIZACIONES CON TOGGLES MODERNOS */}
-                            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-850/80 border border-gray-200/80 dark:border-gray-750 space-y-3">
-                                <label className="flex items-center justify-between cursor-pointer group">
-                                    <div className="space-y-0.5 pr-4">
-                                        <span className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                                            💰 Registrar en Flujo de Caja Real (Contabilidad)
+                            {/* FILA 4: GARANTÍA DE SINCRONIZACIÓN TOTAL CON EXCEL Y CONTABILIDAD */}
+                            <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/5 border border-emerald-500/30 flex items-center justify-between gap-3 shadow-xs">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                                        <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                                            Sincronización Total Garantizada (Excel Online & Contabilidad)
                                         </span>
-                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                                            Asienta el egreso exacto de forma automática en el libro mensual de finanzas.
-                                        </p>
                                     </div>
-                                    <input
-                                        type="checkbox"
-                                        checked={renewalForm.sync_to_cash_flow}
-                                        onChange={(e) => setRenewalForm({ ...renewalForm, sync_to_cash_flow: e.target.checked })}
-                                        className="w-5 h-5 rounded-md text-emerald-600 focus:ring-emerald-500 cursor-pointer flex-shrink-0"
-                                    />
-                                </label>
-
-                                <div className="border-t border-gray-200/60 dark:border-gray-750" />
-
-                                <label className="flex items-center justify-between cursor-pointer group">
-                                    <div className="space-y-0.5 pr-4">
-                                        <span className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                                            📊 Actualizar fecha de vencimiento en Excel Online (OneDrive)
-                                        </span>
-                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                                            Modifica en vivo la celda de vencimiento para todas las filas de esta cuenta en la matriz.
-                                        </p>
-                                    </div>
-                                    <input
-                                        type="checkbox"
-                                        checked={renewalForm.sync_to_excel}
-                                        onChange={(e) => setRenewalForm({ ...renewalForm, sync_to_excel: e.target.checked })}
-                                        className="w-5 h-5 rounded-md text-emerald-600 focus:ring-emerald-500 cursor-pointer flex-shrink-0"
-                                    />
-                                </label>
+                                    <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80 leading-relaxed">
+                                        El nuevo vencimiento se actualiza directamente en el <b>OneDrive Excel Online</b> para todos los perfiles de la cuenta y el monto se descuenta del <b>Flujo de Caja Real</b>.
+                                    </p>
+                                </div>
+                                <span className="text-[10px] bg-emerald-600 text-white font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-2xs flex-shrink-0">
+                                    Activo
+                                </span>
                             </div>
 
                             {/* FOOTER ACTIONS */}
