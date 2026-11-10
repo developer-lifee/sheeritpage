@@ -128,7 +128,7 @@ export function AccountingView() {
     profile_slots: 5,
     notes: '',
     sync_to_cash_flow: true,
-    sync_to_excel: false
+    sync_to_excel: true
   });
 
   const getApiUrl = () => {
@@ -269,7 +269,7 @@ export function AccountingView() {
           profile_slots: 5,
           notes: '',
           sync_to_cash_flow: true,
-          sync_to_excel: false
+          sync_to_excel: true
         });
         fetchData();
       } else {
@@ -1568,27 +1568,12 @@ export function AccountingView() {
                 </div>
               </div>
 
-              {/* Switches automáticos */}
-              <div className="bg-gray-50 dark:bg-gray-850 p-3.5 rounded-xl border dark:border-gray-700 space-y-2.5">
-                <label className="flex items-center gap-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={newRenewal.sync_to_cash_flow}
-                    onChange={(e) => setNewRenewal({ ...newRenewal, sync_to_cash_flow: e.target.checked })}
-                    className="rounded text-brand-primary focus:ring-brand-primary w-4 h-4 cursor-pointer"
-                  />
-                  <span>💰 Registrar automáticamente como salida en el <strong>Flujo de Caja Real</strong> de Contabilidad</span>
-                </label>
-
-                <label className="flex items-center gap-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={newRenewal.sync_to_excel}
-                    onChange={(e) => setNewRenewal({ ...newRenewal, sync_to_excel: e.target.checked })}
-                    className="rounded text-brand-primary focus:ring-brand-primary w-4 h-4 cursor-pointer"
-                  />
-                  <span>📊 Actualizar fecha de vencimiento en las filas de esta cuenta en el <strong>Excel Online (OneDrive)</strong></span>
-                </label>
+              {/* Sincronización Automática Total (Sin checkboxes innecesarios) */}
+              <div className="bg-emerald-50/50 dark:bg-emerald-950/20 p-3 rounded-xl border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300 font-semibold">
+                <span>⚡ Salida de caja y vencimiento en Excel Online actualizados automáticamente al confirmar.</span>
+                <span className="text-[10px] bg-emerald-600 text-white font-black px-2 py-0.5 rounded-full uppercase">
+                  Automático
+                </span>
               </div>
 
               <div className="flex justify-end gap-2.5 pt-2">

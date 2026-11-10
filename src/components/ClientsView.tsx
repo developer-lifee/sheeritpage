@@ -69,7 +69,7 @@ function formatExcelDate(excelDate: any): string {
             const day = String(date.getUTCDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
         }
-    } catch (e) {}
+    } catch (e) { }
     return str;
 }
 
@@ -153,7 +153,7 @@ const getDaysRemaining = (excelDate: any) => {
 export const ClientsView: React.FC = () => {
     const [clients, setClients] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    
+
     // General search State
     const [generalSearch, setGeneralSearch] = useState('');
 
@@ -211,7 +211,7 @@ export const ClientsView: React.FC = () => {
         placeholder1 = 'Primer valor a buscar...',
         placeholder2 = 'Segundo valor (opcional)...'
     ) => (
-        <div 
+        <div
             ref={columnPopoverRef}
             className={`absolute ${alignRight ? 'right-0' : 'left-0'} mt-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl p-3.5 z-50 animate-fadeIn text-left font-normal`}
         >
@@ -219,9 +219,9 @@ export const ClientsView: React.FC = () => {
                 <span className="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider flex items-center gap-1.5">
                     <Filter className="w-3.5 h-3.5 text-brand-primary" /> Filtro: {title}
                 </span>
-                <button 
-                    type="button" 
-                    onClick={() => setActivePopover(null)} 
+                <button
+                    type="button"
+                    onClick={() => setActivePopover(null)}
                     className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                 >
                     <X className="w-3.5 h-3.5" />
@@ -305,9 +305,9 @@ export const ClientsView: React.FC = () => {
             </div>
 
             <div className="pt-2.5 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
-                <button 
+                <button
                     type="button"
-                    onClick={() => handleClearFilter(columnKey)} 
+                    onClick={() => handleClearFilter(columnKey)}
                     className="text-xs text-red-500 hover:text-red-600 hover:underline font-semibold cursor-pointer px-1"
                 >
                     Limpiar
@@ -434,8 +434,8 @@ export const ClientsView: React.FC = () => {
     }, [customMessage]);
 
     // Status states for inline feedback
-    const [actionStates, setActionStates] = useState<{[key: string]: 'idle' | 'loading' | 'success' | 'error'}>({});
-    const [actionErrorMessage, setActionErrorMessage] = useState<{[key: string]: string}>({});
+    const [actionStates, setActionStates] = useState<{ [key: string]: 'idle' | 'loading' | 'success' | 'error' }>({});
+    const [actionErrorMessage, setActionErrorMessage] = useState<{ [key: string]: string }>({});
 
     // Modal de Venta Directa / Renovación
     const [saleModalOpen, setSaleModalOpen] = useState(false);
@@ -700,7 +700,7 @@ export const ClientsView: React.FC = () => {
 
     const filtered = clients.filter(c => {
         const daysLeft = getDaysRemaining(c.deben || c.vencimiento);
-        
+
         // Expiration payment filter matches
         let statusMatches = true;
         if (filterPaymentStatus === 'proximos') {
@@ -715,15 +715,15 @@ export const ClientsView: React.FC = () => {
         const cleanGeneral = generalSearch.replace(/\D/g, '');
         const fullName = `${c.Nombre || ''} ${c.apellido || c.Apellido || ''}`.trim();
         const normStreaming = normalizeServiceName(c.Streaming).toLowerCase();
-        
-        const phoneMatchesSearch = phoneVal.toLowerCase().includes(generalSearch.toLowerCase()) || 
+
+        const phoneMatchesSearch = phoneVal.toLowerCase().includes(generalSearch.toLowerCase()) ||
             (cleanGeneral.length >= 4 && cleanPhoneVal.includes(cleanGeneral));
 
-        const generalMatches = !generalSearch || 
-            fullName.toLowerCase().includes(generalSearch.toLowerCase()) || 
-            phoneMatchesSearch || 
-            normStreaming.includes(generalSearch.toLowerCase()) || 
-            String(c.Streaming || '').toLowerCase().includes(generalSearch.toLowerCase()) || 
+        const generalMatches = !generalSearch ||
+            fullName.toLowerCase().includes(generalSearch.toLowerCase()) ||
+            phoneMatchesSearch ||
+            normStreaming.includes(generalSearch.toLowerCase()) ||
+            String(c.Streaming || '').toLowerCase().includes(generalSearch.toLowerCase()) ||
             String(c.correo || '').toLowerCase().includes(generalSearch.toLowerCase()) ||
             String(c.rowNumber || '').includes(generalSearch);
 
@@ -784,7 +784,7 @@ export const ClientsView: React.FC = () => {
 
         // Service matches: exact match on normalized service name (supports multi-selection, e.g. APPLE TV and APPLE ONE)
         const normClientService = normalizeServiceName(c.Streaming);
-        const serviceMatches = filterServices.length === 0 || 
+        const serviceMatches = filterServices.length === 0 ||
             filterServices.some(s => normalizeServiceName(s) === normClientService);
 
         const emailMatches = checkDualText(c.correo, filterEmail);
@@ -854,7 +854,7 @@ export const ClientsView: React.FC = () => {
             const client = clientsToSend[i];
             const phone = (client.numero || client.Numero || '').toString().replace(/\D/g, '');
             const clientName = client.Nombre || 'Cliente';
-            
+
             if (!phone) {
                 failCount++;
                 setSendProgress(prev => ({ ...prev, current: i + 1, fail: failCount }));
@@ -876,7 +876,7 @@ export const ClientsView: React.FC = () => {
 
                 const platformParam = filterServices.length === 1 ? filterServices[0] : (filterServices.length > 1 ? filterServices.join(', ') : undefined);
                 const res = await sendSingle(phone, messageType, finalMessage, platformParam);
-                
+
                 if (res.success) {
                     successCount++;
                     setSendingLogs(prev => [...prev, `✅ Enviado a: ${clientName} (${phone})`]);
@@ -890,7 +890,7 @@ export const ClientsView: React.FC = () => {
             }
 
             setSendProgress(prev => ({ ...prev, current: i + 1, success: successCount, fail: failCount }));
-            
+
             if (i < clientsToSend.length - 1) {
                 await sleep(2000);
             }
@@ -912,7 +912,7 @@ export const ClientsView: React.FC = () => {
             .map(c => (c.numero || c.Numero || '').toString().replace(/\D/g, ''))
             .filter(Boolean);
         const uniqueFilteredPhones = Array.from(new Set(allFilteredPhones));
-            
+
         if (selectedClientPhones.length === uniqueFilteredPhones.length) {
             setSelectedClientPhones([]);
         } else {
@@ -933,13 +933,13 @@ export const ClientsView: React.FC = () => {
             setClientHistory(null);
             setEditingProfile(null);
         }
-        
+
         const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
         try {
             const res = await fetch(`${apiUrl}/api/admin/client-history?phone=${phone}${force ? '&force=true' : ''}`);
             const data = await res.json();
             setClientHistory(data);
-            
+
             const excelFullName = `${c.Nombre || ''} ${c.apellido || c.Apellido || ''}`.trim();
             const excelCustomerMail = c["customer mail"] || c.customer_mail || "";
 
@@ -1000,7 +1000,7 @@ export const ClientsView: React.FC = () => {
             }, 3000);
             return;
         }
-        
+
         setActionStates(prev => ({ ...prev, [key]: 'loading' }));
         const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
         try {
@@ -1034,7 +1034,8 @@ export const ClientsView: React.FC = () => {
     return (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border dark:border-gray-700 p-6 animate-fadeIn">
             {/* Custom styles for mobile responsiveness matching PHP project */}
-            <style dangerouslySetInnerHTML={{__html: `
+            <style dangerouslySetInnerHTML={{
+                __html: `
                 @media only screen and (max-width: 768px) {
                     .responsive-table table, 
                     .responsive-table thead, 
@@ -1100,7 +1101,7 @@ export const ClientsView: React.FC = () => {
                         <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                         <span>{renewalSuccessToast}</span>
                     </div>
-                    <button 
+                    <button
                         onClick={() => setRenewalSuccessToast(null)}
                         className="p-1 hover:bg-emerald-500/20 rounded-lg text-emerald-700 dark:text-emerald-300 transition-colors cursor-pointer"
                     >
@@ -1116,14 +1117,14 @@ export const ClientsView: React.FC = () => {
                     </h2>
                     <p className="text-xs text-gray-400 mt-1">Filtra clientes de forma general, por vencimiento o usando las columnas tipo Excel.</p>
                 </div>
-                
+
                 <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                     {/* General search */}
                     <div className="relative flex-grow md:flex-grow-0 md:w-64">
                         <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                        <input 
-                            type="text" 
-                            placeholder="Buscar cliente..." 
+                        <input
+                            type="text"
+                            placeholder="Buscar cliente..."
                             className="pl-9 pr-4 py-2 w-full border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
                             value={generalSearch}
                             onChange={(e) => setGeneralSearch(e.target.value)}
@@ -1157,9 +1158,8 @@ export const ClientsView: React.FC = () => {
                                     setServiceSearchQuery(e.target.value);
                                     if (!isServiceDropdownOpen) setIsServiceDropdownOpen(true);
                                 }}
-                                className={`w-full px-3 py-2 pr-8 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary font-medium cursor-pointer transition-all ${
-                                    filterServices.length > 0 ? 'border-brand-primary bg-brand-primary/5 dark:bg-brand-primary/10 text-brand-primary font-bold' : ''
-                                }`}
+                                className={`w-full px-3 py-2 pr-8 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary font-medium cursor-pointer transition-all ${filterServices.length > 0 ? 'border-brand-primary bg-brand-primary/5 dark:bg-brand-primary/10 text-brand-primary font-bold' : ''
+                                    }`}
                             />
                             {filterServices.length > 0 ? (
                                 <button
@@ -1175,9 +1175,9 @@ export const ClientsView: React.FC = () => {
                                     <X className="w-3.5 h-3.5" />
                                 </button>
                             ) : (
-                                <ChevronDown 
+                                <ChevronDown
                                     onClick={() => setIsServiceDropdownOpen(!isServiceDropdownOpen)}
-                                    className="w-4 h-4 absolute right-2.5 text-gray-400 cursor-pointer hover:text-gray-600 dark:hover:text-gray-200" 
+                                    className="w-4 h-4 absolute right-2.5 text-gray-400 cursor-pointer hover:text-gray-600 dark:hover:text-gray-200"
                                 />
                             )}
                         </div>
@@ -1190,9 +1190,8 @@ export const ClientsView: React.FC = () => {
                                         setFilterServices([]);
                                         setServiceSearchQuery('');
                                     }}
-                                    className={`w-full text-left px-3 py-2 flex items-center justify-between hover:bg-brand-primary/10 hover:text-brand-primary transition-colors cursor-pointer ${
-                                        filterServices.length === 0 ? 'font-bold text-brand-primary bg-brand-primary/10' : 'text-gray-700 dark:text-gray-200'
-                                    }`}
+                                    className={`w-full text-left px-3 py-2 flex items-center justify-between hover:bg-brand-primary/10 hover:text-brand-primary transition-colors cursor-pointer ${filterServices.length === 0 ? 'font-bold text-brand-primary bg-brand-primary/10' : 'text-gray-700 dark:text-gray-200'
+                                        }`}
                                 >
                                     <span>🌐 Todos los Servicios</span>
                                     {filterServices.length === 0 && <Check className="w-4 h-4 text-brand-primary" />}
@@ -1201,8 +1200,8 @@ export const ClientsView: React.FC = () => {
                                 {filterServices.length > 0 && (
                                     <div className="flex items-center justify-between px-3 py-1 bg-brand-primary/10 text-xs font-semibold text-brand-primary border-y border-brand-primary/20">
                                         <span>{filterServices.length} {filterServices.length === 1 ? 'servicio seleccionado' : 'servicios seleccionados'}</span>
-                                        <button 
-                                            type="button" 
+                                        <button
+                                            type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 setFilterServices([]);
@@ -1238,16 +1237,14 @@ export const ClientsView: React.FC = () => {
                                                         prev.includes(srv) ? prev.filter(s => s !== srv) : [...prev, srv]
                                                     );
                                                 }}
-                                                className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-brand-primary/10 hover:text-brand-primary transition-colors cursor-pointer ${
-                                                    isSelected ? 'font-bold text-brand-primary bg-brand-primary/10' : 'text-gray-700 dark:text-gray-200'
-                                                }`}
+                                                className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-brand-primary/10 hover:text-brand-primary transition-colors cursor-pointer ${isSelected ? 'font-bold text-brand-primary bg-brand-primary/10' : 'text-gray-700 dark:text-gray-200'
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-2 truncate">
-                                                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors flex-shrink-0 ${
-                                                        isSelected 
-                                                            ? 'bg-brand-primary border-brand-primary text-white' 
+                                                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors flex-shrink-0 ${isSelected
+                                                            ? 'bg-brand-primary border-brand-primary text-white'
                                                             : 'border-gray-400 dark:border-gray-500'
-                                                    }`}>
+                                                        }`}>
                                                         {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
                                                     </div>
                                                     <span className="truncate">{srv}</span>
@@ -1284,11 +1281,10 @@ export const ClientsView: React.FC = () => {
 
                     <button
                         onClick={() => setShowBulkSender(!showBulkSender)}
-                        className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${
-                            showBulkSender 
-                                ? 'bg-brand-primary text-white shadow-md' 
+                        className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${showBulkSender
+                                ? 'bg-brand-primary text-white shadow-md'
                                 : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-750 dark:text-gray-200'
-                        }`}
+                            }`}
                     >
                         <Send className="w-4 h-4" />
                         <span>Difusión Masiva</span>
@@ -1424,7 +1420,7 @@ export const ClientsView: React.FC = () => {
                             <HelpCircle className="w-3.5 h-3.5" />
                             <span>Intervalo de seguridad de 2 segundos automático entre envíos.</span>
                         </div>
-                        
+
                         <button
                             onClick={startBulkClients}
                             disabled={isSending || selectedClientPhones.length === 0}
@@ -1452,7 +1448,7 @@ export const ClientsView: React.FC = () => {
                                 <span>{sendProgress.current} / {sendProgress.total} (Éxitos: {sendProgress.success} | Fallidos: {sendProgress.fail})</span>
                             </div>
                             <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
-                                <div 
+                                <div
                                     className="bg-brand-primary h-full transition-all duration-300"
                                     style={{ width: `${(sendProgress.current / sendProgress.total) * 100}%` }}
                                 />
@@ -1479,7 +1475,7 @@ export const ClientsView: React.FC = () => {
                             <tr className="border-b dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/25">
                                 {showBulkSender && (
                                     <th className="py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300 text-center w-12">
-                                        <input 
+                                        <input
                                             type="checkbox"
                                             checked={selectedClientPhones.length === filtered.length && filtered.length > 0}
                                             onChange={handleToggleSelectAllClients}
@@ -1495,9 +1491,9 @@ export const ClientsView: React.FC = () => {
                                             {isFilterActive(filterName) && (
                                                 <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" title="Filtro activo" />
                                             )}
-                                            <Filter 
-                                                className={`w-3.5 h-3.5 cursor-pointer transition-colors column-filter-btn ${isFilterActive(filterName) ? 'text-brand-primary fill-brand-primary/20' : 'text-gray-450 hover:text-brand-primary'}`} 
-                                                onClick={() => openFilterPopover('nombre')} 
+                                            <Filter
+                                                className={`w-3.5 h-3.5 cursor-pointer transition-colors column-filter-btn ${isFilterActive(filterName) ? 'text-brand-primary fill-brand-primary/20' : 'text-gray-450 hover:text-brand-primary'}`}
+                                                onClick={() => openFilterPopover('nombre')}
                                                 title="Filtrar por nombre"
                                             />
                                         </div>
@@ -1513,9 +1509,9 @@ export const ClientsView: React.FC = () => {
                                             {isFilterActive(filterPhone) && (
                                                 <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" title="Filtro activo" />
                                             )}
-                                            <Filter 
-                                                className={`w-3.5 h-3.5 cursor-pointer transition-colors column-filter-btn ${isFilterActive(filterPhone) ? 'text-brand-primary fill-brand-primary/20' : 'text-gray-450 hover:text-brand-primary'}`} 
-                                                onClick={() => openFilterPopover('numero')} 
+                                            <Filter
+                                                className={`w-3.5 h-3.5 cursor-pointer transition-colors column-filter-btn ${isFilterActive(filterPhone) ? 'text-brand-primary fill-brand-primary/20' : 'text-gray-450 hover:text-brand-primary'}`}
+                                                onClick={() => openFilterPopover('numero')}
                                                 title="Filtrar por teléfono"
                                             />
                                         </div>
@@ -1536,9 +1532,9 @@ export const ClientsView: React.FC = () => {
                                             {isFilterActive(filterEmail) && (
                                                 <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" title="Filtro activo" />
                                             )}
-                                            <Filter 
-                                                className={`w-3.5 h-3.5 cursor-pointer transition-colors column-filter-btn ${isFilterActive(filterEmail) ? 'text-brand-primary fill-brand-primary/20' : 'text-gray-450 hover:text-brand-primary'}`} 
-                                                onClick={() => openFilterPopover('correo')} 
+                                            <Filter
+                                                className={`w-3.5 h-3.5 cursor-pointer transition-colors column-filter-btn ${isFilterActive(filterEmail) ? 'text-brand-primary fill-brand-primary/20' : 'text-gray-450 hover:text-brand-primary'}`}
+                                                onClick={() => openFilterPopover('correo')}
                                                 title="Filtrar por correo"
                                             />
                                         </div>
@@ -1606,16 +1602,16 @@ export const ClientsView: React.FC = () => {
                                     const isNewPlatform = i > 0 && stream !== prevStream;
                                     const isNewAccountBlock = i > 0 && groupKey !== prevGroupKey;
 
-                                    const rowBgClass = palette 
-                                        ? `${palette.bg} ${palette.borderLeft}` 
+                                    const rowBgClass = palette
+                                        ? `${palette.bg} ${palette.borderLeft}`
                                         : 'bg-white dark:bg-gray-800 border-l-4 border-l-transparent';
 
-                                    const blockDividerClass = isNewPlatform 
-                                        ? 'border-t-4 border-t-brand-primary/50 dark:border-t-brand-primary/60' 
-                                        : isNewAccountBlock 
-                                            ? 'border-t-2 border-t-gray-300 dark:border-t-gray-600' 
+                                    const blockDividerClass = isNewPlatform
+                                        ? 'border-t-4 border-t-brand-primary/50 dark:border-t-brand-primary/60'
+                                        : isNewAccountBlock
+                                            ? 'border-t-2 border-t-gray-300 dark:border-t-gray-600'
                                             : '';
-                                    
+
                                     // Color badges setup based on expiration days or cut status
                                     let badgeColor = "text-gray-500 dark:text-gray-400";
                                     let badgeBg = "bg-gray-100 dark:bg-gray-700/50";
@@ -1655,7 +1651,7 @@ export const ClientsView: React.FC = () => {
                                             <tr className={`border-b dark:border-gray-700/60 hover:bg-gray-150/60 dark:hover:bg-gray-700/40 transition-all ${rowBgClass} ${blockDividerClass}`}>
                                                 {showBulkSender && (
                                                     <td className="py-3.5 px-4 text-center">
-                                                        <input 
+                                                        <input
                                                             type="checkbox"
                                                             checked={selectedClientPhones.includes(phone ? phone.toString().replace(/\D/g, '') : '')}
                                                             onChange={() => handleToggleSelectClient(phone ? phone.toString().replace(/\D/g, '') : '')}
@@ -1670,8 +1666,8 @@ export const ClientsView: React.FC = () => {
                                                 <td data-label="Contraseña" className="py-3.5 px-4 text-sm dark:text-gray-200 font-mono">
                                                     {c.contraseña || c.Clave || c.clave || c.password || '-'}
                                                 </td>
-                                                <td 
-                                                    data-label="Cuenta / Correo" 
+                                                <td
+                                                    data-label="Cuenta / Correo"
                                                     onDoubleClick={() => c.correo && openAccountRenewalModal(normalizeServiceName(c.Streaming), c.correo)}
                                                     className="py-3.5 px-4 text-sm break-all font-mono group/emailcell cursor-pointer relative"
                                                     title="💡 Doble clic para registrar renovación de cuenta matriz con tarjeta temporal"
@@ -1709,69 +1705,69 @@ export const ClientsView: React.FC = () => {
                                                     </div>
                                                 </td>
                                                 <td data-label="Vencimiento" className="py-3.5 px-4 text-sm font-mono dark:text-gray-300">
-                                                     {editingDateClient && editingDateClient.rowKey === `${phone}_${c.Streaming}_${i}` ? (
-                                                         <div className="flex flex-col gap-1.5 p-2 bg-purple-50 dark:bg-purple-900/30 rounded-xl border border-purple-300 dark:border-purple-700 animate-fadeIn">
-                                                             <label className="text-[10px] font-bold text-purple-700 dark:text-purple-300 uppercase">Editar Vencimiento:</label>
-                                                             <input
-                                                                 type="date"
-                                                                 value={editingDateClient.date}
-                                                                 onChange={(e) => setEditingDateClient({ ...editingDateClient, date: e.target.value })}
-                                                                 className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                             />
-                                                             <div className="flex gap-1.5 mt-1">
-                                                                 <button
-                                                                     disabled={isSavingDate}
-                                                                     onClick={() => saveNewExpirationDate(c)}
-                                                                     className="flex-1 py-1 px-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1 disabled:opacity-50"
-                                                                 >
-                                                                     {isSavingDate ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                                                                     <span>Guardar</span>
-                                                                 </button>
-                                                                 <button
-                                                                     disabled={isSavingDate}
-                                                                     onClick={() => setEditingDateClient(null)}
-                                                                     className="py-1 px-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-700 dark:text-gray-200 rounded-lg text-xs font-bold transition-all"
-                                                                 >
-                                                                     <X className="w-3 h-3" />
-                                                                 </button>
-                                                             </div>
-                                                         </div>
-                                                     ) : (
-                                                         <div className="flex flex-col group/venc relative">
-                                                             <div className="flex items-center gap-1.5">
-                                                                 <span className="font-semibold">{formatExcelDate(c.deben || c.vencimiento)}</span>
-                                                                 <button
-                                                                     onClick={() => {
-                                                                         const currentDateStr = formatExcelDate(c.deben || c.vencimiento);
-                                                                         let dateForPicker = currentDateStr;
-                                                                         if (!currentDateStr || currentDateStr === '-' || !currentDateStr.includes('-')) {
-                                                                             dateForPicker = new Date().toISOString().split('T')[0];
-                                                                         }
-                                                                         setEditingDateClient({
-                                                                             rowKey: `${phone}_${c.Streaming}_${i}`,
-                                                                             rowNumber: c._rowNumber,
-                                                                             phone,
-                                                                             streaming: c.Streaming || '',
-                                                                             date: dateForPicker
-                                                                         });
-                                                                     }}
-                                                                     className="p-1 text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 opacity-60 hover:opacity-100 transition-all rounded-md hover:bg-purple-50 dark:hover:bg-purple-900/30 cursor-pointer"
-                                                                     title="Editar fecha de vencimiento a tu gusto"
-                                                                 >
-                                                                     <Calendar className="w-3.5 h-3.5" />
-                                                                 </button>
-                                                             </div>
-                                                             {statusText && (
-                                                                 <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full mt-1.5 font-bold w-fit ${badgeBg} ${badgeColor}`}>
-                                                                     {statusText}
-                                                                 </span>
-                                                             )}
-                                                         </div>
-                                                     )}
+                                                    {editingDateClient && editingDateClient.rowKey === `${phone}_${c.Streaming}_${i}` ? (
+                                                        <div className="flex flex-col gap-1.5 p-2 bg-purple-50 dark:bg-purple-900/30 rounded-xl border border-purple-300 dark:border-purple-700 animate-fadeIn">
+                                                            <label className="text-[10px] font-bold text-purple-700 dark:text-purple-300 uppercase">Editar Vencimiento:</label>
+                                                            <input
+                                                                type="date"
+                                                                value={editingDateClient.date}
+                                                                onChange={(e) => setEditingDateClient({ ...editingDateClient, date: e.target.value })}
+                                                                className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                            />
+                                                            <div className="flex gap-1.5 mt-1">
+                                                                <button
+                                                                    disabled={isSavingDate}
+                                                                    onClick={() => saveNewExpirationDate(c)}
+                                                                    className="flex-1 py-1 px-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1 disabled:opacity-50"
+                                                                >
+                                                                    {isSavingDate ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                                                                    <span>Guardar</span>
+                                                                </button>
+                                                                <button
+                                                                    disabled={isSavingDate}
+                                                                    onClick={() => setEditingDateClient(null)}
+                                                                    className="py-1 px-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-700 dark:text-gray-200 rounded-lg text-xs font-bold transition-all"
+                                                                >
+                                                                    <X className="w-3 h-3" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex flex-col group/venc relative">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="font-semibold">{formatExcelDate(c.deben || c.vencimiento)}</span>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const currentDateStr = formatExcelDate(c.deben || c.vencimiento);
+                                                                        let dateForPicker = currentDateStr;
+                                                                        if (!currentDateStr || currentDateStr === '-' || !currentDateStr.includes('-')) {
+                                                                            dateForPicker = new Date().toISOString().split('T')[0];
+                                                                        }
+                                                                        setEditingDateClient({
+                                                                            rowKey: `${phone}_${c.Streaming}_${i}`,
+                                                                            rowNumber: c._rowNumber,
+                                                                            phone,
+                                                                            streaming: c.Streaming || '',
+                                                                            date: dateForPicker
+                                                                        });
+                                                                    }}
+                                                                    className="p-1 text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 opacity-60 hover:opacity-100 transition-all rounded-md hover:bg-purple-50 dark:hover:bg-purple-900/30 cursor-pointer"
+                                                                    title="Editar fecha de vencimiento a tu gusto"
+                                                                >
+                                                                    <Calendar className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                            {statusText && (
+                                                                <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full mt-1.5 font-bold w-fit ${badgeBg} ${badgeColor}`}>
+                                                                    {statusText}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 <td data-label="Acciones" className="py-3.5 px-4 text-sm text-center">
                                                     <div className="flex gap-2 justify-center items-center">
-                                                        <button 
+                                                        <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 const rawPhone = (c.numero || c.Numero || c.whatsapp || '').toString().replace(/\D/g, '');
@@ -1785,7 +1781,7 @@ export const ClientsView: React.FC = () => {
                                                             <CreditCard className="w-3.5 h-3.5" />
                                                             <span>Venta / Renovar</span>
                                                         </button>
-                                                        <button 
+                                                        <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 const rawPhone = (c.numero || c.Numero || c.whatsapp || '').toString().replace(/\D/g, '');
@@ -1808,13 +1804,12 @@ export const ClientsView: React.FC = () => {
                                                             <Scissors className="w-3.5 h-3.5" />
                                                             <span>Cortar</span>
                                                         </button>
-                                                        <button 
+                                                        <button
                                                             onClick={() => toggleExpandHistory(phone, i, c)}
-                                                            className={`p-2 rounded-xl text-xs font-bold transition-all border ${
-                                                                expandedClient === i 
-                                                                    ? 'bg-purple-600 text-white border-purple-600' 
+                                                            className={`p-2 rounded-xl text-xs font-bold transition-all border ${expandedClient === i
+                                                                    ? 'bg-purple-600 text-white border-purple-600'
                                                                     : 'bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 text-purple-750 dark:text-purple-200 border-purple-200/50 dark:border-purple-800/40'
-                                                            }`}
+                                                                }`}
                                                             title="Historial de compras"
                                                         >
                                                             🕒 Historial
@@ -1826,166 +1821,165 @@ export const ClientsView: React.FC = () => {
                                             {expandedClient === i && (
                                                 <tr className={rowBgClass}>
                                                     <td colSpan={showBulkSender ? 7 : 6} className="bg-gray-50/20 dark:bg-gray-900/10 px-6 py-4 border-b dark:border-gray-700">
-                                                    {historyLoading ? (
-                                                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                                            <Clock className="w-4 h-4 animate-spin text-brand-primary" />
-                                                            <span>Analizando historial en la base de datos...</span>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-2 animate-fadeIn text-xs">
-                                                            {/* CRM / Profile Column */}
-                                                            <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border dark:border-gray-700 shadow-sm flex flex-col gap-4">
-                                                                <div>
-                                                                    <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-1">
-                                                                        🧠 Conocimientos y Perfil de Cliente
-                                                                    </h4>
-                                                                    <p className="text-xxs text-gray-400">Registra información valiosa y notas personalizadas sobre este cliente.</p>
-                                                                </div>
-
-                                                                <div className="flex flex-col gap-3">
-                                                                    <div>
-                                                                        <label className="block text-xxs font-bold text-gray-500 uppercase mb-1">Nombre Completo:</label>
-                                                                        <input
-                                                                            type="text"
-                                                                            value={editingProfile?.fullname || ''}
-                                                                            onChange={(e) => setEditingProfile(prev => prev ? { ...prev, fullname: e.target.value } : null)}
-                                                                            className="w-full px-3 py-1.5 border rounded-lg dark:bg-gray-855 dark:border-gray-700 dark:text-white text-xs"
-                                                                            placeholder="Nombre del cliente"
-                                                                        />
-                                                                    </div>
-                                                                    <div>
-                                                                        <label className="block text-xxs font-bold text-gray-500 uppercase mb-1">Correo Electrónico:</label>
-                                                                        <input
-                                                                            type="email"
-                                                                            value={editingProfile?.email || ''}
-                                                                            onChange={(e) => setEditingProfile(prev => prev ? { ...prev, email: e.target.value } : null)}
-                                                                            className="w-full px-3 py-1.5 border rounded-lg dark:bg-gray-855 dark:border-gray-700 dark:text-white text-xs"
-                                                                            placeholder="correo@ejemplo.com"
-                                                                        />
-                                                                    </div>
-                                                                    <div>
-                                                                        <label className="block text-xxs font-bold text-gray-500 uppercase mb-1">Notas / Conocimientos del Cliente:</label>
-                                                                        <textarea
-                                                                            rows={4}
-                                                                            value={editingProfile?.notes || ''}
-                                                                            onChange={(e) => setEditingProfile(prev => prev ? { ...prev, notes: e.target.value } : null)}
-                                                                            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-855 dark:border-gray-700 dark:text-white text-xs"
-                                                                            placeholder="Escribe detalles importantes del cliente aquí..."
-                                                                        />
-                                                                    </div>
-                                                                </div>
-
-                                                                <button
-                                                                    onClick={handleSaveProfileNotes}
-                                                                    disabled={savingNotes}
-                                                                    className="bg-brand-primary hover:bg-brand-dark text-white px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50 mt-2"
-                                                                >
-                                                                    {savingNotes ? 'Guardando...' : '💾 Guardar Datos del Perfil'}
-                                                                </button>
+                                                        {historyLoading ? (
+                                                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                                                <Clock className="w-4 h-4 animate-spin text-brand-primary" />
+                                                                <span>Analizando historial en la base de datos...</span>
                                                             </div>
-
-                                                            {/* History / Accounts Column */}
-                                                            <div className="flex flex-col gap-5">
-                                                                {/* SUSCRIPCIONES (subscriptions table) */}
-                                                                <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border dark:border-gray-700 shadow-sm flex flex-col">
-                                                                    <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-3">
-                                                                        🍿 Cuentas y Suscripciones
-                                                                    </h4>
-                                                                    {!clientHistory.subscriptions || clientHistory.subscriptions.length === 0 ? (
-                                                                        <span className="text-xxs text-gray-400 italic">No tiene cuentas activas asignadas.</span>
-                                                                    ) : (
-                                                                        <div className="max-h-[160px] overflow-y-auto space-y-2.5 pr-1">
-                                                                            {clientHistory.subscriptions.map((sub: any, sIdx: number) => (
-                                                                                <div key={sIdx} className="p-3 bg-gray-50 dark:bg-gray-850 rounded-xl border dark:border-gray-750 flex flex-col gap-1 shadow-xxs">
-                                                                                    <div className="flex justify-between items-center">
-                                                                                        <span className="font-bold text-brand-primary text-xs uppercase">{sub.streaming_platform}</span>
-                                                                                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-extrabold uppercase ${
-                                                                                            sub.status === 'active' 
-                                                                                                ? 'bg-green-500/10 text-green-600' 
-                                                                                                : 'bg-red-500/10 text-red-500'
-                                                                                        }`}>
-                                                                                            {sub.status === 'active' ? 'Activo' : 'Vencido'}
-                                                                                        </span>
-                                                                                    </div>
-                                                                                    <div className="text-xxs text-gray-500 dark:text-gray-400 flex flex-col gap-0.5 mt-0.5 font-mono">
-                                                                                        <span><b>Correo:</b> {sub.account_email}</span>
-                                                                                        <span><b>Clave:</b> {sub.account_password || 'N/A'}</span>
-                                                                                        {sub.profile_pin && <span><b>PIN:</b> {sub.profile_pin}</span>}
-                                                                                        <span className="text-[10px] text-gray-400 mt-1">Vence: {sub.expiration_date ? sub.expiration_date.substring(0, 10) : 'N/A'}</span>
-                                                                                    </div>
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-
-                                                                {/* COMPRAS (web_sales_approved table) */}
-                                                                <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border dark:border-gray-700 shadow-sm flex flex-col">
-                                                                    <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-3">
-                                                                        💳 Historial de Compras y Pagos
-                                                                    </h4>
-                                                                    {!clientHistory.purchases || clientHistory.purchases.length === 0 ? (
-                                                                        <span className="text-xxs text-gray-400 italic font-light">No tiene compras aprobadas registradas.</span>
-                                                                    ) : (
-                                                                        <div className="max-h-[160px] overflow-y-auto space-y-2 pr-1 font-mono text-xxs">
-                                                                            {clientHistory.purchases.map((pur: any, pIdx: number) => (
-                                                                                <div key={pIdx} className="flex justify-between items-center p-2 border-b dark:border-gray-750">
-                                                                                    <div className="flex flex-col">
-                                                                                        <span className="font-bold text-gray-700 dark:text-gray-300">{pur.platformName}</span>
-                                                                                        <span className="text-[10px] text-gray-400 font-sans mt-0.5">Fecha: {pur.approvedAt ? pur.approvedAt.substring(0, 10) : 'N/A'}</span>
-                                                                                    </div>
-                                                                                    <div className="text-right flex flex-col">
-                                                                                        <span className="font-bold text-emerald-600 dark:text-emerald-450 text-xs">${Number(pur.amount).toLocaleString('es-CO')}</span>
-                                                                                        <span className="text-[9px] text-gray-400 mt-0.5">ID: {pur.order_id}</span>
-                                                                                    </div>
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-
-                                                                {/* EXCEL HISTORICO (Matriz de Excel Historico) */}
-                                                                <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border dark:border-gray-700 shadow-sm flex flex-col">
-                                                                    <div className="flex justify-between items-center mb-3">
-                                                                        <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider">
-                                                                            📊 Histórico de Excel (Cortes Mensuales)
+                                                        ) : (
+                                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-2 animate-fadeIn text-xs">
+                                                                {/* CRM / Profile Column */}
+                                                                <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border dark:border-gray-700 shadow-sm flex flex-col gap-4">
+                                                                    <div>
+                                                                        <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-1">
+                                                                            🧠 Conocimientos y Perfil de Cliente
                                                                         </h4>
-                                                                        <button
-                                                                            onClick={() => toggleExpandHistory(phone, i, c, true)}
-                                                                            disabled={historyLoading}
-                                                                            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 hover:text-brand-primary transition-colors flex items-center gap-1 text-[10px] font-semibold"
-                                                                            title="Sincronizar en vivo desde Excel"
-                                                                        >
-                                                                            <RefreshCw size={11} className={historyLoading ? 'animate-spin' : ''} />
-                                                                            Sincronizar
-                                                                        </button>
+                                                                        <p className="text-xxs text-gray-400">Registra información valiosa y notas personalizadas sobre este cliente.</p>
                                                                     </div>
-                                                                    {!clientHistory.excelHistory || clientHistory.excelHistory.length === 0 ? (
-                                                                        <span className="text-xxs text-gray-400 italic font-light">No tiene registros históricos en el Excel.</span>
-                                                                    ) : (
-                                                                        <div className="max-h-[180px] overflow-y-auto space-y-2.5 pr-1 font-mono text-xxs">
-                                                                            {clientHistory.excelHistory.map((hist: any, hIdx: number) => (
-                                                                                <div key={hIdx} className="flex flex-col p-2.5 bg-gray-50 dark:bg-gray-850 rounded-xl border dark:border-gray-750 gap-1">
-                                                                                    <div className="flex justify-between items-center font-bold">
-                                                                                        <span className="text-brand-primary uppercase">{hist.streaming}</span>
-                                                                                        <span className="text-gray-700 dark:text-gray-300">Corte: {hist.fecha_corte || 'N/A'}</span>
-                                                                                    </div>
-                                                                                    <div className="text-[10px] text-gray-550 dark:text-gray-400 font-sans flex flex-col gap-0.5 mt-0.5">
-                                                                                        <span>📧 Correo: {hist.correo || 'N/A'}</span>
-                                                                                        <span>💳 Pago: {hist.metodo_pago || 'N/A'}</span>
-                                                                                    </div>
-                                                                                    <div className="flex justify-between items-center text-[10px] font-sans mt-1 pt-1 border-t border-gray-100 dark:border-gray-800">
-                                                                                        <span className="text-gray-450 dark:text-gray-500">Vence: {hist.vencimiento || 'N/A'}</span>
-                                                                                        <span className="font-bold text-emerald-600 dark:text-emerald-450">${Number(hist.deben || 0).toLocaleString('es-CO')}</span>
-                                                                                    </div>
-                                                                                </div>
-                                                                            ))}
+
+                                                                    <div className="flex flex-col gap-3">
+                                                                        <div>
+                                                                            <label className="block text-xxs font-bold text-gray-500 uppercase mb-1">Nombre Completo:</label>
+                                                                            <input
+                                                                                type="text"
+                                                                                value={editingProfile?.fullname || ''}
+                                                                                onChange={(e) => setEditingProfile(prev => prev ? { ...prev, fullname: e.target.value } : null)}
+                                                                                className="w-full px-3 py-1.5 border rounded-lg dark:bg-gray-855 dark:border-gray-700 dark:text-white text-xs"
+                                                                                placeholder="Nombre del cliente"
+                                                                            />
                                                                         </div>
-                                                                    )}
+                                                                        <div>
+                                                                            <label className="block text-xxs font-bold text-gray-500 uppercase mb-1">Correo Electrónico:</label>
+                                                                            <input
+                                                                                type="email"
+                                                                                value={editingProfile?.email || ''}
+                                                                                onChange={(e) => setEditingProfile(prev => prev ? { ...prev, email: e.target.value } : null)}
+                                                                                className="w-full px-3 py-1.5 border rounded-lg dark:bg-gray-855 dark:border-gray-700 dark:text-white text-xs"
+                                                                                placeholder="correo@ejemplo.com"
+                                                                            />
+                                                                        </div>
+                                                                        <div>
+                                                                            <label className="block text-xxs font-bold text-gray-500 uppercase mb-1">Notas / Conocimientos del Cliente:</label>
+                                                                            <textarea
+                                                                                rows={4}
+                                                                                value={editingProfile?.notes || ''}
+                                                                                onChange={(e) => setEditingProfile(prev => prev ? { ...prev, notes: e.target.value } : null)}
+                                                                                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-855 dark:border-gray-700 dark:text-white text-xs"
+                                                                                placeholder="Escribe detalles importantes del cliente aquí..."
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <button
+                                                                        onClick={handleSaveProfileNotes}
+                                                                        disabled={savingNotes}
+                                                                        className="bg-brand-primary hover:bg-brand-dark text-white px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50 mt-2"
+                                                                    >
+                                                                        {savingNotes ? 'Guardando...' : '💾 Guardar Datos del Perfil'}
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* History / Accounts Column */}
+                                                                <div className="flex flex-col gap-5">
+                                                                    {/* SUSCRIPCIONES (subscriptions table) */}
+                                                                    <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border dark:border-gray-700 shadow-sm flex flex-col">
+                                                                        <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-3">
+                                                                            🍿 Cuentas y Suscripciones
+                                                                        </h4>
+                                                                        {!clientHistory.subscriptions || clientHistory.subscriptions.length === 0 ? (
+                                                                            <span className="text-xxs text-gray-400 italic">No tiene cuentas activas asignadas.</span>
+                                                                        ) : (
+                                                                            <div className="max-h-[160px] overflow-y-auto space-y-2.5 pr-1">
+                                                                                {clientHistory.subscriptions.map((sub: any, sIdx: number) => (
+                                                                                    <div key={sIdx} className="p-3 bg-gray-50 dark:bg-gray-850 rounded-xl border dark:border-gray-750 flex flex-col gap-1 shadow-xxs">
+                                                                                        <div className="flex justify-between items-center">
+                                                                                            <span className="font-bold text-brand-primary text-xs uppercase">{sub.streaming_platform}</span>
+                                                                                            <span className={`px-2 py-0.5 rounded-lg text-[9px] font-extrabold uppercase ${sub.status === 'active'
+                                                                                                    ? 'bg-green-500/10 text-green-600'
+                                                                                                    : 'bg-red-500/10 text-red-500'
+                                                                                                }`}>
+                                                                                                {sub.status === 'active' ? 'Activo' : 'Vencido'}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        <div className="text-xxs text-gray-500 dark:text-gray-400 flex flex-col gap-0.5 mt-0.5 font-mono">
+                                                                                            <span><b>Correo:</b> {sub.account_email}</span>
+                                                                                            <span><b>Clave:</b> {sub.account_password || 'N/A'}</span>
+                                                                                            {sub.profile_pin && <span><b>PIN:</b> {sub.profile_pin}</span>}
+                                                                                            <span className="text-[10px] text-gray-400 mt-1">Vence: {sub.expiration_date ? sub.expiration_date.substring(0, 10) : 'N/A'}</span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {/* COMPRAS (web_sales_approved table) */}
+                                                                    <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border dark:border-gray-700 shadow-sm flex flex-col">
+                                                                        <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-3">
+                                                                            💳 Historial de Compras y Pagos
+                                                                        </h4>
+                                                                        {!clientHistory.purchases || clientHistory.purchases.length === 0 ? (
+                                                                            <span className="text-xxs text-gray-400 italic font-light">No tiene compras aprobadas registradas.</span>
+                                                                        ) : (
+                                                                            <div className="max-h-[160px] overflow-y-auto space-y-2 pr-1 font-mono text-xxs">
+                                                                                {clientHistory.purchases.map((pur: any, pIdx: number) => (
+                                                                                    <div key={pIdx} className="flex justify-between items-center p-2 border-b dark:border-gray-750">
+                                                                                        <div className="flex flex-col">
+                                                                                            <span className="font-bold text-gray-700 dark:text-gray-300">{pur.platformName}</span>
+                                                                                            <span className="text-[10px] text-gray-400 font-sans mt-0.5">Fecha: {pur.approvedAt ? pur.approvedAt.substring(0, 10) : 'N/A'}</span>
+                                                                                        </div>
+                                                                                        <div className="text-right flex flex-col">
+                                                                                            <span className="font-bold text-emerald-600 dark:text-emerald-450 text-xs">${Number(pur.amount).toLocaleString('es-CO')}</span>
+                                                                                            <span className="text-[9px] text-gray-400 mt-0.5">ID: {pur.order_id}</span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {/* EXCEL HISTORICO (Matriz de Excel Historico) */}
+                                                                    <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border dark:border-gray-700 shadow-sm flex flex-col">
+                                                                        <div className="flex justify-between items-center mb-3">
+                                                                            <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider">
+                                                                                📊 Histórico de Excel (Cortes Mensuales)
+                                                                            </h4>
+                                                                            <button
+                                                                                onClick={() => toggleExpandHistory(phone, i, c, true)}
+                                                                                disabled={historyLoading}
+                                                                                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 hover:text-brand-primary transition-colors flex items-center gap-1 text-[10px] font-semibold"
+                                                                                title="Sincronizar en vivo desde Excel"
+                                                                            >
+                                                                                <RefreshCw size={11} className={historyLoading ? 'animate-spin' : ''} />
+                                                                                Sincronizar
+                                                                            </button>
+                                                                        </div>
+                                                                        {!clientHistory.excelHistory || clientHistory.excelHistory.length === 0 ? (
+                                                                            <span className="text-xxs text-gray-400 italic font-light">No tiene registros históricos en el Excel.</span>
+                                                                        ) : (
+                                                                            <div className="max-h-[180px] overflow-y-auto space-y-2.5 pr-1 font-mono text-xxs">
+                                                                                {clientHistory.excelHistory.map((hist: any, hIdx: number) => (
+                                                                                    <div key={hIdx} className="flex flex-col p-2.5 bg-gray-50 dark:bg-gray-850 rounded-xl border dark:border-gray-750 gap-1">
+                                                                                        <div className="flex justify-between items-center font-bold">
+                                                                                            <span className="text-brand-primary uppercase">{hist.streaming}</span>
+                                                                                            <span className="text-gray-700 dark:text-gray-300">Corte: {hist.fecha_corte || 'N/A'}</span>
+                                                                                        </div>
+                                                                                        <div className="text-[10px] text-gray-550 dark:text-gray-400 font-sans flex flex-col gap-0.5 mt-0.5">
+                                                                                            <span>📧 Correo: {hist.correo || 'N/A'}</span>
+                                                                                            <span>💳 Pago: {hist.metodo_pago || 'N/A'}</span>
+                                                                                        </div>
+                                                                                        <div className="flex justify-between items-center text-[10px] font-sans mt-1 pt-1 border-t border-gray-100 dark:border-gray-800">
+                                                                                            <span className="text-gray-450 dark:text-gray-500">Vence: {hist.vencimiento || 'N/A'}</span>
+                                                                                            <span className="font-bold text-emerald-600 dark:text-emerald-450">${Number(hist.deben || 0).toLocaleString('es-CO')}</span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                    )}
+                                                        )}
                                                     </td>
                                                 </tr>
                                             )}
@@ -2223,7 +2217,7 @@ export const ClientsView: React.FC = () => {
                             {/* LIVE VIRTUAL CARD PREVIEW */}
                             <div className="bg-gradient-to-tr from-slate-950 via-gray-900 to-emerald-950 border border-emerald-500/40 rounded-2xl p-5 shadow-2xl text-white relative overflow-hidden font-mono">
                                 <div className="bg-emerald-400/15 blur-xl w-32 h-32 rounded-full absolute -top-8 -right-8 pointer-events-none" />
-                                
+
                                 <div className="flex justify-between items-center mb-4 relative z-10">
                                     {/* Chip metálico */}
                                     <div className="w-10 h-7 rounded-md bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-600 shadow-md border border-amber-200/50 flex items-center justify-center">
@@ -2368,11 +2362,10 @@ export const ClientsView: React.FC = () => {
                                                 key={p}
                                                 type="button"
                                                 onClick={() => setRenewalForm({ ...renewalForm, provider: p })}
-                                                className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
-                                                    renewalForm.provider === p
+                                                className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${renewalForm.provider === p
                                                         ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
                                                         : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-emerald-500'
-                                                }`}
+                                                    }`}
                                             >
                                                 +{p}
                                             </button>
@@ -2430,11 +2423,10 @@ export const ClientsView: React.FC = () => {
                                                     key={d}
                                                     type="button"
                                                     onClick={() => handleSetDuration(d)}
-                                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded cursor-pointer ${
-                                                        renewalForm.duration_days === d 
-                                                            ? 'bg-emerald-600 text-white' 
+                                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded cursor-pointer ${renewalForm.duration_days === d
+                                                            ? 'bg-emerald-600 text-white'
                                                             : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-emerald-500'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     +{d === 365 ? '1a' : `${d}d`}
                                                 </button>
@@ -2451,21 +2443,14 @@ export const ClientsView: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* FILA 4: GARANTÍA DE SINCRONIZACIÓN TOTAL CON EXCEL Y CONTABILIDAD */}
-                            <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/5 border border-emerald-500/30 flex items-center justify-between gap-3 shadow-xs">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                                        <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
-                                            Sincronización Total Garantizada (Excel Online & Contabilidad)
-                                        </span>
-                                    </div>
-                                    <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80 leading-relaxed">
-                                        El nuevo vencimiento se actualiza directamente en el <b>OneDrive Excel Online</b> para todos los perfiles de la cuenta y el monto se descuenta del <b>Flujo de Caja Real</b>.
-                                    </p>
+                            {/* GARANTÍA DE EGRESO Y SINCRONIZACIÓN AUTOMÁTICA */}
+                            <div className="px-3.5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 text-xs text-emerald-800 dark:text-emerald-300 font-semibold">
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                                    <span>Salida de caja y vencimiento en Excel Online actualizados automáticamente al confirmar.</span>
                                 </div>
-                                <span className="text-[10px] bg-emerald-600 text-white font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-2xs flex-shrink-0">
-                                    Activo
+                                <span className="text-[10px] bg-emerald-600 text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wider flex-shrink-0">
+                                    Automático
                                 </span>
                             </div>
 
