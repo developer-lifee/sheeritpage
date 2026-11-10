@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle, Calendar, Plus, CreditCard, ShoppingBag, ChevronDown, Scissors } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle, Calendar, Plus, CreditCard, ShoppingBag, ChevronDown, Scissors, Sparkles, Receipt, ArrowRight } from 'lucide-react';
 import { isDemoMode } from '../utils/demoMode';
 import { AddSaleForm } from './AddSaleForm';
 
@@ -456,6 +456,130 @@ export const ClientsView: React.FC = () => {
     const [leaveSlotVirgin, setLeaveSlotVirgin] = useState<boolean>(true); // Dejar casilla "virgen" / libre en Excel para nueva venta
     const [isCuttingService, setIsCuttingService] = useState<boolean>(false);
     const [visibleRowsCount, setVisibleRowsCount] = useState<number>(100);
+
+    // Modal de Renovación de Cuenta Matriz (Proveedor / Tarjeta Temporal)
+    interface AccountRenewalForm {
+        platform: string;
+        account_email: string;
+        provider: string;
+        payment_method: string;
+        amount_paid: string | number;
+        renewal_date: string;
+        expiration_date: string;
+        duration_days: number;
+        notes?: string;
+        sync_to_cash_flow: boolean;
+        sync_to_excel: boolean;
+    }
+
+    const [renewalModalOpen, setRenewalModalOpen] = useState(false);
+    const [submittingRenewal, setSubmittingRenewal] = useState(false);
+    const [renewalSuccessToast, setRenewalSuccessToast] = useState<string | null>(null);
+
+    const [renewalForm, setRenewalForm] = useState<AccountRenewalForm>({
+        platform: '',
+        account_email: '',
+        provider: 'Directo',
+        payment_method: '',
+        amount_paid: '',
+        renewal_date: new Date().toISOString().slice(0, 10),
+        expiration_date: '',
+        duration_days: 30,
+        notes: '',
+        sync_to_cash_flow: true,
+        sync_to_excel: true
+    });
+
+    const openAccountRenewalModal = (platform = '', email = '') => {
+        const today = new Date().toISOString().slice(0, 10);
+        const exp = new Date();
+        exp.setDate(exp.getDate() + 30);
+        const defaultExp = exp.toISOString().slice(0, 10);
+
+        setRenewalForm({
+            platform: platform ? normalizeServiceName(platform) : '',
+            account_email: email || '',
+            provider: 'Directo',
+            payment_method: '',
+            amount_paid: '',
+            renewal_date: today,
+            expiration_date: defaultExp,
+            duration_days: 30,
+            notes: '',
+            sync_to_cash_flow: true,
+            sync_to_excel: true
+        });
+        setRenewalModalOpen(true);
+    };
+
+    const handleSetDuration = (days: number) => {
+        const baseDate = new Date(renewalForm.renewal_date || new Date().toISOString().slice(0, 10));
+        baseDate.setDate(baseDate.getDate() + days);
+        setRenewalForm(prev => ({
+            ...prev,
+            duration_days: days,
+            expiration_date: baseDate.toISOString().slice(0, 10)
+        }));
+    };
+
+    const uniqueAccountOptions = useMemo(() => {
+        const map = new Map<string, { email: string; platform: string; count: number }>();
+        clients.forEach(c => {
+            const email = (c.correo || c.Correo || c.account_email || '').toString().trim().toLowerCase();
+            const platform = normalizeServiceName(c.Streaming || c.Plataforma || '');
+            if (email && email !== '-' && email.includes('@')) {
+                const key = `${platform}:::${email}`;
+                if (!map.has(key)) {
+                    map.set(key, { email, platform, count: 1 });
+                } else {
+                    map.get(key)!.count++;
+                }
+            }
+        });
+        return Array.from(map.values()).sort((a, b) => a.platform.localeCompare(b.platform) || a.email.localeCompare(b.email));
+    }, [clients]);
+
+    const matchingAccountRows = useMemo(() => {
+        if (!renewalForm.account_email) return [];
+        const normEmail = renewalForm.account_email.trim().toLowerCase();
+        return clients.filter(c => (c.correo || '').toString().trim().toLowerCase() === normEmail);
+    }, [clients, renewalForm.account_email]);
+
+    const handleSaveAccountRenewal = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!renewalForm.account_email || !renewalForm.platform) {
+            alert('Por favor especifica la plataforma y el correo de la cuenta');
+            return;
+        }
+        setSubmittingRenewal(true);
+        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
+        try {
+            const res = await fetch(`${apiUrl}/api/admin/accounting/renewals/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    renewalData: {
+                        ...renewalForm,
+                        amount_paid: parseFloat(renewalForm.amount_paid as any) || 0
+                    },
+                    password: 'admin123'
+                })
+            });
+            const result = await res.json();
+            if (result.success) {
+                setRenewalModalOpen(false);
+                setRenewalSuccessToast(`✅ ¡Renovación de cuenta registrada con éxito! ${result.excel_updated_rows ? `(${result.excel_updated_rows} perfiles actualizados en Excel Online)` : ''}`);
+                setTimeout(() => setRenewalSuccessToast(null), 7000);
+                fetchClientsData();
+            } else {
+                alert('Error al registrar: ' + (result.message || result.error));
+            }
+        } catch (err) {
+            alert('Error de red al registrar la renovación');
+        } finally {
+            setSubmittingRenewal(false);
+        }
+    };
 
     const executeCutService = async () => {
         if (!cutModalClient) return;
@@ -969,6 +1093,22 @@ export const ClientsView: React.FC = () => {
                 }
             `}} />
 
+            {/* Notification Toast for Account Renewal */}
+            {renewalSuccessToast && (
+                <div className="mb-4 p-3.5 bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-emerald-500/10 border border-emerald-500/40 text-emerald-800 dark:text-emerald-200 rounded-2xl flex items-center justify-between gap-3 shadow-lg animate-fadeIn">
+                    <div className="flex items-center gap-2.5 text-xs font-bold">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                        <span>{renewalSuccessToast}</span>
+                    </div>
+                    <button 
+                        onClick={() => setRenewalSuccessToast(null)}
+                        className="p-1 hover:bg-emerald-500/20 rounded-lg text-emerald-700 dark:text-emerald-300 transition-colors cursor-pointer"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
+
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div>
                     <h2 className="text-xl font-bold flex items-center dark:text-white">
@@ -1127,9 +1267,19 @@ export const ClientsView: React.FC = () => {
                             setSaleModalOpen(true);
                         }}
                         className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition-all cursor-pointer"
+                        title="Registrar venta o renovar cupo para un cliente particular"
                     >
                         <Plus className="w-4 h-4" />
                         <span>Nueva Venta</span>
+                    </button>
+
+                    <button
+                        onClick={() => openAccountRenewalModal()}
+                        className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md hover:shadow-lg transition-all cursor-pointer"
+                        title="Registrar pago de renovación de cuenta matriz a proveedor (tarjeta temporal, monto y vencimiento)"
+                    >
+                        <CreditCard className="w-4 h-4" />
+                        <span>Renovar Cuenta Matriz</span>
                     </button>
 
                     <button
@@ -1520,20 +1670,41 @@ export const ClientsView: React.FC = () => {
                                                 <td data-label="Contraseña" className="py-3.5 px-4 text-sm dark:text-gray-200 font-mono">
                                                     {c.contraseña || c.Clave || c.clave || c.password || '-'}
                                                 </td>
-                                                <td data-label="Cuenta / Correo" className="py-3.5 px-4 text-sm break-all font-mono">
+                                                <td 
+                                                    data-label="Cuenta / Correo" 
+                                                    onDoubleClick={() => c.correo && openAccountRenewalModal(normalizeServiceName(c.Streaming), c.correo)}
+                                                    className="py-3.5 px-4 text-sm break-all font-mono group/emailcell cursor-pointer relative"
+                                                    title="💡 Doble clic para registrar renovación de cuenta matriz con tarjeta temporal"
+                                                >
                                                     <div className="flex flex-col gap-1">
                                                         {c.Streaming && (
                                                             <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary dark:text-brand-light w-fit">
                                                                 {normalizeServiceName(c.Streaming)}
                                                             </span>
                                                         )}
-                                                        <div className="flex items-center gap-1.5">
-                                                            {palette && (
-                                                                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${palette.dot} shadow-2xs`} title="Cuenta agrupada por color" />
+                                                        <div className="flex items-center justify-between gap-1.5">
+                                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                                {palette && (
+                                                                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${palette.dot} shadow-2xs`} title="Cuenta agrupada por color" />
+                                                                )}
+                                                                <span className={`truncate text-xs ${palette ? `${palette.text} font-bold` : 'text-gray-600 dark:text-gray-300'}`}>
+                                                                    {c.correo || '-'}
+                                                                </span>
+                                                            </div>
+                                                            {c.correo && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        openAccountRenewalModal(normalizeServiceName(c.Streaming), c.correo);
+                                                                    }}
+                                                                    className="px-1.5 py-0.5 rounded-md text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/25 border border-emerald-500/30 transition-all flex items-center gap-1 text-[10px] font-bold cursor-pointer opacity-75 group-hover/emailcell:opacity-100 flex-shrink-0 shadow-2xs"
+                                                                    title="Renovar cuenta matriz (Pago a proveedor / tarjeta)"
+                                                                >
+                                                                    <CreditCard className="w-3 h-3" />
+                                                                    <span className="hidden xl:inline">Renovar</span>
+                                                                </button>
                                                             )}
-                                                            <span className={`truncate text-xs ${palette ? `${palette.text} font-bold` : 'text-gray-600 dark:text-gray-300'}`}>
-                                                                {c.correo || '-'}
-                                                            </span>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -2008,6 +2179,327 @@ export const ClientsView: React.FC = () => {
                                 fetchClientsData();
                             }}
                         />
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL MODERNO: RENOVACIÓN DE CUENTA MATRIZ (PROVEEDOR / TARJETA TEMPORAL) */}
+            {renewalModalOpen && (
+                <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+                    <div className="relative w-full max-w-2xl bg-white dark:bg-gray-900 border border-emerald-500/30 rounded-3xl shadow-2xl overflow-hidden my-6">
+                        {/* Glow decorativo de fondo */}
+                        <div className="absolute -top-24 -right-24 w-72 h-72 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                        {/* Header Premium */}
+                        <div className="relative px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/30">
+                                    <CreditCard className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+                                        Renovación de Cuenta Matriz
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                                            Proveedor & Tarjeta
+                                        </span>
+                                    </h3>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                        Asienta el pago de la cuenta matriz, guarda la tarjeta temporal y sincroniza con Excel y Contabilidad.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setRenewalModalOpen(false)}
+                                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Contenido del Formulario */}
+                        <form onSubmit={handleSaveAccountRenewal} className="relative p-6 space-y-5">
+                            {/* LIVE VIRTUAL CARD PREVIEW */}
+                            <div className="bg-gradient-to-tr from-slate-950 via-gray-900 to-emerald-950 border border-emerald-500/40 rounded-2xl p-5 shadow-2xl text-white relative overflow-hidden font-mono">
+                                <div className="bg-emerald-400/15 blur-xl w-32 h-32 rounded-full absolute -top-8 -right-8 pointer-events-none" />
+                                
+                                <div className="flex justify-between items-center mb-4 relative z-10">
+                                    {/* Chip metálico */}
+                                    <div className="w-10 h-7 rounded-md bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-600 shadow-md border border-amber-200/50 flex items-center justify-center">
+                                        <div className="w-8 h-5 border border-amber-700/30 rounded-xs flex flex-col justify-around py-0.5">
+                                            <div className="h-px bg-amber-800/40 w-full" />
+                                            <div className="h-px bg-amber-800/40 w-full" />
+                                        </div>
+                                    </div>
+                                    <span className="px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 shadow-xs">
+                                        {renewalForm.platform || 'PLATAFORMA'}
+                                    </span>
+                                </div>
+
+                                {/* Número / Detalle de la tarjeta */}
+                                <div className="text-sm sm:text-base font-bold tracking-widest text-emerald-100/90 mb-4 truncate drop-shadow-sm">
+                                    {renewalForm.payment_method || '•••• •••• •••• •••• (Escribe la tarjeta temporal abajo)'}
+                                </div>
+
+                                {/* Pie de la tarjeta */}
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 text-[11px] text-gray-300 border-t border-gray-700/60 pt-3 relative z-10">
+                                    <div className="truncate max-w-[240px]">
+                                        <span className="text-[9px] uppercase tracking-wider text-gray-400 block">Cuenta</span>
+                                        <span className="font-bold text-white truncate block">{renewalForm.account_email || 'correo@proveedor.com'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[9px] uppercase tracking-wider text-gray-400 block">Proveedor</span>
+                                        <span className="font-bold text-emerald-400">{renewalForm.provider || 'Directo'}</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-[9px] uppercase tracking-wider text-gray-400 block">Nuevo Vencimiento</span>
+                                        <span className="font-black text-emerald-300">{renewalForm.expiration_date || 'AAAA-MM-DD'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Aviso de coincidencias en Excel */}
+                            {matchingAccountRows.length > 0 && (
+                                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300/60 dark:border-emerald-800/50 rounded-xl flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300 font-semibold">
+                                    <div className="flex items-center gap-2">
+                                        <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                                        <span>Esta cuenta tiene <strong>{matchingAccountRows.length} cupo(s) / perfiles</strong> en la Base de Datos.</span>
+                                    </div>
+                                    <span className="text-[10px] bg-emerald-600 text-white font-bold px-2 py-0.5 rounded-full">
+                                        Sincronizable
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* FILA 1: PLATAFORMA Y CORREO */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1.5">
+                                        Plataforma Streaming *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="Ej. AMAZON, NETFLIX, SPOTIFY..."
+                                        value={renewalForm.platform}
+                                        onChange={(e) => setRenewalForm({ ...renewalForm, platform: e.target.value.toUpperCase() })}
+                                        className="w-full px-3.5 py-2.5 text-xs font-bold rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 uppercase"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1.5">
+                                        Correo de Cuenta Matriz *
+                                    </label>
+                                    <input
+                                        type="email"
+                                        required
+                                        list="unique-accounts-list"
+                                        placeholder="Ej. sheerit102@gmail.com"
+                                        value={renewalForm.account_email}
+                                        onChange={(e) => setRenewalForm({ ...renewalForm, account_email: e.target.value.toLowerCase().trim() })}
+                                        className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                    />
+                                    <datalist id="unique-accounts-list">
+                                        {uniqueAccountOptions.map((acc, idx) => (
+                                            <option key={idx} value={acc.email}>
+                                                {acc.platform} ({acc.count} perfiles)
+                                            </option>
+                                        ))}
+                                    </datalist>
+                                </div>
+                            </div>
+
+                            {/* FILA 2: DATOS DE LA TARJETA TEMPORAL Y PROVEEDOR */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1.5">
+                                        Tarjeta Temporal / CCV / Expiración *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="Ej. Mastercard 6833 CCV 791 exp 08/28"
+                                        value={renewalForm.payment_method}
+                                        onChange={(e) => setRenewalForm({ ...renewalForm, payment_method: e.target.value })}
+                                        className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                                    />
+                                    <span className="text-[10px] text-gray-400 mt-1 block">
+                                        Guarda aquí número, CCV y fecha de la tarjeta temporal.
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1.5">
+                                        Proveedor / Vendedor *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="Ej. Net, Transferencia, Directo..."
+                                        value={renewalForm.provider}
+                                        onChange={(e) => setRenewalForm({ ...renewalForm, provider: e.target.value })}
+                                        className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
+                                    />
+                                    {/* Pills rápidas de proveedor */}
+                                    <div className="flex flex-wrap gap-1.5 mt-2">
+                                        {['Net', 'Directo', 'Transferencia', 'Miguel Botero', 'Nu', 'Nequi', 'Bancolombia'].map((p) => (
+                                            <button
+                                                key={p}
+                                                type="button"
+                                                onClick={() => setRenewalForm({ ...renewalForm, provider: p })}
+                                                className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                                                    renewalForm.provider === p
+                                                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-emerald-500'
+                                                }`}
+                                            >
+                                                +{p}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* FILA 3: MONTO, FECHA Y VENCIMIENTO */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1.5">
+                                        Monto Pagado ($ COP) *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        required
+                                        placeholder="Ej. 14000"
+                                        value={renewalForm.amount_paid}
+                                        onChange={(e) => setRenewalForm({ ...renewalForm, amount_paid: e.target.value })}
+                                        className="w-full px-3.5 py-2.5 text-sm font-black text-rose-500 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1.5">
+                                        Fecha de Pago *
+                                    </label>
+                                    <input
+                                        type="date"
+                                        required
+                                        value={renewalForm.renewal_date}
+                                        onChange={(e) => {
+                                            const payDate = e.target.value;
+                                            const d = new Date(payDate);
+                                            d.setDate(d.getDate() + (renewalForm.duration_days || 30));
+                                            setRenewalForm({
+                                                ...renewalForm,
+                                                renewal_date: payDate,
+                                                expiration_date: d.toISOString().slice(0, 10)
+                                            });
+                                        }}
+                                        className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                                    />
+                                </div>
+
+                                <div>
+                                    <div className="flex justify-between items-center mb-1.5">
+                                        <label className="text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                                            Nuevo Vencimiento *
+                                        </label>
+                                        <div className="flex gap-1">
+                                            {[30, 60, 365].map((d) => (
+                                                <button
+                                                    key={d}
+                                                    type="button"
+                                                    onClick={() => handleSetDuration(d)}
+                                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded cursor-pointer ${
+                                                        renewalForm.duration_days === d 
+                                                            ? 'bg-emerald-600 text-white' 
+                                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-emerald-500'
+                                                    }`}
+                                                >
+                                                    +{d === 365 ? '1a' : `${d}d`}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <input
+                                        type="date"
+                                        required
+                                        value={renewalForm.expiration_date}
+                                        onChange={(e) => setRenewalForm({ ...renewalForm, expiration_date: e.target.value })}
+                                        className="w-full px-3.5 py-2.5 text-xs font-black text-emerald-600 dark:text-emerald-400 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* FILA 4: AUTOMATIZACIONES CON TOGGLES MODERNOS */}
+                            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-850/80 border border-gray-200/80 dark:border-gray-750 space-y-3">
+                                <label className="flex items-center justify-between cursor-pointer group">
+                                    <div className="space-y-0.5 pr-4">
+                                        <span className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                            💰 Registrar en Flujo de Caja Real (Contabilidad)
+                                        </span>
+                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                            Asienta el egreso exacto de forma automática en el libro mensual de finanzas.
+                                        </p>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        checked={renewalForm.sync_to_cash_flow}
+                                        onChange={(e) => setRenewalForm({ ...renewalForm, sync_to_cash_flow: e.target.checked })}
+                                        className="w-5 h-5 rounded-md text-emerald-600 focus:ring-emerald-500 cursor-pointer flex-shrink-0"
+                                    />
+                                </label>
+
+                                <div className="border-t border-gray-200/60 dark:border-gray-750" />
+
+                                <label className="flex items-center justify-between cursor-pointer group">
+                                    <div className="space-y-0.5 pr-4">
+                                        <span className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                            📊 Actualizar fecha de vencimiento en Excel Online (OneDrive)
+                                        </span>
+                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                            Modifica en vivo la celda de vencimiento para todas las filas de esta cuenta en la matriz.
+                                        </p>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        checked={renewalForm.sync_to_excel}
+                                        onChange={(e) => setRenewalForm({ ...renewalForm, sync_to_excel: e.target.checked })}
+                                        className="w-5 h-5 rounded-md text-emerald-600 focus:ring-emerald-500 cursor-pointer flex-shrink-0"
+                                    />
+                                </label>
+                            </div>
+
+                            {/* FOOTER ACTIONS */}
+                            <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                                <button
+                                    type="button"
+                                    disabled={submittingRenewal}
+                                    onClick={() => setRenewalModalOpen(false)}
+                                    className="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-bold transition-all cursor-pointer"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={submittingRenewal}
+                                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                                >
+                                    {submittingRenewal ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 animate-spin" />
+                                            <span>Guardando Renovación...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Check className="w-4 h-4" />
+                                            <span>Confirmar y Asentar Renovación</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
