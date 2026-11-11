@@ -1705,6 +1705,12 @@ export const ClientsView: React.FC = () => {
                                                                 </button>
                                                             )}
                                                         </div>
+                                                        {c.vencimiento && (
+                                                            <div className="flex items-center gap-1 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold" title="Vencimiento de la cuenta matriz en proveedor (Columna vencimiento en Excel)">
+                                                                <Calendar className="w-2.5 h-2.5 opacity-60 flex-shrink-0" />
+                                                                <span>Matriz: {formatExcelDate(c.vencimiento)}</span>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </td>
                                                 <td data-label="Vencimiento" className="py-3.5 px-4 text-sm font-mono dark:text-gray-300">
@@ -2182,26 +2188,26 @@ export const ClientsView: React.FC = () => {
 
             {/* MODAL MODERNO: RENOVACIÓN DE CUENTA MATRIZ (PROVEEDOR / TARJETA TEMPORAL) */}
             {renewalModalOpen && (
-                <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
-                    <div className="relative w-full max-w-2xl bg-white dark:bg-gray-900 border border-emerald-500/30 rounded-3xl shadow-2xl overflow-hidden my-6">
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-fadeIn">
+                    <div className="relative w-full max-w-2xl bg-white dark:bg-gray-900 border border-emerald-500/30 rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden my-auto">
                         {/* Glow decorativo de fondo */}
                         <div className="absolute -top-24 -right-24 w-72 h-72 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
                         <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
-                        {/* Header Premium */}
-                        <div className="relative px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/30">
-                                    <CreditCard className="w-6 h-6" />
+                        {/* Header Premium (Fijo / Flex-shrink-0) */}
+                        <div className="relative px-5 sm:px-6 py-3.5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between flex-shrink-0 bg-gray-50/50 dark:bg-gray-900/50">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="p-2 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/30 flex-shrink-0">
+                                    <CreditCard className="w-5 h-5 sm:w-6 sm:h-6" />
                                 </div>
-                                <div>
-                                    <h3 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+                                <div className="min-w-0">
+                                    <h3 className="text-sm sm:text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
                                         Renovación de Cuenta Matriz
-                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex-shrink-0">
                                             Proveedor & Tarjeta
                                         </span>
                                     </h3>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
                                         Asienta el pago de la cuenta matriz, guarda la tarjeta temporal y sincroniza con Excel y Contabilidad.
                                     </p>
                                 </div>
@@ -2209,323 +2215,325 @@ export const ClientsView: React.FC = () => {
                             <button
                                 type="button"
                                 onClick={() => setRenewalModalOpen(false)}
-                                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer flex-shrink-0"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        {/* Contenido del Formulario */}
-                        <form onSubmit={handleSaveAccountRenewal} className="relative p-6 space-y-5">
-                            {/* LIVE VIRTUAL CARD PREVIEW */}
-                            {(() => {
-                                const isTransfer = (renewalForm.provider || '').toLowerCase().includes('net') ||
-                                    (renewalForm.provider || '').toLowerCase().includes('transferencia') ||
-                                    (renewalForm.payment_method || '').toLowerCase().includes('transferencia') ||
-                                    (renewalForm.payment_method || '').toLowerCase().includes('nequi') ||
-                                    (renewalForm.payment_method || '').toLowerCase().includes('bancolombia');
+                        {/* Contenido del Formulario (Flex-grow con Scroll Interno) */}
+                        <form onSubmit={handleSaveAccountRenewal} className="relative flex flex-col flex-grow overflow-hidden">
+                            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-grow">
+                                {/* LIVE VIRTUAL CARD PREVIEW */}
+                                {(() => {
+                                    const isTransfer = (renewalForm.provider || '').toLowerCase().includes('net') ||
+                                        (renewalForm.provider || '').toLowerCase().includes('transferencia') ||
+                                        (renewalForm.payment_method || '').toLowerCase().includes('transferencia') ||
+                                        (renewalForm.payment_method || '').toLowerCase().includes('nequi') ||
+                                        (renewalForm.payment_method || '').toLowerCase().includes('bancolombia');
 
-                                return (
-                                    <div className={`border rounded-2xl p-5 shadow-2xl text-white relative overflow-hidden font-mono transition-all ${
-                                        isTransfer
-                                            ? 'bg-gradient-to-tr from-slate-950 via-blue-950 to-indigo-950 border-blue-500/40'
-                                            : 'bg-gradient-to-tr from-slate-950 via-gray-900 to-emerald-950 border-emerald-500/40'
-                                    }`}>
-                                        <div className={`blur-xl w-32 h-32 rounded-full absolute -top-8 -right-8 pointer-events-none ${
-                                            isTransfer ? 'bg-blue-400/15' : 'bg-emerald-400/15'
-                                        }`} />
+                                    return (
+                                        <div className={`border rounded-2xl p-4 shadow-xl text-white relative overflow-hidden font-mono transition-all ${
+                                            isTransfer
+                                                ? 'bg-gradient-to-tr from-slate-950 via-blue-950 to-indigo-950 border-blue-500/40'
+                                                : 'bg-gradient-to-tr from-slate-950 via-gray-900 to-emerald-950 border-emerald-500/40'
+                                        }`}>
+                                            <div className={`blur-xl w-32 h-32 rounded-full absolute -top-8 -right-8 pointer-events-none ${
+                                                isTransfer ? 'bg-blue-400/15' : 'bg-emerald-400/15'
+                                            }`} />
 
-                                        <div className="flex justify-between items-center mb-4 relative z-10">
-                                            {isTransfer ? (
-                                                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-xs font-black">
-                                                    <span>📲 TRANSFERENCIA BANCARIA</span>
-                                                </div>
-                                            ) : (
-                                                /* Chip metálico */
-                                                <div className="w-10 h-7 rounded-md bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-600 shadow-md border border-amber-200/50 flex items-center justify-center">
-                                                    <div className="w-8 h-5 border border-amber-700/30 rounded-xs flex flex-col justify-around py-0.5">
-                                                        <div className="h-px bg-amber-800/40 w-full" />
-                                                        <div className="h-px bg-amber-800/40 w-full" />
+                                            <div className="flex justify-between items-center mb-3 relative z-10">
+                                                {isTransfer ? (
+                                                    <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-[11px] font-black">
+                                                        <span>📲 TRANSFERENCIA BANCARIA</span>
                                                     </div>
+                                                ) : (
+                                                    /* Chip metálico */
+                                                    <div className="w-8 h-5.5 rounded-md bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-600 shadow-md border border-amber-200/50 flex items-center justify-center">
+                                                        <div className="w-6.5 h-3.5 border border-amber-700/30 rounded-xs flex flex-col justify-around py-0.5">
+                                                            <div className="h-px bg-amber-800/40 w-full" />
+                                                            <div className="h-px bg-amber-800/40 w-full" />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black tracking-wider uppercase border shadow-xs ${
+                                                    isTransfer
+                                                        ? 'bg-blue-500/20 text-blue-300 border-blue-400/30'
+                                                        : 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30'
+                                                }`}>
+                                                    {renewalForm.platform || 'PLATAFORMA'}
+                                                </span>
+                                            </div>
+
+                                            {/* Número / Detalle del método */}
+                                            <div className="text-sm font-bold tracking-wider text-emerald-100/90 mb-3 truncate drop-shadow-sm">
+                                                {renewalForm.payment_method || (isTransfer ? '📲 Transferencia Bancaria Directa (Sin tarjeta)' : '•••• •••• •••• •••• (Escribe la tarjeta abajo)')}
+                                            </div>
+
+                                            {/* Pie de la tarjeta */}
+                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 text-[10px] text-gray-300 border-t border-gray-700/60 pt-2.5 relative z-10">
+                                                <div className="truncate max-w-[240px]">
+                                                    <span className="text-[8px] uppercase tracking-wider text-gray-400 block">Cuenta</span>
+                                                    <span className="font-bold text-white truncate block">{renewalForm.account_email || 'correo@proveedor.com'}</span>
                                                 </div>
-                                            )}
-                                            <span className={`px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase border shadow-xs ${
-                                                isTransfer
-                                                    ? 'bg-blue-500/20 text-blue-300 border-blue-400/30'
-                                                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30'
-                                            }`}>
-                                                {renewalForm.platform || 'PLATAFORMA'}
-                                            </span>
-                                        </div>
-
-                                        {/* Número / Detalle del método */}
-                                        <div className="text-sm sm:text-base font-bold tracking-widest text-emerald-100/90 mb-4 truncate drop-shadow-sm">
-                                            {renewalForm.payment_method || (isTransfer ? '📲 Transferencia Bancaria Directa (Sin tarjeta)' : '•••• •••• •••• •••• (Escribe la tarjeta abajo)')}
-                                        </div>
-
-                                        {/* Pie de la tarjeta */}
-                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 text-[11px] text-gray-300 border-t border-gray-700/60 pt-3 relative z-10">
-                                            <div className="truncate max-w-[240px]">
-                                                <span className="text-[9px] uppercase tracking-wider text-gray-400 block">Cuenta</span>
-                                                <span className="font-bold text-white truncate block">{renewalForm.account_email || 'correo@proveedor.com'}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-[9px] uppercase tracking-wider text-gray-400 block">Proveedor</span>
-                                                <span className={`font-bold ${isTransfer ? 'text-blue-300' : 'text-emerald-400'}`}>
-                                                    {renewalForm.provider || 'Directo'}
-                                                </span>
-                                            </div>
-                                            <div className="text-right">
-                                                <span className="text-[9px] uppercase tracking-wider text-gray-400 block">Nuevo Vencimiento</span>
-                                                <span className={`font-black ${isTransfer ? 'text-blue-200' : 'text-emerald-300'}`}>
-                                                    {renewalForm.expiration_date || 'AAAA-MM-DD'}
-                                                </span>
+                                                <div>
+                                                    <span className="text-[8px] uppercase tracking-wider text-gray-400 block">Proveedor</span>
+                                                    <span className={`font-bold ${isTransfer ? 'text-blue-300' : 'text-emerald-400'}`}>
+                                                        {renewalForm.provider || 'Directo'}
+                                                    </span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-[8px] uppercase tracking-wider text-gray-400 block">Nuevo Vencimiento</span>
+                                                    <span className={`font-black ${isTransfer ? 'text-blue-200' : 'text-emerald-300'}`}>
+                                                        {renewalForm.expiration_date || 'AAAA-MM-DD'}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                );
-                            })()}
+                                    );
+                                })()}
 
-                            {/* Aviso de coincidencias en Excel */}
-                            {matchingAccountRows.length > 0 && (
-                                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300/60 dark:border-emerald-800/50 rounded-xl flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300 font-semibold">
-                                    <div className="flex items-center gap-2">
-                                        <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                                        <span>Esta cuenta tiene <strong>{matchingAccountRows.length} cupo(s) / perfiles</strong> en la Base de Datos.</span>
-                                    </div>
-                                    <span className="text-[10px] bg-emerald-600 text-white font-bold px-2 py-0.5 rounded-full">
-                                        Sincronizable
-                                    </span>
-                                </div>
-                            )}
-
-                            {/* SECCIÓN CUENTA MATRIZ: AHORRA LOS 2 INPUTS SI YA VIENE SELECCIONADA */}
-                            {renewalForm.account_email ? (
-                                <div className="p-3.5 bg-gradient-to-r from-gray-50 via-gray-100 to-emerald-50/30 dark:from-gray-800/90 dark:via-gray-800 dark:to-emerald-950/20 border border-gray-200 dark:border-gray-700/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <span className="px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs flex-shrink-0">
-                                            {renewalForm.platform || 'STREAMING'}
-                                        </span>
-                                        <div className="min-w-0">
-                                            <span className="text-xs font-mono font-bold text-gray-900 dark:text-white block truncate">
-                                                {renewalForm.account_email}
-                                            </span>
-                                            {matchingAccountRows.length > 0 ? (
-                                                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block">
-                                                    ✨ {matchingAccountRows.length} cupo(s) en Excel se actualizarán automáticamente con este pago.
-                                                </span>
-                                            ) : (
-                                                <span className="text-[10px] text-gray-400 block">Cuenta matriz lista para renovar</span>
-                                            )}
+                                {/* Aviso de coincidencias en Excel */}
+                                {matchingAccountRows.length > 0 && (
+                                    <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300/60 dark:border-emerald-800/50 rounded-xl flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300 font-semibold">
+                                        <div className="flex items-center gap-2">
+                                            <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                                            <span>Esta cuenta tiene <strong>{matchingAccountRows.length} cupo(s) / perfiles</strong> en la Base de Datos.</span>
                                         </div>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setRenewalForm(prev => ({ ...prev, account_email: '', platform: '' }))}
-                                        className="text-[11px] font-bold text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline cursor-pointer flex-shrink-0 ml-auto"
-                                    >
-                                        Cambiar cuenta
-                                    </button>
-                                </div>
-                            ) : (
-                                /* Selector de cuenta si abrió el modal desde el botón general */
-                                <div className="p-4 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-2xl space-y-2">
-                                    <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                                        Selecciona la Cuenta Matriz a Renovar *
-                                    </label>
-                                    <select
-                                        value={renewalForm.account_email ? `${renewalForm.platform}:::${renewalForm.account_email}` : ''}
-                                        onChange={(e) => {
-                                            const val = e.target.value;
-                                            if (!val) {
-                                                setRenewalForm(prev => ({ ...prev, platform: '', account_email: '' }));
-                                                return;
-                                            }
-                                            const [plat, em] = val.split(':::');
-                                            setRenewalForm(prev => ({ ...prev, platform: plat, account_email: em }));
-                                        }}
-                                        className="w-full px-3.5 py-2.5 text-xs font-semibold rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-750 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-                                    >
-                                        <option value="">-- Elige una cuenta existente ({uniqueAccountOptions.length} cuentas) --</option>
-                                        {uniqueAccountOptions.map((acc, idx) => (
-                                            <option key={idx} value={`${acc.platform}:::${acc.email}`}>
-                                                [{acc.platform}] {acc.email} ({acc.count} perfiles en Excel)
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            )}
-
-                            {/* FILA 2: DATOS DE MÉTODO DE PAGO / TARJETA TEMPORAL Y PROVEEDOR */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <div className="flex justify-between items-center mb-1.5">
-                                        <label className="text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
-                                            Método de Pago / Tarjeta
-                                        </label>
-                                        <span className="text-[10px] text-gray-400">
-                                            {(renewalForm.provider || '').toLowerCase().includes('net') ? 'Opcional si es transferencia' : 'Tarjeta o Medio'}
+                                        <span className="text-[10px] bg-emerald-600 text-white font-bold px-2 py-0.5 rounded-full flex-shrink-0">
+                                            Sincronizable
                                         </span>
                                     </div>
-                                    <input
-                                        type="text"
-                                        placeholder={(renewalForm.provider || '').toLowerCase().includes('net') ? "Ej. Transferencia Bancaria / Nequi / Comprobante" : "Ej. Mastercard 6833 CCV 791 exp 08/28"}
-                                        value={renewalForm.payment_method}
-                                        onChange={(e) => setRenewalForm({ ...renewalForm, payment_method: e.target.value })}
-                                        className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium shadow-2xs"
-                                    />
-                                    {/* Pills rápidas de método */}
-                                    <div className="flex flex-wrap gap-1.5 mt-2">
-                                        {[
-                                            { label: '💳 Tarjeta Virtual', val: 'Tarjeta Virtual' },
-                                            { label: '📲 Transferencia', val: 'Transferencia Bancaria' },
-                                            { label: '⚡ Nequi', val: 'Nequi' },
-                                            { label: '🏦 Bancolombia', val: 'Bancolombia' }
-                                        ].map(m => (
-                                            <button
-                                                key={m.val}
-                                                type="button"
-                                                onClick={() => setRenewalForm(prev => ({ ...prev, payment_method: m.val }))}
-                                                className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
-                                                    renewalForm.payment_method.includes(m.val)
-                                                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-blue-400'
-                                                }`}
-                                            >
-                                                {m.label}
-                                            </button>
-                                        ))}
+                                )}
+
+                                {/* SECCIÓN CUENTA MATRIZ: AHORRA LOS 2 INPUTS SI YA VIENE SELECCIONADA */}
+                                {renewalForm.account_email ? (
+                                    <div className="p-3.5 bg-gradient-to-r from-gray-50 via-gray-100 to-emerald-50/30 dark:from-gray-800/90 dark:via-gray-800 dark:to-emerald-950/20 border border-gray-200 dark:border-gray-700/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <span className="px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs flex-shrink-0">
+                                                {renewalForm.platform || 'STREAMING'}
+                                            </span>
+                                            <div className="min-w-0">
+                                                <span className="text-xs font-mono font-bold text-gray-900 dark:text-white block truncate">
+                                                    {renewalForm.account_email}
+                                                </span>
+                                                {matchingAccountRows.length > 0 ? (
+                                                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block">
+                                                        ✨ {matchingAccountRows.length} cupo(s) en Excel se actualizarán automáticamente con este pago.
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[10px] text-gray-400 block">Cuenta matriz lista para renovar</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setRenewalForm(prev => ({ ...prev, account_email: '', platform: '' }))}
+                                            className="text-[11px] font-bold text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline cursor-pointer flex-shrink-0 ml-auto"
+                                        >
+                                            Cambiar cuenta
+                                        </button>
                                     </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1.5">
-                                        Proveedor / Vendedor *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="Ej. Net, Transferencia, Directo..."
-                                        value={renewalForm.provider}
-                                        onChange={(e) => {
-                                            const p = e.target.value;
-                                            const isNet = p.toLowerCase().includes('net');
-                                            setRenewalForm(prev => ({
-                                                ...prev,
-                                                provider: p,
-                                                payment_method: (isNet && !prev.payment_method) ? 'Transferencia Bancaria' : prev.payment_method
-                                            }));
-                                        }}
-                                        className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
-                                    />
-                                    {/* Pills rápidas de proveedor */}
-                                    <div className="flex flex-wrap gap-1.5 mt-2">
-                                        {['Net', 'Directo', 'Transferencia', 'Miguel Botero', 'Nu', 'Nequi', 'Bancolombia'].map((p) => (
-                                            <button
-                                                key={p}
-                                                type="button"
-                                                onClick={() => {
-                                                    const isNet = p.toLowerCase().includes('net') || p.toLowerCase().includes('transferencia');
-                                                    setRenewalForm(prev => ({
-                                                        ...prev,
-                                                        provider: p,
-                                                        payment_method: (isNet && (!prev.payment_method || prev.payment_method.includes('Tarjeta'))) ? 'Transferencia Bancaria' : prev.payment_method
-                                                    }));
-                                                }}
-                                                className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${renewalForm.provider === p
-                                                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-emerald-500'
-                                                    }`}
-                                            >
-                                                +{p}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* FILA 3: MONTO, FECHA Y VENCIMIENTO */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div>
-                                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1.5">
-                                        Monto Pagado ($ COP) *
-                                    </label>
-                                    <input
-                                        type="number"
-                                        required
-                                        placeholder="Ej. 14000"
-                                        value={renewalForm.amount_paid}
-                                        onChange={(e) => setRenewalForm({ ...renewalForm, amount_paid: e.target.value })}
-                                        className="w-full px-3.5 py-2.5 text-sm font-black text-rose-500 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-rose-500 shadow-2xs"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1.5">
-                                        Fecha de Pago *
-                                    </label>
-                                    <input
-                                        type="date"
-                                        required
-                                        value={renewalForm.renewal_date}
-                                        onChange={(e) => {
-                                            const payDate = e.target.value;
-                                            const d = new Date(payDate);
-                                            d.setDate(d.getDate() + (renewalForm.duration_days || 30));
-                                            setRenewalForm({
-                                                ...renewalForm,
-                                                renewal_date: payDate,
-                                                expiration_date: d.toISOString().slice(0, 10)
-                                            });
-                                        }}
-                                        className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
-                                    />
-                                </div>
-
-                                <div>
-                                    <div className="flex justify-between items-center mb-1.5">
-                                        <label className="text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
-                                            Nuevo Vencimiento *
+                                ) : (
+                                    /* Selector de cuenta si abrió el modal desde el botón general */
+                                    <div className="p-4 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-2xl space-y-2">
+                                        <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                                            Selecciona la Cuenta Matriz a Renovar *
                                         </label>
-                                        <div className="flex gap-1">
-                                            {[30, 60, 365].map((d) => (
+                                        <select
+                                            value={renewalForm.account_email ? `${renewalForm.platform}:::${renewalForm.account_email}` : ''}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (!val) {
+                                                    setRenewalForm(prev => ({ ...prev, platform: '', account_email: '' }));
+                                                    return;
+                                                }
+                                                const [plat, em] = val.split(':::');
+                                                setRenewalForm(prev => ({ ...prev, platform: plat, account_email: em }));
+                                            }}
+                                            className="w-full px-3.5 py-2.5 text-xs font-semibold rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-750 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                                        >
+                                            <option value="">-- Elige una cuenta existente ({uniqueAccountOptions.length} cuentas) --</option>
+                                            {uniqueAccountOptions.map((acc, idx) => (
+                                                <option key={idx} value={`${acc.platform}:::${acc.email}`}>
+                                                    [{acc.platform}] {acc.email} ({acc.count} perfiles en Excel)
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+
+                                {/* FILA 2: DATOS DE MÉTODO DE PAGO / TARJETA TEMPORAL Y PROVEEDOR */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <label className="text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                                                Método de Pago / Tarjeta
+                                            </label>
+                                            <span className="text-[10px] text-gray-400">
+                                                {(renewalForm.provider || '').toLowerCase().includes('net') ? 'Opcional si es transferencia' : 'Tarjeta o Medio'}
+                                            </span>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder={(renewalForm.provider || '').toLowerCase().includes('net') ? "Ej. Transferencia Bancaria / Nequi / Comprobante" : "Ej. Mastercard 6833 CCV 791 exp 08/28"}
+                                            value={renewalForm.payment_method}
+                                            onChange={(e) => setRenewalForm({ ...renewalForm, payment_method: e.target.value })}
+                                            className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium shadow-2xs"
+                                        />
+                                        {/* Pills rápidas de método */}
+                                        <div className="flex flex-wrap gap-1.5 mt-2">
+                                            {[
+                                                { label: '💳 Tarjeta Virtual', val: 'Tarjeta Virtual' },
+                                                { label: '📲 Transferencia', val: 'Transferencia Bancaria' },
+                                                { label: '⚡ Nequi', val: 'Nequi' },
+                                                { label: '🏦 Bancolombia', val: 'Bancolombia' }
+                                            ].map(m => (
                                                 <button
-                                                    key={d}
+                                                    key={m.val}
                                                     type="button"
-                                                    onClick={() => handleSetDuration(d)}
-                                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded cursor-pointer ${renewalForm.duration_days === d
-                                                            ? 'bg-emerald-600 text-white'
-                                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-emerald-500'
-                                                        }`}
+                                                    onClick={() => setRenewalForm(prev => ({ ...prev, payment_method: m.val }))}
+                                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                                                        renewalForm.payment_method.includes(m.val)
+                                                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-blue-400'
+                                                    }`}
                                                 >
-                                                    +{d === 365 ? '1a' : `${d}d`}
+                                                    {m.label}
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
-                                    <input
-                                        type="date"
-                                        required
-                                        value={renewalForm.expiration_date}
-                                        onChange={(e) => setRenewalForm({ ...renewalForm, expiration_date: e.target.value })}
-                                        className="w-full px-3.5 py-2.5 text-xs font-black text-emerald-600 dark:text-emerald-400 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono shadow-2xs"
-                                    />
+
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1.5">
+                                            Proveedor / Vendedor *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="Ej. Net, Transferencia, Directo..."
+                                            value={renewalForm.provider}
+                                            onChange={(e) => {
+                                                const p = e.target.value;
+                                                const isNet = p.toLowerCase().includes('net');
+                                                setRenewalForm(prev => ({
+                                                    ...prev,
+                                                    provider: p,
+                                                    payment_method: (isNet && !prev.payment_method) ? 'Transferencia Bancaria' : prev.payment_method
+                                                }));
+                                            }}
+                                            className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
+                                        />
+                                        {/* Pills rápidas de proveedor */}
+                                        <div className="flex flex-wrap gap-1.5 mt-2">
+                                            {['Net', 'Directo', 'Transferencia', 'Miguel Botero', 'Nu', 'Nequi', 'Bancolombia'].map((p) => (
+                                                <button
+                                                    key={p}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const isNet = p.toLowerCase().includes('net') || p.toLowerCase().includes('transferencia');
+                                                        setRenewalForm(prev => ({
+                                                            ...prev,
+                                                            provider: p,
+                                                            payment_method: (isNet && (!prev.payment_method || prev.payment_method.includes('Tarjeta'))) ? 'Transferencia Bancaria' : prev.payment_method
+                                                        }));
+                                                    }}
+                                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${renewalForm.provider === p
+                                                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-emerald-500'
+                                                        }`}
+                                                >
+                                                    +{p}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* FILA 3: MONTO, FECHA Y VENCIMIENTO */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1.5">
+                                            Monto Pagado ($ COP) *
+                                        </label>
+                                        <input
+                                            type="number"
+                                            required
+                                            placeholder="Ej. 14000"
+                                            value={renewalForm.amount_paid}
+                                            onChange={(e) => setRenewalForm({ ...renewalForm, amount_paid: e.target.value })}
+                                            className="w-full px-3.5 py-2.5 text-sm font-black text-rose-500 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-rose-500 shadow-2xs"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1.5">
+                                            Fecha de Pago *
+                                        </label>
+                                        <input
+                                            type="date"
+                                            required
+                                            value={renewalForm.renewal_date}
+                                            onChange={(e) => {
+                                                const payDate = e.target.value;
+                                                const d = new Date(payDate);
+                                                d.setDate(d.getDate() + (renewalForm.duration_days || 30));
+                                                setRenewalForm({
+                                                    ...renewalForm,
+                                                    renewal_date: payDate,
+                                                    expiration_date: d.toISOString().slice(0, 10)
+                                                });
+                                            }}
+                                            className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <label className="text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                                                Nuevo Vencimiento *
+                                            </label>
+                                            <div className="flex gap-1">
+                                                {[30, 60, 365].map((d) => (
+                                                    <button
+                                                        key={d}
+                                                        type="button"
+                                                        onClick={() => handleSetDuration(d)}
+                                                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded cursor-pointer ${renewalForm.duration_days === d
+                                                                ? 'bg-emerald-600 text-white'
+                                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-emerald-500'
+                                                            }`}
+                                                    >
+                                                        +{d === 365 ? '1a' : `${d}d`}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <input
+                                            type="date"
+                                            required
+                                            value={renewalForm.expiration_date}
+                                            onChange={(e) => setRenewalForm({ ...renewalForm, expiration_date: e.target.value })}
+                                            className="w-full px-3.5 py-2.5 text-xs font-black text-emerald-600 dark:text-emerald-400 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono shadow-2xs"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* GARANTÍA DE EGRESO Y SINCRONIZACIÓN AUTOMÁTICA */}
+                                <div className="px-3.5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 text-xs text-emerald-800 dark:text-emerald-300 font-semibold">
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                                        <span>Salida de caja y vencimiento en Excel Online actualizados automáticamente al confirmar.</span>
+                                    </div>
+                                    <span className="text-[10px] bg-emerald-600 text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wider flex-shrink-0">
+                                        Automático
+                                    </span>
                                 </div>
                             </div>
 
-                            {/* GARANTÍA DE EGRESO Y SINCRONIZACIÓN AUTOMÁTICA */}
-                            <div className="px-3.5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 text-xs text-emerald-800 dark:text-emerald-300 font-semibold">
-                                <div className="flex items-center gap-2">
-                                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                                    <span>Salida de caja y vencimiento en Excel Online actualizados automáticamente al confirmar.</span>
-                                </div>
-                                <span className="text-[10px] bg-emerald-600 text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wider flex-shrink-0">
-                                    Automático
-                                </span>
-                            </div>
-
-                            {/* FOOTER ACTIONS */}
-                            <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                            {/* FOOTER ACTIONS (Fijo / Flex-shrink-0) */}
+                            <div className="flex items-center justify-end gap-3 px-6 py-3.5 border-t border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-900/80 flex-shrink-0">
                                 <button
                                     type="button"
                                     disabled={submittingRenewal}
