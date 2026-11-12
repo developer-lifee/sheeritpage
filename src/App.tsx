@@ -24,6 +24,7 @@ import PortfolioShowcasePage from './components/PortfolioShowcasePage';
 import { AdvisorSkillTest } from './components/AdvisorSkillTest';
 import ErrorBoundary from './components/ErrorBoundary';
 import ClientLoginView from './components/ClientLoginView';
+import { StoreBuilderPage } from './components/StoreBuilderPage';
 import { useDarkMode } from './hooks/useDarkMode';
 import { Search, ShoppingCart, Lock, AlertCircle, Globe } from 'lucide-react';
 import { ComboCartProvider, useComboCart } from './hooks/useComboCart';
@@ -52,7 +53,7 @@ interface Platform {
   incident?: string;
 }
 
-export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software' | 'raytracing-support' | 'raytracing-privacy' | 'pueblapp-support' | 'pueblapp-privacy' | 'portafolio' | 'evaluacion';
+export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software' | 'raytracing-support' | 'raytracing-privacy' | 'pueblapp-support' | 'pueblapp-privacy' | 'portafolio' | 'evaluacion' | 'crear';
 
 const AUTHORIZED_ADVISORS: { [email: string]: string } = {
   'esclepiades@hotmail.com': 'Esclepiades',
@@ -265,6 +266,7 @@ function AppContent() {
     if (path === '/support/pueblapp' || path === '/support/puebloapp' || path === '/support/yaconecta') return 'pueblapp-support';
     if (path === '/support/pueblapp/privacy' || path === '/support/puebloapp/privacy' || path === '/support/yaconecta/privacy') return 'pueblapp-privacy';
     if (path === '/evaluacion' || path === '/test-asesor' || path === '/test-asesores' || path === '/simulador') return 'evaluacion';
+    if (path === '/crear' || path === '/builder' || path === '/comenzar' || path === '/crear-tienda' || path === '/tienda/crear') return 'crear';
     return 'home';
   });
 
@@ -321,6 +323,8 @@ function AppContent() {
       setCurrentView('pueblapp-privacy');
     } else if (path === '/evaluacion' || path === '/test-asesor' || path === '/test-asesores' || path === '/simulador') {
       setCurrentView('evaluacion');
+    } else if (path === '/crear' || path === '/builder' || path === '/comenzar' || path === '/crear-tienda' || path === '/tienda/crear') {
+      setCurrentView('crear');
     } else {
       setCurrentView('home');
     }
@@ -352,6 +356,8 @@ function AppContent() {
         setCurrentView('pueblapp-privacy');
       } else if (currentPath === '/evaluacion' || currentPath === '/test-asesor' || currentPath === '/test-asesores' || currentPath === '/simulador') {
         setCurrentView('evaluacion');
+      } else if (currentPath === '/crear' || currentPath === '/builder' || currentPath === '/comenzar' || currentPath === '/crear-tienda' || currentPath === '/tienda/crear') {
+        setCurrentView('crear');
       } else {
         setCurrentView('home');
       }
@@ -375,6 +381,7 @@ function AppContent() {
     else if (view === 'pueblapp-support') path = '/support/pueblapp';
     else if (view === 'pueblapp-privacy') path = '/support/pueblapp/privacy';
     else if (view === 'evaluacion') path = '/evaluacion';
+    else if (view === 'crear') path = '/crear';
     window.history.pushState({}, '', path);
     window.scrollTo(0, 0);
   };
@@ -691,6 +698,12 @@ function AppContent() {
       {currentView === 'evaluacion' && (
         <ErrorBoundary fallbackTitle="Simulador y Evaluación de Asesores">
           <AdvisorSkillTest />
+        </ErrorBoundary>
+      )}
+
+      {currentView === 'crear' && (
+        <ErrorBoundary fallbackTitle="Creador de Tiendas Retailer OS">
+          <StoreBuilderPage onNavigateHome={() => navigateTo('home')} />
         </ErrorBoundary>
       )}
 

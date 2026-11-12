@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Menu, User, HelpCircle, Home, X, ShoppingCart, Code, Layers } from 'lucide-react';
+import { Menu, User, HelpCircle, Home, X, ShoppingCart, Code, Layers, Store } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { CurrencyToggle } from './CurrencyToggle';
 import { useComboCart } from '../hooks/useComboCart';
@@ -135,6 +135,13 @@ export function Navbar({ isDark, toggleDark, onNavigate, currentView, agentName,
                   <Code className="h-4 w-4 mr-3 text-amber-500" />
                   <span>Desarrollo de Software</span>
                 </button>
+                <button 
+                  onClick={() => { onNavigate('crear'); setIsMenuOpen(false); }}
+                  className="w-full flex items-center px-4 py-3 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-sm font-bold transition-colors border-t border-gray-100 dark:border-gray-700"
+                >
+                  <Store className="h-4 w-4 mr-3 text-emerald-500" />
+                  <span>Crear mi Tienda ($10 USD)</span>
+                </button>
               </div>
             )}
           </div>
@@ -244,6 +251,13 @@ export function Navbar({ isDark, toggleDark, onNavigate, currentView, agentName,
               >
                 <Code className="h-5 w-5 mr-3" />
                 <span>Desarrollo de Software</span>
+              </button>
+              <button 
+                onClick={() => { onNavigate('crear'); setIsMobileMenuOpen(false); }}
+                className="w-full flex items-center px-2 py-2 text-emerald-300 font-bold hover:bg-white/10 rounded-md border-t border-white/10"
+              >
+                <Store className="h-5 w-5 mr-3" />
+                <span>Crear mi Tienda ($10 USD)</span>
               </button>
             </div>
           </div>
