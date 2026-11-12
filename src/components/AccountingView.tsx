@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, Save, Plus, Trash2, Edit2, TrendingUp, CreditCard, RefreshCcw, DollarSign, Calendar, Eye, EyeOff, Receipt, CheckCircle2, X } from 'lucide-react';
+import { Calculator, Save, Plus, Trash2, Edit2, TrendingUp, CreditCard, RefreshCcw, DollarSign, Calendar, Eye, EyeOff, Receipt, CheckCircle2, X, Users, Wallet, ChevronDown, ChevronUp, UserCheck } from 'lucide-react';
 import { isDemoMode, DEMO_ACCOUNTING } from '../utils/demoMode';
 import {
   ResponsiveContainer,
@@ -26,6 +26,25 @@ interface AccountingRow {
   active_profiles: number;
 }
 
+interface SalariesBreakdownItem {
+  agent_id: number;
+  fullname: string;
+  weekly_hours: number;
+  monthly_hours: number;
+  monthly_total: number;
+}
+
+interface SalariesProjection {
+  projected_monthly: number;
+  by_hours_rules: number;
+  last_month_actual: number;
+  hourly_rate: number;
+  avg_weekly_hours: number;
+  projected_monthly_hours: number;
+  active_agents: number;
+  breakdown?: SalariesBreakdownItem[];
+}
+
 interface AccountingTotals {
   ingreso_total: number;
   egreso_total: number;
@@ -34,6 +53,9 @@ interface AccountingTotals {
   mensual_ingreso: number;
   mensual_egreso: number;
   mensual_utilidad: number;
+  salaries_projection?: SalariesProjection;
+  mensual_utilidad_post_salarios?: number;
+  diario_utilidad_post_salarios?: number;
 }
 
 interface RealCashFlowData {
@@ -92,6 +114,12 @@ export function AccountingView() {
   const [showRenewalModal, setShowRenewalModal] = useState(false);
   const [submittingRenewal, setSubmittingRenewal] = useState(false);
   const [renewalFilterPlat, setRenewalFilterPlat] = useState('');
+
+  // Estados para evaluación interactiva de deducción de salarios de asesores
+  const [deductSalaries, setDeductSalaries] = useState<boolean>(true);
+  const [salariesMode, setSalariesMode] = useState<'last_month' | 'rules' | 'custom'>('last_month');
+  const [customSalaryAmount, setCustomSalaryAmount] = useState<number>(2600000);
+  const [showSalariesBreakdown, setShowSalariesBreakdown] = useState<boolean>(false);
 
   // Form states
   const [editingPrice, setEditingPrice] = useState<Record<string, number>>({});
@@ -410,6 +438,22 @@ export function AccountingView() {
     );
   }
 
+  // Cálculos reactivos de deducción de salarios de asesores
+  const defaultLastMonth = totals?.salaries_projection?.last_month_actual || 2600000;
+  const defaultByRules = totals?.salaries_projection?.by_hours_rules || 2450000;
+  
+  const activeSalaryAmount = salariesMode === 'last_month' 
+    ? defaultLastMonth 
+    : salariesMode === 'rules' 
+      ? defaultByRules 
+      : customSalaryAmount;
+
+  const netProfitPostSalaries = (totals?.mensual_utilidad || 0) - (deductSalaries ? activeSalaryAmount : 0);
+  const dailyProfitPostSalaries = netProfitPostSalaries / 30;
+  const netMarginPostSalaries = (totals?.mensual_ingreso || 0) > 0 
+    ? (netProfitPostSalaries / totals!.mensual_ingreso) * 100 
+    : 0;
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 font-sans">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -418,6 +462,21 @@ export function AccountingView() {
           <p className="text-xs text-gray-500 dark:text-gray-400">Control de ingresos, costos operativos y precios de venta.</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Botón interactivo para Deducir Salarios de Asesores */}
+          <button
+            onClick={() => setDeductSalaries(!deductSalaries)}
+            className={`px-3 py-1.5 rounded-xl text-xxs font-extrabold flex items-center gap-1.5 transition-all border ${
+              deductSalaries
+                ? 'bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400 shadow-xs'
+                : 'bg-gray-100 dark:bg-gray-750 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'
+            }`}
+            title="Evaluar cuánto te queda libre después de pagar salarios a asesores"
+          >
+            <Wallet className="w-3.5 h-3.5" />
+            <span>{deductSalaries ? '💼 Salarios Deducidos' : '💼 Deducir Salarios'}</span>
+            <span className={`w-2 h-2 rounded-full ${deductSalaries ? 'bg-amber-500 animate-pulse' : 'bg-gray-400 dark:bg-gray-600'}`} />
+          </button>
+
           {/* View mode toggle */}
           <div className="bg-gray-100 dark:bg-gray-750 p-1 rounded-xl flex">
             <button
@@ -463,34 +522,174 @@ export function AccountingView() {
 
       {/* Totales Resumen - Cartera Excel (Mensual) */}
       {viewMode === 'excel' && totals && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
-            <span className="text-xs text-gray-400 font-semibold uppercase">Ingreso Total Cartera (Mensual)</span>
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
-              ${Math.round(totals.mensual_ingreso).toLocaleString()}
+        <div className="space-y-4">
+          <div className={`grid grid-cols-1 ${deductSalaries ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-6`}>
+            {/* 1. Ingreso Total Cartera */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
+              <span className="text-xs text-gray-400 font-semibold uppercase">Ingreso Total Cartera (Mensual)</span>
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
+                ${Math.round(totals.mensual_ingreso).toLocaleString()}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                Equivalente Diario: ${Math.round(totals.ingreso_total).toLocaleString()} / día
+              </div>
             </div>
-            <div className="text-xs text-gray-500 mt-1">
-              Equivalente Diario: ${Math.round(totals.ingreso_total).toLocaleString()} / día
+
+            {/* 2. Egreso Total Cuentas Matriz */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
+              <span className="text-xs text-gray-400 font-semibold uppercase">Egreso Cuentas Matriz (Mensual)</span>
+              <div className="text-2xl font-bold text-red-650 dark:text-red-400 mt-1">
+                ${Math.round(totals.mensual_egreso).toLocaleString()}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                Costo Diario Inventario: ${Math.round(totals.egreso_total).toLocaleString()} / día
+              </div>
+            </div>
+
+            {/* 3. Salarios Asesores (Solo visible cuando deductSalaries está activo) */}
+            {deductSalaries && (
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-amber-300 dark:border-amber-800/60 relative overflow-hidden">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-amber-600 dark:text-amber-400 font-bold uppercase flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5" /> Nómina Asesores
+                  </span>
+                  <button
+                    onClick={() => setShowSalariesBreakdown(!showSalariesBreakdown)}
+                    className="text-[10px] text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-semibold underline flex items-center gap-0.5"
+                  >
+                    <span>{showSalariesBreakdown ? 'Ocultar' : 'Ver Horas'}</span>
+                    {showSalariesBreakdown ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  </button>
+                </div>
+                <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">
+                  -${Math.round(activeSalaryAmount).toLocaleString()}
+                </div>
+                {/* Selector rápido de método de cálculo de nómina */}
+                <div className="flex items-center gap-1 mt-2.5">
+                  <button
+                    onClick={() => setSalariesMode('last_month')}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                      salariesMode === 'last_month'
+                        ? 'bg-amber-500 text-white shadow-xs'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-500 hover:text-gray-700'
+                    }`}
+                    title="Mes Anterior pagado con adelantos ($2.600.000 COP)"
+                  >
+                    Mes Ant. ($2.6M)
+                  </button>
+                  <button
+                    onClick={() => setSalariesMode('rules')}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                      salariesMode === 'rules'
+                        ? 'bg-amber-500 text-white shadow-xs'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-500 hover:text-gray-700'
+                    }`}
+                    title={`Predicción según turnos semanales: ~$${Math.round((totals.salaries_projection?.by_hours_rules || 2450000)/1000)}k COP`}
+                  >
+                    Regla Horas (~${Math.round((totals.salaries_projection?.by_hours_rules || 2450000)/1000000 * 10)/10}M)
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 4. Utilidad Mensual Líquida (Para ti) */}
+            <div className={`bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border ${
+              deductSalaries 
+                ? 'border-emerald-300 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/10' 
+                : 'dark:border-gray-700'
+            }`}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-400 font-semibold uppercase">
+                  {deductSalaries ? '✨ Te Queda a Ti (Líquido)' : 'Utilidad Mensual Neta (Inventario)'}
+                </span>
+                {deductSalaries && (
+                  <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold rounded-full">
+                    Post-Salarios
+                  </span>
+                )}
+              </div>
+              <div className={`text-2xl font-bold mt-1 ${deductSalaries ? 'text-emerald-600 dark:text-emerald-400' : 'text-brand-primary'}`}>
+                ${Math.round(netProfitPostSalaries).toLocaleString()}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {deductSalaries ? (
+                  <>
+                    Margen Líquido: <strong className="text-emerald-600 dark:text-emerald-400">{netMarginPostSalaries.toFixed(1)}%</strong> | Diario Libre: <strong>${Math.round(dailyProfitPostSalaries).toLocaleString()} / día</strong>
+                  </>
+                ) : (
+                  <>
+                    Margen Neto: {totals.porcentaje_utilidad.toFixed(1)}% | Ganancia Diaria: ${Math.round(totals.utilidad_total).toLocaleString()} / día
+                  </>
+                )}
+              </div>
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
-            <span className="text-xs text-gray-400 font-semibold uppercase">Egreso Total Cuentas Matriz (Mensual)</span>
-            <div className="text-2xl font-bold text-red-650 dark:text-red-400 mt-1">
-              ${Math.round(totals.mensual_egreso).toLocaleString()}
+
+          {/* Desglose desplegable de nómina de asesores */}
+          {deductSalaries && showSalariesBreakdown && (
+            <div className="bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-2xl p-4 text-xs animate-in slide-in-from-top-2 duration-300">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-200/60 dark:border-amber-900/40 pb-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span className="font-bold text-amber-900 dark:text-amber-200">
+                    Desglose de Nómina de Asesores ({totals.salaries_projection?.active_agents || 2} asesores en soporte)
+                  </span>
+                </div>
+                <span className="text-[11px] text-amber-700 dark:text-amber-300 font-medium">
+                  Tarifa base soporte: <strong>${(totals.salaries_projection?.hourly_rate || 8333).toLocaleString()} COP / hora</strong>
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {(totals.salaries_projection?.breakdown && totals.salaries_projection.breakdown.length > 0) ? (
+                  totals.salaries_projection.breakdown.map((ag) => (
+                    <div key={ag.agent_id} className="bg-white/80 dark:bg-gray-800/80 p-3 rounded-xl border border-amber-100 dark:border-gray-700">
+                      <div className="flex items-center justify-between font-bold text-gray-800 dark:text-gray-100">
+                        <span>{ag.fullname}</span>
+                        <span className="text-amber-600 dark:text-amber-400">${Math.round(ag.monthly_total).toLocaleString()}</span>
+                      </div>
+                      <div className="text-[11px] text-gray-500 mt-1 flex justify-between">
+                        <span>~{ag.weekly_hours} hrs/sem</span>
+                        <span>~{ag.monthly_hours} hrs/mes</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <>
+                    <div className="bg-white/80 dark:bg-gray-800/80 p-3 rounded-xl border border-amber-100 dark:border-gray-700">
+                      <div className="flex items-center justify-between font-bold text-gray-800 dark:text-gray-100">
+                        <span>Carol Cubillos</span>
+                        <span className="text-amber-600 dark:text-amber-400">~$1.237.450</span>
+                      </div>
+                      <div className="text-[11px] text-gray-500 mt-1 flex justify-between">
+                        <span>~35 hrs/sem</span>
+                        <span>~148 hrs/mes</span>
+                      </div>
+                    </div>
+                    <div className="bg-white/80 dark:bg-gray-800/80 p-3 rounded-xl border border-amber-100 dark:border-gray-700">
+                      <div className="flex items-center justify-between font-bold text-gray-800 dark:text-gray-100">
+                        <span>Melissa</span>
+                        <span className="text-amber-600 dark:text-amber-400">~$1.179.120</span>
+                      </div>
+                      <div className="text-[11px] text-gray-500 mt-1 flex justify-between">
+                        <span>~33 hrs/sem</span>
+                        <span>~141 hrs/mes</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+                <div className="bg-amber-100/60 dark:bg-amber-900/30 p-3 rounded-xl border border-amber-200 dark:border-amber-800/40 flex flex-col justify-between">
+                  <div className="font-bold text-amber-900 dark:text-amber-200 flex justify-between">
+                    <span>Ajustes & Adelantos</span>
+                    <span>~$180.000</span>
+                  </div>
+                  <span className="text-[10px] text-amber-700 dark:text-amber-300">
+                    Incluye turnos dominicales / horas extras y variaciones habituales de quincena.
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="text-xs text-gray-500 mt-1">
-              Costo Diario de Inventario: ${Math.round(totals.egreso_total).toLocaleString()} / día
-            </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
-            <span className="text-xs text-gray-400 font-semibold uppercase">Utilidad Mensual Neta (Inventario)</span>
-            <div className="text-2xl font-bold text-brand-primary mt-1">
-              ${Math.round(totals.mensual_utilidad).toLocaleString()}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              Margen Neto: {totals.porcentaje_utilidad.toFixed(1)}% | Ganancia Diaria: ${Math.round(totals.utilidad_total).toLocaleString()} / día
-            </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -516,12 +715,18 @@ export function AccountingView() {
             </div>
           </div>
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
-            <span className="text-xs text-gray-400 font-semibold uppercase">Utilidad Diaria (% Retorno)</span>
-            <div className="text-2xl font-bold text-brand-primary mt-1">
-              ${Math.round(totals.utilidad_total).toLocaleString()}
+            <span className="text-xs text-gray-400 font-semibold uppercase">
+              {deductSalaries ? 'Utilidad Diaria Post-Salarios' : 'Utilidad Diaria (% Retorno)'}
+            </span>
+            <div className={`text-2xl font-bold mt-1 ${deductSalaries ? 'text-emerald-600 dark:text-emerald-400' : 'text-brand-primary'}`}>
+              ${Math.round(deductSalaries ? dailyProfitPostSalaries : totals.utilidad_total).toLocaleString()}
             </div>
             <div className="text-xs text-gray-500 mt-1">
-              Margen Neto: {totals.porcentaje_utilidad.toFixed(1)}% | Mensual Proyectado: ${Math.round(totals.mensual_utilidad).toLocaleString()}
+              {deductSalaries ? (
+                <>Margen: {netMarginPostSalaries.toFixed(1)}% | Mensual Post-Salarios: ${Math.round(netProfitPostSalaries).toLocaleString()}</>
+              ) : (
+                <>Margen Neto: {totals.porcentaje_utilidad.toFixed(1)}% | Mensual Proyectado: ${Math.round(totals.mensual_utilidad).toLocaleString()}</>
+              )}
             </div>
           </div>
         </div>
