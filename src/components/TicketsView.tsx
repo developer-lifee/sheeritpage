@@ -418,6 +418,18 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     return false;
   };
 
+  const isSamePhone = (p1?: string | null, p2?: string | null): boolean => {
+    if (!p1 || !p2) return false;
+    if (p1 === p2) return true;
+    const c1 = String(p1).replace(/\D/g, '');
+    const c2 = String(p2).replace(/\D/g, '');
+    if (!c1 || !c2) return false;
+    if (c1 === c2) return true;
+    const l1 = c1.slice(-10);
+    const l2 = c2.slice(-10);
+    return Boolean(l1 && l2 && l1.length >= 7 && l2.length >= 7 && (l1 === l2 || c1.endsWith(l2) || c2.endsWith(l1)));
+  };
+
   const fetchTickets = (isSilent = false, currentFilter = chatFilter) => {
     if (!agentEmail) return;
 
@@ -1277,10 +1289,16 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     if (!phone) return;
 
     if (targetColumn === 'unassigned') {
-      setTickets(prev => prev.map(t => t.phone === phone ? { ...t, agent: null } : t));
+      setTickets(prev => prev.map(t => isSamePhone(t.phone, phone) ? { ...t, agent: null } : t));
+      if (activeChatTicket && isSamePhone(activeChatTicket.phone, phone)) {
+        setActiveChatTicket(prev => prev ? { ...prev, agent: null } : null);
+      }
       await executeClaim(phone, '');
     } else if (targetColumn === 'me') {
-      setTickets(prev => prev.map(t => t.phone === phone ? { ...t, agent: agentName } : t));
+      setTickets(prev => prev.map(t => isSamePhone(t.phone, phone) ? { ...t, agent: agentName } : t));
+      if (activeChatTicket && isSamePhone(activeChatTicket.phone, phone)) {
+        setActiveChatTicket(prev => prev ? { ...prev, agent: agentName } : null);
+      }
       await executeClaim(phone, agentName);
     } else if (targetColumn === 'other') {
       setAssignDialog({ phone });
@@ -1310,8 +1328,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
   const handleToggleMode = async (phone: string, currentMode: 'bot' | 'advisor') => {
     const nextMode = currentMode === 'bot' ? 'advisor' : 'bot';
-    setTickets(prev => prev.map(t => t.phone === phone ? { ...t, waitingHumanMode: nextMode } : t));
-    if (activeChatTicket && activeChatTicket.phone === phone) {
+    setTickets(prev => prev.map(t => isSamePhone(t.phone, phone) ? { ...t, waitingHumanMode: nextMode } : t));
+    if (activeChatTicket && isSamePhone(activeChatTicket.phone, phone)) {
       setActiveChatTicket(prev => prev ? { ...prev, waitingHumanMode: nextMode } : null);
     }
     
@@ -1348,8 +1366,8 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         alert(`❌ Error: ${result.message}`);
       } else {
         // Cambiar el modo visual a bot ya que fue liberado
-        setTickets(prev => prev.map(t => t.phone === phone ? { ...t, waitingHumanMode: 'bot' } : t));
-        if (activeChatTicket && activeChatTicket.phone === phone) {
+        setTickets(prev => prev.map(t => isSamePhone(t.phone, phone) ? { ...t, waitingHumanMode: 'bot' } : t));
+        if (activeChatTicket && isSamePhone(activeChatTicket.phone, phone)) {
           setActiveChatTicket(prev => prev ? { ...prev, waitingHumanMode: 'bot' } : null);
         }
       }
@@ -1361,10 +1379,10 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   };
 
   const handleReleaseBot = async (phone: string) => {
-    if (activeChatTicket && activeChatTicket.phone === phone) {
+    if (activeChatTicket && isSamePhone(activeChatTicket.phone, phone)) {
       setActiveChatTicket(null);
     }
-    setTickets(prev => prev.filter(t => t.phone !== phone));
+    setTickets(prev => prev.filter(t => !isSamePhone(t.phone, phone)));
     
     const apiUrl = getApiUrl();
     try {
@@ -1385,7 +1403,10 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   };
 
   const handleClaim = (phone: string, targetAgent: string) => {
-    setTickets(prev => prev.map(t => t.phone === phone ? { ...t, agent: targetAgent || null } : t));
+    setTickets(prev => prev.map(t => isSamePhone(t.phone, phone) ? { ...t, agent: targetAgent || null } : t));
+    if (activeChatTicket && isSamePhone(activeChatTicket.phone, phone)) {
+      setActiveChatTicket(prev => prev ? { ...prev, agent: targetAgent || null } : null);
+    }
     executeClaim(phone, targetAgent);
   };
 
@@ -1418,6 +1439,12 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
     // Solo tiene sentido la opción si el ticket es explícitamente de CORTAR y pertenece a una cuenta con límite de códigos (GPT / Claude)
     const canResetDevices = Boolean(isCut && isAi);
+
+    // Si no hay tickets de clientes compartidos abiertos y no aplica reseteo forzoso de dispositivos, resolver directamente con 1 solo clic
+    if (sharedWithDetails.length === 0 && !canResetDevices) {
+      executeResolve(t.phone, false);
+      return;
+    }
 
     setResolveResetDevices(canResetDevices);
     setResolveDialog({
@@ -1456,17 +1483,11 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
         }));
       }
     } else {
-      setTickets(prev => prev.filter(t => {
-        const tClean = String(t.phone).replace(/\D/g, '');
-        return tClean !== cleanP && tClean.slice(-10) !== last10;
-      }));
+      setTickets(prev => prev.filter(t => !isSamePhone(t.phone, phone)));
     }
 
-    if (activeChatTicket) {
-      const activeClean = String(activeChatTicket.phone).replace(/\D/g, '');
-      if (activeClean === cleanP || activeClean.slice(-10) === last10) {
-        setActiveChatTicket(null);
-      }
+    if (activeChatTicket && isSamePhone(activeChatTicket.phone, phone)) {
+      setActiveChatTicket(null);
     }
 
     const apiUrl = getApiUrl();
@@ -3560,7 +3581,10 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     onClick={async () => {
                       const phone = assignDialog.phone;
                       setAssignDialog(null);
-                      setTickets(prev => prev.map(t => t.phone === phone ? { ...t, agent: advisor } : t));
+                      setTickets(prev => prev.map(t => isSamePhone(t.phone, phone) ? { ...t, agent: advisor } : t));
+                      if (activeChatTicket && isSamePhone(activeChatTicket.phone, phone)) {
+                        setActiveChatTicket(prev => prev ? { ...prev, agent: advisor } : null);
+                      }
                       await executeClaim(phone, advisor);
                     }}
                     className="w-full text-left bg-gray-50 dark:bg-gray-900/40 hover:bg-brand-primary/10 dark:hover:bg-brand-primary/20 hover:text-brand-primary p-3 rounded-xl border dark:border-gray-750 flex justify-between items-center text-sm font-semibold transition-all dark:text-white"

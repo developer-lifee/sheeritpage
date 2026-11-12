@@ -1,25 +1,25 @@
 import React, { useState } from 'react';
-import { 
-  Store, 
-  Coffee, 
-  ShoppingBag, 
-  Laptop, 
-  Package, 
-  CheckCircle2, 
-  ArrowRight, 
-  ArrowLeft, 
-  Plus, 
-  Trash2, 
-  Calculator, 
-  CreditCard, 
-  MessageSquare, 
-  Layers, 
-  Sparkles, 
-  ShieldCheck, 
-  TrendingUp, 
-  Flame, 
-  ExternalLink, 
-  Sliders, 
+import {
+  Store,
+  Coffee,
+  ShoppingBag,
+  Laptop,
+  Package,
+  CheckCircle2,
+  ArrowRight,
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Calculator,
+  CreditCard,
+  MessageSquare,
+  Layers,
+  Sparkles,
+  ShieldCheck,
+  TrendingUp,
+  Flame,
+  ExternalLink,
+  Sliders,
   DollarSign,
   Smartphone,
   ChevronRight,
@@ -203,22 +203,20 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
             <button
               key={s.num}
               onClick={() => setStep(s.num)}
-              className={`text-left p-3 rounded-2xl border transition-all ${
-                step === s.num
+              className={`text-left p-3 rounded-2xl border transition-all ${step === s.num
                   ? 'bg-white dark:bg-gray-800 border-brand-primary ring-2 ring-brand-primary/20 shadow-sm'
                   : step > s.num
                     ? 'bg-gray-100/70 dark:bg-gray-850/60 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
                     : 'bg-transparent border-transparent opacity-60'
-              }`}
+                }`}
             >
               <div className="flex items-center gap-1.5">
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
-                  step === s.num
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${step === s.num
                     ? 'bg-brand-primary text-white'
                     : step > s.num
                       ? 'bg-emerald-500 text-white'
                       : 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                }`}>
+                  }`}>
                   {step > s.num ? '✓' : s.num}
                 </span>
                 <span className="text-xs font-bold truncate">{s.title}</span>
@@ -285,11 +283,10 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
                       key={t.id}
                       type="button"
                       onClick={() => setBusinessType(t.id as any)}
-                      className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between ${
-                        isSelected
+                      className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between ${isSelected
                           ? 'border-brand-primary bg-brand-primary/5 dark:bg-brand-primary/10 ring-2 ring-brand-primary/20'
                           : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                      }`}
+                        }`}
                     >
                       <Icon className={`w-6 h-6 mb-2 ${isSelected ? 'text-brand-primary' : 'text-gray-400'}`} />
                       <div>
@@ -399,11 +396,10 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
                   <div
                     key={m.key}
                     onClick={() => toggleModule(m.key as any)}
-                    className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start justify-between gap-4 ${
-                      isEnabled
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start justify-between gap-4 ${isEnabled
                         ? 'border-brand-primary/40 bg-brand-primary/5 dark:bg-brand-primary/10'
                         : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 opacity-60'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-start gap-3.5">
                       <div className={`p-2.5 rounded-xl ${isEnabled ? 'bg-brand-primary text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-400'}`}>
@@ -420,11 +416,10 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
                       </div>
                     </div>
 
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border transition-all ${
-                      isEnabled
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border transition-all ${isEnabled
                         ? 'bg-brand-primary border-brand-primary text-white'
                         : 'border-gray-300 dark:border-gray-600'
-                    }`}>
+                      }`}>
                       {isEnabled && <CheckCircle2 className="w-4 h-4" />}
                     </div>
                   </div>
@@ -692,7 +687,7 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
             {/* Resumen de la Orden */}
             <div className="p-5 bg-gray-50 dark:bg-gray-750 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
               <h3 className="text-xs font-black uppercase text-gray-400 tracking-wider">Resumen de tu Configuración</h3>
-              
+
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <div>
                   <span className="text-[10px] text-gray-400 block">Tienda</span>
@@ -755,3 +750,4 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
     </div>
   );
 }
+
