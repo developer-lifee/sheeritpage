@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle, Calendar, Plus, CreditCard, ShoppingBag, ChevronDown, Scissors, Sparkles, Receipt, ArrowRight } from 'lucide-react';
+import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle, Calendar, Plus, CreditCard, ShoppingBag, ChevronDown, Scissors, Sparkles, Receipt, ArrowRight, Pencil, Save } from 'lucide-react';
 import { isDemoMode } from '../utils/demoMode';
 import { AddSaleForm } from './AddSaleForm';
 
@@ -467,6 +467,127 @@ export const ClientsView: React.FC = () => {
     const [resetDevices, setResetDevices] = useState<boolean>(true);
     const [isCuttingService, setIsCuttingService] = useState<boolean>(false);
     const [visibleRowsCount, setVisibleRowsCount] = useState<number>(100);
+
+    // Modal de Edición de Datos del Cliente / Contraseña / Customer Mail
+    const [editClientModal, setEditClientModal] = useState<any | null>(null);
+    const [editClientForm, setEditClientForm] = useState({
+        Nombre: '',
+        apellido: '',
+        numero: '',
+        correo: '',
+        contraseña: '',
+        customerMail: '',
+        pinPerfil: '',
+        operador: '',
+        observaciones: '',
+        applyPasswordToAccount: false,
+    });
+    const [isSavingClientEdit, setIsSavingClientEdit] = useState<boolean>(false);
+
+    const openEditClientModal = (c: any) => {
+        setEditClientModal(c);
+        setEditClientForm({
+            Nombre: (c.Nombre || '').toString(),
+            apellido: (c.apellido || c.Apellido || '').toString(),
+            numero: (c.numero || c.Numero || c.whatsapp || '').toString(),
+            correo: (c.correo || c.Correo || '').toString(),
+            contraseña: (c.contraseña || c.Clave || c.clave || c.password || '').toString(),
+            customerMail: (c['customer mail'] || c['Customer Mail'] || c.customerMail || c.customer_mail || '').toString(),
+            pinPerfil: (c['pin perfil'] || c.pin || '').toString(),
+            operador: (c.operador || '').toString(),
+            observaciones: (c.observaciones || '').toString(),
+            applyPasswordToAccount: false,
+        });
+    };
+
+    const saveClientEdit = async () => {
+        if (!editClientModal) return;
+        setIsSavingClientEdit(true);
+        try {
+            const apiUrl = getApiUrl();
+            const rawPhone = (editClientModal.numero || editClientModal.Numero || editClientModal.whatsapp || '').toString().replace(/\D/g, '');
+            const originalCorreo = (editClientModal.correo || editClientModal.Correo || '').toString().trim();
+            const originalPassword = (editClientModal.contraseña || editClientModal.Clave || editClientModal.clave || editClientModal.password || '').toString();
+            const passwordChanged = editClientForm.contraseña !== originalPassword;
+
+            const fields: Record<string, string> = {
+                Nombre: editClientForm.Nombre.trim(),
+                apellido: editClientForm.apellido.trim(),
+                numero: editClientForm.numero.trim(),
+                correo: editClientForm.correo.trim(),
+                'contraseña': editClientForm.contraseña.trim(),
+                'customer mail': editClientForm.customerMail.trim(),
+                'pin perfil': editClientForm.pinPerfil.trim(),
+                operador: editClientForm.operador.trim(),
+                observaciones: editClientForm.observaciones.trim(),
+            };
+
+            const res = await fetch(`${apiUrl}/api/admin/client/update-fields`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    rowNumber: editClientModal._rowNumber,
+                    phone: rawPhone,
+                    streaming: editClientModal.Streaming || '',
+                    originalCorreo,
+                    applyPasswordToAccount: passwordChanged && editClientForm.applyPasswordToAccount,
+                    fields,
+                    password: 'admin123',
+                }),
+            });
+
+            const data = await res.json();
+            if (!data.success) {
+                alert(data.message || data.error || 'Error guardando cambios del cliente');
+                return;
+            }
+
+            // Actualizar estado local inmediatamente
+            const targetRowNum = data.rowNumber || editClientModal._rowNumber;
+            const origCorreoLower = originalCorreo.toLowerCase();
+            const targetStreamLower = (editClientModal.Streaming || '').toString().toLowerCase().trim();
+
+            setClients(prev =>
+                prev.map(row => {
+                    const rNum = row._rowNumber;
+                    if (rNum === targetRowNum || row === editClientModal) {
+                        return {
+                            ...row,
+                            Nombre: fields.Nombre,
+                            apellido: fields.apellido,
+                            numero: fields.numero,
+                            whatsapp: fields.numero,
+                            correo: fields.correo,
+                            contraseña: fields['contraseña'],
+                            'customer mail': fields['customer mail'],
+                            customerMail: fields['customer mail'],
+                            'pin perfil': fields['pin perfil'],
+                            operador: fields.operador,
+                            observaciones: fields.observaciones,
+                        };
+                    }
+                    if (
+                        passwordChanged &&
+                        editClientForm.applyPasswordToAccount &&
+                        origCorreoLower &&
+                        (row.correo || row.Correo || '').toString().toLowerCase().trim() === origCorreoLower &&
+                        (!targetStreamLower || (row.Streaming || '').toString().toLowerCase().trim() === targetStreamLower)
+                    ) {
+                        return { ...row, contraseña: fields['contraseña'] };
+                    }
+                    return row;
+                })
+            );
+
+            setRenewalSuccessToast(`✅ ${data.message || 'Datos actualizados correctamente.'}`);
+            setTimeout(() => setRenewalSuccessToast(null), 5000);
+            setEditClientModal(null);
+        } catch (err: any) {
+            alert(`Error de red al guardar cambios: ${err.message}`);
+        } finally {
+            setIsSavingClientEdit(false);
+        }
+    };
 
     // Modal de Renovación de Cuenta Matriz (Proveedor / Tarjeta Temporal)
     interface AccountRenewalForm {
@@ -1666,8 +1787,21 @@ export const ClientsView: React.FC = () => {
                                                     {`${c.Nombre || ''} ${c.apellido || c.Apellido || ''}`.trim() || 'N/A'}
                                                 </td>
                                                 <td data-label="Número" className="py-3.5 px-4 text-sm dark:text-gray-200 font-mono">{phone}</td>
-                                                <td data-label="Contraseña" className="py-3.5 px-4 text-sm dark:text-gray-200 font-mono">
-                                                    {c.contraseña || c.Clave || c.clave || c.password || '-'}
+                                                <td data-label="Contraseña" className="py-3.5 px-4 text-sm dark:text-gray-200 font-mono group/passcell">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span>{c.contraseña || c.Clave || c.clave || c.password || '-'}</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                openEditClientModal(c);
+                                                            }}
+                                                            className="p-1 text-gray-400 hover:text-indigo-500 opacity-50 group-hover/passcell:opacity-100 hover:bg-indigo-500/10 rounded-md transition-all cursor-pointer"
+                                                            title="Editar contraseña, customer mail o datos del cliente"
+                                                        >
+                                                            <Pencil className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                                 <td
                                                     data-label="Cuenta / Correo"
@@ -1776,6 +1910,17 @@ export const ClientsView: React.FC = () => {
                                                 </td>
                                                 <td data-label="Acciones" className="py-3.5 px-4 text-sm text-center">
                                                     <div className="flex gap-2 justify-center items-center">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                openEditClientModal(c);
+                                                            }}
+                                                            className="p-2 rounded-xl text-xs font-bold transition-all border bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 dark:text-indigo-300 border-indigo-200/60 dark:border-indigo-800/50 flex items-center gap-1 shadow-2xs"
+                                                            title="Editar datos del cliente, contraseña o customer mail"
+                                                        >
+                                                            <Pencil className="w-3.5 h-3.5" />
+                                                            <span>Editar</span>
+                                                        </button>
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -2578,8 +2723,168 @@ export const ClientsView: React.FC = () => {
                                         </>
                                     )}
                                 </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+            {/* Modal Editar Datos del Cliente / Contraseña / Customer Mail */}
+            {editClientModal && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-2xl w-full border border-gray-200 dark:border-gray-700 shadow-2xl overflow-hidden">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-850">
+                            <div className="flex items-center gap-2.5">
+                                <div className="p-2 rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-400">
+                                    <Pencil className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">
+                                        Editar Datos del Cliente y Credenciales
+                                    </h3>
+                                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                        {editClientModal.Streaming || 'Servicio'} · Fila #{editClientModal._rowNumber || 'N/A'}
+                                    </p>
+                                </div>
                             </div>
-                        </form>
+                            <button
+                                type="button"
+                                onClick={() => setEditClientModal(null)}
+                                className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Nombre</label>
+                                    <input
+                                        type="text"
+                                        value={editClientForm.Nombre}
+                                        onChange={(e) => setEditClientForm({ ...editClientForm, Nombre: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Apellido</label>
+                                    <input
+                                        type="text"
+                                        value={editClientForm.apellido}
+                                        onChange={(e) => setEditClientForm({ ...editClientForm, apellido: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Teléfono / WhatsApp</label>
+                                    <input
+                                        type="text"
+                                        value={editClientForm.numero}
+                                        onChange={(e) => setEditClientForm({ ...editClientForm, numero: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">PIN / Perfil</label>
+                                    <input
+                                        type="text"
+                                        value={editClientForm.pinPerfil}
+                                        onChange={(e) => setEditClientForm({ ...editClientForm, pinPerfil: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Correo de Cuenta (Matriz)</label>
+                                    <input
+                                        type="text"
+                                        value={editClientForm.correo}
+                                        onChange={(e) => setEditClientForm({ ...editClientForm, correo: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Contraseña</label>
+                                    <input
+                                        type="text"
+                                        value={editClientForm.contraseña}
+                                        onChange={(e) => setEditClientForm({ ...editClientForm, contraseña: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono"
+                                    />
+                                </div>
+                                <div className="sm:col-span-2">
+                                    <label className="block text-[10px] font-bold uppercase text-indigo-600 dark:text-indigo-400 mb-1">
+                                        Customer Mail (Correo personal del cliente)
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={editClientForm.customerMail}
+                                        onChange={(e) => setEditClientForm({ ...editClientForm, customerMail: e.target.value })}
+                                        placeholder="cliente@gmail.com"
+                                        className="w-full px-3 py-2 rounded-xl border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Operador / ISP</label>
+                                    <input
+                                        type="text"
+                                        value={editClientForm.operador}
+                                        onChange={(e) => setEditClientForm({ ...editClientForm, operador: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Observaciones</label>
+                                    <input
+                                        type="text"
+                                        value={editClientForm.observaciones}
+                                        onChange={(e) => setEditClientForm({ ...editClientForm, observaciones: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                    />
+                                </div>
+                            </div>
+
+                            {editClientForm.correo.trim() !== '' && (
+                                <label className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={editClientForm.applyPasswordToAccount}
+                                        onChange={(e) => setEditClientForm({ ...editClientForm, applyPasswordToAccount: e.target.checked })}
+                                        className="mt-0.5 rounded text-amber-600 focus:ring-amber-500"
+                                    />
+                                    <span className="text-[11px] text-amber-900 dark:text-amber-200 leading-relaxed">
+                                        <strong>Aplicar nueva contraseña a toda la cuenta matriz:</strong> Si cambiaste la contraseña, actualiza automáticamente todos los demás cupos en Excel que compartan el correo <code className="font-mono">{editClientForm.correo}</code>.
+                                    </span>
+                                </label>
+                            )}
+                        </div>
+
+                        <div className="flex justify-end gap-2.5 px-5 py-3.5 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-850">
+                            <button
+                                type="button"
+                                disabled={isSavingClientEdit}
+                                onClick={() => setEditClientModal(null)}
+                                className="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                disabled={isSavingClientEdit}
+                                onClick={saveClientEdit}
+                                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-extrabold shadow-sm"
+                            >
+                                {isSavingClientEdit ? (
+                                    <>
+                                        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Guardando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save className="w-3.5 h-3.5" /> Guardar Cambios en Excel
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
