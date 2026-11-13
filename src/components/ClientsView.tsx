@@ -464,6 +464,7 @@ export const ClientsView: React.FC = () => {
     } | null>(null);
     const [cutReason, setCutReason] = useState<string>('Mora > 3 días / No renovó');
     const [customCutReason, setCustomCutReason] = useState<string>('');
+    const [resetDevices, setResetDevices] = useState<boolean>(true);
     const [isCuttingService, setIsCuttingService] = useState<boolean>(false);
     const [visibleRowsCount, setVisibleRowsCount] = useState<number>(100);
 
@@ -598,6 +599,7 @@ export const ClientsView: React.FC = () => {
         if (!cutModalClient) return;
         setIsCuttingService(true);
         const finalReason = cutReason === 'OTRO' ? (customCutReason || 'Corte manual') : cutReason;
+        const isAiLimited = /gpt|chatgpt|claude/i.test(cutModalClient.streaming || '');
         try {
             const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
             const res = await fetch(`${apiUrl}/api/admin/client/cut-service`, {
@@ -609,7 +611,7 @@ export const ClientsView: React.FC = () => {
                     streaming: cutModalClient.streaming,
                     email: cutModalClient.accountEmail,
                     reason: finalReason,
-                    resetDevices: false,
+                    resetDevices: isAiLimited ? resetDevices : false,
                     leaveSlotVirgin: true,
                     password: 'admin123'
                 })
@@ -1803,6 +1805,7 @@ export const ClientsView: React.FC = () => {
                                                                 });
                                                                 setCutReason('Mora > 3 días / No renovó');
                                                                 setCustomCutReason('');
+                                                                setResetDevices(/gpt|chatgpt|claude/i.test(c.Streaming || ''));
                                                             }}
                                                             className="p-2 rounded-xl text-xs font-bold transition-all border bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 dark:text-rose-300 border-rose-200/60 dark:border-rose-800/50 flex items-center gap-1 shadow-2xs"
                                                             title="Aplicar corte de servicio a este cliente y gestionar reinicio de dispositivos si se sacan todas las sesiones"
@@ -2113,6 +2116,28 @@ export const ClientsView: React.FC = () => {
                                     />
                                 )}
                             </div>
+
+                            {/* CONDICIÓN CLAVE: SOLO PARA GPT / CLAUDE */}
+                            {/gpt|chatgpt|claude/i.test(cutModalClient.streaming || '') && (
+                                <div className="p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 space-y-2">
+                                    <label className="flex items-start gap-3 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={resetDevices}
+                                            onChange={(e) => setResetDevices(e.target.checked)}
+                                            className="mt-0.5 w-4 h-4 rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
+                                        />
+                                        <div className="space-y-1">
+                                            <span className="font-bold text-amber-900 dark:text-amber-200 text-xs flex items-center gap-1.5">
+                                                🔄 Reiniciar contador de códigos y dispositivos (Si sacaste todas las sesiones)
+                                            </span>
+                                            <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 leading-relaxed">
+                                                El límite de 3 dispositivos <b>no aplica</b> cuando sacamos todas las sesiones de la cuenta. Al marcar esta opción, se liberará el contador para que los usuarios válidos puedan solicitar códigos sin bloqueo.
+                                            </p>
+                                        </div>
+                                    </label>
+                                </div>
+                            )}
 
                             {/* ACCIÓN OBLIGATORIA: LIBERAR CASILLA EN EXCEL */}
                             <div className="p-3.5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 space-y-1">
