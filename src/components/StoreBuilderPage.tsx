@@ -43,6 +43,9 @@ interface RecipeIngredient {
 export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
   const [step, setStep] = useState<number>(1);
   const [loadingPayment, setLoadingPayment] = useState<boolean>(false);
+  const [demoActivated, setDemoActivated] = useState<boolean>(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [copiedJson, setCopiedJson] = useState<boolean>(false);
 
   // Paso 1: Identidad
   const [storeName, setStoreName] = useState<string>('Café de la Sierra');
@@ -120,8 +123,43 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
     setModules({ ...modules, [key]: !modules[key] });
   };
 
-  // Checkout con Pasarela Bold
+  const isScratchupDemo =
+    slug.trim().toLowerCase() === 'scratchup' ||
+    storeName.trim().toLowerCase().includes('scratchup');
+
+  // Checkout con Pasarela Bold (o Bypass Demo para scratchup)
   const handleInitiateActivation = async () => {
+    setPaymentError(null);
+
+    if (isScratchupDemo) {
+      try {
+        localStorage.setItem(
+          'sheerit_demo_store_scratchup',
+          JSON.stringify({
+            storeName,
+            slug,
+            businessType,
+            ownerPhone,
+            city,
+            modules,
+            sampleProduct: {
+              name: sampleProductName,
+              price: sampleSalePrice,
+              cost: totalProductionCost,
+              ingredients,
+            },
+            activatedAt: new Date().toISOString(),
+            mode: 'demo_bypass',
+          })
+        );
+      } catch {
+        // Ignorar errores de storage
+      }
+      setLoadingPayment(false);
+      setDemoActivated(true);
+      return;
+    }
+
     setLoadingPayment(true);
     const apiUrl = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
       ? 'http://localhost:3000'
@@ -130,7 +168,7 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
     try {
       const payload = {
         amount: 40000, // $40.000 COP (~$10 USD)
-        description: `Suscripción Mensual Retailer OS: ${storeName} (${slug})`,
+        description: `Retailer OS: ${storeName} (${slug})`,
         customerPhone: ownerPhone,
         customerName: storeName,
         tenantSlug: slug,
@@ -145,14 +183,15 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
       });
 
       const data = await res.json();
-      if (data && data.url) {
-        window.location.href = data.url;
+      const targetUrl = data && (data.url || data.paymentUrl);
+      if (res.ok && targetUrl) {
+        window.location.href = targetUrl;
       } else {
-        alert('Se generó la orden de activación. En modo prueba, tu tienda se encuentra registrada como borrador activo.');
+        setPaymentError(data?.error || data?.message || 'No se pudo generar el enlace de pago en Bold. Intenta nuevamente.');
       }
     } catch (err: any) {
       console.error('Error al generar checkout de Bold:', err.message);
-      alert('Error conectando con la pasarela de pagos. Por favor intenta de nuevo.');
+      setPaymentError('Error conectando con la pasarela de pagos Bold. Por favor intenta de nuevo.');
     } finally {
       setLoadingPayment(false);
     }
@@ -708,30 +747,95 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
               </div>
             </div>
 
-            {/* Botón de Pago con Bold */}
+            {/* Botón de Pago con Bold o Bypass Demo */}
             <div className="pt-2 text-center space-y-3">
-              <button
-                type="button"
-                onClick={handleInitiateActivation}
-                disabled={loadingPayment}
-                className="w-full sm:w-auto px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm rounded-2xl shadow-xl shadow-emerald-500/20 transition-all flex items-center justify-center gap-3 mx-auto disabled:opacity-50"
-              >
-                {loadingPayment ? (
-                  <>
-                    <Zap className="w-5 h-5 animate-spin" />
-                    <span>Conectando con Bold...</span>
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="w-5 h-5" />
-                    <span>🚀 Pagar $40.000 COP y Activar Tienda</span>
-                  </>
-                )}
-              </button>
+              {paymentError && (
+                <div className="max-w-lg mx-auto p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-xs font-semibold">
+                  ⚠️ {paymentError}
+                </div>
+              )}
 
-              <p className="text-[11px] text-gray-400 max-w-md mx-auto">
-                🔒 Pago 100% seguro a través de <strong>Bold</strong> (Nequi, Daviplata, Bancolombia, PSE y Tarjetas). Tu tienda se habilita inmediatamente al confirmar el pago.
-              </p>
+              {demoActivated ? (
+                <div className="max-w-xl mx-auto p-5 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/40 text-left space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 font-black text-sm">
+                      <CheckCircle2 className="w-5 h-5" />
+                      <span>¡Tienda Demo "{storeName}" activada (Bypass Demo)!</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-bold uppercase">
+                      Activa
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-700 dark:text-gray-300">
+                    Se omitió el cobro de Bold por tratarse de la tienda demo <strong className="font-mono">{slug}</strong>. La configuración quedó guardada localmente para pruebas.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const demoJson = JSON.stringify(
+                          { storeName, slug, businessType, ownerPhone, city, modules, sampleProduct: { name: sampleProductName, price: sampleSalePrice, ingredients } },
+                          null,
+                          2
+                        );
+                        navigator.clipboard?.writeText(demoJson);
+                        setCopiedJson(true);
+                        setTimeout(() => setCopiedJson(false), 2000);
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors"
+                    >
+                      {copiedJson ? '✅ JSON Copiado' : '📋 Copiar JSON de Tienda'}
+                    </button>
+                    {onNavigateHome && (
+                      <button
+                        type="button"
+                        onClick={onNavigateHome}
+                        className="px-3.5 py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      >
+                        Volver al Inicio
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {isScratchupDemo && (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-300 text-[11px] font-bold">
+                      ⚡ Modo Demo Bypass detectado para "{slug}" (sin cobro en Bold)
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleInitiateActivation}
+                    disabled={loadingPayment}
+                    className="w-full sm:w-auto px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm rounded-2xl shadow-xl shadow-emerald-500/20 transition-all flex items-center justify-center gap-3 mx-auto disabled:opacity-50"
+                  >
+                    {loadingPayment ? (
+                      <>
+                        <Zap className="w-5 h-5 animate-spin" />
+                        <span>Conectando con Bold...</span>
+                      </>
+                    ) : isScratchupDemo ? (
+                      <>
+                        <Sparkles className="w-5 h-5" />
+                        <span>⚡ Activar Tienda Demo ({slug}) sin Pago</span>
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-5 h-5" />
+                        <span>🚀 Pagar $40.000 COP y Activar Tienda</span>
+                      </>
+                    )}
+                  </button>
+
+                  <p className="text-[11px] text-gray-400 max-w-md mx-auto">
+                    {isScratchupDemo
+                      ? '🔓 Bypass de demostración habilitado para scratchup. Al hacer clic se activará al instante.'
+                      : <>🔒 Pago 100% seguro a través de <strong>Bold</strong> (Nequi, Daviplata, Bancolombia, PSE y Tarjetas). Tu tienda se habilita inmediatamente al confirmar el pago.</>}
+                  </p>
+                </>
+              )}
             </div>
 
             <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
