@@ -25,6 +25,7 @@ import { AdvisorSkillTest } from './components/AdvisorSkillTest';
 import ErrorBoundary from './components/ErrorBoundary';
 import ClientLoginView from './components/ClientLoginView';
 import { StoreBuilderPage } from './components/StoreBuilderPage';
+import { TenantStorefrontPage } from './components/TenantStorefrontPage';
 import { useDarkMode } from './hooks/useDarkMode';
 import { Search, ShoppingCart, Lock, AlertCircle, Globe } from 'lucide-react';
 import { ComboCartProvider, useComboCart } from './hooks/useComboCart';
@@ -53,7 +54,7 @@ interface Platform {
   incident?: string;
 }
 
-export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software' | 'raytracing-support' | 'raytracing-privacy' | 'pueblapp-support' | 'pueblapp-privacy' | 'portafolio' | 'evaluacion' | 'crear';
+export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software' | 'raytracing-support' | 'raytracing-privacy' | 'pueblapp-support' | 'pueblapp-privacy' | 'portafolio' | 'evaluacion' | 'crear' | 'tienda';
 
 const AUTHORIZED_ADVISORS: { [email: string]: string } = {
   'esclepiades@hotmail.com': 'Esclepiades',
@@ -267,7 +268,16 @@ function AppContent() {
     if (path === '/support/pueblapp/privacy' || path === '/support/puebloapp/privacy' || path === '/support/yaconecta/privacy') return 'pueblapp-privacy';
     if (path === '/evaluacion' || path === '/test-asesor' || path === '/test-asesores' || path === '/simulador') return 'evaluacion';
     if (path === '/crear' || path === '/builder' || path === '/comenzar' || path === '/crear-tienda' || path === '/tienda/crear') return 'crear';
+    if (path.startsWith('/tienda/')) return 'tienda';
     return 'home';
+  });
+
+  const [tenantSlug, setTenantSlug] = useState<string>(() => {
+    const raw = window.location.pathname.replace(/\/$/, '');
+    if (raw.startsWith('/tienda/') && raw !== '/tienda/crear') {
+      return raw.replace('/tienda/', '').split('/')[0] || '';
+    }
+    return '';
   });
 
   useEffect(() => {
@@ -325,6 +335,9 @@ function AppContent() {
       setCurrentView('evaluacion');
     } else if (path === '/crear' || path === '/builder' || path === '/comenzar' || path === '/crear-tienda' || path === '/tienda/crear') {
       setCurrentView('crear');
+    } else if (path.startsWith('/tienda/')) {
+      setTenantSlug(path.replace('/tienda/', '').split('/')[0] || '');
+      setCurrentView('tienda');
     } else {
       setCurrentView('home');
     }
@@ -358,6 +371,9 @@ function AppContent() {
         setCurrentView('evaluacion');
       } else if (currentPath === '/crear' || currentPath === '/builder' || currentPath === '/comenzar' || currentPath === '/crear-tienda' || currentPath === '/tienda/crear') {
         setCurrentView('crear');
+      } else if (currentPath.startsWith('/tienda/')) {
+        setTenantSlug(currentPath.replace('/tienda/', '').split('/')[0] || '');
+        setCurrentView('tienda');
       } else {
         setCurrentView('home');
       }
@@ -704,6 +720,16 @@ function AppContent() {
       {currentView === 'crear' && (
         <ErrorBoundary fallbackTitle="Creador de Tiendas Retailer OS">
           <StoreBuilderPage onNavigateHome={() => navigateTo('home')} />
+        </ErrorBoundary>
+      )}
+
+      {currentView === 'tienda' && (
+        <ErrorBoundary fallbackTitle="Tienda Retailer OS">
+          <TenantStorefrontPage
+            slug={tenantSlug}
+            onNavigateHome={() => navigateTo('home')}
+            onNavigateCreate={() => navigateTo('crear')}
+          />
         </ErrorBoundary>
       )}
 

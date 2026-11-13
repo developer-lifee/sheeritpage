@@ -53,6 +53,25 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
   const [businessType, setBusinessType] = useState<'coffee' | 'retail' | 'services' | 'general'>('coffee');
   const [ownerPhone, setOwnerPhone] = useState<string>('3118587974');
   const [city, setCity] = useState<string>('Bogotá');
+  const [logoUrl, setLogoUrl] = useState<string>('');
+  const [accentColor, setAccentColor] = useState<string>('#0d9488');
+
+  const [catalogProducts, setCatalogProducts] = useState<Array<{ id: string; name: string; price: number; category: string; description: string }>>([
+    { id: 'p1', name: 'Capuchino Especial 8oz', price: 8000, category: 'Bebidas', description: 'Café de origen Huila con leche vaporizada.' },
+    { id: 'p2', name: 'Croissant Artesanal', price: 6500, category: 'Panadería', description: 'Horneado del día con mantequilla pura.' },
+  ]);
+
+  const handleStoreLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setLogoUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Paso 2: Módulos activos
   const [modules, setModules] = useState({
@@ -130,6 +149,36 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
   // Checkout con Pasarela Bold (o Bypass Demo para scratchup)
   const handleInitiateActivation = async () => {
     setPaymentError(null);
+    const apiUrl = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+      ? 'http://localhost:3000'
+      : window.location.origin;
+
+    const productsToSave = catalogProducts.length > 0
+      ? catalogProducts
+      : [{ id: 'p1', name: sampleProductName, price: sampleSalePrice, category: 'Destacado', description: '' }];
+
+    setLoadingPayment(true);
+    try {
+      // Guardar la tienda en MariaDB para que /tienda/:slug quede activa de inmediato
+      await fetch(`${apiUrl}/api/public/stores`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug,
+          storeName,
+          businessType,
+          ownerPhone,
+          city,
+          logoUrl,
+          accentColor,
+          modules,
+          products: productsToSave,
+          status: isScratchupDemo ? 'active' : 'pending_payment',
+        }),
+      });
+    } catch (saveErr: any) {
+      console.warn('Advertencia guardando tienda:', saveErr.message);
+    }
 
     if (isScratchupDemo) {
       try {
@@ -141,13 +190,10 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
             businessType,
             ownerPhone,
             city,
+            logoUrl,
+            accentColor,
             modules,
-            sampleProduct: {
-              name: sampleProductName,
-              price: sampleSalePrice,
-              cost: totalProductionCost,
-              ingredients,
-            },
+            products: productsToSave,
             activatedAt: new Date().toISOString(),
             mode: 'demo_bypass',
           })
@@ -159,11 +205,6 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
       setDemoActivated(true);
       return;
     }
-
-    setLoadingPayment(true);
-    const apiUrl = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
-      ? 'http://localhost:3000'
-      : window.location.origin;
 
     try {
       const payload = {
@@ -363,6 +404,42 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
                   onChange={(e) => setCity(e.target.value)}
                   placeholder="Ej. Bogotá, Medellín, Cali, Pereira"
                   className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-750 text-sm font-semibold focus:ring-2 focus:ring-brand-primary outline-hidden"
+                />
+              </div>
+            </div>
+
+            {/* Logo y Color de Marca */}
+            <div className="p-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-750/60 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold">Logo y Color de tu Tienda</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-gray-400">Color principal:</span>
+                  <input
+                    type="color"
+                    value={accentColor}
+                    onChange={(e) => setAccentColor(e.target.value)}
+                    className="w-8 h-8 rounded-lg cursor-pointer border border-gray-300 dark:border-gray-600"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                {logoUrl && (
+                  <img
+                    src={logoUrl}
+                    alt="Logo preview"
+                    className="w-11 h-11 rounded-xl object-contain bg-white border border-gray-200 p-1"
+                  />
+                )}
+                <label className="cursor-pointer px-3.5 py-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-700">
+                  📤 Subir Logo
+                  <input type="file" accept="image/*" onChange={handleStoreLogoUpload} className="hidden" />
+                </label>
+                <input
+                  type="text"
+                  value={logoUrl.startsWith('data:') ? '' : logoUrl}
+                  onChange={(e) => setLogoUrl(e.target.value)}
+                  placeholder={logoUrl.startsWith('data:') ? 'Imagen subida localmente' : 'o pega la URL de tu logo...'}
+                  className="flex-1 min-w-[180px] px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs"
                 />
               </div>
             </div>
@@ -658,6 +735,87 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
               />
             </div>
 
+            {/* Catálogo inicial de productos */}
+            <div className="p-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-750/60 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                    Catálogo Inicial de Productos ({catalogProducts.length})
+                  </h3>
+                  <p className="text-[11px] text-gray-400">Estos productos aparecerán de inmediato en tu tienda pública `/tienda/{slug}` (luego podrás editarlos o pegar un JSON).</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCatalogProducts([
+                      ...catalogProducts,
+                      { id: String(Date.now()), name: 'Nuevo Producto', price: 12000, category: 'General', description: '' },
+                    ])
+                  }
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-brand-primary text-white text-xs font-bold"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Agregar
+                </button>
+              </div>
+              <div className="space-y-2">
+                {catalogProducts.map((prod, idx) => (
+                  <div key={prod.id} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                    <input
+                      type="text"
+                      value={prod.name}
+                      onChange={(e) => {
+                        const next = [...catalogProducts];
+                        next[idx] = { ...prod, name: e.target.value };
+                        setCatalogProducts(next);
+                      }}
+                      placeholder="Nombre producto"
+                      className="sm:col-span-4 px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs"
+                    />
+                    <input
+                      type="number"
+                      value={prod.price}
+                      onChange={(e) => {
+                        const next = [...catalogProducts];
+                        next[idx] = { ...prod, price: Number(e.target.value) || 0 };
+                        setCatalogProducts(next);
+                      }}
+                      placeholder="Precio COP"
+                      className="sm:col-span-2 px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-mono"
+                    />
+                    <input
+                      type="text"
+                      value={prod.category}
+                      onChange={(e) => {
+                        const next = [...catalogProducts];
+                        next[idx] = { ...prod, category: e.target.value };
+                        setCatalogProducts(next);
+                      }}
+                      placeholder="Categoría"
+                      className="sm:col-span-2 px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs"
+                    />
+                    <input
+                      type="text"
+                      value={prod.description}
+                      onChange={(e) => {
+                        const next = [...catalogProducts];
+                        next[idx] = { ...prod, description: e.target.value };
+                        setCatalogProducts(next);
+                      }}
+                      placeholder="Descripción corta"
+                      className="sm:col-span-3 px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setCatalogProducts(catalogProducts.filter((_, i) => i !== idx))}
+                      className="sm:col-span-1 p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg justify-self-center"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="flex items-center justify-between pt-4">
               <button
                 type="button"
@@ -770,11 +928,17 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
                     Se omitió el cobro de Bold por tratarse de la tienda demo <strong className="font-mono">{slug}</strong>. La configuración quedó guardada localmente para pruebas.
                   </p>
                   <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <a
+                      href={`/tienda/${slug}`}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-extrabold shadow-sm transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" /> Abrir Tienda en Vivo (/tienda/{slug})
+                    </a>
                     <button
                       type="button"
                       onClick={() => {
                         const demoJson = JSON.stringify(
-                          { storeName, slug, businessType, ownerPhone, city, modules, sampleProduct: { name: sampleProductName, price: sampleSalePrice, ingredients } },
+                          { storeName, slug, businessType, ownerPhone, city, accentColor, modules, products: catalogProducts },
                           null,
                           2
                         );
