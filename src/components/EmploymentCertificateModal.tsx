@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { X, Printer, Award, Copy, Check, Building2, UserCheck, Calendar, DollarSign, FileText } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { X, Printer, Award, Copy, Check, UserCheck, Calendar, DollarSign, FileText, Upload, RotateCcw } from 'lucide-react';
 
 export interface CertificateEmployeeOption {
   id: number;
@@ -15,6 +15,9 @@ interface EmploymentCertificateModalProps {
   onClose: () => void;
   employees: CertificateEmployeeOption[];
   initialEmployee?: CertificateEmployeeOption | null;
+  tenantKey?: string;
+  defaultCompanyName?: string;
+  defaultLogoUrl?: string;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -54,7 +57,13 @@ export const EmploymentCertificateModal: React.FC<EmploymentCertificateModalProp
   onClose,
   employees,
   initialEmployee,
+  tenantKey = 'default',
+  defaultCompanyName = 'SHEERIT',
+  defaultLogoUrl = '/faviconsheerit.png',
 }) => {
+  const storageKey = `cert_brand_config_${tenantKey}`;
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
+
   const todayIso = useMemo(() => {
     const now = new Date();
     const y = now.getFullYear();
@@ -62,6 +71,17 @@ export const EmploymentCertificateModal: React.FC<EmploymentCertificateModalProp
     const d = String(now.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
   }, []);
+
+  const loadSavedBrand = () => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  };
+
+  const savedBrand = useMemo(loadSavedBrand, [storageKey]);
 
   const [selectedEmpId, setSelectedEmpId] = useState<string>('');
   const [fullname, setFullname] = useState('');
@@ -76,17 +96,66 @@ export const EmploymentCertificateModal: React.FC<EmploymentCertificateModalProp
   const [salaryAmount, setSalaryAmount] = useState('');
   const [salaryPeriod, setSalaryPeriod] = useState('mensuales');
   const [addressedTo, setAddressedTo] = useState('A QUIEN INTERESE');
-  const [city, setCity] = useState('Bogotá D.C.');
+  const [city, setCity] = useState<string>(savedBrand.city ?? 'Bogotá D.C.');
   const [issueDate, setIssueDate] = useState(todayIso);
-  const [signerName, setSignerName] = useState('Esteban Ávila');
-  const [signerRole, setSignerRole] = useState('Director General');
-  const [companyName, setCompanyName] = useState('SHEERIT');
-  const [companyNit, setCompanyNit] = useState('');
-  const [companyContact, setCompanyContact] = useState('sheerit.co · WhatsApp +57 311 858 7974');
+  const [signerName, setSignerName] = useState<string>(savedBrand.signerName ?? 'Esteban Ávila');
+  const [signerRole, setSignerRole] = useState<string>(savedBrand.signerRole ?? 'Director General');
+  const [companyName, setCompanyName] = useState<string>(savedBrand.companyName ?? defaultCompanyName);
+  const [companyNit, setCompanyNit] = useState<string>(savedBrand.companyNit ?? '');
+  const [companyContact, setCompanyContact] = useState<string>(
+    savedBrand.companyContact ?? 'sheerit.co · WhatsApp +57 311 858 7974'
+  );
+  const [logoUrl, setLogoUrl] = useState<string>(savedBrand.logoUrl ?? defaultLogoUrl);
+  const [showLogo, setShowLogo] = useState<boolean>(savedBrand.showLogo ?? true);
+  const [accentColor, setAccentColor] = useState<string>(savedBrand.accentColor ?? '#0d9488');
   const [functionsSummary, setFunctionsSummary] = useState(
     'Atención al cliente multicanal, soporte técnico de cuentas digitales, gestión de tickets, verificación de pagos y acompañamiento operativo en turnos asignados.'
   );
   const [copied, setCopied] = useState(false);
+
+  // Persistir configuración de marca/empresa multitenant en localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          companyName,
+          companyNit,
+          companyContact,
+          signerName,
+          signerRole,
+          city,
+          logoUrl,
+          showLogo,
+          accentColor,
+        })
+      );
+    } catch {
+      // Ignorar errores de cuota de almacenamiento
+    }
+  }, [storageKey, companyName, companyNit, companyContact, signerName, signerRole, city, logoUrl, showLogo, accentColor]);
+
+  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setLogoUrl(reader.result);
+        setShowLogo(true);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleResetBrand = () => {
+    setCompanyName(defaultCompanyName);
+    setCompanyNit('');
+    setCompanyContact('');
+    setLogoUrl(defaultLogoUrl);
+    setShowLogo(true);
+    setAccentColor('#0d9488');
+  };
 
   const applyEmployee = (emp: CertificateEmployeeOption | null | undefined) => {
     if (!emp) return;
@@ -167,11 +236,16 @@ export const EmploymentCertificateModal: React.FC<EmploymentCertificateModalProp
   };
 
   const handlePrintPdf = () => {
-    const logoUrl = `${window.location.origin}/faviconsheerit.png`;
+    const resolvedLogo = logoUrl
+      ? (logoUrl.startsWith('data:') || logoUrl.startsWith('http')
+          ? logoUrl
+          : `${window.location.origin}${logoUrl.startsWith('/') ? '' : '/'}${logoUrl}`)
+      : '';
+    const safeAccent = /^#[0-9a-fA-F]{3,8}$/.test(accentColor) ? accentColor : '#0d9488';
     const printWin = window.open('', '_blank', 'width=900,height=1050');
     if (!printWin) return;
 
-    const certCode = `SH-${new Date().getFullYear()}-${String(selectedEmpId || '001').padStart(3, '0')}`;
+    const certCode = `CERT-${new Date().getFullYear()}-${String(selectedEmpId || '001').padStart(3, '0')}`;
 
     printWin.document.write(`<!DOCTYPE html>
 <html lang="es">
@@ -199,7 +273,7 @@ export const EmploymentCertificateModal: React.FC<EmploymentCertificateModalProp
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 3px solid #0d9488;
+      border-bottom: 3px solid ${safeAccent};
       padding-bottom: 16px;
       margin-bottom: 28px;
     }
@@ -209,12 +283,10 @@ export const EmploymentCertificateModal: React.FC<EmploymentCertificateModalProp
       gap: 14px;
     }
     .brand img {
-      width: 56px;
-      height: 56px;
-      border-radius: 12px;
+      max-width: 72px;
+      max-height: 58px;
+      border-radius: 10px;
       object-fit: contain;
-      background: #0f172a;
-      padding: 6px;
     }
     .brand-title {
       font-size: 24px;
@@ -248,7 +320,7 @@ export const EmploymentCertificateModal: React.FC<EmploymentCertificateModalProp
       font-size: 12px;
       font-weight: 700;
       letter-spacing: 0.06em;
-      color: #0d9488;
+      color: ${safeAccent};
       margin-bottom: 28px;
       text-transform: uppercase;
     }
@@ -291,8 +363,8 @@ export const EmploymentCertificateModal: React.FC<EmploymentCertificateModalProp
       color: #475569;
     }
     .seal {
-      border: 2px solid #0d9488;
-      color: #0d9488;
+      border: 2px solid ${safeAccent};
+      color: ${safeAccent};
       border-radius: 10px;
       padding: 8px 14px;
       font-size: 10px;
@@ -315,11 +387,11 @@ export const EmploymentCertificateModal: React.FC<EmploymentCertificateModalProp
   <div class="page">
     <div class="header">
       <div class="brand">
-        <img src="${logoUrl}" alt="${escapeHtml(companyName)}" />
+        ${showLogo && resolvedLogo ? `<img src="${resolvedLogo}" alt="${escapeHtml(companyName)}" />` : ''}
         <div>
           <h1 class="brand-title">${escapeHtml(companyName)}</h1>
           <div class="brand-sub">
-            ${companyNit ? `NIT: ${escapeHtml(companyNit)} · ` : ''}${escapeHtml(companyContact)}
+            ${companyNit ? `NIT: ${escapeHtml(companyNit)}${companyContact ? ' · ' : ''}` : ''}${escapeHtml(companyContact)}
           </div>
         </div>
       </div>
@@ -586,6 +658,64 @@ export const EmploymentCertificateModal: React.FC<EmploymentCertificateModalProp
               />
             </div>
 
+            {/* Logo y marca de la empresa (Multitenant) */}
+            <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/70 border border-gray-200 dark:border-gray-700 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-200">
+                  Logo y color de la empresa (Multitenant)
+                </span>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showLogo}
+                      onChange={(e) => setShowLogo(e.target.checked)}
+                      className="rounded text-teal-600 focus:ring-teal-500"
+                    />
+                    Mostrar logo
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleResetBrand}
+                    className="text-[11px] font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 flex items-center gap-1"
+                    title="Restaurar valores por defecto"
+                  >
+                    <RotateCcw className="w-3 h-3" /> Reset
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoFileUpload}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => logoInputRef.current?.click()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
+                >
+                  <Upload className="w-3.5 h-3.5" /> Subir logo
+                </button>
+                <input
+                  type="text"
+                  value={logoUrl.startsWith('data:') ? '' : logoUrl}
+                  onChange={(e) => { setLogoUrl(e.target.value); setShowLogo(true); }}
+                  placeholder={logoUrl.startsWith('data:') ? 'Imagen subida (local)' : 'o pega URL del logo...'}
+                  className="flex-1 min-w-[140px] px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white"
+                />
+                <input
+                  type="color"
+                  value={accentColor}
+                  onChange={(e) => setAccentColor(e.target.value)}
+                  title="Color de acento de la empresa"
+                  className="w-8 h-8 rounded-lg border border-gray-300 dark:border-gray-700 cursor-pointer bg-transparent"
+                />
+              </div>
+            </div>
+
             {/* Datos de expedición y empresa */}
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -692,25 +822,30 @@ export const EmploymentCertificateModal: React.FC<EmploymentCertificateModalProp
             <div className="bg-white text-slate-900 rounded-xl border border-gray-300 shadow-lg p-7 sm:p-9 flex-1 flex flex-col justify-between min-h-[540px]">
               <div>
                 {/* Header */}
-                <div className="flex items-center justify-between border-b-2 border-teal-600 pb-4 mb-6">
+                <div
+                  className="flex items-center justify-between border-b-2 pb-4 mb-6"
+                  style={{ borderBottomColor: accentColor }}
+                >
                   <div className="flex items-center gap-3">
-                    <img
-                      src="/faviconsheerit.png"
-                      alt={companyName}
-                      className="w-12 h-12 rounded-xl object-contain bg-slate-900 p-1.5"
-                    />
+                    {showLogo && logoUrl && (
+                      <img
+                        src={logoUrl}
+                        alt={companyName}
+                        className="max-w-14 max-h-14 rounded-xl object-contain"
+                      />
+                    )}
                     <div>
                       <h4 className="text-xl font-black tracking-wider text-slate-900 leading-none">
                         {companyName}
                       </h4>
                       <p className="text-[11px] text-slate-500 mt-1">
-                        {companyNit ? `NIT: ${companyNit} · ` : ''}{companyContact}
+                        {companyNit ? `NIT: ${companyNit}${companyContact ? ' · ' : ''}` : ''}{companyContact}
                       </p>
                     </div>
                   </div>
                   <div className="text-right text-[11px] text-slate-500">
                     <div className="font-bold text-slate-700">
-                      Ref: SH-{new Date().getFullYear()}-{String(selectedEmpId || '001').padStart(3, '0')}
+                      Ref: CERT-{new Date().getFullYear()}-{String(selectedEmpId || '001').padStart(3, '0')}
                     </div>
                     <div>{city}, {formatLongDateEs(issueDate)}</div>
                   </div>
@@ -721,7 +856,10 @@ export const EmploymentCertificateModal: React.FC<EmploymentCertificateModalProp
                   <h2 className="text-lg font-extrabold tracking-widest uppercase text-slate-900">
                     CERTIFICADO LABORAL
                   </h2>
-                  <p className="text-[11px] font-bold tracking-wider uppercase text-teal-600">
+                  <p
+                    className="text-[11px] font-bold tracking-wider uppercase"
+                    style={{ color: accentColor }}
+                  >
                     Constancia Oficial de Vinculación
                   </p>
                 </div>
@@ -756,7 +894,10 @@ export const EmploymentCertificateModal: React.FC<EmploymentCertificateModalProp
                       <p className="text-xs text-slate-600">{signerRole} · {companyName}</p>
                     </div>
                   </div>
-                  <div className="border-2 border-teal-600 text-teal-700 rounded-lg px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-center">
+                  <div
+                    className="border-2 rounded-lg px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-center"
+                    style={{ borderColor: accentColor, color: accentColor }}
+                  >
                     Documento Emitido<br />{companyName}
                   </div>
                 </div>
