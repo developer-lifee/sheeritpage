@@ -2355,7 +2355,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
 
           {/* Tarjeta de Resumen de Nómina */}
           {!payrollLoading && payrollList.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <div className="bg-gray-50 dark:bg-gray-850 p-4 rounded-xl border dark:border-gray-700 flex justify-between items-center">
                 <div>
                   <span className="text-xxs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Total Horas Acumuladas</span>
@@ -2374,6 +2374,26 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                   </div>
                 </div>
                 <Award className="w-8 h-8 text-amber-500/20" />
+              </div>
+
+              <div className="bg-rose-500/5 dark:bg-rose-500/10 p-4 rounded-xl border border-rose-500/25 flex justify-between items-center">
+                <div>
+                  <span className="text-xxs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">Total Adelantos / Abonos</span>
+                  <div className="text-xl font-black text-rose-600 dark:text-rose-400 mt-1 font-mono">
+                    -${Math.round(
+                      payrollList.reduce(
+                        (sum, agent) =>
+                          sum +
+                          (agent.bonuses || []).reduce((bSum, b) => {
+                            const val = parseFloat(b.amount as any) || 0;
+                            return val < 0 ? bSum + Math.abs(val) : bSum;
+                          }, 0),
+                        0
+                      )
+                    ).toLocaleString('es-CO')}
+                  </div>
+                </div>
+                <DollarSign className="w-8 h-8 text-rose-500/20" />
               </div>
 
               <div className="bg-emerald-500/5 dark:bg-emerald-500/10 p-4 rounded-xl border border-emerald-500/25 flex justify-between items-center">
@@ -2515,63 +2535,93 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
 
                         {/* Bonuses and Advances List */}
                         <td className="py-4 px-4">
-                          <div className="flex flex-col gap-1.5 max-w-[220px]">
-                            {(!agent.bonuses || agent.bonuses.length === 0) ? (
-                              <span className="text-xxs text-gray-400 italic">Sin ajustes</span>
-                            ) : (
-                              (agent.bonuses || []).map(b => {
-                                const numAmount = parseFloat(b.amount as any) || 0;
-                                const isDeduction = numAmount < 0;
-                                return (
-                                  <div 
-                                    key={b.id} 
-                                    className={`flex items-center justify-between border rounded-lg px-2 py-1 text-xxs transition-colors ${
-                                      isDeduction
-                                        ? 'bg-rose-50/70 dark:bg-rose-950/30 border-rose-200/60 dark:border-rose-900/40 text-rose-800 dark:text-rose-300'
-                                        : 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200/60 dark:border-emerald-900/40 text-emerald-800 dark:text-emerald-300'
-                                    }`}
-                                  >
-                                    <span className="truncate max-w-[160px]" title={b.reason}>
-                                      {isDeduction ? '💸' : '🎁'} {b.reason} <strong className={isDeduction ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}>
-                                        ({isDeduction ? `-$${Math.abs(numAmount).toLocaleString('es-CO')}` : `+$${numAmount.toLocaleString('es-CO')}`})
-                                      </strong>
-                                    </span>
-                                    {agent.status !== 'paid' && (
-                                      <div className="flex items-center gap-1 ml-1.5 flex-shrink-0">
-                                        {isEsteban && (
-                                          <button
-                                            type="button"
-                                            onClick={() => handleOpenEditBonus(b, agent)}
-                                            className="text-gray-400 hover:text-amber-500 font-bold cursor-pointer p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-                                            title="Editar este ajuste (Solo Esteban)"
-                                          >
-                                            ✏️
-                                          </button>
-                                        )}
-                                        {isEsteban && (
-                                          <button
-                                            type="button"
-                                            onClick={() => handleOpenBonusHistory(b, agent)}
-                                            className="text-gray-400 hover:text-indigo-500 font-bold cursor-pointer p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-                                            title="Ver historial de cambios y auditoría"
-                                          >
-                                            📜
-                                          </button>
-                                        )}
-                                        <button
-                                          type="button"
-                                          onClick={() => handleDeleteBonus(b.id)}
-                                          className="text-red-500 hover:text-red-700 font-bold cursor-pointer p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-                                          title="Eliminar ajuste"
+                          {(() => {
+                            const bonusesList = agent.bonuses || [];
+                            const totalAdvances = bonusesList.reduce((acc, b) => {
+                              const v = parseFloat(b.amount as any) || 0;
+                              return v < 0 ? acc + Math.abs(v) : acc;
+                            }, 0);
+                            const totalBonusesPos = bonusesList.reduce((acc, b) => {
+                              const v = parseFloat(b.amount as any) || 0;
+                              return v > 0 ? acc + v : acc;
+                            }, 0);
+
+                            return (
+                              <div className="flex flex-col gap-1.5 min-w-[240px] max-w-[300px]">
+                                {bonusesList.length === 0 ? (
+                                  <span className="text-xxs text-gray-400 italic">Sin ajustes</span>
+                                ) : (
+                                  <>
+                                    {bonusesList.map(b => {
+                                      const numAmount = parseFloat(b.amount as any) || 0;
+                                      const isDeduction = numAmount < 0;
+                                      return (
+                                        <div 
+                                          key={b.id} 
+                                          className={`flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-xxs transition-colors ${
+                                            isDeduction
+                                              ? 'bg-rose-50/70 dark:bg-rose-950/30 border-rose-200/60 dark:border-rose-900/40 text-rose-800 dark:text-rose-300'
+                                              : 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200/60 dark:border-emerald-900/40 text-emerald-800 dark:text-emerald-300'
+                                          }`}
                                         >
-                                          ✕
-                                        </button>
+                                          <span className="truncate flex-1 min-w-0" title={b.reason}>
+                                            {isDeduction ? '💸' : '🎁'} {b.reason}
+                                          </span>
+                                          <strong className={`font-mono flex-shrink-0 ${isDeduction ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                            {isDeduction ? `-$${Math.abs(numAmount).toLocaleString('es-CO')}` : `+$${numAmount.toLocaleString('es-CO')}`}
+                                          </strong>
+                                          {agent.status !== 'paid' && (
+                                            <div className="flex items-center gap-1 flex-shrink-0">
+                                              {isEsteban && (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => handleOpenEditBonus(b, agent)}
+                                                  className="text-gray-400 hover:text-amber-500 font-bold cursor-pointer p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                                                  title="Editar este ajuste (Solo Esteban)"
+                                                >
+                                                  ✏️
+                                                </button>
+                                              )}
+                                              {isEsteban && (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => handleOpenBonusHistory(b, agent)}
+                                                  className="text-gray-400 hover:text-indigo-500 font-bold cursor-pointer p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                                                  title="Ver historial de cambios y auditoría"
+                                                >
+                                                  📜
+                                                </button>
+                                              )}
+                                              <button
+                                                type="button"
+                                                onClick={() => handleDeleteBonus(b.id)}
+                                                className="text-red-500 hover:text-red-700 font-bold cursor-pointer p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                                                title="Eliminar ajuste"
+                                              >
+                                                ✕
+                                              </button>
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+
+                                    {(totalAdvances > 0 || totalBonusesPos > 0) && (
+                                      <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1 mt-0.5 border-t border-gray-200/70 dark:border-gray-700/70 text-[10px] font-bold">
+                                        {totalAdvances > 0 && (
+                                          <span className="text-rose-600 dark:text-rose-400 font-mono bg-rose-500/10 px-1.5 py-0.5 rounded">
+                                            Total Adelantos: -${Math.round(totalAdvances).toLocaleString('es-CO')}
+                                          </span>
+                                        )}
+                                        {totalBonusesPos > 0 && (
+                                          <span className="text-emerald-600 dark:text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                                            Total Bonos: +${Math.round(totalBonusesPos).toLocaleString('es-CO')}
+                                          </span>
+                                        )}
                                       </div>
                                     )}
-                                  </div>
-                                );
-                              })
-                            )}
+                                  </>
+                                )}
                             {agent.status !== 'paid' && (
                               <div className="flex items-center gap-2 mt-1">
                                 <button
@@ -2607,6 +2657,8 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                               </div>
                             )}
                           </div>
+                            );
+                          })()}
                         </td>
 
                         {/* Total to pay */}
