@@ -464,8 +464,6 @@ export const ClientsView: React.FC = () => {
     } | null>(null);
     const [cutReason, setCutReason] = useState<string>('Mora > 3 días / No renovó');
     const [customCutReason, setCustomCutReason] = useState<string>('');
-    const [resetDevices, setResetDevices] = useState<boolean>(true); // El límite de códigos no aplica a cuando sacamos todas las sesiones
-    const [leaveSlotVirgin, setLeaveSlotVirgin] = useState<boolean>(true); // Dejar casilla "virgen" / libre en Excel para nueva venta
     const [isCuttingService, setIsCuttingService] = useState<boolean>(false);
     const [visibleRowsCount, setVisibleRowsCount] = useState<number>(100);
 
@@ -611,8 +609,8 @@ export const ClientsView: React.FC = () => {
                     streaming: cutModalClient.streaming,
                     email: cutModalClient.accountEmail,
                     reason: finalReason,
-                    resetDevices,
-                    leaveSlotVirgin,
+                    resetDevices: false,
+                    leaveSlotVirgin: true,
                     password: 'admin123'
                 })
             });
@@ -1805,7 +1803,6 @@ export const ClientsView: React.FC = () => {
                                                                 });
                                                                 setCutReason('Mora > 3 días / No renovó');
                                                                 setCustomCutReason('');
-                                                                setResetDevices(true);
                                                             }}
                                                             className="p-2 rounded-xl text-xs font-bold transition-all border bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 dark:text-rose-300 border-rose-200/60 dark:border-rose-800/50 flex items-center gap-1 shadow-2xs"
                                                             title="Aplicar corte de servicio a este cliente y gestionar reinicio de dispositivos si se sacan todas las sesiones"
@@ -2048,19 +2045,46 @@ export const ClientsView: React.FC = () => {
 
                         {/* Body */}
                         <div className="p-6 space-y-4 text-xs">
-                            {/* Detalles del Cliente */}
-                            <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 space-y-1.5 font-medium text-gray-700 dark:text-gray-300">
-                                <div className="flex justify-between">
-                                    <span className="text-gray-400">WhatsApp:</span>
-                                    <span className="font-mono font-bold">+{cutModalClient.phone || 'N/A'}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-400">Cuenta / Correo:</span>
-                                    <span className="font-mono text-gray-900 dark:text-white truncate max-w-[240px]">
-                                        {cutModalClient.accountEmail || 'Sin correo asignado'}
-                                    </span>
-                                </div>
-                            </div>
+                            {/* Detalles del Cliente y Contador de Días de Más */}
+                            {(() => {
+                                const rawExp = cutModalClient.clientRow?.deben || cutModalClient.clientRow?.Columna4 || cutModalClient.clientRow?.vencimiento;
+                                const daysLeft = getDaysRemaining(rawExp);
+                                const extraDays = daysLeft !== null && daysLeft < 0 ? Math.abs(daysLeft) : 0;
+                                return (
+                                    <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 space-y-2 font-medium text-gray-700 dark:text-gray-300">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">WhatsApp:</span>
+                                            <span className="font-mono font-bold">+{cutModalClient.phone || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Cuenta / Correo:</span>
+                                            <span className="font-mono text-gray-900 dark:text-white truncate max-w-[240px]">
+                                                {cutModalClient.accountEmail || 'Sin correo asignado'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center pt-1.5 border-t border-gray-200 dark:border-gray-700">
+                                            <span className="text-gray-400">Vencimiento ({formatExcelDate(rawExp) || 'N/A'}):</span>
+                                            {daysLeft === null ? (
+                                                <span className="px-2.5 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-bold text-[11px]">
+                                                    Sin fecha
+                                                </span>
+                                            ) : extraDays > 0 ? (
+                                                <span className="px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-700 text-rose-700 dark:text-rose-300 font-black text-[11px]">
+                                                    ⏱️ Tuvo +{extraDays} {extraDays === 1 ? 'día' : 'días'} de más
+                                                </span>
+                                            ) : daysLeft === 0 ? (
+                                                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-bold text-[11px]">
+                                                    Vence hoy (0 días de más)
+                                                </span>
+                                            ) : (
+                                                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-[11px]">
+                                                    Faltan {daysLeft} {daysLeft === 1 ? 'día' : 'días'} (0 días de más)
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
                             {/* Motivo del Corte */}
                             <div className="space-y-1.5">
@@ -2090,44 +2114,14 @@ export const ClientsView: React.FC = () => {
                                 )}
                             </div>
 
-                            {/* CONDICIÓN CLAVE: PREGUNTAR SI REINICIAR DISPOSITIVOS/SESIONES */}
-                            <div className="p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 space-y-2">
-                                <label className="flex items-start gap-3 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={resetDevices}
-                                        onChange={(e) => setResetDevices(e.target.checked)}
-                                        className="mt-0.5 w-4 h-4 rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
-                                    />
-                                    <div className="space-y-1">
-                                        <span className="font-bold text-amber-900 dark:text-amber-200 text-xs flex items-center gap-1.5">
-                                            🔄 Reiniciar contador de códigos y dispositivos (Si sacaste todas las sesiones)
-                                        </span>
-                                        <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 leading-relaxed">
-                                            El límite de 3 dispositivos <b>no aplica</b> cuando sacamos todas las sesiones de la cuenta. Al marcar esta opción, se liberará el contador para que los usuarios válidos puedan solicitar códigos sin bloqueo.
-                                        </p>
-                                    </div>
-                                </label>
-                            </div>
-
-                            {/* CONDICIÓN: DEJAR CASILLA LIBRE ("VIRGEN") EN EXCEL */}
-                            <div className="p-4 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 space-y-2">
-                                <label className="flex items-start gap-3 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={leaveSlotVirgin}
-                                        onChange={(e) => setLeaveSlotVirgin(e.target.checked)}
-                                        className="mt-0.5 w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                                    />
-                                    <div className="space-y-1">
-                                        <span className="font-bold text-emerald-900 dark:text-emerald-200 text-xs flex items-center gap-1.5">
-                                            ✨ Dejar casilla libre ("virgen") en Excel para nueva venta
-                                        </span>
-                                        <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80 leading-relaxed">
-                                            Limpia el teléfono, fecha y marca el Nombre como <b>"libre"</b> en Excel para que el cupo quede inmediatamente disponible en el inventario sin dejar filas fantasmas.
-                                        </p>
-                                    </div>
-                                </label>
+                            {/* ACCIÓN OBLIGATORIA: LIBERAR CASILLA EN EXCEL */}
+                            <div className="p-3.5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 space-y-1">
+                                <span className="font-bold text-emerald-900 dark:text-emerald-200 text-xs flex items-center gap-1.5">
+                                    ✨ Liberación obligatoria en Excel (casilla virgen)
+                                </span>
+                                <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80 leading-relaxed">
+                                    Al confirmar el corte se limpiarán automáticamente el nombre, teléfono y fecha en Excel para dejar el cupo disponible para una nueva venta.
+                                </p>
                             </div>
 
                             {/* Botones de Acción */}
