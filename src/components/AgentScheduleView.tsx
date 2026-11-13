@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, User, Plus, Trash2, Save, RefreshCw, AlertTriangle, CheckCircle, Calendar, Users, X, ChevronLeft, ChevronRight, Lock, DollarSign, Gift, Settings, ShieldAlert, FileText, Printer, Award, History, Copy, Zap, Info, Unlock, Activity } from 'lucide-react';
 import { isDemoMode, DEMO_AGENTS, DEMO_SCHEDULES, DEMO_PAYROLL } from '../utils/demoMode';
+import { EmploymentCertificateModal, CertificateEmployeeOption } from './EmploymentCertificateModal';
 
 interface Agent {
   id: number;
@@ -367,6 +368,10 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
   // Pay Stub & History Modals State
   const [stubModalOpen, setStubModalOpen] = useState<boolean>(false);
   const [selectedStubAgent, setSelectedStubAgent] = useState<PayrollAgent | null>(null);
+
+  // Employment Certificate Modal State
+  const [certModalOpen, setCertModalOpen] = useState<boolean>(false);
+  const [certInitialEmployee, setCertInitialEmployee] = useState<CertificateEmployeeOption | null>(null);
 
   // Agent Employee Management Modal State
   const [agentModalOpen, setAgentModalOpen] = useState(false);
@@ -2217,6 +2222,16 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
 
               {role === 'admin' && (
                 <button
+                  onClick={() => { setCertInitialEmployee(null); setCertModalOpen(true); }}
+                  className="flex items-center gap-1.5 px-3 py-2 border border-teal-200 dark:border-teal-900/50 bg-teal-50/60 dark:bg-teal-950/30 rounded-xl text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/40 transition-colors"
+                  title="Generar certificado laboral con logo de la empresa"
+                >
+                  <Award className="w-4 h-4 text-teal-600 dark:text-teal-400" /> Certificado Laboral
+                </button>
+              )}
+
+              {role === 'admin' && (
+                <button
                   onClick={() => { fetchSystemLogs(); setSystemLogsModalOpen(true); }}
                   className="flex items-center gap-1.5 px-3 py-2 border border-purple-200 dark:border-purple-900/50 bg-purple-50/50 dark:bg-purple-950/30 rounded-xl text-xs font-bold text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors"
                   title="Ver registro de auditoría de actividad de empleados"
@@ -2693,6 +2708,25 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                                   title="Ver historial de cambios de contrato y reactivaciones"
                                 >
                                   📜 Historial Contrato
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const contractStatus = agent.contract_status || (agents.find(a => a.id === agent.agent_id)?.status);
+                                    setCertInitialEmployee({
+                                      id: agent.agent_id,
+                                      fullname: agent.fullname,
+                                      email: agent.email,
+                                      role: agent.role,
+                                      status: contractStatus,
+                                      hourly_rate: agent.hourly_rate,
+                                    });
+                                    setCertModalOpen(true);
+                                  }}
+                                  className="w-full text-[10px] font-bold px-2 py-1 rounded-lg border border-teal-300 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/40 transition-all"
+                                  title="Generar certificado laboral para este colaborador"
+                                >
+                                  📄 Certificado Laboral
                                 </button>
                               </div>
                             )}
@@ -4007,6 +4041,34 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
           </div>
         </div>
       )}
+
+      <EmploymentCertificateModal
+        isOpen={certModalOpen}
+        onClose={() => {
+          setCertModalOpen(false);
+          setCertInitialEmployee(null);
+        }}
+        employees={
+          agents.length > 0
+            ? agents.map((a) => ({
+                id: a.id,
+                fullname: a.fullname,
+                email: a.email,
+                role: a.role,
+                status: a.status,
+                hourly_rate: payrollList.find((p) => p.agent_id === a.id)?.hourly_rate,
+              }))
+            : payrollList.map((p) => ({
+                id: p.agent_id,
+                fullname: p.fullname,
+                email: p.email,
+                role: p.role,
+                status: p.contract_status,
+                hourly_rate: p.hourly_rate,
+              }))
+        }
+        initialEmployee={certInitialEmployee}
+      />
     </div>
   );
 };
