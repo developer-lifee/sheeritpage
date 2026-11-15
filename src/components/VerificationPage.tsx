@@ -237,7 +237,7 @@ export const VerificationPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Botón de Enlace de Confirmación de Hogar */}
+              {/* Botón de Enlace de Confirmación de Hogar o Código Temporal */}
               {result.link && (
                 <div className="mt-5 pt-4 border-t border-green-200/60 dark:border-green-800/60">
                   <a 
@@ -246,11 +246,17 @@ export const VerificationPage: React.FC = () => {
                     rel="noopener noreferrer"
                     className="flex items-center justify-center space-x-2 w-full px-5 py-3.5 text-sm font-extrabold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-[1.02]"
                   >
-                    <span>🚀 Confirmar Hogar en Netflix</span>
+                    <span>
+                      {result.link.toLowerCase().includes('travel/verify')
+                        ? '🔑 Obtener Código Temporal en Netflix'
+                        : '🚀 Confirmar Hogar en Netflix'}
+                    </span>
                     <ExternalLink className="w-4 h-4" />
                   </a>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 text-center mt-2">
-                    Haz clic para abrir el enlace oficial y autorizar la conexión en tu TV.
+                    {result.link.toLowerCase().includes('travel/verify')
+                      ? 'Haz clic en el botón rojo para abrir Netflix y ver tu código temporal de 4 dígitos.'
+                      : 'Haz clic para abrir el enlace oficial y autorizar la conexión de tu Hogar en tu TV.'}
                   </p>
                 </div>
               )}
