@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calculator, Save, Plus, Trash2, Edit2, TrendingUp, CreditCard, RefreshCcw, DollarSign, Calendar, Eye, EyeOff, Receipt, CheckCircle2, X, Users, Wallet, ChevronDown, ChevronUp, UserCheck } from 'lucide-react';
 import { isDemoMode, DEMO_ACCOUNTING } from '../utils/demoMode';
+import { ValidatedPaymentsTab } from './ValidatedPaymentsTab';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -103,7 +104,7 @@ interface AccountRenewal {
 
 export function AccountingView() {
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'excel' | 'projections' | 'real'>('excel');
+  const [viewMode, setViewMode] = useState<'excel' | 'projections' | 'real' | 'payments'>('excel');
   const [rows, setRows] = useState<AccountingRow[]>([]);
   const [redFlags, setRedFlags] = useState<any[]>([]);
   const [totals, setTotals] = useState<AccountingTotals | null>(null);
@@ -509,6 +510,16 @@ export function AccountingView() {
             >
               💵 Flujo de Caja Real (Mes)
             </button>
+            <button
+              onClick={() => setViewMode('payments')}
+              className={`px-3 py-1.5 rounded-lg text-xxs font-bold transition-all ${
+                viewMode === 'payments'
+                  ? 'bg-white dark:bg-gray-800 text-brand-primary shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-800'
+              }`}
+            >
+              🔑 Pagos y Renovaciones (Llave)
+            </button>
           </div>
           <button 
             onClick={fetchData}
@@ -519,6 +530,8 @@ export function AccountingView() {
           </button>
         </div>
       </div>
+
+      {viewMode === 'payments' && <ValidatedPaymentsTab />}
 
       {/* Totales Resumen - Cartera Excel (Mensual) */}
       {viewMode === 'excel' && totals && (

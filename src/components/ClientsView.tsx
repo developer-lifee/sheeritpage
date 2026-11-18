@@ -2067,20 +2067,46 @@ export const ClientsView: React.FC = () => {
                                                                         )}
                                                                     </div>
 
-                                                                    {/* COMPRAS (web_sales_approved table) */}
+                                                                    {/* COMPRAS Y PAGOS VALIDADOS (web_sales_approved + validated_payments_log) */}
                                                                     <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border dark:border-gray-700 shadow-sm flex flex-col">
                                                                         <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-3">
-                                                                            💳 Historial de Compras y Pagos
+                                                                            💳 Historial de Compras, Pagos y Renovaciones
                                                                         </h4>
-                                                                        {!clientHistory.purchases || clientHistory.purchases.length === 0 ? (
-                                                                            <span className="text-xxs text-gray-400 italic font-light">No tiene compras aprobadas registradas.</span>
+                                                                        {(!clientHistory.purchases || clientHistory.purchases.length === 0) && (!clientHistory.validatedPayments || clientHistory.validatedPayments.length === 0) ? (
+                                                                            <span className="text-xxs text-gray-400 italic font-light">No tiene compras ni pagos validados registrados.</span>
                                                                         ) : (
-                                                                            <div className="max-h-[160px] overflow-y-auto space-y-2 pr-1 font-mono text-xxs">
-                                                                                {clientHistory.purchases.map((pur: any, pIdx: number) => (
-                                                                                    <div key={pIdx} className="flex justify-between items-center p-2 border-b dark:border-gray-750">
+                                                                            <div className="max-h-[200px] overflow-y-auto space-y-2 pr-1 font-mono text-xxs">
+                                                                                {(clientHistory.validatedPayments || []).map((vp: any, vpIdx: number) => (
+                                                                                    <div key={`vp-${vpIdx}`} className="flex justify-between items-start p-2.5 bg-emerald-50/40 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-800/40">
+                                                                                        <div className="flex flex-col gap-0.5">
+                                                                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                                                                <span className="font-bold text-gray-800 dark:text-gray-200 font-sans">{vp.platform}</span>
+                                                                                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold font-sans ${vp.payment_type === 'renewal' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300'}`}>
+                                                                                                    {vp.payment_type === 'renewal' ? `Renovación (${vp.duration_months}m)` : `Venta (${vp.duration_months}m)`}
+                                                                                                </span>
+                                                                                            </div>
+                                                                                            <span className="text-[10px] text-gray-500 font-sans">
+                                                                                                {vp.created_at ? new Date(vp.created_at).toLocaleString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                                                                                                {vp.bank || vp.payment_method ? ` · ${vp.bank || vp.payment_method}` : ''}
+                                                                                                {vp.destination_key ? ` · Llave ${vp.destination_key}` : ''}
+                                                                                            </span>
+                                                                                            <span className="text-[10px] text-gray-400 font-sans">
+                                                                                                {vp.transaction_reference ? `Ref: ${vp.transaction_reference}` : 'Sin ref.'}
+                                                                                                {vp.receipt_date ? ` · Comp: ${vp.receipt_date}` : ''}
+                                                                                                {vp.new_expiration ? ` · Vence: ${vp.new_expiration}` : ''}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        <div className="text-right flex flex-col shrink-0 ml-2">
+                                                                                            <span className="font-bold text-emerald-600 dark:text-emerald-400 text-xs">${Math.round(Number(vp.amount || 0)).toLocaleString('es-CO')}</span>
+                                                                                            {vp.excel_row && <span className="text-[9px] text-gray-400 mt-0.5">Fila {vp.excel_row}</span>}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ))}
+                                                                                {(clientHistory.purchases || []).map((pur: any, pIdx: number) => (
+                                                                                    <div key={`pur-${pIdx}`} className="flex justify-between items-center p-2 border-b dark:border-gray-750">
                                                                                         <div className="flex flex-col">
                                                                                             <span className="font-bold text-gray-700 dark:text-gray-300">{pur.platformName}</span>
-                                                                                            <span className="text-[10px] text-gray-400 font-sans mt-0.5">Fecha: {pur.approvedAt ? pur.approvedAt.substring(0, 10) : 'N/A'}</span>
+                                                                                            <span className="text-[10px] text-gray-400 font-sans mt-0.5">Web Bold · {pur.approvedAt ? pur.approvedAt.substring(0, 10) : 'N/A'}</span>
                                                                                         </div>
                                                                                         <div className="text-right flex flex-col">
                                                                                             <span className="font-bold text-emerald-600 dark:text-emerald-450 text-xs">${Number(pur.amount).toLocaleString('es-CO')}</span>
