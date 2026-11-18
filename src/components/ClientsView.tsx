@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle, Calendar, Plus, CreditCard, ShoppingBag, ChevronDown, Scissors, Sparkles, Receipt, ArrowRight, Pencil, Save } from 'lucide-react';
 import { isDemoMode } from '../utils/demoMode';
 import { AddSaleForm } from './AddSaleForm';
+import { CustomBillingCard } from './CustomBillingCard';
 
 const ACCOUNT_COLOR_PALETTES = [
     {
@@ -2158,6 +2159,13 @@ export const ClientsView: React.FC = () => {
                                                                         )}
                                                                     </div>
                                                                 </div>
+                                                                <CustomBillingCard
+                                                                    phone={phone || ''}
+                                                                    clientName={clientHistory.fullname || name || ''}
+                                                                    defaultPlatform={(c.Streaming || c.streaming || '').toString()}
+                                                                    defaultAccountEmail={(c.correo || c.Correo || '').toString()}
+                                                                    initialRules={clientHistory.customBillingRules || []}
+                                                                />
                                                             </div>
                                                         )}
                                                     </td>
