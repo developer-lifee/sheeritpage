@@ -59,7 +59,7 @@ export const CustomBillingCard: React.FC<CustomBillingCardProps> = ({
           platform: platform.trim().toUpperCase(),
           account_email: accountEmail.trim() || null,
           mode,
-          custom_amount: mode === 'custom_price' && customAmount ? Number(customAmount) : null,
+          custom_amount: (mode === 'custom_price' || mode === 'owner_settlement') && customAmount ? Number(customAmount) : null,
           notes: notes.trim() || null
         })
       });
@@ -146,16 +146,18 @@ export const CustomBillingCard: React.FC<CustomBillingCardProps> = ({
             </select>
           </div>
 
-          {mode === 'custom_price' && (
+          {(mode === 'custom_price' || mode === 'owner_settlement') && (
             <div>
-              <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Valor Acordado (COP)</label>
+              <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">
+                {mode === 'owner_settlement' ? 'Valor a Pagar / Liquidar (COP)' : 'Valor Acordado a Cobrar (COP)'}
+              </label>
               <input
                 type="number"
-                required
+                required={mode === 'custom_price'}
                 min={1000}
                 value={customAmount}
                 onChange={(e) => setCustomAmount(e.target.value)}
-                placeholder="Ej: 25000"
+                placeholder={mode === 'owner_settlement' ? 'Ej: 43900' : 'Ej: 25000'}
                 className="w-full px-3 py-2 rounded-lg border dark:bg-gray-800 dark:border-gray-600 dark:text-white outline-none"
               />
             </div>
@@ -209,7 +211,7 @@ export const CustomBillingCard: React.FC<CustomBillingCardProps> = ({
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
                     {modeLabel(r.mode)}
                   </span>
-                  {r.mode === 'custom_price' && r.custom_amount && (
+                  {(r.mode === 'custom_price' || r.mode === 'owner_settlement') && r.custom_amount && (
                     <span className="font-bold text-emerald-600 dark:text-emerald-400">
                       ${Math.round(Number(r.custom_amount)).toLocaleString('es-CO')}
                     </span>
