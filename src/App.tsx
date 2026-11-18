@@ -65,68 +65,128 @@ const AUTHORIZED_ADVISORS: { [email: string]: string } = {
 };
 
 function AdminLoginOnApp({ onSuccess }: { onSuccess: () => void }) {
+  const [mode, setMode] = useState<'login' | 'forgot' | 'reset'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const getApiUrl = () =>
+    (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+      ? 'http://localhost:3000'
+      : window.location.origin;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMsg('');
     setLoading(true);
     const cleanEmail = email.trim().toLowerCase();
-    const cleanPass = password.trim().toLowerCase();
+    const cleanPass = password.trim();
 
     try {
-      const apiUrl = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
-        ? 'http://localhost:3000'
-        : window.location.origin;
-      
-      const res = await fetch(`${apiUrl}/api/admin/agents`);
+      const apiUrl = getApiUrl();
+      const res = await fetch(`${apiUrl}/api/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, password: cleanPass })
+      });
       const data = await res.json();
-      
-      let agentObj = null;
-      if (data.success && Array.isArray(data.agents)) {
-        agentObj = data.agents.find((a: any) => a.email && a.email.trim().toLowerCase() === cleanEmail);
-      }
 
-      const fallbackName = AUTHORIZED_ADVISORS[cleanEmail];
-      
-      if (!agentObj && !fallbackName) {
-        setError('El correo ingresado no corresponde a un asesor autorizado.');
+      if (!res.ok || !data.success) {
+        setError(data.message || 'Credenciales incorrectas.');
         setLoading(false);
         return;
       }
 
-      if (agentObj && agentObj.status === 'inactive') {
-        setError('Este contrato se encuentra terminado/inactivo. Contacta al administrador.');
-        setLoading(false);
-        return;
-      }
-
-      if (cleanPass !== 'admin123') {
-        setError('Contraseña incorrecta.');
-        setLoading(false);
-        return;
-      }
-
-      const agentName = agentObj ? agentObj.fullname : (fallbackName || cleanEmail.split('@')[0]);
+      const agentName = data.agent?.fullname || AUTHORIZED_ADVISORS[cleanEmail] || cleanEmail.split('@')[0];
       localStorage.setItem('ticket_agent_email', cleanEmail);
       localStorage.setItem('ticket_agent_name', agentName);
-      localStorage.setItem('ticket_agent_password', cleanPass);
+      localStorage.setItem('ticket_agent_token', data.token);
+      localStorage.setItem('ticket_agent_password', 'admin123');
       onSuccess();
     } catch (err) {
-      const fallbackName = AUTHORIZED_ADVISORS[cleanEmail];
-      if (!fallbackName) {
-        setError('El correo ingresado no corresponde a un asesor autorizado.');
-      } else if (cleanPass !== 'admin123') {
-        setError('Contraseña incorrecta.');
-      } else {
-        localStorage.setItem('ticket_agent_email', cleanEmail);
-        localStorage.setItem('ticket_agent_name', fallbackName);
-        localStorage.setItem('ticket_agent_password', cleanPass);
-        onSuccess();
+      setError('No se pudo conectar con el servidor de autenticación. Intenta de nuevo.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccessMsg('');
+    setLoading(true);
+    const cleanEmail = email.trim().toLowerCase();
+
+    try {
+      const res = await fetch(`${getApiUrl()}/api/admin/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail })
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setError(data.message || 'No se pudo enviar el código de recuperación.');
+        setLoading(false);
+        return;
       }
+
+      setSuccessMsg(data.message || 'Código enviado. Revisa tu WhatsApp e ingrésalo abajo.');
+      setMode('reset');
+    } catch (err) {
+      setError('Error de conexión al solicitar el código.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccessMsg('');
+
+    if (newPassword.trim().length < 6) {
+      setError('La nueva contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (newPassword.trim() !== confirmPassword.trim()) {
+      setError('Las contraseñas no coinciden.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${getApiUrl()}/api/admin/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          code: resetCode.trim(),
+          newPassword: newPassword.trim()
+        })
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setError(data.message || 'No se pudo restablecer la contraseña.');
+        setLoading(false);
+        return;
+      }
+
+      setPassword('');
+      setResetCode('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setSuccessMsg(data.message || 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.');
+      setMode('login');
+    } catch (err) {
+      setError('Error de conexión al actualizar la contraseña.');
     } finally {
       setLoading(false);
     }
@@ -139,62 +199,224 @@ function AdminLoginOnApp({ onSuccess }: { onSuccess: () => void }) {
           <div className="p-3 bg-brand-primary/10 rounded-full mb-3 text-brand-primary">
             <Lock className="w-8 h-8" />
           </div>
-          <h2 className="text-xl font-bold dark:text-white text-center">Panel de Control - Acceso</h2>
+          <h2 className="text-xl font-bold dark:text-white text-center">
+            {mode === 'login' && 'Panel de Control - Acceso'}
+            {mode === 'forgot' && 'Recuperar Contraseña'}
+            {mode === 'reset' && 'Crear Nueva Contraseña'}
+          </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
-            Ingresa tu correo autorizado y contraseña admin.
+            {mode === 'login' && 'Ingresa tu correo autorizado y contraseña.'}
+            {mode === 'forgot' && 'Te enviaremos un código de 6 dígitos por WhatsApp para restablecer tu clave.'}
+            {mode === 'reset' && 'Ingresa el código recibido y define tu nueva contraseña.'}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="admin-login-email" className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
-              Correo Electrónico
-            </label>
-            <input
-              id="admin-login-email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              placeholder="ejemplo@outlook.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:ring-2 focus:ring-brand-primary transition-all text-sm"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="admin-login-password" className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
-              Contraseña
-            </label>
-            <input
-              id="admin-login-password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:ring-2 focus:ring-brand-primary transition-all text-sm"
-            />
-          </div>
-
-          {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-xs font-medium flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{error}</span>
+        {mode === 'login' && (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="admin-login-email" className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
+                Correo Electrónico
+              </label>
+              <input
+                id="admin-login-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                placeholder="ejemplo@outlook.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:ring-2 focus:ring-brand-primary transition-all text-sm"
+              />
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50"
-          >
-            {loading ? 'Verificando...' : 'Ingresar al Panel'}
-          </button>
-        </form>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="admin-login-password" className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                  Contraseña
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError('');
+                    setSuccessMsg('');
+                    setMode('forgot');
+                  }}
+                  className="text-xs font-semibold text-brand-primary hover:underline"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              </div>
+              <input
+                id="admin-login-password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:ring-2 focus:ring-brand-primary transition-all text-sm"
+              />
+            </div>
+
+            {successMsg && (
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-xl text-emerald-700 dark:text-emerald-300 text-xs font-medium">
+                {successMsg}
+              </div>
+            )}
+
+            {error && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-xs font-medium flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50"
+            >
+              {loading ? 'Verificando...' : 'Ingresar al Panel'}
+            </button>
+          </form>
+        )}
+
+        {mode === 'forgot' && (
+          <form onSubmit={handleForgotSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="admin-forgot-email" className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
+                Correo Electrónico Autorizado
+              </label>
+              <input
+                id="admin-forgot-email"
+                type="email"
+                autoComplete="email"
+                required
+                placeholder="ejemplo@outlook.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:ring-2 focus:ring-brand-primary transition-all text-sm"
+              />
+            </div>
+
+            {error && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-xs font-medium flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50"
+            >
+              {loading ? 'Enviando código...' : 'Enviar código por WhatsApp'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setError('');
+                setSuccessMsg('');
+                setMode('login');
+              }}
+              className="w-full py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors"
+            >
+              ← Volver al inicio de sesión
+            </button>
+          </form>
+        )}
+
+        {mode === 'reset' && (
+          <form onSubmit={handleResetSubmit} className="space-y-4">
+            {successMsg && (
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-xl text-emerald-700 dark:text-emerald-300 text-xs font-medium">
+                {successMsg}
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="admin-reset-code" className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
+                Código de 6 dígitos
+              </label>
+              <input
+                id="admin-reset-code"
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                required
+                placeholder="123456"
+                value={resetCode}
+                onChange={(e) => setResetCode(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:ring-2 focus:ring-brand-primary transition-all text-sm tracking-widest text-center font-bold"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="admin-reset-newpass" className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
+                Nueva Contraseña
+              </label>
+              <input
+                id="admin-reset-newpass"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={6}
+                placeholder="Mínimo 6 caracteres"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:ring-2 focus:ring-brand-primary transition-all text-sm"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="admin-reset-confirmpass" className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
+                Confirmar Contraseña
+              </label>
+              <input
+                id="admin-reset-confirmpass"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={6}
+                placeholder="Repite la nueva contraseña"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white outline-none focus:ring-2 focus:ring-brand-primary transition-all text-sm"
+              />
+            </div>
+
+            {error && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-xs font-medium flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50"
+            >
+              {loading ? 'Guardando...' : 'Restablecer Contraseña'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setError('');
+                setSuccessMsg('');
+                setMode('login');
+              }}
+              className="w-full py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors"
+            >
+              ← Volver al inicio de sesión
+            </button>
+          </form>
+        )}
 
         <div className="mt-5 pt-5 border-t border-gray-200 dark:border-gray-700 flex flex-col gap-2">
           <button
@@ -220,13 +442,14 @@ function AdminLoginOnApp({ onSuccess }: { onSuccess: () => void }) {
 function AppContent() {
   const [isAdminAuth, setIsAdminAuth] = useState(() => {
     const email = localStorage.getItem('ticket_agent_email') || '';
+    const token = localStorage.getItem('ticket_agent_token') || '';
     const pass = localStorage.getItem('ticket_agent_password') || '';
     const cleanEmail = email.trim().toLowerCase();
     const hasValidEmail = !!cleanEmail;
     const isDemo = isDemoMode() || cleanEmail === 'demo@sheerit.com.co';
-    const hasValidPass = pass.toLowerCase() === 'admin123' || pass.toLowerCase() === 'demo123' || isDemo;
+    const hasValidSession = !!token || pass.toLowerCase() === 'admin123' || isDemo;
     
-    if (hasValidEmail && hasValidPass) {
+    if (hasValidEmail && hasValidSession) {
       if (!localStorage.getItem('ticket_agent_name')) {
         const fallbackName = isDemo ? 'Asesor Demo Comercial' : (AUTHORIZED_ADVISORS[cleanEmail] || cleanEmail.split('@')[0]);
         localStorage.setItem('ticket_agent_name', fallbackName);
@@ -298,6 +521,8 @@ function AppContent() {
             localStorage.removeItem('ticket_agent_email');
             localStorage.removeItem('ticket_agent_name');
             localStorage.removeItem('ticket_agent_password');
+          localStorage.removeItem('ticket_agent_token');
+            localStorage.removeItem('ticket_agent_token');
             setIsAdminAuth(false);
           }
         }
@@ -602,6 +827,7 @@ function AppContent() {
           localStorage.removeItem('ticket_agent_email');
           localStorage.removeItem('ticket_agent_name');
           localStorage.removeItem('ticket_agent_password');
+          localStorage.removeItem('ticket_agent_token');
           setIsAdminAuth(false);
         } : undefined}
       />
@@ -744,6 +970,9 @@ function AppContent() {
                 localStorage.removeItem('ticket_agent_email');
                 localStorage.removeItem('ticket_agent_name');
                 localStorage.removeItem('ticket_agent_password');
+                localStorage.removeItem('ticket_agent_token');
+          localStorage.removeItem('ticket_agent_token');
+            localStorage.removeItem('ticket_agent_token');
                 setIsAdminAuth(false);
               }}
             />
