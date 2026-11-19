@@ -198,8 +198,8 @@ export const ManagedEmailsView: React.FC = () => {
   const [expandedEmailId, setExpandedEmailId] = useState<string | null>(null);
   const [htmlViewMode, setHtmlViewMode] = useState<Record<string, boolean>>({});
 
-  // Top-level subtab: 'accounts' | 'inboxes'
-  const [activeSubTab, setActiveSubTab] = useState<'accounts' | 'inboxes'>('accounts');
+  // Top-level subtab: 'inboxes' | 'accounts'
+  const [activeSubTab, setActiveSubTab] = useState<'accounts' | 'inboxes'>('inboxes');
 
   // Streaming Accounts state
   const [streamingAccounts, setStreamingAccounts] = useState<StreamingAccountItem[]>([]);
@@ -423,23 +423,6 @@ export const ManagedEmailsView: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-4 p-2 bg-gray-100 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setActiveSubTab('accounts')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-              activeSubTab === 'accounts'
-                ? 'bg-brand-primary text-white shadow-md'
-                : 'text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700'
-            }`}
-          >
-            <Tv className="w-4 h-4" />
-            <span>Cuentas Streaming & 2FA (Excel / BD)</span>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-              activeSubTab === 'accounts' ? 'bg-white/20 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-            }`}>
-              {streamingAccounts.length}
-            </span>
-          </button>
-
-          <button
             onClick={() => setActiveSubTab('inboxes')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
               activeSubTab === 'inboxes'
@@ -453,6 +436,23 @@ export const ManagedEmailsView: React.FC = () => {
               activeSubTab === 'inboxes' ? 'bg-white/20 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
             }`}>
               {emails.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('accounts')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+              activeSubTab === 'accounts'
+                ? 'bg-brand-primary text-white shadow-md'
+                : 'text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700'
+            }`}
+          >
+            <Tv className="w-4 h-4" />
+            <span>Cuentas Streaming & 2FA (Excel / BD)</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+              activeSubTab === 'accounts' ? 'bg-white/20 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+            }`}>
+              {streamingAccounts.length}
             </span>
           </button>
         </div>
