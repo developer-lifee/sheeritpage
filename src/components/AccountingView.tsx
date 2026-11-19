@@ -1548,6 +1548,7 @@ export function AccountingView() {
                 <th className="px-3.5 py-2.5">Tarjeta / Método Pago</th>
                 <th className="px-3.5 py-2.5 text-right">Monto Pagado ($)</th>
                 <th className="px-3.5 py-2.5">Vencimiento Cuenta</th>
+                <th className="px-3.5 py-2.5">Asesor</th>
                 <th className="px-3.5 py-2.5 text-center">Flujo de Caja</th>
                 <th className="px-3.5 py-2.5 text-center">Acciones</th>
               </tr>
@@ -1555,7 +1556,7 @@ export function AccountingView() {
             <tbody className="divide-y dark:divide-gray-700">
               {renewals.filter(r => !renewalFilterPlat || r.platform === renewalFilterPlat).length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-400 italic">
+                  <td colSpan={10} className="px-4 py-8 text-center text-gray-400 italic">
                     No hay renovaciones registradas todavía. Haz clic en "Registrar Pago de Renovación" para asentar el primer pago con tarjeta temporal y proveedor.
                   </td>
                 </tr>
@@ -1588,6 +1589,11 @@ export function AccountingView() {
                       </td>
                       <td className="px-3.5 py-2.5 font-mono text-emerald-600 dark:text-emerald-400 font-bold">
                         {ren.expiration_date ? new Date(ren.expiration_date).toISOString().slice(0, 10) : 'N/A'}
+                      </td>
+                      <td className="px-3.5 py-2.5">
+                        <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-750 text-gray-700 dark:text-gray-300 rounded-md font-semibold text-[11px]">
+                          {ren.registered_by || 'N/A'}
+                        </span>
                       </td>
                       <td className="px-3.5 py-2.5 text-center">
                         {ren.sync_to_cash_flow ? (
