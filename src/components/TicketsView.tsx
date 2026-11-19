@@ -147,6 +147,7 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
   // States for Heavy Tickets (Internal Tasks)
   const [heavyTickets, setHeavyTickets] = useState<any[]>([]);
+  const [heavySubTab, setHeavySubTab] = useState<'active' | 'archived'>('active');
   const [activeHeavyTicket, setActiveHeavyTicket] = useState<any | null>(null);
   const [heavyComments, setHeavyComments] = useState<any[]>([]);
   const [loadingHeavyComments, setLoadingHeavyComments] = useState(false);
@@ -2279,15 +2280,46 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
 
             {/* Accordion / Flat List */}
             <div className="flex-grow overflow-y-auto p-4 space-y-4">
-              {chatFilter === 'heavy' && (
-                <div className="space-y-2">
-                  {heavyTickets.length === 0 ? (
-                    <p className="text-center py-8 text-xs text-gray-450 italic">No hay labores o tickets pesados creados.</p>
-                  ) : (
-                    heavyTickets.map(ht => renderHeavyTicketItem(ht))
-                  )}
-                </div>
-              )}
+              {chatFilter === 'heavy' && (() => {
+                const activeHeavy = heavyTickets.filter(ht => ht.status !== 'completed');
+                const archivedHeavy = heavyTickets.filter(ht => ht.status === 'completed');
+                const visibleHeavy = heavySubTab === 'active' ? activeHeavy : archivedHeavy;
+                return (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800/80 p-1 rounded-xl">
+                      <button
+                        type="button"
+                        onClick={() => setHeavySubTab('active')}
+                        className={`flex-1 py-1.5 px-2.5 rounded-lg text-[11px] font-bold transition-all ${
+                          heavySubTab === 'active'
+                            ? 'bg-white dark:bg-gray-700 text-brand-primary shadow-xs'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                        }`}
+                      >
+                        Pendientes ({activeHeavy.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setHeavySubTab('archived')}
+                        className={`flex-1 py-1.5 px-2.5 rounded-lg text-[11px] font-bold transition-all ${
+                          heavySubTab === 'archived'
+                            ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                        }`}
+                      >
+                        Archivadas ({archivedHeavy.length})
+                      </button>
+                    </div>
+                    {visibleHeavy.length === 0 ? (
+                      <p className="text-center py-8 text-xs text-gray-450 italic">
+                        {heavySubTab === 'active' ? 'No hay labores pendientes en este momento.' : 'No hay labores completadas/archivadas.'}
+                      </p>
+                    ) : (
+                      visibleHeavy.map(ht => renderHeavyTicketItem(ht))
+                    )}
+                  </div>
+                );
+              })()}
 
               {chatFilter === 'my' && (
                 <div className="space-y-2">
