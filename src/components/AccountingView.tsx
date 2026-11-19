@@ -277,7 +277,7 @@ export function AccountingView() {
         body: JSON.stringify({
           renewalData: {
             ...newRenewal,
-            amount_paid: parseFloat(newRenewal.amount_paid) || 0
+            amount_paid: Number(String(newRenewal.amount_paid || '').replace(/[^\d]/g, '')) || 0
           },
           password: adminPassword
         })
@@ -1736,11 +1736,12 @@ export function AccountingView() {
                     Monto Real Pagado ($ COP) *
                   </label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     required
-                    placeholder="Ej. 14000 o promo"
+                    placeholder="Ej. 74900 (sin puntos ni comas)"
                     value={newRenewal.amount_paid}
-                    onChange={(e) => setNewRenewal({ ...newRenewal, amount_paid: e.target.value })}
+                    onChange={(e) => setNewRenewal({ ...newRenewal, amount_paid: e.target.value.replace(/[^\d]/g, '') })}
                     className="w-full px-3 py-2 border rounded-xl text-xs dark:bg-gray-750 dark:text-white dark:border-gray-700 font-black text-rose-500"
                   />
                   <span className="text-[10px] text-gray-400 mt-1 block">
