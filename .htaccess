@@ -1,14 +1,40 @@
+# Deshabilitar listado de directorios y MultiViews
+Options -Indexes -MultiViews
+
+# Bloquear acceso web a archivos sensibles (.env, .git, backups, logs, SQL)
+<FilesMatch "(^\.|\.(env|git|sql|bak|log|ini|sh|yml|yaml)$)">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# Cabeceras de Seguridad HTTP
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+  Header unset X-Powered-By
+</IfModule>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
-  
-  # Ensure slashes are handled correctly and MultiViews is OFF
-  Options -MultiViews
-  
+
+  # Forzar HTTPS en producción
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP_HOST} !^localhost [NC]
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
   # Don't rewrite for real files or directories
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
-  
+
   # Catch-all for React SPA routing
   RewriteRule ^.*$ index.html [L]
 </IfModule>
