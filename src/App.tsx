@@ -107,7 +107,7 @@ function AdminLoginOnApp({ onSuccess }: { onSuccess: () => void }) {
       localStorage.setItem('ticket_agent_email', cleanEmail);
       localStorage.setItem('ticket_agent_name', agentName);
       localStorage.setItem('ticket_agent_token', data.token);
-      localStorage.setItem('ticket_agent_password', 'admin123');
+      localStorage.removeItem('ticket_agent_password');
       onSuccess();
     } catch (err) {
       setError('No se pudo conectar con el servidor de autenticación. Intenta de nuevo.');
@@ -443,11 +443,11 @@ function AppContent() {
   const [isAdminAuth, setIsAdminAuth] = useState(() => {
     const email = localStorage.getItem('ticket_agent_email') || '';
     const token = localStorage.getItem('ticket_agent_token') || '';
-    const pass = localStorage.getItem('ticket_agent_password') || '';
     const cleanEmail = email.trim().toLowerCase();
     const hasValidEmail = !!cleanEmail;
     const isDemo = isDemoMode() || cleanEmail === 'demo@sheerit.com.co';
-    const hasValidSession = !!token || pass.toLowerCase() === 'admin123' || isDemo;
+    // Requerir token JWT real emitido por el backend (eliminado bypass 'admin123')
+    const hasValidSession = (token.trim().length > 20) || isDemo;
     
     if (hasValidEmail && hasValidSession) {
       if (!localStorage.getItem('ticket_agent_name')) {
