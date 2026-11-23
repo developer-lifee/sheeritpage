@@ -399,7 +399,7 @@ export const ClientsView: React.FC = () => {
                 setClients(prev => prev.map(c => {
                     const cPhone = (c.numero || c.Numero || '').toString().replace(/\D/g, '');
                     if (cPhone === editingDateClient.phone && c.Streaming === editingDateClient.streaming) {
-                        return { ...c, deben: editingDateClient.date, vencimiento: editingDateClient.date };
+                        return { ...c, deben: editingDateClient.date, Columna4: editingDateClient.date };
                     }
                     return c;
                 }));
@@ -2165,6 +2165,17 @@ export const ClientsView: React.FC = () => {
                                                                     defaultPlatform={(c.Streaming || c.streaming || '').toString()}
                                                                     defaultAccountEmail={(c.correo || c.Correo || '').toString()}
                                                                     initialRules={clientHistory.customBillingRules || []}
+                                                                    onDatesUnified={(unifiedPhone, newDate) => {
+                                                                        const tail = unifiedPhone.replace(/\D/g, '').slice(-10);
+                                                                        if (!tail) return;
+                                                                        setClients(prev => prev.map(row => {
+                                                                            const rPhone = (row.numero || row.Numero || '').toString().replace(/\D/g, '');
+                                                                            if (rPhone.includes(tail)) {
+                                                                                return { ...row, deben: newDate, Columna4: newDate };
+                                                                            }
+                                                                            return row;
+                                                                        }));
+                                                                    }}
                                                                 />
                                                             </div>
                                                         )}
