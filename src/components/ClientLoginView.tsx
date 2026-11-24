@@ -37,6 +37,19 @@ export default function ClientLoginView() {
   const [showPass, setShowPass] = useState<Record<number, boolean>>({});
   const [accountResults, setAccountResults] = useState<Record<number, Account2faResult>>({});
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [authMode, setAuthMode] = useState<'otp' | 'password'>('otp');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [whatsappOfflineHint, setWhatsappOfflineHint] = useState(false);
+  const [sessionToken, setSessionToken] = useState<string>(() => (
+    typeof window !== 'undefined' ? (localStorage.getItem('client_session_token') || '') : ''
+  ));
+  const [hasPassword, setHasPassword] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordModalMsg, setPasswordModalMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
   const API_BASE = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
     ? 'http://localhost:3000'
@@ -63,6 +76,11 @@ export default function ClientLoginView() {
           .then(data => {
             if (data.success && Array.isArray(data.accounts)) {
               setAccounts(data.accounts);
+              if (data.sessionToken) {
+                setSessionToken(data.sessionToken);
+                localStorage.setItem('client_session_token', data.sessionToken);
+              }
+              setHasPassword(Boolean(data.hasPassword));
               setStep(3);
             }
           })
@@ -77,6 +95,7 @@ export default function ClientLoginView() {
     setLoading(true);
     setError(null);
     setSuccess(null);
+    setWhatsappOfflineHint(false);
 
     const cleanPhone = phone.replace(/\D/g, '');
     if (!cleanPhone) {
@@ -94,6 +113,9 @@ export default function ClientLoginView() {
 
       const data = await response.json();
       if (!response.ok || !data.success) {
+        if (data.whatsappOffline) {
+          setWhatsappOfflineHint(true);
+        }
         throw new Error(data.message || 'No se pudo enviar el código OTP');
       }
 
@@ -103,6 +125,88 @@ export default function ClientLoginView() {
       setError(err.message || 'Error de red al solicitar el código');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone || !loginPassword) {
+      setError('Ingresa tu número de WhatsApp y tu contraseña.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/client/login-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: cleanPhone, password: loginPassword })
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'No se pudo iniciar sesión con contraseña.');
+      }
+
+      setAccounts(data.accounts || []);
+      if (data.sessionToken) {
+        setSessionToken(data.sessionToken);
+        localStorage.setItem('client_session_token', data.sessionToken);
+      }
+      localStorage.setItem('client_session_phone', cleanPhone);
+      setHasPassword(true);
+      setLoginPassword('');
+      setWhatsappOfflineHint(false);
+      setSuccess('Inicio de sesión exitoso con tu contraseña.');
+      setStep(3);
+    } catch (err: any) {
+      setError(err.message || 'Error al iniciar sesión con contraseña');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSavePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordModalMsg(null);
+
+    if (newPassword.length < 6) {
+      setPasswordModalMsg({ type: 'error', text: 'La contraseña debe tener al menos 6 caracteres.' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordModalMsg({ type: 'error', text: 'Las contraseñas no coinciden.' });
+      return;
+    }
+
+    setSavingPassword(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/client/set-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {})
+        },
+        body: JSON.stringify({ phone, newPassword, sessionToken })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'No se pudo guardar la contraseña.');
+      }
+      setHasPassword(true);
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowPasswordModal(false);
+      setSuccess(data.message || 'Contraseña de respaldo guardada con éxito.');
+    } catch (err: any) {
+      setPasswordModalMsg({ type: 'error', text: err.message || 'Error guardando contraseña.' });
+    } finally {
+      setSavingPassword(false);
     }
   };
 
@@ -126,6 +230,11 @@ export default function ClientLoginView() {
       }
 
       setAccounts(data.accounts);
+      if (data.sessionToken) {
+        setSessionToken(data.sessionToken);
+        localStorage.setItem('client_session_token', data.sessionToken);
+      }
+      setHasPassword(Boolean(data.hasPassword));
       localStorage.setItem('client_session_phone', cleanPhone);
       setSuccess('Inicio de sesión exitoso.');
       setStep(3);
@@ -216,8 +325,15 @@ export default function ClientLoginView() {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('client_session_phone');
+    localStorage.removeItem('sheerit_client_phone');
+    localStorage.removeItem('client_session_token');
     setPhone('');
     setCode('');
+    setLoginPassword('');
+    setSessionToken('');
+    setHasPassword(false);
+    setShowPasswordModal(false);
     setAccounts([]);
     setStep(1);
     setSuccess(null);
@@ -239,7 +355,24 @@ export default function ClientLoginView() {
             </p>
           </div>
 
-          <form onSubmit={handleRequestOtp} className="space-y-4">
+          <div className="grid grid-cols-2 gap-1.5 p-1 bg-gray-100 dark:bg-slate-950 rounded-xl border border-gray-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => { setAuthMode('otp'); setError(null); setWhatsappOfflineHint(false); }}
+              className={`py-2 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${authMode === 'otp' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'}`}
+            >
+              <Smartphone size={13} /> Código WhatsApp
+            </button>
+            <button
+              type="button"
+              onClick={() => { setAuthMode('password'); setError(null); setWhatsappOfflineHint(false); }}
+              className={`py-2 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${authMode === 'password' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'}`}
+            >
+              <Lock size={13} /> Con Contraseña
+            </button>
+          </div>
+
+          <form onSubmit={authMode === 'otp' ? handleRequestOtp : handlePasswordLogin} className="space-y-4">
             <div className="space-y-2">
               <label className="block text-xs font-semibold text-gray-400 dark:text-slate-400 uppercase tracking-wider">
                 Ingresa tu número de WhatsApp
@@ -260,10 +393,49 @@ export default function ClientLoginView() {
               </p>
             </div>
 
+            {authMode === 'password' && (
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-gray-400 dark:text-slate-400 uppercase tracking-wider">
+                  Tu contraseña de respaldo
+                </label>
+                <div className="relative">
+                  <input
+                    type={showLoginPassword ? 'text' : 'password'}
+                    placeholder="Ingresa tu contraseña"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    required
+                    className="w-full bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl py-3 pl-4 pr-10 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-600 focus:outline-none focus:border-indigo-500/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword(prev => !prev)}
+                    className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600 dark:text-slate-500"
+                  >
+                    {showLoginPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-400 dark:text-slate-500">
+                  Funciona incluso si WhatsApp está temporalmente fuera de línea.
+                </p>
+              </div>
+            )}
+
             {error && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-500 dark:text-rose-400 text-xs">
-                <AlertCircle size={14} className="shrink-0" />
-                <span>{error}</span>
+              <div className="space-y-2 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-500 dark:text-rose-400 text-xs">
+                <div className="flex items-center gap-2">
+                  <AlertCircle size={14} className="shrink-0" />
+                  <span>{error}</span>
+                </div>
+                {whatsappOfflineHint && authMode === 'otp' && (
+                  <button
+                    type="button"
+                    onClick={() => { setAuthMode('password'); setError(null); setWhatsappOfflineHint(false); }}
+                    className="w-full py-1.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg transition-colors text-center"
+                  >
+                    Ingresar con mi contraseña
+                  </button>
+                )}
               </div>
             )}
 
@@ -274,11 +446,11 @@ export default function ClientLoginView() {
             >
               {loading ? (
                 <>
-                  <RefreshCw size={16} className="animate-spin" /> Enviando...
+                  <RefreshCw size={16} className="animate-spin" /> {authMode === 'otp' ? 'Enviando...' : 'Verificando...'}
                 </>
               ) : (
                 <>
-                  Obtener Código OTP por WhatsApp
+                  {authMode === 'otp' ? 'Obtener Código OTP por WhatsApp' : 'Ingresar con Contraseña'}
                 </>
               )}
             </button>
@@ -358,7 +530,7 @@ export default function ClientLoginView() {
       {step === 3 && (
         <div className="w-full space-y-6">
           {/* Header */}
-          <div className="bg-white dark:bg-slate-900/60 backdrop-blur-md p-6 rounded-2xl border border-gray-150 dark:border-slate-800 flex items-center justify-between shadow-sm">
+          <div className="bg-white dark:bg-slate-900/60 backdrop-blur-md p-6 rounded-2xl border border-gray-150 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 shadow-sm">
             <div>
               <h2 className="text-xl font-bold tracking-tight text-gray-800 dark:text-white flex items-center gap-2">
                 👋 Mis Servicios Contratados
@@ -367,13 +539,99 @@ export default function ClientLoginView() {
                 Consulta los accesos o solicita códigos de seguridad de tus perfiles vigentes.
               </p>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/25 border border-rose-500/20 text-rose-500 dark:text-rose-400 rounded-xl transition-colors"
-            >
-              <LogOut size={12} /> Salir
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { setPasswordModalMsg(null); setShowPasswordModal(prev => !prev); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-xl transition-colors"
+              >
+                <Lock size={12} /> {hasPassword ? 'Cambiar Contraseña' : 'Mi Contraseña'}
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/25 border border-rose-500/20 text-rose-500 dark:text-rose-400 rounded-xl transition-colors"
+              >
+                <LogOut size={12} /> Salir
+              </button>
+            </div>
           </div>
+
+          {!hasPassword && !showPasswordModal && (
+            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <Shield size={18} className="text-indigo-500 shrink-0 mt-0.5" />
+                <p className="text-xs text-gray-700 dark:text-slate-200 leading-relaxed">
+                  <strong>Crea una contraseña de respaldo</strong> para entrar y pedir tus códigos 2FA en el portal incluso si WhatsApp no está disponible.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setPasswordModalMsg(null); setShowPasswordModal(true); }}
+                className="shrink-0 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition-colors"
+              >
+                Crear contraseña
+              </button>
+            </div>
+          )}
+
+          {showPasswordModal && (
+            <form onSubmit={handleSavePassword} className="bg-white dark:bg-slate-900/80 border border-indigo-500/30 rounded-2xl p-5 space-y-4 shadow-md">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                  <Lock size={15} className="text-indigo-500" /> {hasPassword ? 'Actualizar contraseña de respaldo' : 'Crear contraseña de respaldo'}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordModal(false)}
+                  className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-slate-200"
+                >
+                  Cerrar
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <input
+                  type="password"
+                  placeholder="Nueva contraseña (mín. 6 caracteres)"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  maxLength={64}
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl py-2.5 px-3 text-xs text-gray-800 dark:text-white focus:outline-none focus:border-indigo-500"
+                />
+                <input
+                  type="password"
+                  placeholder="Confirmar contraseña"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  maxLength={64}
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl py-2.5 px-3 text-xs text-gray-800 dark:text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              {passwordModalMsg && (
+                <p className={`text-xs ${passwordModalMsg.type === 'error' ? 'text-rose-500' : 'text-emerald-500'}`}>
+                  {passwordModalMsg.text}
+                </p>
+              )}
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordModal(false)}
+                  className="px-3.5 py-2 text-xs font-medium bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 rounded-xl"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingPassword}
+                  className="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl flex items-center gap-1.5"
+                >
+                  {savingPassword ? 'Guardando...' : 'Guardar contraseña'}
+                </button>
+              </div>
+            </form>
+          )}
 
           {/* Banner notification */}
           {(error || success) && (
