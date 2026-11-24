@@ -505,7 +505,7 @@ export const ClientsView: React.FC = () => {
         if (!editClientModal) return;
         setIsSavingClientEdit(true);
         try {
-            const apiUrl = getApiUrl();
+            const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
             const rawPhone = (editClientModal.numero || editClientModal.Numero || editClientModal.whatsapp || '').toString().replace(/\D/g, '');
             const originalCorreo = (editClientModal.correo || editClientModal.Correo || '').toString().trim();
             const originalPassword = (editClientModal.contraseña || editClientModal.Clave || editClientModal.clave || editClientModal.password || '').toString();
@@ -567,12 +567,16 @@ export const ClientsView: React.FC = () => {
                             observaciones: fields.observaciones,
                         };
                     }
+                    const rStreamLower = (row.Streaming || '').toString().toLowerCase().trim();
+                    const sameStreamFamily = !targetStreamLower || rStreamLower === targetStreamLower ||
+                        [/apple|icloud/, /netflix/, /disney/, /spotify/, /youtube/, /\bhbo\b|\bmax\b/, /prime|amazon/, /paramount/, /crunchy/, /canva/, /chatgpt|\bgpt\b/, /claude/, /microsoft|office/, /\bvix\b/]
+                            .some(rx => rx.test(targetStreamLower) && rx.test(rStreamLower));
                     if (
                         passwordChanged &&
                         editClientForm.applyPasswordToAccount &&
                         origCorreoLower &&
                         (row.correo || row.Correo || '').toString().toLowerCase().trim() === origCorreoLower &&
-                        (!targetStreamLower || (row.Streaming || '').toString().toLowerCase().trim() === targetStreamLower)
+                        sameStreamFamily
                     ) {
                         return { ...row, contraseña: fields['contraseña'] };
                     }
