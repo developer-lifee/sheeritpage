@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle, Calendar, Plus, CreditCard, ShoppingBag, ChevronDown, Scissors, Sparkles, Receipt, ArrowRight, Pencil, Save } from 'lucide-react';
+import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle, Calendar, Plus, CreditCard, ShoppingBag, ChevronDown, Scissors, Sparkles, Receipt, ArrowRight, Pencil, Save, Key, Mail, Copy, ExternalLink } from 'lucide-react';
 import { isDemoMode } from '../utils/demoMode';
 import { AddSaleForm } from './AddSaleForm';
 import { CustomBillingCard } from './CustomBillingCard';
@@ -161,6 +161,58 @@ const normalizeServiceName = (raw?: any): string => {
         .toUpperCase();
     s = s.replace(/\b(WONER|ONWER)\b/g, 'OWNER');
     return s;
+};
+
+interface QuickInboxEmail {
+    id: string;
+    subject: string;
+    from: string;
+    date: string;
+    internalDate?: string;
+    snippet: string;
+    body?: string;
+    code?: string;
+    link?: string;
+}
+
+interface QuickTotpAccount {
+    email: string;
+    code: string;
+    timeRemaining: number;
+    service?: string;
+}
+
+const extractQuickCodeAndLink = (msg: QuickInboxEmail): { code?: string; link?: string } => {
+    const rawText = `${msg.subject || ''} ${msg.snippet || ''} ${msg.body || ''}`;
+    let code = (msg.code || '').trim();
+    if (!code) {
+        const textWithoutUrls = rawText.replace(/https?:\/\/[^\s<>"'`]+/gi, ' ');
+        const sixDigit = textWithoutUrls.match(/\b([0-9]{6})\b/);
+        const fiveDigit = textWithoutUrls.match(/\b([0-9]{5})\b/);
+        const eightDigit = textWithoutUrls.match(/\b([0-9]{8})\b/);
+        let fourDigit: string | undefined;
+        for (const m of textWithoutUrls.matchAll(/\b([0-9]{4})\b/g)) {
+            if (!['2024', '2025', '2026', '2027'].includes(m[1])) {
+                fourDigit = m[1];
+                break;
+            }
+        }
+        code = (sixDigit?.[1] || fourDigit || fiveDigit?.[1] || eightDigit?.[1] || '').trim();
+    }
+
+    let link = (msg.link || '').trim();
+    if (!link) {
+        const linkSource = `${msg.body || ''} ${msg.snippet || ''}`;
+        const linkMatch = linkSource.match(
+            /https?:\/\/(?:www\.)?(?:netflix\.com|disneyplus\.com|starplus\.com|max\.com|hbomax\.com|primevideo\.com|amazon\.com|auth\.max\.com|claude\.ai|anthropic\.com|mail\.anthropic\.com|openai\.com|auth\.openai\.com|spotify\.com)[^\s<>"']+/i
+        );
+        link = linkMatch ? linkMatch[0] : '';
+    }
+
+    return {
+        code: code || undefined,
+        link: link || undefined
+    };
 };
 
 export const ClientsView: React.FC = () => {
@@ -626,6 +678,115 @@ export const ClientsView: React.FC = () => {
         sync_to_cash_flow: true,
         sync_to_excel: true
     });
+
+    // Modal rápido de 2FA (TOTP) y Correos (Gmail) desde la tabla de Base de Datos
+    const [quick2faModal, setQuick2faModal] = useState<{ email: string; platform: string; clientName: string } | null>(null);
+    const [quick2faLoading, setQuick2faLoading] = useState<boolean>(false);
+    const [quick2faTotp, setQuick2faTotp] = useState<QuickTotpAccount | null>(null);
+    const [quick2faTotpSeconds, setQuick2faTotpSeconds] = useState<number>(30);
+    const [quick2faEmails, setQuick2faEmails] = useState<QuickInboxEmail[]>([]);
+    const [quick2faEmailsError, setQuick2faEmailsError] = useState<string>('');
+    const [quick2faExpandedId, setQuick2faExpandedId] = useState<string | null>(null);
+    const [quick2faCopiedKey, setQuick2faCopiedKey] = useState<string | null>(null);
+
+    const fetchQuick2faData = useCallback(async (targetEmail: string) => {
+        const normalizedTarget = targetEmail.trim().toLowerCase();
+        if (!normalizedTarget) return;
+
+        setQuick2faLoading(true);
+        setQuick2faEmailsError('');
+        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
+
+        const [totpRes, emailsRes] = await Promise.allSettled([
+            fetch(`${apiUrl}/api/admin/gpt-accounts`),
+            fetch(`${apiUrl}/api/admin/gmail-inboxes/emails?email=${encodeURIComponent(targetEmail.trim())}&password=admin123`)
+        ]);
+
+        if (totpRes.status === 'fulfilled' && totpRes.value.ok) {
+            try {
+                const totpData = await totpRes.value.json();
+                const list: QuickTotpAccount[] = Array.isArray(totpData) ? totpData : [];
+                const matched = list.find((acc) => (acc.email || '').trim().toLowerCase() === normalizedTarget) || null;
+                setQuick2faTotp(matched);
+                if (matched) {
+                    setQuick2faTotpSeconds(typeof matched.timeRemaining === 'number' ? matched.timeRemaining : 30);
+                }
+            } catch {
+                setQuick2faTotp(null);
+            }
+        } else {
+            setQuick2faTotp(null);
+        }
+
+        if (emailsRes.status === 'fulfilled' && emailsRes.value.ok) {
+            try {
+                const emailsData = await emailsRes.value.json();
+                setQuick2faEmails(Array.isArray(emailsData) ? emailsData.slice(0, 8) : []);
+            } catch {
+                setQuick2faEmails([]);
+                setQuick2faEmailsError('No se pudo leer la respuesta de correos.');
+            }
+        } else {
+            setQuick2faEmails([]);
+            setQuick2faEmailsError('Esta cuenta no tiene buzón Gmail vinculado o el token no está activo.');
+        }
+
+        setQuick2faLoading(false);
+    }, []);
+
+    const openQuick2faModal = (email: string, platform: string, clientName: string) => {
+        const cleanEmail = (email || '').trim();
+        if (!cleanEmail) return;
+        setQuick2faTotp(null);
+        setQuick2faTotpSeconds(30);
+        setQuick2faEmails([]);
+        setQuick2faEmailsError('');
+        setQuick2faExpandedId(null);
+        setQuick2faCopiedKey(null);
+        setQuick2faModal({
+            email: cleanEmail,
+            platform: platform || 'Cuenta',
+            clientName: (clientName || '').trim()
+        });
+        fetchQuick2faData(cleanEmail);
+    };
+
+    useEffect(() => {
+        if (!quick2faModal || !quick2faTotp) return;
+        const targetEmail = quick2faModal.email.trim().toLowerCase();
+        const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
+
+        const timer = setInterval(() => {
+            setQuick2faTotpSeconds((prev) => {
+                if (prev <= 1) {
+                    fetch(`${apiUrl}/api/admin/gpt-accounts`)
+                        .then((r) => (r.ok ? r.json() : []))
+                        .then((list) => {
+                            if (!Array.isArray(list)) return;
+                            const matched = list.find((acc: QuickTotpAccount) => (acc.email || '').trim().toLowerCase() === targetEmail);
+                            if (matched) {
+                                setQuick2faTotp(matched);
+                                setQuick2faTotpSeconds(typeof matched.timeRemaining === 'number' ? matched.timeRemaining : 30);
+                            }
+                        })
+                        .catch(() => {});
+                    return 30;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [quick2faModal, quick2faTotp]);
+
+    const copyQuick2faText = (value: string, key: string) => {
+        if (!value) return;
+        navigator.clipboard.writeText(value);
+        setQuick2faCopiedKey(key);
+        setTimeout(() => {
+            setQuick2faCopiedKey((current) => (current === key ? null : current));
+        }, 1800);
+    };
 
     const openAccountRenewalModal = (platform = '', email = '') => {
         const today = new Date().toISOString().slice(0, 10);
@@ -1833,18 +1994,32 @@ export const ClientsView: React.FC = () => {
                                                                 </span>
                                                             </div>
                                                             {c.correo && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        openAccountRenewalModal(normalizeServiceName(c.Streaming), c.correo);
-                                                                    }}
-                                                                    className="px-1.5 py-0.5 rounded-md text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/25 border border-emerald-500/30 transition-all flex items-center gap-1 text-[10px] font-bold cursor-pointer opacity-75 group-hover/emailcell:opacity-100 flex-shrink-0 shadow-2xs"
-                                                                    title="Renovar cuenta matriz (Pago a proveedor / tarjeta)"
-                                                                >
-                                                                    <CreditCard className="w-3 h-3" />
-                                                                    <span className="hidden xl:inline">Renovar</span>
-                                                                </button>
+                                                                <div className="flex items-center gap-1 flex-shrink-0">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            openQuick2faModal(c.correo, normalizeServiceName(c.Streaming), `${c.Nombre || ''} ${c.apellido || c.Apellido || ''}`.trim());
+                                                                        }}
+                                                                        className="px-1.5 py-0.5 rounded-md text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/25 border border-indigo-500/30 transition-all flex items-center gap-1 text-[10px] font-bold cursor-pointer opacity-80 group-hover/emailcell:opacity-100 shadow-2xs"
+                                                                        title="Ver código 2FA (TOTP) y correos recientes de esta cuenta"
+                                                                    >
+                                                                        <Key className="w-3 h-3" />
+                                                                        <span className="hidden xl:inline">2FA</span>
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            openAccountRenewalModal(normalizeServiceName(c.Streaming), c.correo);
+                                                                        }}
+                                                                        className="px-1.5 py-0.5 rounded-md text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/25 border border-emerald-500/30 transition-all flex items-center gap-1 text-[10px] font-bold cursor-pointer opacity-75 group-hover/emailcell:opacity-100 shadow-2xs"
+                                                                        title="Renovar cuenta matriz (Pago a proveedor / tarjeta)"
+                                                                    >
+                                                                        <CreditCard className="w-3 h-3" />
+                                                                        <span className="hidden xl:inline">Renovar</span>
+                                                                    </button>
+                                                                </div>
                                                             )}
                                                         </div>
                                                         {c.vencimiento && (
@@ -2950,6 +3125,240 @@ export const ClientsView: React.FC = () => {
                                     </>
                                 )}
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Rápido de 2FA (TOTP) y Buzón de Correos desde Base de Datos */}
+            {quick2faModal && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn"
+                    onClick={() => setQuick2faModal(null)}
+                >
+                    <div
+                        className="w-full max-w-2xl max-h-[88vh] flex flex-col bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-2xl overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-850/80">
+                            <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30">
+                                        <Key className="w-3 h-3" /> {quick2faModal.platform}
+                                    </span>
+                                    {quick2faModal.clientName && (
+                                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 truncate">
+                                            Cliente: <strong className="text-gray-700 dark:text-gray-200">{quick2faModal.clientName}</strong>
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                                    <h3 className="text-sm sm:text-base font-extrabold font-mono text-gray-900 dark:text-white break-all">
+                                        {quick2faModal.email}
+                                    </h3>
+                                    <button
+                                        type="button"
+                                        onClick={() => copyQuick2faText(quick2faModal.email, 'modal_email')}
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold bg-gray-200/70 hover:bg-gray-300/70 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-colors cursor-pointer"
+                                        title="Copiar correo de la cuenta"
+                                    >
+                                        {quick2faCopiedKey === 'modal_email' ? (
+                                            <><Check className="w-3 h-3 text-emerald-500" /> Copiado</>
+                                        ) : (
+                                            <><Copy className="w-3 h-3" /> Copiar correo</>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                                <button
+                                    type="button"
+                                    disabled={quick2faLoading}
+                                    onClick={() => fetchQuick2faData(quick2faModal.email)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                                    title="Actualizar código TOTP y correos recientes"
+                                >
+                                    <RefreshCw className={`w-3.5 h-3.5 ${quick2faLoading ? 'animate-spin' : ''}`} />
+                                    <span className="hidden sm:inline">Actualizar</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setQuick2faModal(null)}
+                                    className="p-1.5 rounded-xl text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200/70 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                                    title="Cerrar"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-5 overflow-y-auto space-y-4">
+                            {/* Sección TOTP 2FA en vivo */}
+                            {quick2faTotp && (
+                                <div className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60">
+                                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                                                    Código 2FA en vivo ({quick2faTotp.service || 'TOTP'})
+                                                </span>
+                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${quick2faTotpSeconds <= 6 ? 'bg-red-500/15 text-red-600 dark:text-red-400' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'}`}>
+                                                    <Clock className="w-3 h-3" /> {quick2faTotpSeconds}s
+                                                </span>
+                                            </div>
+                                            <div className="mt-1.5 text-3xl font-black font-mono tracking-[0.22em] text-gray-900 dark:text-white select-all">
+                                                {quick2faTotp.code}
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => copyQuick2faText(quick2faTotp.code, 'totp_code')}
+                                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-xs transition-colors cursor-pointer"
+                                        >
+                                            {quick2faCopiedKey === 'totp_code' ? (
+                                                <><Check className="w-3.5 h-3.5" /> ¡Copiado!</>
+                                            ) : (
+                                                <><Copy className="w-3.5 h-3.5" /> Copiar código</>
+                                            )}
+                                        </button>
+                                    </div>
+                                    <div className="mt-3 h-1.5 w-full rounded-full bg-emerald-200/70 dark:bg-emerald-900/50 overflow-hidden">
+                                        <div
+                                            className={`h-full transition-all duration-1000 ${quick2faTotpSeconds <= 6 ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                            style={{ width: `${Math.max(0, Math.min(100, (quick2faTotpSeconds / 30) * 100))}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Sección Correos recientes (Gmail) */}
+                            <div>
+                                <div className="flex items-center justify-between mb-2.5">
+                                    <h4 className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                                        <Mail className="w-3.5 h-3.5 text-indigo-500" />
+                                        Correos Recientes / Códigos / Enlaces
+                                    </h4>
+                                    {quick2faEmails.length > 0 && (
+                                        <span className="text-[11px] text-gray-500 dark:text-gray-400 font-semibold">
+                                            Últimos {quick2faEmails.length}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {quick2faLoading && quick2faEmails.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-10 text-gray-500 dark:text-gray-400 gap-2">
+                                        <RefreshCw className="w-6 h-6 animate-spin text-indigo-500" />
+                                        <span className="text-xs font-semibold">Consultando 2FA y bandeja de entrada...</span>
+                                    </div>
+                                ) : quick2faEmails.length > 0 ? (
+                                    <div className="space-y-2.5">
+                                        {quick2faEmails.map((msg) => {
+                                            const extracted = extractQuickCodeAndLink(msg);
+                                            const isExpanded = quick2faExpandedId === msg.id;
+                                            return (
+                                                <div
+                                                    key={msg.id}
+                                                    className="p-3.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-800/40 hover:border-indigo-300 dark:hover:border-indigo-700/70 transition-colors"
+                                                >
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="text-xs font-extrabold text-gray-900 dark:text-white leading-snug">
+                                                                {msg.subject || '(Sin asunto)'}
+                                                            </p>
+                                                            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                                                                <span className="truncate max-w-[260px]">{msg.from}</span>
+                                                                <span>•</span>
+                                                                <span>{msg.date}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {(extracted.code || extracted.link) && (
+                                                        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                                                            {extracted.code && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => copyQuick2faText(extracted.code!, `email_code_${msg.id}`)}
+                                                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold font-mono shadow-2xs transition-colors cursor-pointer"
+                                                                    title="Copiar código extraído"
+                                                                >
+                                                                    <span>{extracted.code}</span>
+                                                                    {quick2faCopiedKey === `email_code_${msg.id}` ? (
+                                                                        <Check className="w-3.5 h-3.5 text-emerald-300" />
+                                                                    ) : (
+                                                                        <Copy className="w-3.5 h-3.5 opacity-85" />
+                                                                    )}
+                                                                </button>
+                                                            )}
+                                                            {extracted.link && (
+                                                                <div className="inline-flex items-center gap-1">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => copyQuick2faText(extracted.link!, `email_link_${msg.id}`)}
+                                                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[11px] font-bold transition-colors cursor-pointer"
+                                                                        title="Copiar enlace de verificación"
+                                                                    >
+                                                                        {quick2faCopiedKey === `email_link_${msg.id}` ? (
+                                                                            <><Check className="w-3 h-3" /> Enlace copiado</>
+                                                                        ) : (
+                                                                            <><Copy className="w-3 h-3" /> Copiar enlace</>
+                                                                        )}
+                                                                    </button>
+                                                                    <a
+                                                                        href={extracted.link}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-200/80 hover:bg-gray-300/80 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 text-[11px] font-bold transition-colors"
+                                                                        title="Abrir enlace en nueva pestaña"
+                                                                    >
+                                                                        <ExternalLink className="w-3 h-3" /> Abrir
+                                                                    </a>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    {msg.snippet && (
+                                                        <p className="mt-2 text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed">
+                                                            {msg.snippet}
+                                                        </p>
+                                                    )}
+
+                                                    {msg.body && (
+                                                        <div className="mt-1.5">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setQuick2faExpandedId(isExpanded ? null : msg.id)}
+                                                                className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                                                            >
+                                                                {isExpanded ? 'Ocultar cuerpo completo' : 'Ver cuerpo completo'}
+                                                            </button>
+                                                            {isExpanded && (
+                                                                <pre className="mt-2 p-2.5 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[11px] font-mono text-gray-700 dark:text-gray-200 whitespace-pre-wrap break-words max-h-48 overflow-y-auto">
+                                                                    {msg.body}
+                                                                </pre>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className={`p-4 rounded-xl border text-xs ${quick2faTotp ? 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300' : 'bg-amber-50/80 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50 text-amber-800 dark:text-amber-200'}`}>
+                                        <p className="font-semibold">
+                                            {quick2faEmailsError || 'No se encontraron correos recientes en esta bandeja.'}
+                                        </p>
+                                        {!quick2faTotp && (
+                                            <p className="mt-1 text-[11px] opacity-85">
+                                                Si es un correo Outlook o una cuenta sin secreto TOTP/Gmail vinculado en el módulo <strong>2FA / Correos</strong>, aún no es posible consultar códigos automáticamente aquí.
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
