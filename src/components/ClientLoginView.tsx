@@ -15,6 +15,7 @@ interface ClientAccount {
   devicesUsed?: number | null;
   devicesRemaining?: number | null;
   maxDevices?: number | null;
+  registeredDevices?: string[];
 }
 
 interface Account2faResult {
@@ -280,8 +281,12 @@ export default function ClientLoginView() {
         throw new Error(data.message || 'No se pudo generar la solicitud de código');
       }
 
-      if (typeof data.devicesRemaining === 'number') {
-        setAccounts(prev => prev.map(a => a.id === accountId ? { ...a, devicesRemaining: data.devicesRemaining, devicesUsed: data.devicesUsed } : a));
+      if (typeof data.devicesRemaining === 'number' || Array.isArray(data.registeredDevices)) {
+        setAccounts(prev => prev.map(a => a.id === accountId ? {
+          ...a,
+          ...(typeof data.devicesRemaining === 'number' ? { devicesRemaining: data.devicesRemaining, devicesUsed: data.devicesUsed } : {}),
+          ...(Array.isArray(data.registeredDevices) ? { registeredDevices: data.registeredDevices } : {})
+        } : a));
       }
 
       setAccountResults(prev => ({
@@ -296,8 +301,11 @@ export default function ClientLoginView() {
       }));
 
       const isLimited = data.isLimitedPlatform || (typeof data.devicesRemaining === 'number' && typeof data.maxDevices === 'number');
+      const deviceRecognizedNote = data.deviceAlreadyRegistered && data.deviceLabel
+        ? ` Dispositivo ya reconocido (${data.deviceLabel}) — sin consumir cupo nuevo.`
+        : (data.isNewDevice && data.deviceLabel ? ` Dispositivo registrado: ${data.deviceLabel}.` : '');
       const remainingNote = (isLimited && typeof data.devicesRemaining === 'number')
-        ? ` (Te quedan ${data.devicesRemaining} de ${data.maxDevices || 3} dispositivos)` 
+        ? ` (Te quedan ${data.devicesRemaining} de ${data.maxDevices || 3} dispositivos)${deviceRecognizedNote}`
         : '';
 
       if (data.code) {
@@ -739,39 +747,53 @@ export default function ClientLoginView() {
 
                       {/* Dispositivos permitidos y contador (Exclusivo para cuentas de Claude y GPT) */}
                       {(acc.isLimitedPlatform || (acc.platform && (acc.platform.toLowerCase().includes('gpt') || acc.platform.toLowerCase().includes('claude')))) && (
-                        <div className="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 dark:bg-slate-950/60 border border-gray-150 dark:border-slate-850">
-                          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-slate-400">
-                            <Smartphone size={13} className="text-indigo-500 shrink-0" />
-                            <span>Dispositivos:</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs font-bold ${
-                              (acc.devicesRemaining ?? 3) === 0
-                                ? 'text-rose-600 dark:text-rose-400'
-                                : (acc.devicesRemaining ?? 3) === 1
-                                ? 'text-amber-600 dark:text-amber-400'
-                                : 'text-emerald-600 dark:text-emerald-400'
-                            }`}>
-                              {(acc.devicesRemaining ?? 3) === 0
-                                ? 'Límite alcanzado (3/3)'
-                                : `Te quedan ${acc.devicesRemaining ?? 3} de ${acc.maxDevices ?? 3}`}
-                            </span>
-                            <div className="flex gap-1" title={`${acc.devicesUsed ?? 0} de ${acc.maxDevices ?? 3} dispositivos vinculados`}>
-                              {[1, 2, 3].map((dot) => {
-                                const isUsed = dot <= (acc.devicesUsed ?? (3 - (acc.devicesRemaining ?? 3)));
-                                return (
-                                  <span
-                                    key={dot}
-                                    className={`w-2 h-2 rounded-full transition-all ${
-                                      isUsed
-                                        ? ((acc.devicesRemaining ?? 3) === 0 ? 'bg-rose-500' : 'bg-indigo-500')
-                                        : 'bg-gray-200 dark:bg-slate-800'
-                                    }`}
-                                  />
-                                );
-                              })}
+                        <div className="p-2.5 rounded-lg bg-gray-50 dark:bg-slate-950/60 border border-gray-150 dark:border-slate-850 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-slate-400">
+                              <Smartphone size={13} className="text-indigo-500 shrink-0" />
+                              <span>Dispositivos:</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs font-bold ${
+                                (acc.devicesRemaining ?? 3) === 0
+                                  ? 'text-rose-600 dark:text-rose-400'
+                                  : (acc.devicesRemaining ?? 3) === 1
+                                  ? 'text-amber-600 dark:text-amber-400'
+                                  : 'text-emerald-600 dark:text-emerald-400'
+                              }`}>
+                                {(acc.devicesRemaining ?? 3) === 0
+                                  ? 'Límite alcanzado (3/3)'
+                                  : `Te quedan ${acc.devicesRemaining ?? 3} de ${acc.maxDevices ?? 3}`}
+                              </span>
+                              <div className="flex gap-1" title={`${acc.devicesUsed ?? 0} de ${acc.maxDevices ?? 3} dispositivos vinculados`}>
+                                {[1, 2, 3].map((dot) => {
+                                  const isUsed = dot <= (acc.devicesUsed ?? (3 - (acc.devicesRemaining ?? 3)));
+                                  return (
+                                    <span
+                                      key={dot}
+                                      className={`w-2 h-2 rounded-full transition-all ${
+                                        isUsed
+                                          ? ((acc.devicesRemaining ?? 3) === 0 ? 'bg-rose-500' : 'bg-indigo-500')
+                                          : 'bg-gray-200 dark:bg-slate-800'
+                                      }`}
+                                    />
+                                  );
+                                })}
+                              </div>
                             </div>
                           </div>
+                          {Array.isArray(acc.registeredDevices) && acc.registeredDevices.length > 0 && (
+                            <div className="flex flex-wrap gap-1 pt-1 border-t border-gray-200/70 dark:border-slate-800/70">
+                              {acc.registeredDevices.map((dev, i) => (
+                                <span
+                                  key={`${dev}-${i}`}
+                                  className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border border-indigo-500/20"
+                                >
+                                  {dev}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
 
