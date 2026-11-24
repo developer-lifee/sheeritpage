@@ -36,12 +36,22 @@ interface UnifyPreviewResult {
   updatedCount?: number;
 }
 
+interface OverdueDebtItem {
+  id: number;
+  origin_platform: string;
+  extra_days: number;
+  monthly_price: number;
+  debt_amount: number;
+  cut_date: string | null;
+}
+
 interface CustomBillingCardProps {
   phone: string;
   clientName: string;
   defaultPlatform?: string;
   defaultAccountEmail?: string;
   initialRules: CustomBillingRule[];
+  initialOverdueDebts?: OverdueDebtItem[];
   onDatesUnified?: (phone: string, newDate: string) => void;
 }
 
@@ -51,9 +61,11 @@ export const CustomBillingCard: React.FC<CustomBillingCardProps> = ({
   defaultPlatform = '',
   defaultAccountEmail = '',
   initialRules,
+  initialOverdueDebts = [],
   onDatesUnified
 }) => {
   const [rules, setRules] = useState<CustomBillingRule[]>(initialRules || []);
+  const [overdueDebts, setOverdueDebts] = useState<OverdueDebtItem[]>(initialOverdueDebts || []);
   const [showForm, setShowForm] = useState(false);
   const [platform, setPlatform] = useState(defaultPlatform || 'ALL');
   const [mode, setMode] = useState<'custom_price' | 'manual_only' | 'owner_settlement' | 'fixed_date'>('custom_price');
@@ -81,6 +93,27 @@ export const CustomBillingCard: React.FC<CustomBillingCardProps> = ({
   useEffect(() => {
     setRules(initialRules || []);
   }, [initialRules]);
+
+  useEffect(() => {
+    setOverdueDebts(initialOverdueDebts || []);
+  }, [initialOverdueDebts]);
+
+  const handleDeleteOverdueDebt = async (id: number) => {
+    if (!window.confirm('¿Perdonar/eliminar este saldo pendiente de días de mora?')) return;
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/overdue-debt/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setOverdueDebts(prev => prev.filter(d => d.id !== id));
+      }
+    } catch (err) {
+      alert('Error eliminando saldo pendiente.');
+    }
+  };
 
   const apiUrl =
     typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -488,6 +521,36 @@ export const CustomBillingCard: React.FC<CustomBillingCardProps> = ({
             </button>
           </div>
         </form>
+      )}
+
+      {overdueDebts.length > 0 && (
+        <div className="mb-3 space-y-1.5">
+          {overdueDebts.map((d) => (
+            <div key={d.id} className="flex items-center justify-between p-2.5 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 text-xs">
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-rose-700 dark:text-rose-300">
+                    ⚖️ Mora pendiente por descontar en próxima activación
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-200">
+                    +{d.extra_days}d · ${Math.round(Number(d.debt_amount || 0)).toLocaleString('es-CO')} COP
+                  </span>
+                </div>
+                <span className="text-[11px] text-rose-600/80 dark:text-rose-300/70">
+                  Origen: {d.origin_platform}{d.cut_date ? ` (corte ${d.cut_date})` : ''} — se restará en días al entregar su próxima cuenta.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleDeleteOverdueDebt(d.id)}
+                className="p-1.5 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-900/40 rounded-lg transition-colors cursor-pointer"
+                title="Perdonar / eliminar saldo de mora"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
       )}
 
       {rules.length === 0 ? (

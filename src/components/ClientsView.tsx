@@ -717,6 +717,8 @@ export const ClientsView: React.FC = () => {
         }
     };
 
+    const [saveOverdueDebt, setSaveOverdueDebt] = useState(true);
+
     const executeCutService = async () => {
         if (!cutModalClient) return;
         setIsCuttingService(true);
@@ -735,6 +737,7 @@ export const ClientsView: React.FC = () => {
                     reason: finalReason,
                     resetDevices: isAiLimited ? resetDevices : false,
                     leaveSlotVirgin: true,
+                    saveOverdueDebt,
                     password: 'admin123'
                 })
             });
@@ -2165,6 +2168,7 @@ export const ClientsView: React.FC = () => {
                                                                     defaultPlatform={(c.Streaming || c.streaming || '').toString()}
                                                                     defaultAccountEmail={(c.correo || c.Correo || '').toString()}
                                                                     initialRules={clientHistory.customBillingRules || []}
+                                                                    initialOverdueDebts={clientHistory.overdueDebts || []}
                                                                     onDatesUnified={(unifiedPhone, newDate) => {
                                                                         const tail = unifiedPhone.replace(/\D/g, '').slice(-10);
                                                                         if (!tail) return;
@@ -2275,6 +2279,19 @@ export const ClientsView: React.FC = () => {
                                                 </span>
                                             )}
                                         </div>
+                                        {extraDays > 0 && (
+                                            <label className="flex items-start gap-2.5 pt-2.5 mt-1 border-t border-rose-200/70 dark:border-rose-900/50 cursor-pointer select-none">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={saveOverdueDebt}
+                                                    onChange={(e) => setSaveOverdueDebt(e.target.checked)}
+                                                    className="mt-0.5 rounded border-rose-400 text-rose-600 focus:ring-rose-500"
+                                                />
+                                                <span className="text-[11px] leading-snug text-rose-700 dark:text-rose-300">
+                                                    <strong>Guardar saldo de +{extraDays} {extraDays === 1 ? 'día' : 'días'} de más:</strong> si el cliente vuelve a activar, se hará la venta normal y en Excel se restará automáticamente en días el valor prorrateado de esta mora.
+                                                </span>
+                                            </label>
+                                        )}
                                     </div>
                                 );
                             })()}
