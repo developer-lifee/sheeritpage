@@ -51,6 +51,10 @@ interface PlatformAccountingConfig {
   durationDays: number;
   isVariableShared: boolean;
   source: 'contabilidad' | 'fallback';
+  extraPlatform?: string;
+  defaultExtraSlots?: number;
+  extraSlotCost?: number;
+  extraSlotSalePrice?: number;
 }
 
 interface SummaryStats {
@@ -141,6 +145,7 @@ export const InventoryAccountsView: React.FC = () => {
     correo: '',
     contraseña: '',
     perfiles: 5,
+    extraPerfiles: 2,
     isAutoSlots: true,
     vencimiento: '',
     proveedor: '',
@@ -233,11 +238,17 @@ export const InventoryAccountsView: React.FC = () => {
     const slots = platformDefaults[upper] || 5;
     return {
       profileSlots: slots,
-      defaultCost: null,
+      defaultCost: upper === 'NETFLIX' ? 54900 : null,
       defaultSalePrice: null,
       durationDays: 30,
       isVariableShared: /gpt|chatgpt|claude|compartid|canva|platzi/i.test(upper),
-      source: 'fallback'
+      source: 'fallback',
+      ...(upper === 'NETFLIX' ? {
+        extraPlatform: 'NETFLIX EXTRA',
+        defaultExtraSlots: 2,
+        extraSlotCost: 9900,
+        extraSlotSalePrice: 17000
+      } : {})
     };
   };
 
@@ -292,6 +303,7 @@ export const InventoryAccountsView: React.FC = () => {
       correo: '',
       contraseña: '',
       perfiles: cfg.profileSlots,
+      extraPerfiles: cfg.defaultExtraSlots || 0,
       isAutoSlots: true,
       vencimiento: defaultExp,
       proveedor: '',
@@ -312,6 +324,7 @@ export const InventoryAccountsView: React.FC = () => {
     }
     setSavingCreate(true);
     try {
+      const cfg = getAccountingConfig(createForm.streaming);
       const res = await fetch(`${apiUrl}/api/admin/accounts/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -320,6 +333,9 @@ export const InventoryAccountsView: React.FC = () => {
           correo: createForm.correo.trim(),
           contraseña: createForm.contraseña.trim(),
           perfiles: createForm.perfiles,
+          extraPerfiles: cfg.extraPlatform ? (createForm.extraPerfiles || 0) : 0,
+          extraStreaming: cfg.extraPlatform || '',
+          extraUnitCost: cfg.extraSlotCost ?? null,
           vencimiento: createForm.vencimiento || null,
           proveedor: createForm.proveedor.trim() || null,
           paymentMethod: createForm.paymentMethod.trim() || null,
@@ -840,7 +856,11 @@ export const InventoryAccountsView: React.FC = () => {
                       onChange={(e) => {
                         const val = e.target.value;
                         const cfg = getAccountingConfig(val);
-                        setCreateForm(f => ({ ...f, streaming: val, ...(f.isAutoSlots ? { perfiles: cfg.profileSlots } : {}) }));
+                        setCreateForm(f => ({
+                          ...f,
+                          streaming: val,
+                          ...(f.isAutoSlots ? { perfiles: cfg.profileSlots, extraPerfiles: cfg.defaultExtraSlots || 0 } : {})
+                        }));
                       }}
                       placeholder="Nombre de la plataforma"
                       className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
@@ -857,6 +877,7 @@ export const InventoryAccountsView: React.FC = () => {
                           ...f,
                           streaming: val,
                           perfiles: cfg.profileSlots,
+                          extraPerfiles: cfg.defaultExtraSlots || 0,
                           isAutoSlots: true,
                           vencimiento: nextExp,
                           costPrice: cfg.defaultCost != null ? String(cfg.defaultCost) : '',
@@ -896,6 +917,43 @@ export const InventoryAccountsView: React.FC = () => {
                     required
                   />
                 </div>
+
+                {(() => {
+                  const cfg = getAccountingConfig(createForm.streaming);
+                  if (!cfg.extraPlatform) return null;
+                  const extraCount = Math.max(0, Number(createForm.extraPerfiles) || 0);
+                  const baseCostNum = Number(createForm.costPrice) || 0;
+                  const extraUnitCost = cfg.extraSlotCost || 9900;
+                  const totalCombinedCost = baseCostNum + (extraCount * extraUnitCost);
+                  return (
+                    <div className="sm:col-span-2 p-3 rounded-xl bg-rose-50/70 dark:bg-rose-950/25 border border-rose-200 dark:border-rose-900/50 space-y-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <label className="block text-[10px] font-extrabold uppercase text-rose-700 dark:text-rose-300">
+                            Cupos Extra ({cfg.extraPlatform})
+                          </label>
+                          <p className="text-[11px] text-rose-800/80 dark:text-rose-200/80">
+                            Se crean como filas aparte de {cfg.extraPlatform} (costo ${extraUnitCost.toLocaleString('es-CO')} c/u, venta ${(cfg.extraSlotSalePrice || 17000).toLocaleString('es-CO')}).
+                          </p>
+                        </div>
+                        <input
+                          type="number"
+                          min={0}
+                          max={5}
+                          value={createForm.extraPerfiles}
+                          onChange={(e) => setCreateForm({
+                            ...createForm,
+                            extraPerfiles: Math.max(0, Math.min(5, parseInt(e.target.value, 10) || 0))
+                          })}
+                          className="w-24 px-3 py-1.5 rounded-xl border border-rose-300 dark:border-rose-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono font-bold text-center"
+                        />
+                      </div>
+                      <div className="text-[11px] font-mono font-semibold text-rose-900 dark:text-rose-200 bg-white/70 dark:bg-gray-900/60 px-2.5 py-1.5 rounded-lg border border-rose-200/70 dark:border-rose-900/40">
+                        Base: ${baseCostNum.toLocaleString('es-CO')} ({createForm.perfiles} perfiles) + {extraCount} extras × ${extraUnitCost.toLocaleString('es-CO')} = <span className="font-black">${totalCombinedCost.toLocaleString('es-CO')} total</span>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Correo de la Cuenta</label>

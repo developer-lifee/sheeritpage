@@ -534,6 +534,7 @@ export const ClientsView: React.FC = () => {
         correo: '',
         contraseña: '',
         perfiles: 5,
+        extraPerfiles: 2,
         isAutoSlots: true,
         vencimiento: '',
         proveedor: '',
@@ -547,6 +548,10 @@ export const ClientsView: React.FC = () => {
         defaultSalePrice: number | null;
         durationDays: number;
         isVariableShared: boolean;
+        extraPlatform?: string;
+        defaultExtraSlots?: number;
+        extraSlotCost?: number;
+        extraSlotSalePrice?: number;
     }>>({});
 
     const fallbackDefaultSlots: Record<string, number> = {
@@ -581,10 +586,16 @@ export const ClientsView: React.FC = () => {
         const fbKey = Object.keys(fallbackDefaultSlots).find(k => upper.includes(k) || k.includes(upper));
         return {
             profileSlots: fbKey ? fallbackDefaultSlots[fbKey] : 5,
-            defaultCost: null,
+            defaultCost: upper === 'NETFLIX' ? 54900 : null,
             defaultSalePrice: null,
             durationDays: 30,
-            isVariableShared: /gpt|chatgpt|claude|compartid|canva|platzi/i.test(upper)
+            isVariableShared: /gpt|chatgpt|claude|compartid|canva|platzi/i.test(upper),
+            ...(upper === 'NETFLIX' ? {
+                extraPlatform: 'NETFLIX EXTRA',
+                defaultExtraSlots: 2,
+                extraSlotCost: 9900,
+                extraSlotSalePrice: 17000
+            } : {})
         };
     };
 
@@ -605,6 +616,7 @@ export const ClientsView: React.FC = () => {
             correo: '',
             contraseña: '',
             perfiles: cfg.profileSlots,
+            extraPerfiles: cfg.defaultExtraSlots || 0,
             isAutoSlots: true,
             vencimiento: defaultExp,
             proveedor: '',
@@ -622,6 +634,7 @@ export const ClientsView: React.FC = () => {
         }
         setQuickMasterSaving(true);
         try {
+            const cfg = getQuickMasterConfig(quickMasterForm.streaming);
             const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
             const res = await fetch(`${apiUrl}/api/admin/accounts/add`, {
                 method: 'POST',
@@ -631,6 +644,9 @@ export const ClientsView: React.FC = () => {
                     correo: quickMasterForm.correo.trim(),
                     contraseña: quickMasterForm.contraseña.trim(),
                     perfiles: quickMasterForm.perfiles,
+                    extraPerfiles: cfg.extraPlatform ? (quickMasterForm.extraPerfiles || 0) : 0,
+                    extraStreaming: cfg.extraPlatform || '',
+                    extraUnitCost: cfg.extraSlotCost ?? null,
                     vencimiento: quickMasterForm.vencimiento || null,
                     proveedor: quickMasterForm.proveedor.trim() || null,
                     costPrice: quickMasterForm.costPrice !== '' ? Number(quickMasterForm.costPrice) : null,
@@ -2929,6 +2945,7 @@ export const ClientsView: React.FC = () => {
                                                 ...f,
                                                 streaming: val,
                                                 perfiles: cfg.profileSlots,
+                                                extraPerfiles: cfg.defaultExtraSlots || 0,
                                                 isAutoSlots: true,
                                                 vencimiento: nextExp,
                                                 costPrice: cfg.defaultCost != null ? String(cfg.defaultCost) : ''
@@ -2970,6 +2987,43 @@ export const ClientsView: React.FC = () => {
                                         required
                                     />
                                 </div>
+
+                                {(() => {
+                                    const cfg = getQuickMasterConfig(quickMasterForm.streaming);
+                                    if (!cfg.extraPlatform) return null;
+                                    const extraCount = Math.max(0, Number(quickMasterForm.extraPerfiles) || 0);
+                                    const baseCostNum = Number(quickMasterForm.costPrice) || 0;
+                                    const extraUnitCost = cfg.extraSlotCost || 9900;
+                                    const totalCombinedCost = baseCostNum + (extraCount * extraUnitCost);
+                                    return (
+                                        <div className="sm:col-span-2 p-3 rounded-xl bg-rose-50/70 dark:bg-rose-950/25 border border-rose-200 dark:border-rose-900/50 space-y-2">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                                <div>
+                                                    <label className="block text-[10px] font-extrabold uppercase text-rose-700 dark:text-rose-300">
+                                                        Cupos Extra ({cfg.extraPlatform})
+                                                    </label>
+                                                    <p className="text-[11px] text-rose-800/80 dark:text-rose-200/80">
+                                                        Se crean como filas aparte de {cfg.extraPlatform} (costo ${extraUnitCost.toLocaleString('es-CO')} c/u, venta ${(cfg.extraSlotSalePrice || 17000).toLocaleString('es-CO')}).
+                                                    </p>
+                                                </div>
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    max={5}
+                                                    value={quickMasterForm.extraPerfiles}
+                                                    onChange={(e) => setQuickMasterForm({
+                                                        ...quickMasterForm,
+                                                        extraPerfiles: Math.max(0, Math.min(5, parseInt(e.target.value, 10) || 0))
+                                                    })}
+                                                    className="w-24 px-3 py-1.5 rounded-xl border border-rose-300 dark:border-rose-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono font-bold text-center"
+                                                />
+                                            </div>
+                                            <div className="text-[11px] font-mono font-semibold text-rose-900 dark:text-rose-200 bg-white/70 dark:bg-gray-900/60 px-2.5 py-1.5 rounded-lg border border-rose-200/70 dark:border-rose-900/40">
+                                                Base: ${baseCostNum.toLocaleString('es-CO')} ({quickMasterForm.perfiles} perfiles) + {extraCount} extras × ${extraUnitCost.toLocaleString('es-CO')} = <span className="font-black">${totalCombinedCost.toLocaleString('es-CO')} total</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
 
                                 <div>
                                     <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Correo</label>
