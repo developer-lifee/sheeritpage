@@ -852,13 +852,35 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
 
   const applyShiftPreset = (startTime: string, endTime: string, breakType: 'none' | 'break_30' | 'lunch_60' | 'lunch_120', breakStart: string) => {
     if (!editingDay) return;
+    const [sh, sm] = startTime.split(':').map(Number);
+    const [eh, em] = endTime.split(':').map(Number);
+    const startMin = sh * 60 + sm;
+    const endMin = eh * 60 + em;
+    const durationHours = (endMin - startMin) / 60;
+
+    let effectiveBreakType = breakType;
+    if (durationHours >= 5 && (!effectiveBreakType || effectiveBreakType === 'none')) {
+      effectiveBreakType = 'break_30';
+    }
+
+    let effectiveBreakStart = breakStart;
+    if (effectiveBreakType !== 'none' && !effectiveBreakStart) {
+      const midMin = Math.floor(((startMin + endMin) / 2) / 30) * 30;
+      const bh = String(Math.floor(midMin / 60)).padStart(2, '0');
+      const bm = String(midMin % 60).padStart(2, '0');
+      effectiveBreakStart = `${bh}:${bm}`;
+    } else if (effectiveBreakType === 'none') {
+      effectiveBreakStart = '';
+    }
+
+    setModalError('');
     if (editingSlots.length === 0) {
       setEditingSlots([{
         day_of_week: editingDay.value,
         start_time: startTime,
         end_time: endTime,
-        break_type: breakType,
-        break_start: breakStart
+        break_type: effectiveBreakType,
+        break_start: effectiveBreakStart
       }]);
     } else {
       const updated = [...editingSlots];
@@ -867,8 +889,8 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
         day_of_week: editingDay.value,
         start_time: startTime,
         end_time: endTime,
-        break_type: breakType,
-        break_start: breakStart
+        break_type: effectiveBreakType,
+        break_start: effectiveBreakStart
       };
       setEditingSlots(updated);
     }
@@ -2924,17 +2946,17 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                   <div className="flex flex-wrap gap-1.5">
                     <button
                       type="button"
-                      onClick={() => applyShiftPreset('10:00', '15:00', 'none', '')}
+                      onClick={() => applyShiftPreset('10:00', '15:00', 'break_30', '12:30')}
                       className="px-2.5 py-1 text-xxs font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 rounded-lg border border-amber-500/20 hover:bg-amber-500/20 transition-all cursor-pointer"
-                      title="Turno mañana (10:00 AM a 3:00 PM - 5 horas)"
+                      title="Turno mañana (10:00 AM a 3:00 PM - 5 horas con 30m de break)"
                     >
                       🌅 Mañana (10:00 - 15:00)
                     </button>
                     <button
                       type="button"
-                      onClick={() => applyShiftPreset('17:00', '22:00', 'none', '')}
+                      onClick={() => applyShiftPreset('17:00', '22:00', 'break_30', '19:30')}
                       className="px-2.5 py-1 text-xxs font-bold bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 rounded-lg border border-indigo-500/20 hover:bg-indigo-500/20 transition-all cursor-pointer"
-                      title="Turno tarde normal (5:00 PM a 10:00 PM - 2h intercalación)"
+                      title="Turno tarde normal (5:00 PM a 10:00 PM - 5 horas con 30m de break)"
                     >
                       🌆 Tarde Normal (17:00 - 22:00)
                     </button>
