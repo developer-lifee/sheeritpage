@@ -1729,7 +1729,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
 
               <div className="hidden sm:block h-5 w-[1px] bg-gray-200 dark:bg-gray-700 mx-1"></div>
 
-              <div className="flex items-center gap-1.5 w-full sm:w-auto">
+              <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
                 <button
                   onClick={handleCurrentWeek}
                   className={`flex-1 sm:flex-initial px-3 py-1.5 text-xs font-extrabold rounded-xl transition-all text-center ${
@@ -1755,7 +1755,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
 
                 <button
                   onClick={() => setDateQueryModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-black rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md transition-all active:scale-95 whitespace-nowrap"
+                  className="w-full sm:w-auto justify-center flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-black rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md transition-all active:scale-95 whitespace-nowrap"
                   title="Consultar quién estuvo laborando en una fecha específica (incluyendo contratos terminados)"
                 >
                   <Calendar className="w-3.5 h-3.5 text-purple-200" />
@@ -2023,7 +2023,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                                     executeMultiCellPaste([{ email: agent.email, dayValue: day.value, dayLabel: day.label }], slotsToDrop);
                                   }
                                 }}
-                                className={`py-3 px-2 text-center align-middle transition-all relative select-none ${
+                                className={`group py-3 px-2 text-center align-middle transition-all relative select-none ${
                                   isDragOver
                                     ? 'bg-emerald-500/20 border-2 border-dashed border-emerald-500 shadow-lg'
                                     : isSelected
@@ -2034,6 +2034,19 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                                 }`}
                                 title={isEditableRow ? "Click: Seleccionar | Shift+Click: Rango | Cmd/Ctrl: Múltiple | Ctrl+C/V: Copiar/Pegar | Supr: Borrar | Doble clic: Editar" : "Solo lectura"}
                               >
+                                {isEditableRow && slots.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      executeMultiCellDelete([{ email: agent.email, dayValue: day.value, dayLabel: day.label }]);
+                                    }}
+                                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 rounded-md text-red-500 hover:bg-red-500/15 transition-all z-10"
+                                    title="Eliminar horario de este día (dejar Libre)"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                )}
                                 {isDragOver && (
                                   <div className="absolute inset-0 pointer-events-none bg-emerald-500/15 backdrop-blur-[1px] flex flex-col items-center justify-center gap-0.5 text-emerald-700 dark:text-emerald-300 font-bold text-xxs z-20 animate-pulse">
                                     <Zap className="w-4 h-4 text-emerald-500" />
@@ -2244,26 +2257,41 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                                       {isEditableRow ? '+ Asignar' : 'Libre'}
                                     </span>
                                   ) : (
-                                    <div className="flex flex-col items-end gap-0.5">
-                                      {slots.map((s: any, idx: number) => (
-                                        <span
-                                          key={idx}
-                                          draggable={isEditableRow}
-                                          onDragStart={(e) => {
+                                    <div className="flex items-center gap-1.5">
+                                      <div className="flex flex-col items-end gap-0.5">
+                                        {slots.map((s: any, idx: number) => (
+                                          <span
+                                            key={idx}
+                                            draggable={isEditableRow}
+                                            onDragStart={(e) => {
+                                              e.stopPropagation();
+                                              e.dataTransfer.effectAllowed = 'copy';
+                                              e.dataTransfer.setData('text/plain', JSON.stringify(slots));
+                                              setDraggedSlotsData({ slots, sourceEmail: agent.email, sourceDay: day.value });
+                                            }}
+                                            onDragEnd={() => {
+                                              setDragOverCell(null);
+                                              setDraggedSlotsData(null);
+                                            }}
+                                            className="text-xxs font-mono font-bold text-brand-primary bg-brand-primary/10 px-2 py-0.5 rounded-lg border border-brand-primary/20 cursor-grab active:cursor-grabbing"
+                                          >
+                                            {s.start_time.substring(0, 5)} - {s.end_time.substring(0, 5)}
+                                          </span>
+                                        ))}
+                                      </div>
+                                      {isEditableRow && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
                                             e.stopPropagation();
-                                            e.dataTransfer.effectAllowed = 'copy';
-                                            e.dataTransfer.setData('text/plain', JSON.stringify(slots));
-                                            setDraggedSlotsData({ slots, sourceEmail: agent.email, sourceDay: day.value });
+                                            executeMultiCellDelete([{ email: agent.email, dayValue: day.value, dayLabel: day.label }]);
                                           }}
-                                          onDragEnd={() => {
-                                            setDragOverCell(null);
-                                            setDraggedSlotsData(null);
-                                          }}
-                                          className="text-xxs font-mono font-bold text-brand-primary bg-brand-primary/10 px-2 py-0.5 rounded-lg border border-brand-primary/20 cursor-grab active:cursor-grabbing"
+                                          className="p-1.5 rounded-lg text-red-500 bg-red-500/10 hover:bg-red-500/20 active:scale-95 transition-all"
+                                          title="Eliminar horario de este día"
                                         >
-                                          {s.start_time.substring(0, 5)} - {s.end_time.substring(0, 5)}
-                                        </span>
-                                      ))}
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      )}
                                     </div>
                                   )}
                                 </div>
@@ -3065,7 +3093,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                           className="bg-gray-50 dark:bg-gray-850 p-4 rounded-xl border dark:border-gray-700 flex flex-col gap-3 relative animate-fadeIn"
                         >
                           {/* Horario de la Franja */}
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <span className="text-xs font-bold text-gray-600 dark:text-gray-400 min-w-[50px]">Franja:</span>
                             <input
                               type="time"
@@ -3087,7 +3115,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                           </div>
 
                           {/* Tipo de Break */}
-                          <div className="flex items-center gap-3 w-full">
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full">
                             <span className="text-xs font-bold text-gray-600 dark:text-gray-400 min-w-[50px]">Descanso:</span>
                             {(() => {
                               const [sh, sm] = slot.start_time.split(':').map(Number);
@@ -3108,7 +3136,7 @@ export const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({
                                   <select
                                     value={slot.break_type || 'none'}
                                     onChange={(e) => handleSlotChange(index, 'break_type', e.target.value)}
-                                    className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent"
+                                    className="px-2 py-1 text-xs border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white bg-transparent max-w-full"
                                   >
                                     {durationHours < 5 && <option value="none">Sin descanso</option>}
                                     <option value="break_30">Break (30 min)</option>
