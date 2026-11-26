@@ -594,7 +594,7 @@ export const ClientsView: React.FC = () => {
                 extraPlatform: 'NETFLIX EXTRA',
                 defaultExtraSlots: 2,
                 extraSlotCost: 11900,
-                extraSlotSalePrice: 17000
+                extraSlotSalePrice: 18000
             } : {})
         };
     };
@@ -3003,7 +3003,7 @@ export const ClientsView: React.FC = () => {
                                                         Cupos Extra ({cfg.extraPlatform})
                                                     </label>
                                                     <p className="text-[11px] text-rose-800/80 dark:text-rose-200/80">
-                                                        Se crean como filas aparte de {cfg.extraPlatform} (costo ${extraUnitCost.toLocaleString('es-CO')} c/u, venta ${(cfg.extraSlotSalePrice || 17000).toLocaleString('es-CO')}).
+                                                        Se crean como filas aparte de {cfg.extraPlatform} (costo ${extraUnitCost.toLocaleString('es-CO')} c/u, venta ${(cfg.extraSlotSalePrice || 18000).toLocaleString('es-CO')}).
                                                     </p>
                                                 </div>
                                                 <input

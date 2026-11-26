@@ -247,7 +247,7 @@ export const InventoryAccountsView: React.FC = () => {
         extraPlatform: 'NETFLIX EXTRA',
         defaultExtraSlots: 2,
         extraSlotCost: 11900,
-        extraSlotSalePrice: 17000
+        extraSlotSalePrice: 18000
       } : {})
     };
   };
@@ -933,7 +933,7 @@ export const InventoryAccountsView: React.FC = () => {
                             Cupos Extra ({cfg.extraPlatform})
                           </label>
                           <p className="text-[11px] text-rose-800/80 dark:text-rose-200/80">
-                            Se crean como filas aparte de {cfg.extraPlatform} (costo ${extraUnitCost.toLocaleString('es-CO')} c/u, venta ${(cfg.extraSlotSalePrice || 17000).toLocaleString('es-CO')}).
+                            Se crean como filas aparte de {cfg.extraPlatform} (costo ${extraUnitCost.toLocaleString('es-CO')} c/u, venta ${(cfg.extraSlotSalePrice || 18000).toLocaleString('es-CO')}).
                           </p>
                         </div>
                         <input
@@ -1028,7 +1028,7 @@ export const InventoryAccountsView: React.FC = () => {
                       type="number"
                       value={createForm.salePrice}
                       onChange={(e) => setCreateForm({ ...createForm, salePrice: e.target.value })}
-                      placeholder="Ej: 13000"
+                      placeholder="Ej: 14000"
                       className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono"
                     />
                   </div>
