@@ -519,6 +519,14 @@ export const ClientsView: React.FC = () => {
     const [customCutReason, setCustomCutReason] = useState<string>('');
     const [resetDevices, setResetDevices] = useState<boolean>(true);
     const [isCuttingService, setIsCuttingService] = useState<boolean>(false);
+    const [manualResetClient, setManualResetClient] = useState<{
+        phone: string;
+        name: string;
+        streaming: string;
+        email: string;
+    } | null>(null);
+    const [manualResetConfirmed, setManualResetConfirmed] = useState<boolean>(false);
+    const [isManualResetting, setIsManualResetting] = useState<boolean>(false);
     const [visibleRowsCount, setVisibleRowsCount] = useState<number>(100);
 
     // Modal de Edición de Datos del Cliente / Contraseña / Customer Mail
@@ -536,6 +544,9 @@ export const ClientsView: React.FC = () => {
         applyPasswordToAccount: false,
     });
     const [isSavingClientEdit, setIsSavingClientEdit] = useState<boolean>(false);
+    const [editGuestPhone, setEditGuestPhone] = useState<string>('');
+    const [initialGuestPhone, setInitialGuestPhone] = useState<string>('');
+    const [loadingGuestPhone, setLoadingGuestPhone] = useState<boolean>(false);
 
     const openEditClientModal = (c: any) => {
         setEditClientModal(c);
@@ -551,6 +562,30 @@ export const ClientsView: React.FC = () => {
             observaciones: (c.observaciones || '').toString(),
             applyPasswordToAccount: false,
         });
+        setEditGuestPhone('');
+        setInitialGuestPhone('');
+        const rawPhone = (c.numero || c.Numero || c.whatsapp || '').toString().replace(/\D/g, '');
+        if (rawPhone) {
+            setLoadingGuestPhone(true);
+            const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
+            const qs = new URLSearchParams({
+                ownerPhone: rawPhone,
+                rowNumber: String(c._rowNumber || ''),
+                platform: String(c.Streaming || ''),
+                email: String(c.correo || c.Correo || ''),
+                profile: String(c.Nombre || c.nombre || '')
+            });
+            fetch(`${apiUrl}/api/admin/client/guest-phone?${qs.toString()}`)
+                .then(r => r.json())
+                .then(d => {
+                    if (d.success && d.guestPhone) {
+                        setEditGuestPhone(d.guestPhone);
+                        setInitialGuestPhone(d.guestPhone);
+                    }
+                })
+                .catch(() => {})
+                .finally(() => setLoadingGuestPhone(false));
+        }
     };
 
     const saveClientEdit = async () => {
@@ -593,6 +628,29 @@ export const ClientsView: React.FC = () => {
             if (!data.success) {
                 alert(data.message || data.error || 'Error guardando cambios del cliente');
                 return;
+            }
+
+            // Guardar o eliminar número invitado si cambió
+            const cleanNewGuest = editGuestPhone.replace(/\D/g, '');
+            const cleanOldGuest = initialGuestPhone.replace(/\D/g, '');
+            const effectiveOwnerPhone = (editClientForm.numero || rawPhone).replace(/\D/g, '');
+            if (cleanNewGuest !== cleanOldGuest && effectiveOwnerPhone) {
+                const guestRes = await fetch(`${apiUrl}/api/admin/client/guest-phone`, {
+                    method: cleanNewGuest ? 'POST' : 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ownerPhone: effectiveOwnerPhone,
+                        guestPhone: cleanNewGuest,
+                        rowNumber: editClientModal._rowNumber,
+                        platform: editClientModal.Streaming || '',
+                        email: editClientForm.correo.trim() || originalCorreo,
+                        profile: editClientForm.Nombre.trim()
+                    })
+                });
+                const guestData = await guestRes.json();
+                if (!guestRes.ok || !guestData.success) {
+                    alert(guestData.message || 'Los datos del cliente se guardaron, pero hubo un error con el número invitado.');
+                }
             }
 
             // Actualizar estado local inmediatamente
@@ -941,6 +999,37 @@ export const ClientsView: React.FC = () => {
             alert(`❌ Error de conexión: ${e.message}`);
         } finally {
             setIsCuttingService(false);
+        }
+    };
+
+    const executeManualClientDeviceReset = async () => {
+        if (!manualResetClient || !manualResetConfirmed || isManualResetting) return;
+        setIsManualResetting(true);
+        try {
+            const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
+            const res = await fetch(`${apiUrl}/api/admin/reset-devices`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    phone: manualResetClient.phone,
+                    email: manualResetClient.email,
+                    scope: 'client',
+                    password: 'admin123'
+                })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                alert(`❌ Error al reiniciar contador: ${data.message || data.error || 'Error desconocido'}`);
+                return;
+            }
+            setRenewalSuccessToast(`✅ Contador de dispositivos/tokens reiniciado para ${manualResetClient.name} (+${manualResetClient.phone}).`);
+            setTimeout(() => setRenewalSuccessToast(null), 5000);
+            setManualResetClient(null);
+            setManualResetConfirmed(false);
+        } catch (e: any) {
+            alert(`❌ Error de conexión: ${e.message}`);
+        } finally {
+            setIsManualResetting(false);
         }
     };
 
@@ -2141,6 +2230,27 @@ export const ClientsView: React.FC = () => {
                                                             <Scissors className="w-3.5 h-3.5" />
                                                             <span>Cortar</span>
                                                         </button>
+                                                        {/gpt|chatgpt|claude/i.test(c.Streaming || '') && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const rawPhone = (c.numero || c.Numero || c.whatsapp || '').toString().replace(/\D/g, '');
+                                                                    const rawName = `${c.Nombre || ''} ${c.apellido || c.Apellido || ''}`.trim() || 'Cliente';
+                                                                    setManualResetConfirmed(false);
+                                                                    setManualResetClient({
+                                                                        phone: rawPhone,
+                                                                        name: rawName,
+                                                                        streaming: c.Streaming || '',
+                                                                        email: c.correo || ''
+                                                                    });
+                                                                }}
+                                                                className="p-2 rounded-xl text-xs font-bold transition-all border bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 dark:text-amber-300 border-amber-200/60 dark:border-amber-800/50 flex items-center gap-1 shadow-2xs"
+                                                                title="Reiniciar manualmente el contador de tokens/dispositivos de este cliente"
+                                                            >
+                                                                <RefreshCw className="w-3.5 h-3.5" />
+                                                                <span>Reiniciar Tokens</span>
+                                                            </button>
+                                                        )}
                                                         <button
                                                             onClick={() => toggleExpandHistory(phone, i, c)}
                                                             className={`p-2 rounded-xl text-xs font-bold transition-all border ${expandedClient === i
@@ -2562,6 +2672,81 @@ export const ClientsView: React.FC = () => {
                                             <span>Confirmar Corte</span>
                                         </>
                                     )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE REINICIO MANUAL DE CONTADOR DE TOKENS / DISPOSITIVOS */}
+            {manualResetClient && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-md w-full border border-gray-200 dark:border-gray-700 shadow-2xl overflow-hidden">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-850">
+                            <div className="flex items-center gap-2.5">
+                                <div className="p-2 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                                    <AlertTriangle className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">
+                                        Reiniciar Contador de Tokens / Dispositivos
+                                    </h3>
+                                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                        {manualResetClient.name} · {manualResetClient.streaming || 'Servicio'} (+{manualResetClient.phone})
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                disabled={isManualResetting}
+                                onClick={() => {
+                                    setManualResetClient(null);
+                                    setManualResetConfirmed(false);
+                                }}
+                                className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <div className="p-5 space-y-4 text-xs">
+                            <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-rose-900 dark:text-rose-200 leading-relaxed">
+                                ⚠️ <strong>Aviso importante:</strong> Antes de reiniciar el contador, asegúrate de que los dispositivos del cliente en verdad fueron sacados (sesiones cerradas) para evitar que supere el límite permitido.
+                            </div>
+
+                            <label className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={manualResetConfirmed}
+                                    onChange={(e) => setManualResetConfirmed(e.target.checked)}
+                                    className="mt-0.5 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+                                />
+                                <span className="font-semibold text-amber-900 dark:text-amber-200 leading-snug">
+                                    Confirmo que verifiqué y los dispositivos del cliente en verdad fueron sacados.
+                                </span>
+                            </label>
+
+                            <div className="flex gap-2.5 pt-1">
+                                <button
+                                    type="button"
+                                    disabled={isManualResetting}
+                                    onClick={() => {
+                                        setManualResetClient(null);
+                                        setManualResetConfirmed(false);
+                                    }}
+                                    className="flex-1 py-2.5 px-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={!manualResetConfirmed || isManualResetting}
+                                    onClick={executeManualClientDeviceReset}
+                                    className="flex-1 py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-45 disabled:cursor-not-allowed text-white font-bold transition-all shadow-lg shadow-amber-600/20 flex items-center justify-center gap-2"
+                                >
+                                    <RefreshCw className={`w-4 h-4 ${isManualResetting ? 'animate-spin' : ''}`} />
+                                    <span>{isManualResetting ? 'Reiniciando...' : 'Reiniciar Contador'}</span>
                                 </button>
                             </div>
                         </div>
@@ -3083,6 +3268,29 @@ export const ClientsView: React.FC = () => {
                                         className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                     />
                                 </div>
+                                <div className="sm:col-span-2">
+                                    <label className="block text-[10px] font-bold uppercase text-purple-600 dark:text-purple-400 mb-1">
+                                        Número Invitado / Adicional (máx. 1 por cuenta)
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            value={editGuestPhone}
+                                            onChange={(e) => setEditGuestPhone(e.target.value)}
+                                            placeholder={loadingGuestPhone ? 'Cargando...' : 'Ej: 573001234567 (dejar vacío para quitar)'}
+                                            className="flex-1 px-3 py-2 rounded-xl border border-purple-300 dark:border-purple-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono"
+                                        />
+                                        {editGuestPhone && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setEditGuestPhone('')}
+                                                className="px-3 py-2 rounded-xl border border-rose-300 dark:border-rose-700 text-rose-600 dark:text-rose-400 text-[11px] font-bold hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                                            >
+                                                Quitar
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
 
                             {editClientForm.correo.trim() !== '' && (
@@ -3100,7 +3308,30 @@ export const ClientsView: React.FC = () => {
                             )}
                         </div>
 
-                        <div className="flex justify-end gap-2.5 px-5 py-3.5 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-850">
+                        <div className="flex flex-wrap items-center justify-between gap-2.5 px-5 py-3.5 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-850">
+                            <button
+                                type="button"
+                                disabled={isSavingClientEdit}
+                                onClick={() => {
+                                    const rawPhone = (editClientForm.numero || editClientModal.numero || editClientModal.Numero || editClientModal.whatsapp || '').toString().replace(/\D/g, '');
+                                    const rawName = `${editClientForm.Nombre || ''} ${editClientForm.apellido || ''}`.trim() || 'Cliente';
+                                    if (!rawPhone) {
+                                        alert('Este registro no tiene un teléfono válido asociado.');
+                                        return;
+                                    }
+                                    setManualResetConfirmed(false);
+                                    setManualResetClient({
+                                        phone: rawPhone,
+                                        name: rawName,
+                                        streaming: editClientModal.Streaming || '',
+                                        email: editClientForm.correo.trim() || editClientModal.correo || ''
+                                    });
+                                }}
+                                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-800 dark:text-amber-300 text-xs font-bold transition-all"
+                            >
+                                <RefreshCw className="w-3.5 h-3.5" /> Reiniciar Contador Tokens
+                            </button>
+                            <div className="flex items-center gap-2.5 ml-auto">
                             <button
                                 type="button"
                                 disabled={isSavingClientEdit}
@@ -3125,6 +3356,7 @@ export const ClientsView: React.FC = () => {
                                     </>
                                 )}
                             </button>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -7,10 +7,13 @@ interface ClientAccount {
   email: string;
   password?: string;
   profile: string;
+  rawProfile?: string;
   vencimiento: string;
   isAutomated?: boolean;
   automationType?: string;
   automationLabel?: string;
+  isGuestAccess?: boolean;
+  guestPhone?: string | null;
   isLimitedPlatform?: boolean;
   devicesUsed?: number | null;
   devicesRemaining?: number | null;
@@ -51,6 +54,84 @@ export default function ClientLoginView() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordModalMsg, setPasswordModalMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+  const [guestEditorId, setGuestEditorId] = useState<number | null>(null);
+  const [guestInput, setGuestInput] = useState('');
+  const [savingGuest, setSavingGuest] = useState(false);
+  const [guestMsg, setGuestMsg] = useState<{ id: number; type: 'error' | 'success'; text: string } | null>(null);
+
+  const handleSaveGuestPhone = async (acc: ClientAccount) => {
+    const cleanGuest = guestInput.replace(/\D/g, '');
+    if (cleanGuest.length < 10) {
+      setGuestMsg({ id: acc.id, type: 'error', text: 'Ingresa un número válido (mínimo 10 dígitos).' });
+      return;
+    }
+    setSavingGuest(true);
+    setGuestMsg(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/client/guest-phone`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {})
+        },
+        body: JSON.stringify({
+          sessionToken,
+          accountId: acc.id,
+          guestPhone: cleanGuest,
+          platform: acc.platform,
+          email: acc.email,
+          rawProfile: acc.rawProfile || ''
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'No se pudo guardar el número invitado');
+      }
+      setAccounts(prev => prev.map(a => a.id === acc.id ? { ...a, guestPhone: data.guestPhone } : a));
+      setGuestEditorId(null);
+      setGuestInput('');
+      setGuestMsg({ id: acc.id, type: 'success', text: 'Invitado guardado correctamente.' });
+      setTimeout(() => setGuestMsg(prev => (prev?.id === acc.id ? null : prev)), 3500);
+    } catch (err: any) {
+      setGuestMsg({ id: acc.id, type: 'error', text: err.message || 'Error guardando invitado' });
+    } finally {
+      setSavingGuest(false);
+    }
+  };
+
+  const handleRemoveGuestPhone = async (acc: ClientAccount) => {
+    setSavingGuest(true);
+    setGuestMsg(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/client/guest-phone`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {})
+        },
+        body: JSON.stringify({
+          sessionToken,
+          accountId: acc.id,
+          platform: acc.platform,
+          email: acc.email,
+          rawProfile: acc.rawProfile || ''
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'No se pudo eliminar el número invitado');
+      }
+      setAccounts(prev => prev.map(a => a.id === acc.id ? { ...a, guestPhone: null } : a));
+      setGuestEditorId(null);
+      setGuestInput('');
+      setGuestMsg({ id: acc.id, type: 'success', text: 'Número invitado eliminado.' });
+      setTimeout(() => setGuestMsg(prev => (prev?.id === acc.id ? null : prev)), 3500);
+    } catch (err: any) {
+      setGuestMsg({ id: acc.id, type: 'error', text: err.message || 'Error eliminando invitado' });
+    } finally {
+      setSavingGuest(false);
+    }
+  };
 
   const API_BASE = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
     ? 'http://localhost:3000'
@@ -686,6 +767,11 @@ export default function ClientLoginView() {
                           <span className="text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest">
                             {acc.platform}
                           </span>
+                          {acc.isGuestAccess && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20 rounded-full">
+                              Compartida (Invitado)
+                            </span>
+                          )}
                           {acc.isAutomated === false ? (
                             <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 rounded-full">
                               <AlertCircle size={10} /> Código con Asesor
@@ -744,6 +830,72 @@ export default function ClientLoginView() {
                       <div className="p-2.5 rounded-lg bg-gray-50 dark:bg-slate-950/60 border border-gray-150 dark:border-slate-850 text-gray-750 dark:text-slate-300">
                         <span className="text-gray-400 dark:text-slate-500 mr-1.5 font-medium">Perfil asignado:</span> {acc.profile}
                       </div>
+
+                      {/* Número invitado (solo editable por el titular de la cuenta) */}
+                      {!acc.isGuestAccess && (
+                        <div className="p-2.5 rounded-lg bg-gray-50 dark:bg-slate-950/60 border border-gray-150 dark:border-slate-850 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-slate-400 min-w-0">
+                              <Phone size={12} className="text-indigo-500 shrink-0" />
+                              <span className="font-medium shrink-0">Invitado:</span>
+                              <span className="font-mono text-gray-700 dark:text-slate-200 truncate">
+                                {acc.guestPhone ? acc.guestPhone : 'Sin asignar'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setGuestMsg(null);
+                                  if (guestEditorId === acc.id) {
+                                    setGuestEditorId(null);
+                                  } else {
+                                    setGuestEditorId(acc.id);
+                                    setGuestInput(acc.guestPhone || '');
+                                  }
+                                }}
+                                className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                              >
+                                {guestEditorId === acc.id ? 'Cerrar' : (acc.guestPhone ? 'Cambiar' : '+ Agregar')}
+                              </button>
+                              {acc.guestPhone && guestEditorId !== acc.id && (
+                                <button
+                                  type="button"
+                                  disabled={savingGuest}
+                                  onClick={() => handleRemoveGuestPhone(acc)}
+                                  className="text-[11px] font-semibold text-rose-500 hover:underline disabled:opacity-50"
+                                >
+                                  Quitar
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          {guestEditorId === acc.id && (
+                            <div className="flex items-center gap-1.5 pt-1">
+                              <input
+                                type="tel"
+                                placeholder="Ej: 3001234567"
+                                value={guestInput}
+                                onChange={(e) => setGuestInput(e.target.value)}
+                                className="flex-1 min-w-0 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-mono text-gray-800 dark:text-white focus:outline-none focus:border-indigo-500"
+                              />
+                              <button
+                                type="button"
+                                disabled={savingGuest}
+                                onClick={() => handleSaveGuestPhone(acc)}
+                                className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-[11px] font-semibold rounded-lg"
+                              >
+                                {savingGuest ? '...' : 'Guardar'}
+                              </button>
+                            </div>
+                          )}
+                          {guestMsg?.id === acc.id && (
+                            <p className={`text-[11px] ${guestMsg.type === 'error' ? 'text-rose-500' : 'text-emerald-500'}`}>
+                              {guestMsg.text}
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                       {/* Dispositivos permitidos y contador (Exclusivo para cuentas de Claude y GPT) */}
                       {(acc.isLimitedPlatform || (acc.platform && (acc.platform.toLowerCase().includes('gpt') || acc.platform.toLowerCase().includes('claude')))) && (

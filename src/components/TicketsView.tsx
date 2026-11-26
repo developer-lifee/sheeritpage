@@ -288,6 +288,14 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
   const [resolveResetDevices, setResolveResetDevices] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
 
+  // Manual device/token counter reset modal state
+  const [manualResetModal, setManualResetModal] = useState<{
+    phone: string;
+    nombre: string;
+  } | null>(null);
+  const [manualResetConfirmed, setManualResetConfirmed] = useState(false);
+  const [isManualResetting, setIsManualResetting] = useState(false);
+
   // Custom assign dialog state
   const [assignDialog, setAssignDialog] = useState<{
     phone: string;
@@ -1527,6 +1535,39 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
     }
   };
 
+  const executeManualDeviceReset = async () => {
+    if (!manualResetModal || !manualResetConfirmed || isManualResetting) return;
+    setIsManualResetting(true);
+    const targetPhone = manualResetModal.phone;
+    const targetName = manualResetModal.nombre;
+    const apiUrl = getApiUrl();
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/reset-devices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: targetPhone,
+          scope: 'client',
+          agentName,
+          password: 'admin123'
+        })
+      });
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        alert(`❌ Error al reiniciar contador: ${result.message || result.error || 'Error desconocido'}`);
+        return;
+      }
+      logAuditAction('MANUAL_RESET_DEVICES', { ticketPhone: targetPhone, scope: 'client' });
+      setManualResetModal(null);
+      setManualResetConfirmed(false);
+      alert(`✅ Contador de tokens/dispositivos reiniciado manualmente para ${targetName} (+${cleanPhone(targetPhone)}).`);
+    } catch (err) {
+      alert('❌ Error de red al reiniciar contador de dispositivos.');
+    } finally {
+      setIsManualResetting(false);
+    }
+  };
+
   const handleDeleteMessage = async (messageId: string) => {
     if (!window.confirm('¿Estás seguro de que deseas eliminar este mensaje de WhatsApp (para todos) y de la base de datos?')) return;
     const apiUrl = getApiUrl();
@@ -2602,6 +2643,20 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                     </button>
 
                     <button
+                      onClick={() => {
+                        setManualResetConfirmed(false);
+                        setManualResetModal({
+                          phone: activeChatTicket.phone,
+                          nombre: activeChatTicket.nombre || 'Cliente WhatsApp'
+                        });
+                      }}
+                      className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1"
+                      title="Reiniciar manualmente el contador de tokens/dispositivos de este cliente"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Reiniciar Tokens
+                    </button>
+
+                    <button
                       onClick={() => handleToggleMode(activeChatTicket.phone, activeChatTicket.waitingHumanMode || 'bot')}
                       className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-all active:scale-95 flex items-center gap-1 text-white ${
                         (activeChatTicket.waitingHumanMode || 'bot') === 'bot'
@@ -3394,6 +3449,66 @@ export const TicketsView: React.FC<TicketsViewProps> = ({ agentEmail, agentName,
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Reinicio Manual de Contador de Tokens / Dispositivos */}
+      {manualResetModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border dark:border-gray-700">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-white text-base">
+                  Reiniciar Contador de Tokens / Dispositivos
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {manualResetModal.nombre} (+{cleanPhone(manualResetModal.phone)})
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-4 p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-xs text-rose-900 dark:text-rose-200 leading-relaxed">
+              ⚠️ <strong>Aviso importante:</strong> Antes de reiniciar el contador, asegúrate de que los dispositivos del cliente en verdad fueron sacados (sesiones cerradas) para evitar que supere el límite permitido.
+            </div>
+
+            <label className="flex items-start gap-2.5 p-3 mb-5 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-xs cursor-pointer">
+              <input
+                type="checkbox"
+                checked={manualResetConfirmed}
+                onChange={(e) => setManualResetConfirmed(e.target.checked)}
+                className="mt-0.5 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+              />
+              <span className="font-semibold text-amber-900 dark:text-amber-200 leading-snug">
+                Confirmo que verifiqué y los dispositivos del cliente en verdad fueron sacados.
+              </span>
+            </label>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={isManualResetting}
+                onClick={() => {
+                  setManualResetModal(null);
+                  setManualResetConfirmed(false);
+                }}
+                className="flex-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-650 text-gray-750 dark:text-gray-200 font-bold py-2.5 rounded-xl text-sm transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={!manualResetConfirmed || isManualResetting}
+                onClick={executeManualDeviceReset}
+                className="flex-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-45 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-xl text-sm transition-all flex items-center justify-center gap-1.5 shadow-md shadow-amber-600/20"
+              >
+                <RefreshCw className={`w-4 h-4 ${isManualResetting ? 'animate-spin' : ''}`} />
+                {isManualResetting ? 'Reiniciando...' : 'Reiniciar Contador'}
+              </button>
+            </div>
           </div>
         </div>
       )}
