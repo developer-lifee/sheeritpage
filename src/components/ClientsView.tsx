@@ -586,14 +586,14 @@ export const ClientsView: React.FC = () => {
         const fbKey = Object.keys(fallbackDefaultSlots).find(k => upper.includes(k) || k.includes(upper));
         return {
             profileSlots: fbKey ? fallbackDefaultSlots[fbKey] : 5,
-            defaultCost: upper === 'NETFLIX' ? 54900 : null,
+            defaultCost: upper === 'NETFLIX' ? 50900 : null,
             defaultSalePrice: null,
             durationDays: 30,
             isVariableShared: /gpt|chatgpt|claude|compartid|canva|platzi/i.test(upper),
             ...(upper === 'NETFLIX' ? {
                 extraPlatform: 'NETFLIX EXTRA',
                 defaultExtraSlots: 2,
-                extraSlotCost: 9900,
+                extraSlotCost: 11900,
                 extraSlotSalePrice: 17000
             } : {})
         };
@@ -2993,7 +2993,7 @@ export const ClientsView: React.FC = () => {
                                     if (!cfg.extraPlatform) return null;
                                     const extraCount = Math.max(0, Number(quickMasterForm.extraPerfiles) || 0);
                                     const baseCostNum = Number(quickMasterForm.costPrice) || 0;
-                                    const extraUnitCost = cfg.extraSlotCost || 9900;
+                                    const extraUnitCost = cfg.extraSlotCost || 11900;
                                     const totalCombinedCost = baseCostNum + (extraCount * extraUnitCost);
                                     return (
                                         <div className="sm:col-span-2 p-3 rounded-xl bg-rose-50/70 dark:bg-rose-950/25 border border-rose-200 dark:border-rose-900/50 space-y-2">
