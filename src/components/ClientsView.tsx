@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle, Calendar, Plus, CreditCard, ShoppingBag, ChevronDown, Scissors, Sparkles, Receipt, ArrowRight, Pencil, Save, Key, Mail, Copy, ExternalLink } from 'lucide-react';
+import { Users, Search, Clock, ShieldAlert, Filter, Check, X, Send, Play, CheckCircle2, AlertTriangle, RefreshCw, HelpCircle, Calendar, Plus, CreditCard, ShoppingBag, ChevronDown, Scissors, Sparkles, Receipt, ArrowRight, Pencil, Save, Key, Mail, Copy, ExternalLink, Database } from 'lucide-react';
 import { isDemoMode } from '../utils/demoMode';
 import { AddSaleForm } from './AddSaleForm';
 import { CustomBillingCard } from './CustomBillingCard';
@@ -527,7 +527,132 @@ export const ClientsView: React.FC = () => {
     } | null>(null);
     const [manualResetConfirmed, setManualResetConfirmed] = useState<boolean>(false);
     const [isManualResetting, setIsManualResetting] = useState<boolean>(false);
+    const [quickMasterModalOpen, setQuickMasterModalOpen] = useState<boolean>(false);
+    const [quickMasterSaving, setQuickMasterSaving] = useState<boolean>(false);
+    const [quickMasterForm, setQuickMasterForm] = useState({
+        streaming: 'NETFLIX',
+        correo: '',
+        contraseña: '',
+        perfiles: 5,
+        isAutoSlots: true,
+        vencimiento: '',
+        proveedor: '',
+        costPrice: '',
+        recordExpense: false
+    });
     const [visibleRowsCount, setVisibleRowsCount] = useState<number>(100);
+    const [accountingPlatformConfigs, setAccountingPlatformConfigs] = useState<Record<string, {
+        profileSlots: number;
+        defaultCost: number | null;
+        defaultSalePrice: number | null;
+        durationDays: number;
+        isVariableShared: boolean;
+    }>>({});
+
+    const fallbackDefaultSlots: Record<string, number> = {
+        NETFLIX: 5, 'NETFLIX EXTRA': 1, DISNEY: 7, 'DISNEY+': 7, HBO: 5, 'HBO PLATINO': 5,
+        MAX: 5, 'MAX (HBO)': 5, AMAZON: 6, 'PRIME VIDEO': 6, SPOTIFY: 6, YOUTUBE: 5,
+        'APPLE ONE': 6, 'APPLE TV': 5, 'CRUNCHY ROLL': 5, CRUNCHYROLL: 5, PARAMOUNT: 6,
+        'PARAMOUNT+': 6, VIX: 4, GPT: 5, CHATGPT: 5, CLAUDE: 5, CANVA: 5, MICROSOFT: 6
+    };
+
+    const loadAccountingPlatformDefaults = useCallback(async () => {
+        try {
+            const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
+            const res = await fetch(`${apiUrl}/api/admin/master-accounts/platform-defaults`);
+            const data = await res.json();
+            if (data.success && data.platformConfigs) {
+                setAccountingPlatformConfigs(data.platformConfigs);
+                return data.platformConfigs;
+            }
+        } catch (_) {}
+        return null;
+    }, []);
+
+    useEffect(() => {
+        loadAccountingPlatformDefaults();
+    }, [loadAccountingPlatformDefaults]);
+
+    const getQuickMasterConfig = (plat: string, configsMap = accountingPlatformConfigs) => {
+        const upper = String(plat || '').trim().toUpperCase();
+        if (configsMap[upper]) return configsMap[upper];
+        const found = Object.keys(configsMap).find(k => upper.includes(k) || k.includes(upper));
+        if (found) return configsMap[found];
+        const fbKey = Object.keys(fallbackDefaultSlots).find(k => upper.includes(k) || k.includes(upper));
+        return {
+            profileSlots: fbKey ? fallbackDefaultSlots[fbKey] : 5,
+            defaultCost: null,
+            defaultSalePrice: null,
+            durationDays: 30,
+            isVariableShared: /gpt|chatgpt|claude|compartid|canva|platzi/i.test(upper)
+        };
+    };
+
+    const quickMasterPlatforms = useMemo(() => {
+        const s = new Set<string>([...Object.keys(fallbackDefaultSlots), ...Object.keys(accountingPlatformConfigs)]);
+        return Array.from(s).sort();
+    }, [accountingPlatformConfigs]);
+
+    const openQuickMasterModal = async () => {
+        const defaultPlat = 'NETFLIX';
+        const latestMap = (Object.keys(accountingPlatformConfigs).length === 0)
+            ? ((await loadAccountingPlatformDefaults()) || accountingPlatformConfigs)
+            : accountingPlatformConfigs;
+        const cfg = getQuickMasterConfig(defaultPlat, latestMap);
+        const defaultExp = new Date(Date.now() + (cfg.durationDays || 30) * 86400000).toISOString().split('T')[0];
+        setQuickMasterForm({
+            streaming: defaultPlat,
+            correo: '',
+            contraseña: '',
+            perfiles: cfg.profileSlots,
+            isAutoSlots: true,
+            vencimiento: defaultExp,
+            proveedor: '',
+            costPrice: cfg.defaultCost != null ? String(cfg.defaultCost) : '',
+            recordExpense: false
+        });
+        setQuickMasterModalOpen(true);
+    };
+
+    const handleSaveQuickMaster = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!quickMasterForm.streaming.trim() || !quickMasterForm.correo.trim() || !quickMasterForm.contraseña.trim()) {
+            alert('Plataforma, correo y contraseña son obligatorios.');
+            return;
+        }
+        setQuickMasterSaving(true);
+        try {
+            const apiUrl = window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin;
+            const res = await fetch(`${apiUrl}/api/admin/accounts/add`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    streaming: quickMasterForm.streaming.trim(),
+                    correo: quickMasterForm.correo.trim(),
+                    contraseña: quickMasterForm.contraseña.trim(),
+                    perfiles: quickMasterForm.perfiles,
+                    vencimiento: quickMasterForm.vencimiento || null,
+                    proveedor: quickMasterForm.proveedor.trim() || null,
+                    costPrice: quickMasterForm.costPrice !== '' ? Number(quickMasterForm.costPrice) : null,
+                    recordExpense: quickMasterForm.recordExpense,
+                    password: 'admin123'
+                })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                alert(`❌ ${data.message || data.error || 'Error creando cuenta matriz'}`);
+                return;
+            }
+            setQuickMasterModalOpen(false);
+            setRenewalSuccessToast(`✅ ${data.message}`);
+            setTimeout(() => setRenewalSuccessToast(null), 5000);
+            fetchClientsData();
+        } catch (err: any) {
+            alert(`❌ Error de conexión: ${err.message}`);
+        } finally {
+            setQuickMasterSaving(false);
+        }
+    };
 
     // Modal de Edición de Datos del Cliente / Contraseña / Customer Mail
     const [editClientModal, setEditClientModal] = useState<any | null>(null);
@@ -1662,6 +1787,15 @@ export const ClientsView: React.FC = () => {
                     </button>
 
                     <button
+                        onClick={openQuickMasterModal}
+                        className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-md hover:shadow-lg transition-all cursor-pointer"
+                        title="Crear rápidamente una cuenta matriz nueva en Excel y Base de Datos con cupos automáticos"
+                    >
+                        <Database className="w-4 h-4" />
+                        <span>+ Cuenta Matriz</span>
+                    </button>
+
+                    <button
                         onClick={() => setShowBulkSender(!showBulkSender)}
                         className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${showBulkSender
                                 ? 'bg-brand-primary text-white shadow-md'
@@ -2750,6 +2884,183 @@ export const ClientsView: React.FC = () => {
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL RÁPIDO: CREAR CUENTA MATRIZ EN BASE DE DATOS + EXCEL */}
+            {quickMasterModalOpen && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-lg w-full border border-gray-200 dark:border-gray-700 shadow-2xl overflow-hidden">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-850">
+                            <div className="flex items-center gap-2.5">
+                                <div className="p-2 rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-400">
+                                    <Database className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">
+                                        Crear Cuenta Matriz Rápida
+                                    </h3>
+                                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                        Inserta los cupos libres en Excel y guarda la cuenta en MariaDB.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setQuickMasterModalOpen(false)}
+                                className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSaveQuickMaster} className="p-5 space-y-3.5 text-xs">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Plataforma</label>
+                                    <select
+                                        value={quickMasterForm.streaming}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            const cfg = getQuickMasterConfig(val);
+                                            const nextExp = new Date(Date.now() + (cfg.durationDays || 30) * 86400000).toISOString().split('T')[0];
+                                            setQuickMasterForm(f => ({
+                                                ...f,
+                                                streaming: val,
+                                                perfiles: cfg.profileSlots,
+                                                isAutoSlots: true,
+                                                vencimiento: nextExp,
+                                                costPrice: cfg.defaultCost != null ? String(cfg.defaultCost) : ''
+                                            }));
+                                        }}
+                                        className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                    >
+                                        {quickMasterPlatforms.map(p => (
+                                            <option key={p} value={p}>{p}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label className="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400">N° Cupos</label>
+                                        {(() => {
+                                            const cfg = getQuickMasterConfig(quickMasterForm.streaming);
+                                            if (!quickMasterForm.isAutoSlots) {
+                                                return <span className="text-[10px] font-bold text-indigo-500">Editado manual</span>;
+                                            }
+                                            if (cfg.isVariableShared) {
+                                                return <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">Compartida / variable (Contab: {cfg.profileSlots} — ajustable)</span>;
+                                            }
+                                            return <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Contabilidad: {cfg.profileSlots} perfiles</span>;
+                                        })()}
+                                    </div>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={30}
+                                        value={quickMasterForm.perfiles}
+                                        onChange={(e) => setQuickMasterForm({
+                                            ...quickMasterForm,
+                                            perfiles: parseInt(e.target.value, 10) || 1,
+                                            isAutoSlots: false
+                                        })}
+                                        className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Correo</label>
+                                    <input
+                                        type="email"
+                                        value={quickMasterForm.correo}
+                                        onChange={(e) => setQuickMasterForm({ ...quickMasterForm, correo: e.target.value })}
+                                        placeholder="correo@cuenta.com"
+                                        className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Contraseña</label>
+                                    <input
+                                        type="text"
+                                        value={quickMasterForm.contraseña}
+                                        onChange={(e) => setQuickMasterForm({ ...quickMasterForm, contraseña: e.target.value })}
+                                        placeholder="Clave"
+                                        className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Vencimiento (Opcional)</label>
+                                    <input
+                                        type="date"
+                                        value={quickMasterForm.vencimiento}
+                                        onChange={(e) => setQuickMasterForm({ ...quickMasterForm, vencimiento: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Proveedor (Opcional)</label>
+                                    <input
+                                        type="text"
+                                        value={quickMasterForm.proveedor}
+                                        onChange={(e) => setQuickMasterForm({ ...quickMasterForm, proveedor: e.target.value })}
+                                        placeholder="Ej: Directo / Spotinet"
+                                        className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                    />
+                                </div>
+
+                                <div className="sm:col-span-2">
+                                    <label className="block text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Costo de Compra COP (Opcional)</label>
+                                    <input
+                                        type="number"
+                                        value={quickMasterForm.costPrice}
+                                        onChange={(e) => setQuickMasterForm({ ...quickMasterForm, costPrice: e.target.value })}
+                                        placeholder="Ej: 45000"
+                                        className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono"
+                                    />
+                                </div>
+                            </div>
+
+                            {quickMasterForm.costPrice && Number(quickMasterForm.costPrice) > 0 && (
+                                <label className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={quickMasterForm.recordExpense}
+                                        onChange={(e) => setQuickMasterForm({ ...quickMasterForm, recordExpense: e.target.checked })}
+                                        className="rounded text-emerald-600"
+                                    />
+                                    <span className="text-[11px] font-semibold text-emerald-900 dark:text-emerald-200">
+                                        Registrar compra como egreso en Contabilidad
+                                    </span>
+                                </label>
+                            )}
+
+                            <div className="flex justify-end gap-2.5 pt-2">
+                                <button
+                                    type="button"
+                                    disabled={quickMasterSaving}
+                                    onClick={() => setQuickMasterModalOpen(false)}
+                                    className="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 font-bold text-gray-700 dark:text-gray-300"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={quickMasterSaving}
+                                    className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-extrabold flex items-center gap-1.5"
+                                >
+                                    <Save className="w-3.5 h-3.5" />
+                                    {quickMasterSaving ? 'Creando...' : 'Crear Cuenta Matriz'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

@@ -39,6 +39,30 @@ interface SchemaEdge {
 
 const PRESET_QUERIES = [
   {
+    name: '📊 ETL Staging: Resumen por Mes y Calidad',
+    sql: `SELECT block_month, COUNT(*) AS total, SUM(is_duplicate=0 AND phone_issue=0) AS listas_nuevas, SUM(is_duplicate=1) AS duplicadas, SUM(phone_issue=1) AS tel_invalido, SUM(date_issue=1) AS fecha_invalida\nFROM etl_historico_staging\nGROUP BY block_month, block_index\nORDER BY block_index ASC;`
+  },
+  {
+    name: '📱 ETL Staging: Ver Teléfonos con Error (phone_issue=1)',
+    sql: `SELECT id, block_month, excel_row, customer_phone_raw, customer_phone, streaming_platform, profile_name\nFROM etl_historico_staging\nWHERE phone_issue = 1 AND etl_status != 'discarded'\nLIMIT 100;`
+  },
+  {
+    name: '🛠️ ETL Staging: Normalizar Teléfonos 10 dígitos (+57)',
+    sql: `UPDATE etl_historico_staging\nSET customer_phone = CONCAT('57', REGEXP_REPLACE(customer_phone_raw, '[^0-9]', '')),\n    phone_issue = 0\nWHERE phone_issue = 1\n  AND LENGTH(REGEXP_REPLACE(customer_phone_raw, '[^0-9]', '')) = 10\n  AND REGEXP_REPLACE(customer_phone_raw, '[^0-9]', '') LIKE '3%';`
+  },
+  {
+    name: '🔍 ETL Staging: Ver Duplicados vs Producción',
+    sql: `SELECT id, block_month, customer_phone, streaming_platform, account_email, vencimiento, amount_paid\nFROM etl_historico_staging\nWHERE is_duplicate = 1\nLIMIT 100;`
+  },
+  {
+    name: '🏷️ ETL Staging: Plataformas Sin Estandarizar',
+    sql: `SELECT streaming_platform, COUNT(*) AS total\nFROM etl_historico_staging\nGROUP BY streaming_platform\nORDER BY total DESC;`
+  },
+  {
+    name: '📈 Histórico Producción: Registros por Mes',
+    sql: `SELECT fecha_corte, COUNT(*) AS registros, COUNT(DISTINCT customer_phone) AS clientes_unicos\nFROM excel_historical_records\nGROUP BY fecha_corte\nORDER BY MAX(id) DESC;`
+  },
+  {
     name: 'Suscripciones que vencen en los próximos 7 días',
     sql: `SELECT s.id, c.fullname, s.customer_phone, s.streaming_platform, s.account_email, s.expiration_date, s.payment_method\nFROM subscriptions s\nJOIN customers c ON s.customer_phone = c.phone\nWHERE s.expiration_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)\nORDER BY s.expiration_date ASC;`
   },
@@ -871,8 +895,91 @@ export function DataStudioView() {
     if (draggingTable) setDraggingTable(null);
   };
 
-  // Ejecutar consulta SQL
-  const handleExecuteQuery = async (queryToRun?: string) => {
+  // ETL Histórico (OneDrive Graph -> Staging SQL -> Producción)
+  const [etlOpen, setEtlOpen] = useState<boolean>(true);
+  const [etlExtracting, setEtlExtracting] = useState<boolean>(false);
+  const [etlPromoting, setEtlPromoting] = useState<boolean>(false);
+  const [etlOnlyClean, setEtlOnlyClean] = useState<boolean>(true);
+  const [etlStatus, setEtlStatus] = useState<{
+    stagingTotal: number;
+    newRows: number;
+    duplicateRows: number;
+    phoneIssues: number;
+    dateIssues: number;
+    promotedRows: number;
+    discardedRows: number;
+    distinctMonths: number;
+    productionTotal: number;
+  } | null>(null);
+  const [etlBanner, setEtlBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const loadEtlHistoricoStatus = async () => {
+    try {
+      const res = await fetch(`${getApiUrl()}/api/admin/database/etl/historico/status`);
+      const data = await res.json();
+      if (data.success) setEtlStatus(data);
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    loadEtlHistoricoStatus();
+  }, []);
+
+  const handleExtractHistorico = async () => {
+    setEtlExtracting(true);
+    setEtlBanner(null);
+    try {
+      const res = await fetch(`${getApiUrl()}/api/admin/database/etl/historico/extract`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ forceGraph: true })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Error extrayendo hoja historico');
+      setEtlStatus(data);
+      setEtlBanner({
+        type: 'success',
+        text: `✅ Extraídas ${data.totalExtracted?.toLocaleString()} filas (${data.blocksCount} bloques mensuales) desde ${data.source === 'microsoft_graph' ? 'OneDrive Microsoft Graph' : 'caché local'}. Nuevas listas: ${data.newRows?.toLocaleString()} | Duplicadas: ${data.duplicateRows?.toLocaleString()}.`
+      });
+      loadSchema();
+    } catch (e: any) {
+      setEtlBanner({ type: 'error', text: e.message || 'Error ejecutando extracción' });
+    } finally {
+      setEtlExtracting(false);
+    }
+  };
+
+  const handlePromoteHistorico = async () => {
+    if (!etlStatus || etlStatus.newRows === 0) return;
+    const msg = etlOnlyClean
+      ? `¿Promover las filas limpias nuevas (sin errores de teléfono) de etl_historico_staging hacia excel_historical_records?`
+      : `¿Promover TODAS las ${etlStatus.newRows} filas nuevas (incluyendo las que tienen phone_issue=1) hacia excel_historical_records?`;
+    if (!window.confirm(msg)) return;
+    setEtlPromoting(true);
+    setEtlBanner(null);
+    try {
+      const res = await fetch(`${getApiUrl()}/api/admin/database/etl/historico/promote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ onlyClean: etlOnlyClean, includePhoneIssues: !etlOnlyClean })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Error promoviendo filas');
+      setEtlStatus(data);
+      setEtlBanner({
+        type: 'success',
+        text: `🚀 Se promovieron ${data.promotedCount?.toLocaleString()} registros nuevos y deduplicados a excel_historical_records (Total producción: ${data.productionTotal?.toLocaleString()}).`
+      });
+      loadSchema();
+    } catch (e: any) {
+      setEtlBanner({ type: 'error', text: e.message || 'Error promoviendo datos' });
+    } finally {
+      setEtlPromoting(false);
+    }
+  };
+
+  // Ejecutar consulta SQL (soporta dryRun = true para simular con ROLLBACK)
+  const handleExecuteQuery = async (queryToRun?: string, dryRun = false) => {
     const query = queryToRun || sqlQuery;
     if (!query.trim()) return;
 
@@ -886,7 +993,8 @@ export function DataStudioView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sql: query,
-          allowWrite,
+          allowWrite: allowWrite || dryRun,
+          dryRun,
           limit: queryLimit
         })
       });
@@ -894,14 +1002,17 @@ export function DataStudioView() {
       const data = await res.json();
       if (data.success) {
         setQueryResult(data);
-      sendToDualScreen({
-        title: `Consulta SQL (${data.rowCount || (data.rows ? data.rows.length : 0)} filas)`,
-        sourceQuery: query,
-        columns: data.fields?.map((f: any) => typeof f === 'string' ? f : f.name) || (data.rows && data.rows[0] ? Object.keys(data.rows[0]) : []),
-        rows: data.rows || [],
-        totalRows: data.rowCount || (data.rows ? data.rows.length : 0),
-        executionTime: data.executionTime || '0ms'
-      });
+        if (!dryRun && allowWrite) {
+          loadEtlHistoricoStatus();
+        }
+        sendToDualScreen({
+          title: `${dryRun ? '🧪 Dry-Run ' : ''}Consulta SQL (${data.rowCount || (data.rows ? data.rows.length : 0)} filas)`,
+          sourceQuery: query,
+          columns: data.fields?.map((f: any) => typeof f === 'string' ? f : f.name) || (data.rows && data.rows[0] ? Object.keys(data.rows[0]) : []),
+          rows: data.rows || [],
+          totalRows: data.rowCount || (data.rows ? data.rows.length : 0),
+          executionTime: data.executionTime || '0ms'
+        });
       } else {
         setQueryError(data.error || 'Error al ejecutar consulta');
       }
@@ -1171,9 +1282,131 @@ export function DataStudioView() {
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
           {/* PANEL IZQUIERDO: PENSAR EN LAS TABLAS (KNIME / SQL / TUTOR) */}
           <div className="xl:col-span-6 space-y-6 min-w-0">
-{/* ========================================================================= */}
+      {/* PANEL COLAPSABLE ETL HISTÓRICO (OneDrive Microsoft Graph -> Staging SQL -> Producción) */}
+      {activeTab === 'query' && (
+        <div className="bg-white dark:bg-gray-800 rounded-3xl border border-emerald-200 dark:border-emerald-900/50 shadow-sm overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 bg-gradient-to-r from-emerald-50/90 to-indigo-50/70 dark:from-emerald-950/30 dark:to-indigo-950/30 border-b border-emerald-100 dark:border-gray-700">
+            <div className="flex items-center gap-2.5">
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <div>
+                <h3 className="text-xs font-extrabold text-gray-900 dark:text-white">
+                  ETL Histórico: OneDrive (hoja <code className="font-mono">historico</code>) → Staging SQL (<code className="font-mono">etl_historico_staging</code>) → <code className="font-mono">excel_historical_records</code>
+                </h3>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  Extrae bloques en vivo con Graph, inspecciona/limpia con SQL + Dry-Run y promueve registros deduplicados.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setEtlOpen(v => !v)}
+              className="px-3 py-1 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[11px] font-bold text-gray-600 dark:text-gray-300"
+            >
+              {etlOpen ? 'Ocultar ETL' : 'Mostrar ETL'}
+            </button>
+          </div>
+
+          {etlOpen && (
+            <div className="p-5 space-y-4">
+              {etlBanner && (
+                <div className={`p-3 rounded-xl border text-xs font-medium ${
+                  etlBanner.type === 'success'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
+                    : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200'
+                }`}>
+                  {etlBanner.text}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 sm:grid-cols-6 gap-2.5 text-xs">
+                <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700">
+                  <span className="text-[10px] font-bold uppercase text-gray-400">Staging Total</span>
+                  <p className="text-base font-black text-gray-900 dark:text-white font-mono">{(etlStatus?.stagingTotal ?? 0).toLocaleString()}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-900/40">
+                  <span className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">Nuevas Listas</span>
+                  <p className="text-base font-black text-emerald-700 dark:text-emerald-300 font-mono">{(etlStatus?.newRows ?? 0).toLocaleString()}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/70 dark:border-indigo-900/40">
+                  <span className="text-[10px] font-bold uppercase text-indigo-600 dark:text-indigo-400">Duplicadas</span>
+                  <p className="text-base font-black text-indigo-700 dark:text-indigo-300 font-mono">{(etlStatus?.duplicateRows ?? 0).toLocaleString()}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/40">
+                  <span className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">Error Teléfono</span>
+                  <p className="text-base font-black text-amber-700 dark:text-amber-300 font-mono">{(etlStatus?.phoneIssues ?? 0).toLocaleString()}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200/70 dark:border-purple-900/40">
+                  <span className="text-[10px] font-bold uppercase text-purple-600 dark:text-purple-400">Promovidas</span>
+                  <p className="text-base font-black text-purple-700 dark:text-purple-300 font-mono">{(etlStatus?.promotedRows ?? 0).toLocaleString()}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+                  <span className="text-[10px] font-bold uppercase text-gray-500">Producción</span>
+                  <p className="text-base font-black text-gray-900 dark:text-white font-mono">{(etlStatus?.productionTotal ?? 0).toLocaleString()}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={etlExtracting}
+                    onClick={handleExtractHistorico}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-sm"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${etlExtracting ? 'animate-spin' : ''}`} />
+                    <span>{etlExtracting ? 'Extrayendo desde Graph...' : '1. Extraer historico (Graph → Staging)'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => loadAndRunInEditor(PRESET_QUERIES[0].sql)}
+                    className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold"
+                  >
+                    2a. Ver Resumen Staging
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => loadAndRunInEditor(PRESET_QUERIES[1].sql)}
+                    className="px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold"
+                  >
+                    2b. Ver Teléfonos Inválidos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSqlQuery(PRESET_QUERIES[2].sql)}
+                    className="px-3 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-bold"
+                  >
+                    2c. Cargar SQL Normalizar +57
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <label className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-600 dark:text-gray-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={etlOnlyClean}
+                      onChange={(e) => setEtlOnlyClean(e.target.checked)}
+                      className="rounded text-indigo-600"
+                    />
+                    <span>Solo sin error de teléfono</span>
+                  </label>
+                  <button
+                    type="button"
+                    disabled={etlPromoting || !etlStatus || etlStatus.newRows === 0}
+                    onClick={handlePromoteHistorico}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-45 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-sm"
+                  >
+                    <ArrowRight className="w-3.5 h-3.5" />
+                    <span>{etlPromoting ? 'Promoviendo...' : '3. Promover limpias a excel_historical_records'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* TAB 1: QUERY STUDIO (TIPO DBEAVER) */}
-      {/* ========================================================================= */}
       {activeTab === 'query' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* BARRA LATERAL: EXPLORADOR DE TABLAS */}
@@ -1267,7 +1500,18 @@ export function DataStudioView() {
                     <option value={100}>Límite: 100</option>
                     <option value={250}>Límite: 250</option>
                     <option value={500}>Límite: 500</option>
+                    <option value={1000}>Límite: 1000</option>
+                    <option value={2000}>Límite: 2000</option>
                   </select>
+
+                  <button
+                    onClick={() => handleExecuteQuery(undefined, true)}
+                    disabled={runningQuery || !sqlQuery.trim()}
+                    className="px-3 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30 font-extrabold text-xs rounded-xl transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                    title="Ejecuta en transacción y hace ROLLBACK automático para previsualizar cuántas filas afectaría sin modificar la BD"
+                  >
+                    <span>🧪 Simular (Dry-Run)</span>
+                  </button>
 
                   <button
                     onClick={() => handleExplainCurrentQuery()}
@@ -1392,13 +1636,21 @@ export function DataStudioView() {
             )}
 
             {queryResult && !queryResult.isResultSet && (
-              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between">
+              <div className={`p-4 rounded-2xl border text-xs flex items-center justify-between ${
+                queryResult.dryRun
+                  ? 'bg-purple-500/10 border-purple-500/30 text-purple-700 dark:text-purple-300'
+                  : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+              }`}>
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                  <CheckCircle2 className={`w-5 h-5 flex-shrink-0 ${queryResult.dryRun ? 'text-purple-500' : 'text-emerald-500'}`} />
                   <div>
-                    <span className="font-bold">Sentencia DML ejecutada exitosamente</span>
+                    <span className="font-bold">
+                      {queryResult.dryRun
+                        ? '🧪 SIMULACIÓN (ROLLBACK APLICADO — NO SE MODIFICÓ LA BD)'
+                        : 'Sentencia DML ejecutada exitosamente'}
+                    </span>
                     <p className="text-[11px] text-gray-500 dark:text-gray-400 font-mono mt-0.5">
-                      Filas afectadas: {queryResult.affectedRows} | Insert ID: {queryResult.insertId || 'N/A'} | Tiempo: {queryResult.executionTimeMs}ms
+                      {queryResult.dryRun ? 'Afectaría' : 'Filas afectadas'}: {queryResult.affectedRows} | Sentencias: {queryResult.statementsCount || 1} | Insert ID: {queryResult.insertId || 'N/A'} | Tiempo: {queryResult.executionTimeMs}ms
                     </p>
                   </div>
                 </div>
@@ -3029,9 +3281,131 @@ export function DataStudioView() {
         </div>
       ) : (
         <div className="space-y-6">
-{/* ========================================================================= */}
+      {/* PANEL COLAPSABLE ETL HISTÓRICO (OneDrive Microsoft Graph -> Staging SQL -> Producción) */}
+      {activeTab === 'query' && (
+        <div className="bg-white dark:bg-gray-800 rounded-3xl border border-emerald-200 dark:border-emerald-900/50 shadow-sm overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 bg-gradient-to-r from-emerald-50/90 to-indigo-50/70 dark:from-emerald-950/30 dark:to-indigo-950/30 border-b border-emerald-100 dark:border-gray-700">
+            <div className="flex items-center gap-2.5">
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <div>
+                <h3 className="text-xs font-extrabold text-gray-900 dark:text-white">
+                  ETL Histórico: OneDrive (hoja <code className="font-mono">historico</code>) → Staging SQL (<code className="font-mono">etl_historico_staging</code>) → <code className="font-mono">excel_historical_records</code>
+                </h3>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  Extrae bloques en vivo con Graph, inspecciona/limpia con SQL + Dry-Run y promueve registros deduplicados.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setEtlOpen(v => !v)}
+              className="px-3 py-1 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[11px] font-bold text-gray-600 dark:text-gray-300"
+            >
+              {etlOpen ? 'Ocultar ETL' : 'Mostrar ETL'}
+            </button>
+          </div>
+
+          {etlOpen && (
+            <div className="p-5 space-y-4">
+              {etlBanner && (
+                <div className={`p-3 rounded-xl border text-xs font-medium ${
+                  etlBanner.type === 'success'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
+                    : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200'
+                }`}>
+                  {etlBanner.text}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 sm:grid-cols-6 gap-2.5 text-xs">
+                <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700">
+                  <span className="text-[10px] font-bold uppercase text-gray-400">Staging Total</span>
+                  <p className="text-base font-black text-gray-900 dark:text-white font-mono">{(etlStatus?.stagingTotal ?? 0).toLocaleString()}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-900/40">
+                  <span className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">Nuevas Listas</span>
+                  <p className="text-base font-black text-emerald-700 dark:text-emerald-300 font-mono">{(etlStatus?.newRows ?? 0).toLocaleString()}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/70 dark:border-indigo-900/40">
+                  <span className="text-[10px] font-bold uppercase text-indigo-600 dark:text-indigo-400">Duplicadas</span>
+                  <p className="text-base font-black text-indigo-700 dark:text-indigo-300 font-mono">{(etlStatus?.duplicateRows ?? 0).toLocaleString()}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/40">
+                  <span className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">Error Teléfono</span>
+                  <p className="text-base font-black text-amber-700 dark:text-amber-300 font-mono">{(etlStatus?.phoneIssues ?? 0).toLocaleString()}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200/70 dark:border-purple-900/40">
+                  <span className="text-[10px] font-bold uppercase text-purple-600 dark:text-purple-400">Promovidas</span>
+                  <p className="text-base font-black text-purple-700 dark:text-purple-300 font-mono">{(etlStatus?.promotedRows ?? 0).toLocaleString()}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+                  <span className="text-[10px] font-bold uppercase text-gray-500">Producción</span>
+                  <p className="text-base font-black text-gray-900 dark:text-white font-mono">{(etlStatus?.productionTotal ?? 0).toLocaleString()}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={etlExtracting}
+                    onClick={handleExtractHistorico}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-sm"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${etlExtracting ? 'animate-spin' : ''}`} />
+                    <span>{etlExtracting ? 'Extrayendo desde Graph...' : '1. Extraer historico (Graph → Staging)'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => loadAndRunInEditor(PRESET_QUERIES[0].sql)}
+                    className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold"
+                  >
+                    2a. Ver Resumen Staging
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => loadAndRunInEditor(PRESET_QUERIES[1].sql)}
+                    className="px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold"
+                  >
+                    2b. Ver Teléfonos Inválidos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSqlQuery(PRESET_QUERIES[2].sql)}
+                    className="px-3 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-bold"
+                  >
+                    2c. Cargar SQL Normalizar +57
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <label className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-600 dark:text-gray-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={etlOnlyClean}
+                      onChange={(e) => setEtlOnlyClean(e.target.checked)}
+                      className="rounded text-indigo-600"
+                    />
+                    <span>Solo sin error de teléfono</span>
+                  </label>
+                  <button
+                    type="button"
+                    disabled={etlPromoting || !etlStatus || etlStatus.newRows === 0}
+                    onClick={handlePromoteHistorico}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-45 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-sm"
+                  >
+                    <ArrowRight className="w-3.5 h-3.5" />
+                    <span>{etlPromoting ? 'Promoviendo...' : '3. Promover limpias a excel_historical_records'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* TAB 1: QUERY STUDIO (TIPO DBEAVER) */}
-      {/* ========================================================================= */}
       {activeTab === 'query' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* BARRA LATERAL: EXPLORADOR DE TABLAS */}
@@ -3125,7 +3499,18 @@ export function DataStudioView() {
                     <option value={100}>Límite: 100</option>
                     <option value={250}>Límite: 250</option>
                     <option value={500}>Límite: 500</option>
+                    <option value={1000}>Límite: 1000</option>
+                    <option value={2000}>Límite: 2000</option>
                   </select>
+
+                  <button
+                    onClick={() => handleExecuteQuery(undefined, true)}
+                    disabled={runningQuery || !sqlQuery.trim()}
+                    className="px-3 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30 font-extrabold text-xs rounded-xl transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                    title="Ejecuta en transacción y hace ROLLBACK automático para previsualizar cuántas filas afectaría sin modificar la BD"
+                  >
+                    <span>🧪 Simular (Dry-Run)</span>
+                  </button>
 
                   <button
                     onClick={() => handleExplainCurrentQuery()}
@@ -3250,13 +3635,21 @@ export function DataStudioView() {
             )}
 
             {queryResult && !queryResult.isResultSet && (
-              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between">
+              <div className={`p-4 rounded-2xl border text-xs flex items-center justify-between ${
+                queryResult.dryRun
+                  ? 'bg-purple-500/10 border-purple-500/30 text-purple-700 dark:text-purple-300'
+                  : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+              }`}>
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                  <CheckCircle2 className={`w-5 h-5 flex-shrink-0 ${queryResult.dryRun ? 'text-purple-500' : 'text-emerald-500'}`} />
                   <div>
-                    <span className="font-bold">Sentencia DML ejecutada exitosamente</span>
+                    <span className="font-bold">
+                      {queryResult.dryRun
+                        ? '🧪 SIMULACIÓN (ROLLBACK APLICADO — NO SE MODIFICÓ LA BD)'
+                        : 'Sentencia DML ejecutada exitosamente'}
+                    </span>
                     <p className="text-[11px] text-gray-500 dark:text-gray-400 font-mono mt-0.5">
-                      Filas afectadas: {queryResult.affectedRows} | Insert ID: {queryResult.insertId || 'N/A'} | Tiempo: {queryResult.executionTimeMs}ms
+                      {queryResult.dryRun ? 'Afectaría' : 'Filas afectadas'}: {queryResult.affectedRows} | Sentencias: {queryResult.statementsCount || 1} | Insert ID: {queryResult.insertId || 'N/A'} | Tiempo: {queryResult.executionTimeMs}ms
                     </p>
                   </div>
                 </div>
