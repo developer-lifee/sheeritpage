@@ -116,6 +116,15 @@ const base64Mp3ToBlobUrl = (b64: string) => {
 export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
   const [token, setToken] = useState<string>(() => {
     try {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const impToken = params.get('impersonate');
+        if (impToken && impToken.trim()) {
+          localStorage.setItem(TOKEN_STORAGE_KEY, impToken.trim());
+          window.history.replaceState({}, '', '/mi-bot');
+          return impToken.trim();
+        }
+      }
       return localStorage.getItem(TOKEN_STORAGE_KEY) || '';
     } catch {
       return '';
