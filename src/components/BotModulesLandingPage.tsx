@@ -86,7 +86,7 @@ const BASE_PLANS: BasePlan[] = [
     name: 'Scale & Alto Volumen',
     price: 60000,
     messages: '2.000 Mensajes IA / mes',
-    desc: 'Alto tráfico, sincronización Excel / SQL, múltiples operadores y prioridad 24/7.'
+    desc: 'Todo el Plan Pro + Base de Datos CRM/Excel + 1 módulo extra incluido (OCR o Cobros).'
   }
 ];
 
@@ -801,9 +801,14 @@ export function BotModulesShowcase({ onNavigate, embedded = false }: BotModulesP
                   <span>{selectedPlan.name}</span>
                   <span className="font-mono">{formatCop(selectedPlan.price)}</span>
                 </div>
-                {selectedPlanId !== 'starter' ? (
+                {selectedPlanId === 'scale' ? (
+                  <div className="text-[11px] text-emerald-400 space-y-0.5">
+                    <div>✓ Incluye todo lo del Plan Pro ($30k) + CRM/Excel</div>
+                    <div>✓ Incluye 1 módulo extra a elección (Pagos OCR o Cobros Automáticos)</div>
+                  </div>
+                ) : selectedPlanId === 'pro' ? (
                   <div className="text-[11px] text-emerald-400">
-                    ✓ Incluye Flujos Audio+Imagen+Texto (sin reenviado), Modo Semiautomático 1 Clic y Ajustes con IA
+                    ✓ Incluye todo lo del Plan Starter + Flujos Audio+Imagen+Texto (sin reenviado), Modo Semiautomático 1 Clic y Ajustes con IA
                   </div>
                 ) : (
                   <div className="text-[11px] text-slate-400">

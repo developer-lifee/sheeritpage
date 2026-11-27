@@ -586,6 +586,9 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                   </p>
                 </div>
                 <hr className="border-slate-800 my-6" />
+                <div className="mb-3 text-[11px] font-mono font-bold text-teal-300 bg-teal-500/10 border border-teal-500/25 rounded-xl px-3 py-1.5">
+                  ✨ Todo lo del Plan Starter ($10k), más:
+                </div>
                 <ul className="space-y-3 mb-8 text-xs sm:text-sm text-slate-300">
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
@@ -637,22 +640,29 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                   </p>
                 </div>
                 <hr className="border-slate-800 my-6" />
+                <div className="mb-3 text-[11px] font-mono font-bold text-cyan-300 bg-cyan-500/10 border border-cyan-500/25 rounded-xl px-3 py-1.5">
+                  🚀 Todo lo del Plan Pro ($30k), más:
+                </div>
                 <ul className="space-y-3 mb-8 text-xs sm:text-sm text-slate-300">
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span><strong className="text-white">2.000 Mensajes con IA</strong> incluidos al mes</span>
+                    <span><strong className="text-white">2.000 Mensajes con IA</strong> incluidos al mes (4x más capacidad)</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span>Incluye todo el Plan Pro + sincronización Excel / SQL</span>
+                    <span><strong className="text-white">Base de Datos CRM + Sincronización Excel / OneDrive / SQL</strong> incluida</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span>Panel multiagente colaborativo Sheerit</span>
+                    <span><strong className="text-white">1 Módulo extra incluido a elección:</strong> Validación OCR de Pagos IA o Cobros Automáticos</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span>Soporte prioritario directo por WhatsApp</span>
+                    <span><strong className="text-white">Panel multiagente colaborativo:</strong> varios operadores en 1 solo WhatsApp</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <span><strong className="text-white">Soporte prioritario directo por WhatsApp</strong> y monitoreo 24/7</span>
                   </li>
                 </ul>
               </div>
