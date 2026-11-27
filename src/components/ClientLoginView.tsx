@@ -327,6 +327,20 @@ export default function ClientLoginView() {
     }
   };
 
+  const getOrCreateDeviceToken = () => {
+    try {
+      const existing = localStorage.getItem('sheerit_device_id');
+      if (existing && existing.length >= 8) return existing;
+      const generated = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+        ? crypto.randomUUID()
+        : `dev_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+      localStorage.setItem('sheerit_device_id', generated);
+      return generated;
+    } catch {
+      return '';
+    }
+  };
+
   const handleRequest2fa = async (accountId: number) => {
     setRequesting2fa(accountId);
     setError(null);
@@ -339,6 +353,7 @@ export default function ClientLoginView() {
         return;
       }
 
+      const deviceToken = getOrCreateDeviceToken();
       const response = await fetch(`${API_BASE}/api/client/request-2fa`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -346,11 +361,15 @@ export default function ClientLoginView() {
           phone,
           accountId,
           email: targetAcc?.email,
-          platform: targetAcc?.platform
+          platform: targetAcc?.platform,
+          deviceToken
         })
       });
 
       const data = await response.json();
+      if (data.deviceToken) {
+        try { localStorage.setItem('sheerit_device_id', data.deviceToken); } catch {}
+      }
       if (!response.ok || !data.success) {
         if (data.unautomated) {
           throw new Error(data.message || 'Esta cuenta no está automatizada. Solicita el código directamente a un asesor por WhatsApp.');
