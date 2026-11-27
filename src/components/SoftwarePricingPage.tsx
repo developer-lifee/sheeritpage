@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useWhatsAppContact } from '../hooks/useWhatsAppContact';
 import { WhatsAppBotSimulatorModal } from './WhatsAppBotSimulatorModal';
 import { InteractiveAppWebStudio } from './InteractiveAppWebStudio';
+import { BotModulesShowcase } from './BotModulesLandingPage';
 import { Bot, Heart, MessageCircle, Film } from 'lucide-react';
 import { Shield, Sparkles, Server, Clock, Code, Award, CheckCircle2, MessageSquare, ArrowRight, Database, Settings, Zap, ArrowLeftRight, Check, ChevronLeft, ChevronRight, Laptop, Globe, Smartphone, ExternalLink } from 'lucide-react';
 
@@ -124,8 +125,14 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
               onClick={() => setIsBotModalOpen(true)}
               className="px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black rounded-2xl shadow-xl transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2 cursor-pointer border border-emerald-400/30"
             >
-              <span>🤖 Bot WhatsApp IA (k)</span> <Sparkles className="w-4 h-4" />
+              <span>🤖 Bot WhatsApp IA ($10k - $60k)</span> <Sparkles className="w-4 h-4" />
             </button>
+            <a
+              href="#modulos-bot"
+              className="px-8 py-4 bg-slate-900 hover:bg-slate-800 text-teal-300 font-bold rounded-2xl shadow-lg border border-teal-500/40 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
+            >
+              ⚡ Módulos IA & OCR
+            </a>
             <a 
               href="#pricing-comparison"
               className="px-8 py-4 bg-brand-primary hover:bg-brand-dark text-white font-bold rounded-2xl shadow-lg hover:shadow-brand-primary/20 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
@@ -654,6 +661,9 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
           </div>
         </div>
       </section>
+
+      {/* SUITE MODULAR TECNOLÓGICA DE BOT WHATSAPP IA (OCR, TICKETERA, CRM, CONTABILIDAD, RPA) */}
+      <BotModulesShowcase embedded onNavigate={onNavigate} />
 
       {/* CONSTRUCTOR & ESTUDIO INTERACTIVO (APP $200k / WEB $79k) */}
       <InteractiveAppWebStudio />
