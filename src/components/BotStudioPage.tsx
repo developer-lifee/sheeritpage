@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import * as XLSX from 'xlsx';
 import {
   Bot,
   QrCode,
@@ -30,8 +31,23 @@ import {
   UserCheck,
   Pencil,
   Star,
-  X
+  X,
+  Database
 } from 'lucide-react';
+import { useWhatsAppContact } from '../hooks/useWhatsAppContact';
+
+interface DataSourceItem {
+  id: number;
+  tenant_id: number;
+  name: string;
+  source_type: 'google_sheets' | 'uploaded_table';
+  sheet_url?: string | null;
+  headers: string[];
+  previewRows: Record<string, string>[];
+  row_count: number;
+  last_synced_at?: string | null;
+  is_active: boolean;
+}
 
 interface SimAudioItem {
   id: number;
@@ -75,6 +91,7 @@ interface TenantData {
     favoriteAudioIds?: number[];
     [key: string]: any;
   };
+  enabled_modules?: string[];
   is_bot_active: number | boolean;
   business_description: string | null;
   system_prompt: string | null;
@@ -239,9 +256,18 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
   const [logsSubTab, setLogsSubTab] = useState<'history' | 'proposals' | 'applied'>('history');
   const [pairingPhone, setPairingPhone] = useState('');
   const [pairingNow, setPairingNow] = useState(() => Date.now());
-  const [activeTab, setActiveTab] = useState<'whatsapp' | 'generator' | 'elevenlabs' | 'simulator' | 'chats' | 'logs'>('whatsapp');
+  const [activeTab, setActiveTab] = useState<'whatsapp' | 'generator' | 'elevenlabs' | 'simulator' | 'chats' | 'logs' | 'data'>('whatsapp');
   const [bannerMsg, setBannerMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
+
+  // #7 Datos & Sheets (Módulo Pro crm_sheets)
+  const [dataSources, setDataSources] = useState<DataSourceItem[]>([]);
+  const [dataModuleEnabled, setDataModuleEnabled] = useState(false);
+  const [dataSheetName, setDataSheetName] = useState('');
+  const [dataSheetUrl, setDataSheetUrl] = useState('');
+  const [dataUploadName, setDataUploadName] = useState('');
+  const [dataUploadFile, setDataUploadFile] = useState<File | null>(null);
+  const [dataPreviewOpenId, setDataPreviewOpenId] = useState<number | null>(null);
 
   // Modo Prueba (chat simulado sin vincular WhatsApp)
   const [simMessages, setSimMessages] = useState<SimChatMessage[]>([]);
@@ -313,6 +339,7 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
   const [sendToPhone, setSendToPhone] = useState('');
 
   const apiBase = getApiBase();
+  const { getWaLink } = useWhatsAppContact();
 
   const notify = (type: 'ok' | 'err', text: string) => {
     setBannerMsg({ type, text });
@@ -335,6 +362,21 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
     setElModelId(t.elevenlabs_model_id || 'eleven_multilingual_v2');
     setElReplyMode(t.reply_mode || 'text');
     setFavoriteAudioIds(Array.isArray(t.dashboard_prefs?.favoriteAudioIds) ? t.dashboard_prefs.favoriteAudioIds : []);
+    setDataModuleEnabled(Array.isArray(t.enabled_modules) && t.enabled_modules.includes('crm_sheets'));
+  };
+
+  const fetchDataSources = async (activeToken = token) => {
+    if (!activeToken) return;
+    try {
+      const res = await fetch(`${apiBase}/api/saas-bot/data-sources`, {
+        headers: { Authorization: `Bearer ${activeToken}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDataModuleEnabled(Boolean(data.enabled));
+        if (Array.isArray(data.sources)) setDataSources(data.sources);
+      }
+    } catch {}
   };
 
   const fetchAudios = async (activeToken = token) => {
@@ -374,6 +416,7 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
         }
       }
       fetchAudios(activeToken);
+      fetchDataSources(activeToken);
     } catch (err) {
       console.error('Error cargando Bot Studio:', err);
     }
@@ -709,6 +752,125 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
       }
     } catch (err: any) {
       setFavoriteAudioIds(prevFavs);
+      notify('err', err.message);
+    }
+  };
+
+  const handleSyncGoogleSheet = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dataSheetUrl.trim()) {
+      notify('err', 'Pega la URL compartida o publicada de tu Google Sheets.');
+      return;
+    }
+    setBusyAction('sync_google_sheet');
+    try {
+      const res = await fetch(`${apiBase}/api/saas-bot/data-sources/google-sheet`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: dataSheetName.trim() || 'Hoja de Cobertura / Catálogo',
+          sheetUrl: dataSheetUrl.trim()
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.source) throw new Error(data.message || 'Error conectando Google Sheets');
+      setDataSources(prev => [data.source, ...prev.filter(s => s.id !== data.source.id)]);
+      setDataSheetName('');
+      setDataSheetUrl('');
+      setDataPreviewOpenId(data.source.id);
+      notify('ok', `Hoja conectada: ${data.source.row_count} filas sincronizadas.`);
+    } catch (err: any) {
+      notify('err', err.message);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleResyncSource = async (sourceId: number) => {
+    setBusyAction(`resync_${sourceId}`);
+    try {
+      const res = await fetch(`${apiBase}/api/saas-bot/data-sources/${sourceId}/sync`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.source) throw new Error(data.message || 'No se pudo resincronizar');
+      setDataSources(prev => prev.map(s => (s.id === sourceId ? data.source : s)));
+      notify('ok', `Sincronizado (${data.source.row_count} filas actualizadas).`);
+    } catch (err: any) {
+      notify('err', err.message);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleImportExcelTable = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dataUploadFile) {
+      notify('err', 'Selecciona un archivo Excel (.xlsx, .xls) o CSV primero.');
+      return;
+    }
+    setBusyAction('import_excel_table');
+    try {
+      const buf = await dataUploadFile.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const sheetName = wb.SheetNames[0];
+      if (!sheetName) throw new Error('El archivo no contiene hojas válidas.');
+      const ws = wb.Sheets[sheetName];
+      const matrix = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1, defval: '' });
+      if (!matrix || matrix.length < 2) throw new Error('El archivo debe tener encabezados y al menos 1 fila de datos.');
+
+      const rawHeaders = (matrix[0] || []).map((h, i) => String(h || '').trim() || `Columna_${i + 1}`);
+      const headers = rawHeaders.filter(Boolean);
+      const rows = matrix.slice(1, 1501).map(rowArr => {
+        const obj: Record<string, string> = {};
+        headers.forEach((h, idx) => {
+          obj[h] = rowArr[idx] !== undefined && rowArr[idx] !== null ? String(rowArr[idx]).trim() : '';
+        });
+        return obj;
+      }).filter(obj => Object.values(obj).some(v => v !== ''));
+
+      const res = await fetch(`${apiBase}/api/saas-bot/data-sources/import`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: dataUploadName.trim() || dataUploadFile.name.replace(/\.(xlsx|xls|csv)$/i, ''),
+          headers,
+          rows
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.source) throw new Error(data.message || 'No se pudo guardar la tabla');
+      setDataSources(prev => [data.source, ...prev]);
+      setDataUploadName('');
+      setDataUploadFile(null);
+      setDataPreviewOpenId(data.source.id);
+      notify('ok', `Tabla Pro importada en Sheerit (${data.source.row_count} filas).`);
+    } catch (err: any) {
+      notify('err', err.message);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleDeleteDataSource = async (sourceId: number) => {
+    try {
+      const res = await fetch(`${apiBase}/api/saas-bot/data-sources/${sourceId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDataSources(prev => prev.filter(s => s.id !== sourceId));
+        notify('ok', 'Fuente de datos eliminada.');
+      }
+    } catch (err: any) {
       notify('err', err.message);
     }
   };
@@ -1473,14 +1635,15 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
         )}
 
         {/* Navigation tabs */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
           {[
             { id: 'whatsapp', label: '1. Conectar WhatsApp', icon: QrCode },
             { id: 'generator', label: '2. Generador IA & Prompt', icon: Sparkles },
             { id: 'elevenlabs', label: '3. Audios y Flujos', icon: Volume2 },
             { id: 'simulator', label: '4. Modo Prueba', icon: Play },
             { id: 'chats', label: '5. Chats en Vivo', icon: Send },
-            { id: 'logs', label: '6. Historial y Mejoras', icon: MessageSquare }
+            { id: 'logs', label: '6. Historial y Mejoras', icon: MessageSquare },
+            { id: 'data', label: '7. Datos & Sheets', icon: Database }
           ].map(tab => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -1490,6 +1653,7 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                 onClick={() => {
                   setActiveTab(tab.id as any);
                   if (tab.id === 'chats') fetchLiveChats();
+                  if (tab.id === 'data') fetchDataSources();
                 }}
                 className={`p-3 rounded-xl border text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition ${
                   active
@@ -3277,6 +3441,241 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
             </div>
           );
         })()}
+
+        {/* Tab 7: Datos, Excel Pro & Google Sheets en Vivo */}
+        {activeTab === 'data' && (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold flex items-center gap-2">
+                  <Database className="w-5 h-5 text-sky-400" /> Base de Datos Pro & Google Sheets en Vivo
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Conecta tu hoja de Google Sheets en tiempo real o sube archivos Excel/CSV directamente a Sheerit para que tu bot consulte coberturas, bodegas, precios y stock al responder.
+                </p>
+              </div>
+              {dataModuleEnabled && (
+                <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 text-xs font-semibold self-start">
+                  ✓ Módulo Activo
+                </span>
+              )}
+            </div>
+
+            {!dataModuleEnabled ? (
+              <div className="bg-gradient-to-br from-slate-950 via-[#07111F] to-slate-900 border border-sky-500/35 rounded-2xl p-6 space-y-5 shadow-xl">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="px-3 py-1 rounded-full bg-sky-500/15 border border-sky-400/35 text-sky-300 text-[11px] font-mono font-bold uppercase">
+                    Módulo Avanzado · Datos, CRM & Hojas Conectadas
+                  </span>
+                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/35 text-emerald-300">
+                    +$25.000 COP/mes · O Gratis ($0) como 1er módulo en Plan Pro 30K
+                  </span>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4 text-xs">
+                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1.5">
+                    <div className="font-bold text-teal-300 text-sm">1. Conector Google Sheets en Vivo</div>
+                    <p className="text-slate-300 leading-relaxed">
+                      Pega el enlace de tu hoja (cobertura de bodegas, rutas, horas de corte, catálogo). Se sincroniza automáticamente cada pocos minutos y el bot la consulta antes de responder y elegir el audio exacto.
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1.5">
+                    <div className="font-bold text-sky-300 text-sm">2. Modo Pro: Subir Datos directo a Sheerit</div>
+                    <p className="text-slate-300 leading-relaxed">
+                      Importa tu Excel (.xlsx) o CSV directamente en nuestra infraestructura propia: búsquedas instantáneas, cero caídas por permisos externos y tu operación creciendo dentro de un sistema real.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-800">
+                  <p className="text-[11px] text-slate-400 max-w-xl">
+                    Nota: Si estás en <strong className="text-white">Plan Pro ($30k)</strong> o <strong className="text-white">Scale ($60k)</strong>, puedes pedirlo usando tu cupo incluido sin costo adicional (o agregarlo como módulo adicional por $25.000/mes).
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const msg =
+                        `¡Hola Sheerit! Quiero activar el módulo *Base de Datos CRM & Hojas Conectadas (Google Sheets / Excel Pro)* en mi Bot Studio (/mi-bot).\n\n` +
+                        `🏢 *Negocio:* ${tenant?.business_name || cfgBusinessName}\n` +
+                        `📦 *Plan actual:* ${tenant?.plan_name || 'Plan Básico 30K'}\n` +
+                        `¿Me ayudas a habilitarlo?`;
+                      window.open(getWaLink(msg), '_blank');
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-400 to-teal-400 hover:from-sky-300 hover:to-teal-300 text-slate-950 font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg cursor-pointer"
+                  >
+                    <Send className="w-4 h-4" /> Solicitar activación por WhatsApp
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-5">
+                  {/* Card 1: Google Sheets Live Sync */}
+                  <form onSubmit={handleSyncGoogleSheet} className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 text-xs">
+                    <div className="font-bold text-teal-300 text-sm">1. Conectar Google Sheets en vivo</div>
+                    <p className="text-[11px] text-slate-400">
+                      Comparte tu hoja como <em>"Cualquier persona con el enlace (Lector)"</em> o publicada en la web, y pega el enlace aquí.
+                    </p>
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">Nombre de esta tabla</label>
+                      <input
+                        value={dataSheetName}
+                        onChange={e => setDataSheetName(e.target.value)}
+                        placeholder="Ej: Cobertura Bodegas y Cortes"
+                        className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs outline-none focus:border-teal-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">Enlace de Google Sheets</label>
+                      <input
+                        value={dataSheetUrl}
+                        onChange={e => setDataSheetUrl(e.target.value)}
+                        placeholder="https://docs.google.com/spreadsheets/d/..."
+                        className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs outline-none focus:border-teal-500"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={busyAction === 'sync_google_sheet'}
+                      className="w-full py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-50 font-semibold text-white flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${busyAction === 'sync_google_sheet' ? 'animate-spin' : ''}`} />
+                      {busyAction === 'sync_google_sheet' ? 'Sincronizando hoja...' : 'Conectar y sincronizar ahora'}
+                    </button>
+                  </form>
+
+                  {/* Card 2: Upload Excel / CSV Pro */}
+                  <form onSubmit={handleImportExcelTable} className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 text-xs">
+                    <div className="font-bold text-sky-300 text-sm">2. Importar Excel / CSV a Tabla Pro Sheerit</div>
+                    <p className="text-[11px] text-slate-400">
+                      Guarda tu base directamente en la nube de Sheerit (hasta 1.500 filas por tabla) para consultas instantáneas.
+                    </p>
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">Nombre de la tabla</label>
+                      <input
+                        value={dataUploadName}
+                        onChange={e => setDataUploadName(e.target.value)}
+                        placeholder="Ej: Catálogo Precios 2026"
+                        className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs outline-none focus:border-sky-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">Archivo Excel (.xlsx / .xls / .csv)</label>
+                      <input
+                        type="file"
+                        accept=".xlsx,.xls,.csv"
+                        onChange={e => setDataUploadFile(e.target.files?.[0] || null)}
+                        className="w-full text-[11px] text-slate-300 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-slate-800 file:text-slate-200"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={busyAction === 'import_excel_table'}
+                      className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 font-semibold text-white flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      {busyAction === 'import_excel_table' ? 'Importando...' : 'Subir como Tabla Pro'}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Connected Sources List */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-bold text-slate-200">
+                    Tablas y Hojas Conectadas ({dataSources.length})
+                  </h3>
+                  {dataSources.length === 0 ? (
+                    <p className="text-xs text-slate-500 py-6 text-center bg-slate-950 border border-slate-800 rounded-xl">
+                      Aún no has conectado ninguna hoja ni tabla. Agrega una arriba y pruébala de una vez en el <strong>4. Modo Prueba</strong>.
+                    </p>
+                  ) : (
+                    dataSources.map(src => {
+                      const isPreviewOpen = dataPreviewOpenId === src.id;
+                      return (
+                        <div key={src.id} className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 text-xs">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-white text-sm">{src.name}</span>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${
+                                src.source_type === 'google_sheets'
+                                  ? 'bg-teal-500/15 border-teal-500/30 text-teal-300'
+                                  : 'bg-sky-500/15 border-sky-500/30 text-sky-300'
+                              }`}>
+                                {src.source_type === 'google_sheets' ? 'Google Sheets en vivo' : 'Tabla Pro Sheerit'}
+                              </span>
+                              <span className="text-[11px] font-mono text-slate-400">{src.row_count} filas</span>
+                              {src.last_synced_at && (
+                                <span className="text-[11px] text-slate-500">
+                                  · Sincronizado: {new Date(src.last_synced_at).toLocaleString('es-CO')}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setDataPreviewOpenId(isPreviewOpen ? null : src.id)}
+                                className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-[11px] text-slate-200 hover:border-teal-500/50 cursor-pointer"
+                              >
+                                {isPreviewOpen ? 'Ocultar vista previa' : 'Ver filas'}
+                              </button>
+                              {src.source_type === 'google_sheets' && (
+                                <button
+                                  type="button"
+                                  disabled={busyAction === `resync_${src.id}`}
+                                  onClick={() => handleResyncSource(src.id)}
+                                  className="px-2.5 py-1 rounded-lg bg-teal-600/20 hover:bg-teal-600/35 border border-teal-500/40 text-[11px] text-teal-200 flex items-center gap-1 cursor-pointer"
+                                >
+                                  <RefreshCw className={`w-3 h-3 ${busyAction === `resync_${src.id}` ? 'animate-spin' : ''}`} />
+                                  Sincronizar
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteDataSource(src.id)}
+                                className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 cursor-pointer"
+                                title="Eliminar fuente"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {isPreviewOpen && src.previewRows.length > 0 && (
+                            <div className="overflow-x-auto border border-slate-800 rounded-xl">
+                              <table className="min-w-full text-[11px] text-left">
+                                <thead className="bg-slate-900 text-slate-300">
+                                  <tr>
+                                    {src.headers.map(h => (
+                                      <th key={h} className="px-2.5 py-1.5 font-semibold border-b border-slate-800 whitespace-nowrap">
+                                        {h}
+                                      </th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800/80 text-slate-300">
+                                  {src.previewRows.slice(0, 10).map((row, idx) => (
+                                    <tr key={idx} className="hover:bg-slate-900/50">
+                                      {src.headers.map(h => (
+                                        <td key={h} className="px-2.5 py-1.5 whitespace-nowrap">
+                                          {row[h] || '—'}
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -210,21 +210,21 @@ export const MODULES_CATALOG: ModuleSpec[] = [
   {
     id: 'crm',
     includedInBase: false,
-    shortTitle: 'Base de Datos CRM',
-    title: 'Base de Datos CRM y Control de Clientes',
-    subtitle: 'Búsquedas instantáneas, vencimientos y sincronización Excel / SQL',
+    shortTitle: 'Datos, CRM & Sheets',
+    title: 'Base de Datos CRM & Hojas Conectadas (Excel / Google Sheets)',
+    subtitle: 'Tablas Pro en la nube + consulta en vivo de Google Sheets mientras responde tu bot',
     price: 25000,
     tag: '+$25.000 / mes',
     accent: 'sky',
     description:
-      'Organiza toda tu cartera en un panel web ultrarrápido: consulta qué compró cada cliente, su fecha de vencimiento, historial de chats y stock disponible, con sincronización directa a Excel Online / OneDrive o MariaDB.',
+      'Conecta tu Google Sheets para que tu bot consulte cobertura, bodegas, cortes, stock o precios en vivo, o sube tus archivos Excel/CSV directamente a Sheerit para trabajar con una base de datos Pro sin depender de hojas sueltas.',
     exampleTitle: 'Ejemplo real en operación:',
     exampleText:
-      'Digitas los últimos dígitos del celular de un cliente (aunque en la base esté con +57 y espacios), ves al instante su historial completo, renuevas 30 días o liberas el cupo en 1 clic.',
+      'Un cliente pregunta por entregas en Envigado: tu bot consulta la matriz conectada, detecta la bodega, los días de envío y la hora de corte vigentes, y elige automáticamente el audio correcto.',
     bullets: [
-      'Buscador normalizado de teléfonos, nombres, correos y planes',
-      'Tabla dinámica en tiempo real de stock y cupos disponibles',
-      'Sincronización bidireccional Excel Online (Microsoft Graph) o base SQL'
+      'Sincronización automática en vivo desde enlace de Google Sheets (lectura)',
+      'Importador de Excel (.xlsx) / CSV directo a Tablas Pro dentro de Sheerit',
+      'Búsquedas normalizadas e inyección automática de filas reales en el chat del bot'
     ],
     icon: Database
   },
