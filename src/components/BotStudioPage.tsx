@@ -23,8 +23,33 @@ import {
   Upload,
   ShieldCheck,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Play,
+  Pause,
+  RotateCcw,
+  UserCheck
 } from 'lucide-react';
+
+interface SimAudioItem {
+  id: number;
+  title: string;
+  duration_sec: number;
+  hasImage: boolean;
+  image_filename?: string | null;
+  followup_text?: string;
+}
+
+interface SimChatMessage {
+  id: string;
+  sender: 'customer' | 'bot' | 'human';
+  text?: string;
+  burst?: string[];
+  mode?: string;
+  reason?: string;
+  pausedByHuman?: boolean;
+  audios?: SimAudioItem[];
+  timestamp: string;
+}
 
 interface BotStudioPageProps {
   onNavigateHome?: () => void;
@@ -204,9 +229,19 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
   const [improvements, setImprovements] = useState<ImprovementItem[]>([]);
   const [logsSubTab, setLogsSubTab] = useState<'history' | 'proposals' | 'applied'>('history');
   const [pairingPhone, setPairingPhone] = useState('');
-  const [activeTab, setActiveTab] = useState<'whatsapp' | 'generator' | 'elevenlabs' | 'logs' | 'chats'>('whatsapp');
+  const [activeTab, setActiveTab] = useState<'whatsapp' | 'generator' | 'elevenlabs' | 'simulator' | 'chats' | 'logs'>('whatsapp');
   const [bannerMsg, setBannerMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
+
+  // Modo Prueba (chat simulado sin vincular WhatsApp)
+  const [simMessages, setSimMessages] = useState<SimChatMessage[]>([]);
+  const [simHistory, setSimHistory] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
+  const [simBurstDrafts, setSimBurstDrafts] = useState<string[]>(['']);
+  const [simHumanPaused, setSimHumanPaused] = useState(false);
+  const [simHumanReply, setSimHumanReply] = useState('');
+  const [simAudioBlobUrls, setSimAudioBlobUrls] = useState<Record<number, string>>({});
+  const [simImageBlobUrls, setSimImageBlobUrls] = useState<Record<number, string>>({});
+  const [simExpandedWhyId, setSimExpandedWhyId] = useState<string | null>(null);
 
   // Editable bot config
   const [cfgBusinessName, setCfgBusinessName] = useState('');
@@ -922,6 +957,154 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
     }
   };
 
+  const ensureSimMediaLoaded = async (pickedAudios: SimAudioItem[]) => {
+    if (!token || !pickedAudios.length) return;
+    await Promise.all(
+      pickedAudios.map(async item => {
+        if (!simAudioBlobUrls[item.id]) {
+          try {
+            const res = await fetch(`${apiBase}/api/saas-bot/audios/${item.id}/stream`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+              const blob = await res.blob();
+              const objUrl = URL.createObjectURL(blob);
+              setSimAudioBlobUrls(prev => (prev[item.id] ? prev : { ...prev, [item.id]: objUrl }));
+            }
+          } catch {}
+        }
+        if (item.hasImage && !simImageBlobUrls[item.id]) {
+          try {
+            const res = await fetch(`${apiBase}/api/saas-bot/audios/${item.id}/image`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+              const blob = await res.blob();
+              const objUrl = URL.createObjectURL(blob);
+              setSimImageBlobUrls(prev => (prev[item.id] ? prev : { ...prev, [item.id]: objUrl }));
+            }
+          } catch {}
+        }
+      })
+    );
+  };
+
+  const handleRunSimulation = async (overrideMessages?: string[]) => {
+    const burst = (overrideMessages ?? simBurstDrafts).map(m => m.trim()).filter(Boolean);
+    if (burst.length === 0) {
+      notify('err', 'Escribe al menos un mensaje de cliente para probar.');
+      return;
+    }
+
+    const nowLabel = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+    const customerBubbleId = `sim_c_${Date.now()}`;
+    setSimMessages(prev => [
+      ...prev,
+      {
+        id: customerBubbleId,
+        sender: 'customer',
+        text: burst.join('\n'),
+        burst: burst.length > 1 ? burst : undefined,
+        timestamp: nowLabel
+      }
+    ]);
+    if (!overrideMessages) setSimBurstDrafts(['']);
+    setBusyAction('simulate_chat');
+
+    try {
+      const res = await fetch(`${apiBase}/api/saas-bot/simulate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          messages: burst,
+          history: simHistory,
+          humanPaused: simHumanPaused
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo simular el turno');
+
+      const sim = data.simulation;
+      const botBubbleId = `sim_b_${Date.now()}`;
+
+      if (sim.pausedByHuman) {
+        setSimMessages(prev => [
+          ...prev,
+          {
+            id: botBubbleId,
+            sender: 'bot',
+            pausedByHuman: true,
+            mode: 'paused',
+            reason: sim.reason,
+            timestamp: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+          }
+        ]);
+        setSimHistory(prev => [...prev, { role: 'user', content: sim.incomingText }].slice(-12));
+        return;
+      }
+
+      if (Array.isArray(sim.pickedAudios) && sim.pickedAudios.length > 0) {
+        ensureSimMediaLoaded(sim.pickedAudios);
+      }
+
+      setSimMessages(prev => [
+        ...prev,
+        {
+          id: botBubbleId,
+          sender: 'bot',
+          text: sim.replyText || '',
+          mode: sim.mode,
+          reason: sim.reason,
+          audios: sim.pickedAudios || [],
+          timestamp: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
+
+      setSimHistory(prev =>
+        [
+          ...prev,
+          { role: 'user' as const, content: sim.incomingText },
+          ...(sim.assistantHistorySummary
+            ? [{ role: 'assistant' as const, content: String(sim.assistantHistorySummary) }]
+            : [])
+        ].slice(-12)
+      );
+    } catch (err: any) {
+      notify('err', err.message);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleSendSimHumanReply = () => {
+    const msg = simHumanReply.trim();
+    if (!msg) return;
+    if (!simHumanPaused) setSimHumanPaused(true);
+    setSimMessages(prev => [
+      ...prev,
+      {
+        id: `sim_h_${Date.now()}`,
+        sender: 'human',
+        text: msg,
+        timestamp: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
+    setSimHistory(prev => [...prev, { role: 'assistant', content: msg }].slice(-12));
+    setSimHumanReply('');
+  };
+
+  const handleResetSimulation = () => {
+    setSimMessages([]);
+    setSimHistory([]);
+    setSimBurstDrafts(['']);
+    setSimHumanPaused(false);
+    setSimHumanReply('');
+    setSimExpandedWhyId(null);
+  };
+
   if (!token) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-10">
@@ -1160,13 +1343,14 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
         )}
 
         {/* Navigation tabs */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
           {[
             { id: 'whatsapp', label: '1. Conectar WhatsApp', icon: QrCode },
             { id: 'generator', label: '2. Generador IA & Prompt', icon: Sparkles },
             { id: 'elevenlabs', label: '3. Audios y Flujos', icon: Volume2 },
-            { id: 'chats', label: '4. Chats en Vivo', icon: Send },
-            { id: 'logs', label: '5. Historial y Mejoras', icon: MessageSquare }
+            { id: 'simulator', label: '4. Modo Prueba', icon: Play },
+            { id: 'chats', label: '5. Chats en Vivo', icon: Send },
+            { id: 'logs', label: '6. Historial y Mejoras', icon: MessageSquare }
           ].map(tab => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -2031,6 +2215,314 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Tab 4: Modo Prueba (Simulador sin WhatsApp) */}
+        {activeTab === 'simulator' && (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold flex items-center gap-2">
+                  <Play className="w-5 h-5 text-teal-400" /> Modo Prueba (Simulador de Chat en Vivo)
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Prueba exactamente qué audio, imagen, texto o pausa elegiría tu bot con tus reglas y biblioteca actuales. No requiere WhatsApp conectado, no escribe a clientes reales y no consume tu cuota mensual.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setSimHumanPaused(prev => !prev)}
+                  className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                    simHumanPaused
+                      ? 'bg-amber-500/20 border-amber-400/50 text-amber-200 hover:bg-amber-500/30'
+                      : 'bg-slate-950 border-slate-700 text-slate-200 hover:border-teal-500/50'
+                  }`}
+                >
+                  {simHumanPaused ? (
+                    <>
+                      <Play className="w-3.5 h-3.5 text-emerald-300" /> Reactivar bot (Auto)
+                    </>
+                  ) : (
+                    <>
+                      <Pause className="w-3.5 h-3.5 text-amber-300" /> Simular toma manual ({cfgPauseMinutes} min)
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetSimulation}
+                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> Reiniciar chat
+                </button>
+              </div>
+            </div>
+
+            {/* Escenarios rápidos de prueba */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-semibold text-slate-400">Pruebas rápidas:</span>
+              <button
+                type="button"
+                disabled={busyAction === 'simulate_chat'}
+                onClick={() => handleRunSimulation(['Hola, quiero información'])}
+                className="px-3 py-1 rounded-full bg-slate-950 hover:bg-slate-800 border border-slate-700 text-[11px] text-slate-200 cursor-pointer"
+              >
+                👋 Primer saludo
+              </button>
+              <button
+                type="button"
+                disabled={busyAction === 'simulate_chat'}
+                onClick={() => handleRunSimulation(['¿Cuánto valen 3 tarros?', 'Estoy en Medellín'])}
+                className="px-3 py-1 rounded-full bg-slate-950 hover:bg-slate-800 border border-slate-700 text-[11px] text-slate-200 cursor-pointer"
+              >
+                ⚡ 2 mensajes seguidos (Precio + Ciudad)
+              </button>
+              <button
+                type="button"
+                disabled={busyAction === 'simulate_chat'}
+                onClick={() => handleRunSimulation(['Perdón, quise decir Envigado, ¿cuándo llega?'])}
+                className="px-3 py-1 rounded-full bg-slate-950 hover:bg-slate-800 border border-slate-700 text-[11px] text-slate-200 cursor-pointer"
+              >
+                📍 Corrección de ciudad
+              </button>
+            </div>
+
+            {simHumanPaused && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 flex items-center justify-between gap-2 flex-wrap">
+                <span className="flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 shrink-0" />
+                  <strong>Control manual activo:</strong> mientras esté activo, si el cliente vuelve a escribir, el bot guardará silencio tal como en producción.
+                </span>
+              </div>
+            )}
+
+            {/* Hilo visual de WhatsApp simulado */}
+            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 h-[420px] overflow-y-auto space-y-3">
+              {simMessages.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center text-slate-500 space-y-2 px-4">
+                  <Bot className="w-8 h-8 text-teal-400/70" />
+                  <p className="text-xs max-w-md">
+                    Escribe un mensaje abajo o haz clic en una prueba rápida. Verás exactamente qué audio de tu biblioteca, imagen y texto elegiría <strong className="text-slate-300">{cfgBusinessName || 'tu bot'}</strong> en este momento.
+                  </p>
+                </div>
+              ) : (
+                simMessages.map(msg => {
+                  if (msg.sender === 'customer') {
+                    return (
+                      <div key={msg.id} className="flex justify-start">
+                        <div className="max-w-[82%] bg-slate-800 border border-slate-700 rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-xs text-slate-100 space-y-1">
+                          <div className="text-[10px] font-bold text-cyan-300 flex items-center justify-between gap-3">
+                            <span>Cliente simulado {msg.burst ? `(${msg.burst.length} mensajes seguidos)` : ''}</span>
+                            <span className="text-slate-500 font-normal">{msg.timestamp}</span>
+                          </div>
+                          {msg.burst ? (
+                            <div className="space-y-1">
+                              {msg.burst.map((line, idx) => (
+                                <div key={idx} className="px-2 py-1 rounded-lg bg-slate-900/80 border border-slate-700/70">
+                                  {line}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="whitespace-pre-wrap">{msg.text}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (msg.sender === 'human') {
+                    return (
+                      <div key={msg.id} className="flex justify-end">
+                        <div className="max-w-[82%] bg-indigo-950/70 border border-indigo-500/40 rounded-2xl rounded-tr-sm px-3.5 py-2.5 text-xs text-slate-100 space-y-1">
+                          <div className="text-[10px] font-bold text-indigo-300 flex items-center justify-between gap-3">
+                            <span>👤 Tú (Asesor humano)</span>
+                            <span className="text-slate-400 font-normal">{msg.timestamp}</span>
+                          </div>
+                          <p className="whitespace-pre-wrap">{msg.text}</p>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (msg.pausedByHuman) {
+                    return (
+                      <div key={msg.id} className="flex justify-center">
+                        <div className="px-3.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-200 max-w-lg text-center">
+                          ⏸️ <strong>Bot en silencio:</strong> {msg.reason}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={msg.id} className="flex justify-end">
+                      <div className="max-w-[85%] bg-teal-950/60 border border-teal-500/35 rounded-2xl rounded-tr-sm px-3.5 py-2.5 text-xs text-slate-100 space-y-2.5">
+                        <div className="text-[10px] font-bold text-teal-300 flex items-center justify-between gap-3">
+                          <span>🤖 Bot ({msg.mode || 'auto'})</span>
+                          <span className="text-slate-400 font-normal">{msg.timestamp}</span>
+                        </div>
+
+                        {msg.audios && msg.audios.length > 0 && (
+                          <div className="space-y-2">
+                            {msg.audios.map(aud => (
+                              <div key={aud.id} className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="font-semibold text-emerald-300 flex items-center gap-1.5">
+                                    <Volume2 className="w-3.5 h-3.5 shrink-0" /> Nota de voz: {aud.title} ({aud.duration_sec}s)
+                                  </span>
+                                  <span className="text-[10px] font-mono text-slate-500">ID #{aud.id}</span>
+                                </div>
+                                {simAudioBlobUrls[aud.id] ? (
+                                  <audio controls src={simAudioBlobUrls[aud.id]} className="w-full h-8" />
+                                ) : (
+                                  <div className="text-[10px] text-slate-400">Cargando reproductor...</div>
+                                )}
+                                {aud.hasImage && (
+                                  <div className="space-y-1 pt-1 border-t border-slate-800/80">
+                                    <div className="text-[10px] font-semibold text-cyan-300">
+                                      🖼️ Imagen adjunta: {aud.image_filename || 'adjunta'}
+                                    </div>
+                                    {simImageBlobUrls[aud.id] && (
+                                      <img
+                                        src={simImageBlobUrls[aud.id]}
+                                        alt={aud.image_filename || aud.title}
+                                        className="max-h-48 rounded-lg border border-slate-800 object-contain"
+                                      />
+                                    )}
+                                  </div>
+                                )}
+                                {aud.followup_text && (
+                                  <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-200 whitespace-pre-wrap">
+                                    {aud.followup_text}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {msg.text && (
+                          <div className="p-2.5 rounded-xl bg-slate-900/70 border border-slate-800 text-xs text-slate-100 whitespace-pre-wrap">
+                            {msg.text}
+                          </div>
+                        )}
+
+                        {msg.reason && (
+                          <div className="pt-1">
+                            <button
+                              type="button"
+                              onClick={() => setSimExpandedWhyId(prev => (prev === msg.id ? null : msg.id))}
+                              className="text-[10px] font-semibold text-teal-300 hover:text-teal-200 flex items-center gap-1 cursor-pointer"
+                            >
+                              {simExpandedWhyId === msg.id ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                              ¿Por qué eligió esto?
+                            </button>
+                            {simExpandedWhyId === msg.id && (
+                              <div className="mt-1.5 p-2 rounded-lg bg-slate-950/90 border border-teal-500/20 text-[11px] text-slate-300">
+                                {msg.reason}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Composer: Mensajes seguidos de cliente + respuesta manual asesor */}
+            <div className="grid lg:grid-cols-2 gap-4">
+              <form
+                onSubmit={e => {
+                  e.preventDefault();
+                  handleRunSimulation();
+                }}
+                className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-cyan-300">Mensaje(s) del cliente de prueba</span>
+                  <button
+                    type="button"
+                    onClick={() => setSimBurstDrafts(prev => (prev.length < 5 ? [...prev, ''] : prev))}
+                    className="text-[11px] font-semibold text-teal-300 hover:text-teal-200 flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Añadir mensaje seguido
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {simBurstDrafts.map((draft, idx) => (
+                    <div key={idx} className="flex gap-2">
+                      <input
+                        value={draft}
+                        onChange={e =>
+                          setSimBurstDrafts(prev => prev.map((v, i) => (i === idx ? e.target.value : v)))
+                        }
+                        placeholder={
+                          idx === 0
+                            ? 'Ej: Hola, quiero información de ResvisFactor'
+                            : `Mensaje seguido #${idx + 1} (en el mismo turno)`
+                        }
+                        className="flex-1 px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs outline-none focus:border-teal-500"
+                      />
+                      {simBurstDrafts.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setSimBurstDrafts(prev => prev.filter((_, i) => i !== idx))}
+                          className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-rose-400 cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={busyAction === 'simulate_chat'}
+                    className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-xs font-semibold text-white flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    {busyAction === 'simulate_chat' ? 'Simulando respuesta...' : 'Simular envío'}
+                  </button>
+                </div>
+              </form>
+
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5 flex flex-col justify-between">
+                <div className="space-y-1">
+                  <div className="text-xs font-bold text-indigo-300">Responder como asesor humano (opcional)</div>
+                  <p className="text-[11px] text-slate-400">
+                    Envía un mensaje manual para activar la pausa automática y comprobar que el bot cede el control del chat.
+                  </p>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <input
+                    value={simHumanReply}
+                    onChange={e => setSimHumanReply(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSendSimHumanReply();
+                      }
+                    }}
+                    placeholder="Ej: ¡Claro! En Sabaneta te llega hoy mismo..."
+                    className="flex-1 px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs outline-none focus:border-indigo-500"
+                  />
+                  <button
+                    type="button"
+                    disabled={!simHumanReply.trim()}
+                    onClick={handleSendSimHumanReply}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-xs font-semibold text-white flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <UserCheck className="w-3.5 h-3.5" /> Tomar chat
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
