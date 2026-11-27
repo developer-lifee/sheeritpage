@@ -75,49 +75,59 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
   return (
     <div className="min-h-screen bg-[#050A12] text-slate-100 transition-colors duration-300 animate-fadeIn">
       {/* Hero Section */}
-      <section
-        className="relative overflow-hidden pt-20 pb-16 md:pt-28 md:pb-24 border-b border-teal-500/15"
-        style={{
-          backgroundImage:
-            'radial-gradient(circle at 1px 1px, rgba(45, 212, 191, 0.08) 1px, transparent 0)',
-          backgroundSize: '28px 28px'
-        }}
-      >
+      <section className="relative overflow-hidden pt-20 pb-16 md:pt-28 md:pb-24 border-b border-teal-500/15 bg-[#030710]">
+        {/* 3D Architectural Liquid Obsidian Backdrop */}
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-60 pointer-events-none scale-105"
+          style={{ backgroundImage: "url('/assets/software_hero_bg.jpg')" }}
+        />
+        {/* Legibility Gradient Vignette */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050A12]/70 via-[#050A12]/55 to-[#050A12] pointer-events-none" />
+        {/* Subtle Cyber Grid */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-80"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 1px 1px, rgba(45, 212, 191, 0.08) 1px, transparent 0)',
+            backgroundSize: '28px 28px'
+          }}
+        />
+
         <div className="max-w-6xl mx-auto px-4 text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/30 mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-teal-500/10 backdrop-blur-md border border-teal-500/30 mb-6">
             <Sparkles className="w-4 h-4 text-teal-400" />
             <span className="text-xs font-mono font-bold text-teal-300 uppercase tracking-wider">
               Ingeniería Web, Apps iOS/Android & Automatización IA
             </span>
           </div>
           
-          <h1 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-6 leading-tight">
+          <h1 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-6 leading-tight drop-shadow-lg">
             Desarrollo de Software, Apps Móviles <br />
             <span className="bg-gradient-to-r from-teal-400 via-cyan-300 to-emerald-400 bg-clip-text text-transparent">
               & Automatizaciones a la Medida
             </span>
           </h1>
           
-          <p className="text-lg md:text-xl text-slate-300 max-w-3xl mx-auto mb-10 leading-relaxed">
+          <p className="text-lg md:text-xl text-slate-200 max-w-3xl mx-auto mb-10 leading-relaxed drop-shadow">
             Diseñamos plataformas web de alto rendimiento, aplicaciones nativas para <strong className="text-white">iOS (App Store)</strong> y <strong className="text-white">Android (Google Play)</strong>, y bots modulares en WhatsApp Web real para escalar tu operación.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={() => setIsBotModalOpen(true)}
-              className="px-7 py-3.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-black rounded-2xl shadow-xl shadow-teal-950/50 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2 cursor-pointer"
+              className="px-7 py-3.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-black rounded-2xl shadow-xl shadow-teal-950/60 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2 cursor-pointer"
             >
               <span>🤖 Bot WhatsApp IA ($10k - $60k)</span> <Sparkles className="w-4 h-4" />
             </button>
             <a
               href="#modulos-bot"
-              className="px-7 py-3.5 bg-slate-900/90 hover:bg-slate-800 text-teal-300 font-bold rounded-2xl shadow-lg border border-teal-500/40 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
+              className="px-7 py-3.5 bg-slate-900/85 backdrop-blur-md hover:bg-slate-800 text-teal-300 font-bold rounded-2xl shadow-lg border border-teal-500/40 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
             >
               ⚡ Módulos IA & OCR
             </a>
             <a 
               href="#constructor-interactivo"
-              className="px-6 py-3.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 font-bold rounded-2xl border border-slate-700/80 hover:border-teal-500/40 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
+              className="px-6 py-3.5 bg-slate-900/85 backdrop-blur-md hover:bg-slate-800 text-slate-200 font-bold rounded-2xl border border-slate-700/80 hover:border-teal-500/40 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
             >
               <span>🛠️ Diseña App / Web ($200k / $79k)</span>
             </a>
@@ -130,22 +140,38 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                   window.dispatchEvent(new Event('popstate'));
                 }
               }}
-              className="px-6 py-3.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 font-bold rounded-2xl border border-slate-700/80 hover:border-teal-500/40 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2 cursor-pointer"
+              className="px-6 py-3.5 bg-slate-900/85 backdrop-blur-md hover:bg-slate-800 text-slate-200 font-bold rounded-2xl border border-slate-700/80 hover:border-teal-500/40 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2 cursor-pointer"
             >
               <span>🎨 Portafolio</span> <ArrowRight className="w-4 h-4 text-teal-400" />
             </button>
             <a 
               href="#pricing-comparison"
-              className="px-6 py-3.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 font-bold rounded-2xl border border-slate-700/80 hover:border-teal-500/40 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
+              className="px-6 py-3.5 bg-slate-900/85 backdrop-blur-md hover:bg-slate-800 text-slate-200 font-bold rounded-2xl border border-slate-700/80 hover:border-teal-500/40 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
             >
               Ver Planes
             </a>
           </div>
+
+          {/* Telemetry & Trust Strip */}
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-3 md:gap-6 text-xs text-slate-300">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/75 backdrop-blur-md border border-slate-800">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="font-semibold text-white">WhatsApp Web Anti-Bloqueo 24/7</span>
+            </div>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/75 backdrop-blur-md border border-slate-800">
+              <Zap className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="font-semibold text-white">OCR + IA + Audios Nativos</span>
+            </div>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/75 backdrop-blur-md border border-slate-800">
+              <Shield className="w-3.5 h-3.5 text-teal-400" />
+              <span className="font-semibold text-white">Infraestructura Cloud Propia</span>
+            </div>
+          </div>
         </div>
         
         {/* Background shapes */}
-        <div className="absolute top-1/2 left-1/4 -translate-y-1/2 -translate-x-1/2 w-[420px] h-[420px] bg-teal-500/15 rounded-full blur-3xl -z-0 pointer-events-none"></div>
-        <div className="absolute top-1/3 right-1/4 -translate-y-1/2 translate-x-1/2 w-[400px] h-[400px] bg-cyan-500/10 rounded-full blur-3xl -z-0 pointer-events-none"></div>
+        <div className="absolute top-1/2 left-1/4 -translate-y-1/2 -translate-x-1/2 w-[420px] h-[420px] bg-teal-500/15 rounded-full blur-3xl z-0 pointer-events-none"></div>
+        <div className="absolute top-1/3 right-1/4 -translate-y-1/2 translate-x-1/2 w-[400px] h-[400px] bg-cyan-500/10 rounded-full blur-3xl z-0 pointer-events-none"></div>
       </section>
 
       {/* Qué hacemos / Pilares */}

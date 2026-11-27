@@ -531,12 +531,22 @@ export function BotModulesShowcase({ onNavigate, embedded = false }: BotModulesP
     <section
       id="modulos-bot"
       className="relative overflow-hidden bg-[#060B14] text-slate-100 py-16 md:py-24 border-y border-teal-500/20"
-      style={{
-        backgroundImage:
-          'radial-gradient(circle at 1px 1px, rgba(45, 212, 191, 0.08) 1px, transparent 0)',
-        backgroundSize: '28px 28px'
-      }}
     >
+      {/* Holographic Mesh 3D Atmospheric Backdrop */}
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-25 pointer-events-none"
+        style={{ backgroundImage: "url('/assets/software_suite_bg.jpg')" }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#050A12]/90 via-[#060B14]/65 to-[#050A12]/95 pointer-events-none" />
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle at 1px 1px, rgba(45, 212, 191, 0.08) 1px, transparent 0)',
+          backgroundSize: '28px 28px'
+        }}
+      />
+
       {/* Ambient glowing orbs */}
       <div className="absolute -top-32 left-1/4 w-[420px] h-[420px] bg-teal-500/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 right-1/5 w-[380px] h-[380px] bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
