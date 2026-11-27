@@ -27,7 +27,10 @@ import {
   Play,
   Pause,
   RotateCcw,
-  UserCheck
+  UserCheck,
+  Pencil,
+  Star,
+  X
 } from 'lucide-react';
 
 interface SimAudioItem {
@@ -68,6 +71,10 @@ interface TenantData {
   messages_used_month: number;
   usage_reset_month: string;
   status: string;
+  dashboard_prefs?: {
+    favoriteAudioIds?: number[];
+    [key: string]: any;
+  };
   is_bot_active: number | boolean;
   business_description: string | null;
   system_prompt: string | null;
@@ -276,6 +283,18 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
   const [libMergedUrl, setLibMergedUrl] = useState<string | null>(null);
   const [libMergedMeta, setLibMergedMeta] = useState<{ filesCount: number; durationSec: number } | null>(null);
 
+  // #3 Edición inline de flujos de audio
+  const [editingAudioId, setEditingAudioId] = useState<number | null>(null);
+  const [editAudioTitle, setEditAudioTitle] = useState('');
+  const [editAudioTrigger, setEditAudioTrigger] = useState('');
+  const [editAudioFollowup, setEditAudioFollowup] = useState('');
+  const [editAudioImageFile, setEditAudioImageFile] = useState<File | null>(null);
+  const [editAudioRemoveImage, setEditAudioRemoveImage] = useState(false);
+
+  // #4 Personalización por cliente: favoritos y filtro en Chats en Vivo
+  const [favoriteAudioIds, setFavoriteAudioIds] = useState<number[]>([]);
+  const [chatAudioSearch, setChatAudioSearch] = useState('');
+
   // Optional ElevenLabs TTS
   const [showElevenLabsTts, setShowElevenLabsTts] = useState(false);
   const [elEnabled, setElEnabled] = useState(false);
@@ -315,6 +334,7 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
     setElVoiceId(t.elevenlabs_voice_id || '');
     setElModelId(t.elevenlabs_model_id || 'eleven_multilingual_v2');
     setElReplyMode(t.reply_mode || 'text');
+    setFavoriteAudioIds(Array.isArray(t.dashboard_prefs?.favoriteAudioIds) ? t.dashboard_prefs.favoriteAudioIds : []);
   };
 
   const fetchAudios = async (activeToken = token) => {
@@ -621,6 +641,76 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
         setAudios(prev => prev.map(a => a.id === audio.id ? data.audio : a));
       }
     } catch {}
+  };
+
+  const startEditAudio = (audio: LibraryAudio) => {
+    setEditingAudioId(audio.id);
+    setEditAudioTitle(audio.title || '');
+    setEditAudioTrigger(audio.trigger_description || '');
+    setEditAudioFollowup(audio.followup_text || '');
+    setEditAudioImageFile(null);
+    setEditAudioRemoveImage(false);
+  };
+
+  const handleSaveEditAudio = async (audioId: number) => {
+    if (!editAudioTitle.trim() || !editAudioTrigger.trim()) {
+      notify('err', 'Indica el nombre del audio y cuándo debe enviarlo.');
+      return;
+    }
+    setBusyAction(`edit_audio_${audioId}`);
+    try {
+      const form = new FormData();
+      form.append('title', editAudioTitle.trim());
+      form.append('trigger_description', editAudioTrigger.trim());
+      form.append('followup_text', editAudioFollowup.trim());
+      if (editAudioRemoveImage) form.append('remove_image', '1');
+      if (editAudioImageFile) form.append('image', editAudioImageFile);
+
+      const res = await fetch(`${apiBase}/api/saas-bot/audios/${audioId}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.audio) {
+        throw new Error(data.message || 'No se pudo actualizar el audio');
+      }
+      setAudios(prev => prev.map(a => (a.id === audioId ? data.audio : a)));
+      setEditingAudioId(null);
+      setEditAudioImageFile(null);
+      setEditAudioRemoveImage(false);
+      notify('ok', 'Flujo de audio actualizado sin perder tu grabación.');
+    } catch (err: any) {
+      notify('err', err.message);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleToggleFavoriteAudio = async (audioId: number) => {
+    const prevFavs = favoriteAudioIds;
+    const nextFavs = prevFavs.includes(audioId)
+      ? prevFavs.filter(x => x !== audioId)
+      : [...prevFavs, audioId];
+    setFavoriteAudioIds(nextFavs);
+    try {
+      const res = await fetch(`${apiBase}/api/saas-bot/dashboard-prefs`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ favoriteAudioIds: nextFavs })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Error guardando favorito');
+      if (Array.isArray(data.dashboard_prefs?.favoriteAudioIds)) {
+        setFavoriteAudioIds(data.dashboard_prefs.favoriteAudioIds);
+      }
+    } catch (err: any) {
+      setFavoriteAudioIds(prevFavs);
+      notify('err', err.message);
+    }
   };
 
   const handleDeleteAudio = async (id: number) => {
@@ -1811,7 +1901,27 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                               </span>
                             </label>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleFavoriteAudio(audio.id)}
+                                title={favoriteAudioIds.includes(audio.id) ? 'Quitar de favoritos' : 'Fijar como favorito en Chats en Vivo'}
+                                className={`p-1.5 rounded-lg border transition cursor-pointer ${
+                                  favoriteAudioIds.includes(audio.id)
+                                    ? 'bg-amber-500/15 border-amber-400/40 text-amber-300'
+                                    : 'bg-slate-900 border-slate-800 text-slate-500 hover:text-amber-300'
+                                }`}
+                              >
+                                <Star className={`w-3.5 h-3.5 ${favoriteAudioIds.includes(audio.id) ? 'fill-amber-300' : ''}`} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => (editingAudioId === audio.id ? setEditingAudioId(null) : startEditAudio(audio))}
+                                className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border bg-slate-900 border-slate-700 text-slate-200 hover:border-teal-400/50 flex items-center gap-1 cursor-pointer"
+                              >
+                                <Pencil className="w-3 h-3 text-teal-400" />
+                                {editingAudioId === audio.id ? 'Cerrar' : 'Editar'}
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleToggleAudioActive(audio)}
@@ -1834,22 +1944,101 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                             </div>
                           </div>
 
-                          <p className="text-xs text-slate-400">
-                            <strong className="text-teal-400">Cuándo enviarlo:</strong> {audio.trigger_description}
-                          </p>
-                          {(Boolean(audio.has_image) || Boolean(audio.followup_text)) && (
-                            <div className="flex flex-wrap gap-2 text-[11px]">
-                              {Boolean(audio.has_image) && (
-                                <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/30 text-indigo-300">
-                                  🖼️ Imagen adjunta: {audio.image_filename || 'Sí'}
-                                </span>
+                          {editingAudioId === audio.id ? (
+                            <div className="p-3.5 rounded-xl bg-slate-900 border border-teal-500/35 space-y-3 text-xs">
+                              <div className="grid sm:grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-[11px] text-slate-400 mb-1">Nombre del audio</label>
+                                  <input
+                                    value={editAudioTitle}
+                                    onChange={e => setEditAudioTitle(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs outline-none focus:border-teal-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[11px] text-slate-400 mb-1">
+                                    Reemplazar imagen adjunta (opcional)
+                                  </label>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={e => {
+                                      setEditAudioImageFile(e.target.files?.[0] || null);
+                                      if (e.target.files?.[0]) setEditAudioRemoveImage(false);
+                                    }}
+                                    className="w-full text-[11px] text-slate-300 file:mr-2 file:py-1.5 file:px-2.5 file:rounded-lg file:border-0 file:bg-slate-800 file:text-slate-200"
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="block text-[11px] text-slate-400 mb-1">Cuándo debe enviarlo el bot</label>
+                                <textarea
+                                  rows={2}
+                                  value={editAudioTrigger}
+                                  onChange={e => setEditAudioTrigger(e.target.value)}
+                                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs outline-none focus:border-teal-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[11px] text-slate-400 mb-1">Texto complementario después del audio (opcional)</label>
+                                <textarea
+                                  rows={2}
+                                  value={editAudioFollowup}
+                                  onChange={e => setEditAudioFollowup(e.target.value)}
+                                  placeholder="Vacío si no lleva texto adicional..."
+                                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs outline-none focus:border-teal-500"
+                                />
+                              </div>
+                              {Boolean(audio.has_image) && !editAudioImageFile && (
+                                <label className="flex items-center gap-2 text-[11px] text-rose-300 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={editAudioRemoveImage}
+                                    onChange={e => setEditAudioRemoveImage(e.target.checked)}
+                                    className="accent-rose-500"
+                                  />
+                                  <span>Quitar imagen adjunta actual ({audio.image_filename || 'imagen'})</span>
+                                </label>
                               )}
-                              {audio.followup_text && (
-                                <span className="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300">
-                                  💬 Texto después del audio: "{audio.followup_text}"
-                                </span>
-                              )}
+                              <div className="flex justify-end gap-2 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingAudioId(null)}
+                                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 flex items-center gap-1 cursor-pointer"
+                                >
+                                  <X className="w-3.5 h-3.5" /> Cancelar
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={busyAction === `edit_audio_${audio.id}`}
+                                  onClick={() => handleSaveEditAudio(audio.id)}
+                                  className="px-4 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-xs font-semibold text-white flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <Save className="w-3.5 h-3.5" />
+                                  {busyAction === `edit_audio_${audio.id}` ? 'Guardando...' : 'Guardar cambios'}
+                                </button>
+                              </div>
                             </div>
+                          ) : (
+                            <>
+                              <p className="text-xs text-slate-400">
+                                <strong className="text-teal-400">Cuándo enviarlo:</strong> {audio.trigger_description}
+                              </p>
+                              {(Boolean(audio.has_image) || Boolean(audio.followup_text)) && (
+                                <div className="flex flex-wrap gap-2 text-[11px]">
+                                  {Boolean(audio.has_image) && (
+                                    <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/30 text-indigo-300">
+                                      🖼️ Imagen adjunta: {audio.image_filename || 'Sí'}
+                                    </span>
+                                  )}
+                                  {audio.followup_text && (
+                                    <span className="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300">
+                                      💬 Texto después del audio: "{audio.followup_text}"
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </>
                           )}
 
                           <audio
@@ -2222,33 +2411,70 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                         ))}
                       </div>
 
-                      {/* Botones rápidos de 1 clic para flujos */}
-                      {audios.length > 0 && (
-                        <div className="pt-2 border-t border-slate-800 space-y-1.5">
-                          <div className="text-[11px] font-semibold text-teal-300">
-                            ⚡ Disparo rápido con 1 clic (Audio + Imagen/Texto sin etiqueta de reenviado):
+                      {/* Botones rápidos de 1 clic para flujos (favoritos fijados arriba) */}
+                      {audios.length > 0 && (() => {
+                        const term = chatAudioSearch.trim().toLowerCase();
+                        const sortedAudios = [...audios]
+                          .filter(a => !term || a.title.toLowerCase().includes(term) || a.trigger_description.toLowerCase().includes(term))
+                          .sort((a, b) => {
+                            const aFav = favoriteAudioIds.includes(a.id) ? 1 : 0;
+                            const bFav = favoriteAudioIds.includes(b.id) ? 1 : 0;
+                            if (aFav !== bFav) return bFav - aFav;
+                            return a.id - b.id;
+                          });
+
+                        return (
+                          <div className="pt-2 border-t border-slate-800 space-y-2">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="text-[11px] font-semibold text-teal-300">
+                                ⚡ Disparo rápido con 1 clic (⭐ Favoritos aparecen primero):
+                              </div>
+                              <input
+                                value={chatAudioSearch}
+                                onChange={e => setChatAudioSearch(e.target.value)}
+                                placeholder="Buscar audio rápido (ej: precio, cobertura)..."
+                                className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[11px] w-full sm:w-60 outline-none focus:border-teal-500"
+                              />
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                              {sortedAudios.map(a => {
+                                const isFav = favoriteAudioIds.includes(a.id);
+                                return (
+                                  <div
+                                    key={a.id}
+                                    className={`inline-flex items-center rounded-lg border overflow-hidden ${
+                                      isFav
+                                        ? 'bg-amber-500/15 border-amber-400/50 text-amber-200'
+                                        : a.is_active
+                                          ? 'bg-indigo-600/20 border-indigo-500/30 text-indigo-200'
+                                          : 'bg-slate-800/80 border-slate-700 text-slate-300'
+                                    }`}
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleFavoriteAudio(a.id)}
+                                      title={isFav ? 'Quitar favorito' : 'Fijar como favorito'}
+                                      className="px-1.5 py-1.5 hover:bg-black/20 cursor-pointer"
+                                    >
+                                      <Star className={`w-3 h-3 ${isFav ? 'text-amber-300 fill-amber-300' : 'text-slate-500 hover:text-amber-300'}`} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={session.status !== 'CONNECTED' || busyAction === `manual_flow_${a.id}`}
+                                      onClick={() => handleSendManualFlow({ audioIds: [a.id] })}
+                                      className="pr-2.5 pl-1 py-1.5 hover:bg-black/15 disabled:opacity-40 text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Volume2 className="w-3 h-3" />
+                                      {busyAction === `manual_flow_${a.id}` ? 'Enviando...' : a.title}
+                                      {Boolean(a.has_image) && <span>🖼️</span>}
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
-                          <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
-                            {audios.map(a => (
-                              <button
-                                key={a.id}
-                                type="button"
-                                disabled={session.status !== 'CONNECTED' || busyAction === `manual_flow_${a.id}`}
-                                onClick={() => handleSendManualFlow({ audioIds: [a.id] })}
-                                className={`px-2.5 py-1.5 rounded-lg disabled:opacity-40 border text-[11px] font-semibold flex items-center gap-1 ${
-                                  a.is_active
-                                    ? 'bg-indigo-600/20 hover:bg-indigo-600/35 border-indigo-500/30 text-indigo-200'
-                                    : 'bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/30 text-amber-200'
-                                }`}
-                              >
-                                <Volume2 className="w-3 h-3" />
-                                {busyAction === `manual_flow_${a.id}` ? 'Enviando...' : a.title}
-                                {Boolean(a.has_image) && <span>🖼️</span>}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                        );
+                      })()}
 
                       {/* Envío manual de texto */}
                       <form
