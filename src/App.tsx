@@ -27,7 +27,6 @@ import ClientLoginView from './components/ClientLoginView';
 import { StoreBuilderPage } from './components/StoreBuilderPage';
 import { TenantStorefrontPage } from './components/TenantStorefrontPage';
 import { BotStudioPage } from './components/BotStudioPage';
-import { BotModulesLandingPage } from './components/BotModulesLandingPage';
 import { useDarkMode } from './hooks/useDarkMode';
 import { Search, ShoppingCart, Lock, AlertCircle, Globe } from 'lucide-react';
 import { ComboCartProvider, useComboCart } from './hooks/useComboCart';
@@ -56,7 +55,7 @@ interface Platform {
   incident?: string;
 }
 
-export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software' | 'raytracing-support' | 'raytracing-privacy' | 'pueblapp-support' | 'pueblapp-privacy' | 'portafolio' | 'evaluacion' | 'crear' | 'tienda' | 'mibot' | 'modulos';
+export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software' | 'raytracing-support' | 'raytracing-privacy' | 'pueblapp-support' | 'pueblapp-privacy' | 'portafolio' | 'evaluacion' | 'crear' | 'tienda' | 'mibot';
 
 const AUTHORIZED_ADVISORS: { [email: string]: string } = {
   'esclepiades@hotmail.com': 'Esclepiades',
@@ -485,7 +484,7 @@ function AppContent() {
     if (path === '/aiuda/admin') return 'admin';
     if (path === '/verificar' || path === '/actualizar' || path === '/hogar' || path === '/codigo') return 'verificar';
     if (path === '/mis-servicios') return 'servicios';
-    if (path === '/software') return 'software';
+    if (path === '/software' || path === '/modulos' || path === '/suite' || path === '/bot-modulos') return 'software';
     if (path === '/portafolio' || path === '/portfolio' || path === '/proyectos' || path === '/trabajos') return 'portafolio';
     if (path === '/support/raytracinggame') return 'raytracing-support';
     if (path === '/support/raytracinggame/privacy') return 'raytracing-privacy';
@@ -494,7 +493,6 @@ function AppContent() {
     if (path === '/evaluacion' || path === '/test-asesor' || path === '/test-asesores' || path === '/simulador') return 'evaluacion';
     if (path === '/crear' || path === '/builder' || path === '/comenzar' || path === '/crear-tienda' || path === '/tienda/crear') return 'crear';
     if (path === '/mi-bot' || path === '/bot-studio') return 'mibot';
-    if (path === '/modulos' || path === '/suite' || path === '/bot-modulos') return 'modulos';
     if (path.startsWith('/tienda/')) return 'tienda';
     return 'home';
   });
@@ -548,7 +546,7 @@ function AppContent() {
       setCurrentView('verificar');
     } else if (path === '/mis-servicios') {
       setCurrentView('servicios');
-    } else if (path === '/software') {
+    } else if (path === '/software' || path === '/modulos' || path === '/suite' || path === '/bot-modulos') {
       setCurrentView('software');
     } else if (path === '/portafolio' || path === '/portfolio' || path === '/proyectos' || path === '/trabajos') {
       setCurrentView('portafolio');
@@ -566,8 +564,6 @@ function AppContent() {
       setCurrentView('crear');
     } else if (path === '/mi-bot' || path === '/bot-studio') {
       setCurrentView('mibot');
-    } else if (path === '/modulos' || path === '/suite' || path === '/bot-modulos') {
-      setCurrentView('modulos');
     } else if (path.startsWith('/tienda/')) {
       setTenantSlug(path.replace('/tienda/', '').split('/')[0] || '');
       setCurrentView('tienda');
@@ -588,7 +584,7 @@ function AppContent() {
         setCurrentView('verificar');
       } else if (currentPath === '/mis-servicios') {
         setCurrentView('servicios');
-      } else if (currentPath === '/software') {
+      } else if (currentPath === '/software' || currentPath === '/modulos' || currentPath === '/suite' || currentPath === '/bot-modulos') {
         setCurrentView('software');
       } else if (currentPath === '/portafolio' || currentPath === '/portfolio' || currentPath === '/proyectos' || currentPath === '/trabajos') {
         setCurrentView('portafolio');
@@ -606,8 +602,6 @@ function AppContent() {
         setCurrentView('crear');
       } else if (currentPath === '/mi-bot' || currentPath === '/bot-studio') {
         setCurrentView('mibot');
-      } else if (currentPath === '/modulos' || currentPath === '/suite' || currentPath === '/bot-modulos') {
-        setCurrentView('modulos');
       } else if (currentPath.startsWith('/tienda/')) {
         setTenantSlug(currentPath.replace('/tienda/', '').split('/')[0] || '');
         setCurrentView('tienda');
@@ -636,7 +630,6 @@ function AppContent() {
     else if (view === 'evaluacion') path = '/evaluacion';
     else if (view === 'crear') path = '/crear';
     else if (view === 'mibot') path = '/mi-bot';
-    else if (view === 'modulos') path = '/modulos';
     window.history.pushState({}, '', path);
     window.scrollTo(0, 0);
   };
@@ -976,12 +969,6 @@ function AppContent() {
       {currentView === 'mibot' && (
         <ErrorBoundary fallbackTitle="Sheerit Bot Studio">
           <BotStudioPage onNavigateHome={() => navigateTo('home')} />
-        </ErrorBoundary>
-      )}
-
-      {currentView === 'modulos' && (
-        <ErrorBoundary fallbackTitle="Módulos Sheerit Bot Studio">
-          <BotModulesLandingPage onNavigate={navigateTo} />
         </ErrorBoundary>
       )}
 
