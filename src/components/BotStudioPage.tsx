@@ -38,6 +38,8 @@ interface TenantData {
   email: string;
   plan_name: string;
   monthly_message_limit: number;
+  amount_paid?: number;
+  expires_at?: string | null;
   messages_used_month: number;
   usage_reset_month: string;
   status: string;
@@ -124,6 +126,7 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [activationCode, setActivationCode] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [email, setEmail] = useState('');
@@ -270,7 +273,14 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
     try {
       const endpoint = authMode === 'register' ? '/api/saas-bot/register' : '/api/saas-bot/login';
       const payload = authMode === 'register'
-        ? { ownerName, businessName, email, password, businessDescription: registerDesc }
+        ? {
+            activationCode: activationCode.trim().toUpperCase(),
+            ownerName,
+            businessName,
+            email,
+            password,
+            businessDescription: registerDesc
+          }
         : { email, password };
 
       const res = await fetch(`${apiBase}${endpoint}`, {
@@ -640,6 +650,21 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
           <form onSubmit={handleAuthSubmit} className="space-y-3">
             {authMode === 'register' && (
               <>
+                <div className="p-3 rounded-xl bg-teal-500/10 border border-teal-500/30">
+                  <label className="block text-xs font-semibold text-teal-300 mb-1 flex items-center gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5" /> Código de Activación (obligatorio)
+                  </label>
+                  <input
+                    required
+                    value={activationCode}
+                    onChange={e => setActivationCode(e.target.value.toUpperCase())}
+                    placeholder="Ej: JOHAN-30K"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/40 text-sm font-mono uppercase tracking-wider text-teal-200 focus:border-teal-400 outline-none"
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Te lo entrega tu asesor Sheerit al confirmar tu plan.
+                  </p>
+                </div>
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Tu nombre completo</label>
                   <input
@@ -733,6 +758,27 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                 <span className="text-[11px] px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30 font-semibold">
                   {tenant?.plan_name || 'Plan Básico 30K'}
                 </span>
+                {tenant?.expires_at && (() => {
+                  const expDate = new Date(tenant.expires_at);
+                  const isExpired = expDate.getTime() < Date.now();
+                  return (
+                    <span
+                      className={`text-[11px] px-2 py-0.5 rounded-full border font-semibold ${
+                        isExpired
+                          ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                          : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                      }`}
+                    >
+                      {isExpired
+                        ? 'Plan vencido — renovar con Sheerit'
+                        : `Vigente hasta ${expDate.toLocaleDateString('es-CO', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric'
+                          })}`}
+                    </span>
+                  );
+                })()}
               </div>
               <p className="text-xs text-slate-400">
                 Hola, {tenant?.owner_name} • {tenant?.email}
