@@ -1977,19 +1977,23 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                       </div>
 
                       {/* Botones rápidos de 1 clic para flujos */}
-                      {audios.filter(a => a.is_active).length > 0 && (
+                      {audios.length > 0 && (
                         <div className="pt-2 border-t border-slate-800 space-y-1.5">
                           <div className="text-[11px] font-semibold text-teal-300">
                             ⚡ Disparo rápido con 1 clic (Audio + Imagen/Texto sin etiqueta de reenviado):
                           </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {audios.filter(a => a.is_active).map(a => (
+                          <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
+                            {audios.map(a => (
                               <button
                                 key={a.id}
                                 type="button"
                                 disabled={session.status !== 'CONNECTED' || busyAction === `manual_flow_${a.id}`}
                                 onClick={() => handleSendManualFlow({ audioIds: [a.id] })}
-                                className="px-2.5 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/35 disabled:opacity-40 border border-indigo-500/30 text-[11px] text-indigo-200 font-semibold flex items-center gap-1"
+                                className={`px-2.5 py-1.5 rounded-lg disabled:opacity-40 border text-[11px] font-semibold flex items-center gap-1 ${
+                                  a.is_active
+                                    ? 'bg-indigo-600/20 hover:bg-indigo-600/35 border-indigo-500/30 text-indigo-200'
+                                    : 'bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/30 text-amber-200'
+                                }`}
                               >
                                 <Volume2 className="w-3 h-3" />
                                 {busyAction === `manual_flow_${a.id}` ? 'Enviando...' : a.title}
