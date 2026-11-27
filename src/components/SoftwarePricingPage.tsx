@@ -592,15 +592,19 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                   </li>
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                    <span>Catálogo de productos interactivo y respuestas con fotos</span>
+                    <span><strong>Flujos Audio + Imagen + Texto:</strong> notas de voz naturales sin etiqueta de "Reenviado" + envío automático de fotos y texto</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                    <span>Transcripción de notas de voz recibidas</span>
+                    <span><strong>Modo Semiautomático + 1 Clic:</strong> auto-pausa al intervenir tú y botones rápidos para disparar audios en vivo</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                    <span>Prioridad de servidor 24/7 sin caídas</span>
+                    <span><strong>Panel de Ajustes de Mejora con IA:</strong> consulta decisiones del bot y revierte cambios en 1 clic</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <span><strong>Conexión WhatsApp Web real anti-bloqueo</strong> (QR o código de 8 dígitos) y servidor 24/7</span>
                   </li>
                 </ul>
               </div>

@@ -98,7 +98,7 @@ const MODULES_CATALOG: ModuleSpec[] = [
     title: 'Flujos Audio + Imagen + Texto (Sin "Reenviado")',
     subtitle: 'Simulación humana de grabación en tiempo real + material visual automático',
     price: 0,
-    tag: 'INCLUIDO EN BASE',
+    tag: 'INCLUIDO EN PRO ($30k)+',
     accent: 'emerald',
     description:
       'Sube tus audios en MP3/OGG y adjunta una imagen o texto complementario a cada flujo. El motor recodifica el audio al instante sin metadatos heredados, marca "grabando audio..." y lo entrega junto con la foto de tu catálogo o precios.',
@@ -119,7 +119,7 @@ const MODULES_CATALOG: ModuleSpec[] = [
     title: 'Modo Semiautomático + Chats en Vivo 1 Clic',
     subtitle: 'Toma el control de cualquier venta sin pelear con el bot',
     price: 0,
-    tag: 'INCLUIDO EN BASE',
+    tag: 'INCLUIDO EN PRO ($30k)+',
     accent: 'teal',
     description:
       'Atención híbrida inteligente: el bot responde en piloto automático hasta que tú escribes desde tu celular o desde la consola web. En ese instante, el bot pausa ese chat durante los minutos que elijas y te deja cerrar la venta.',
@@ -629,7 +629,7 @@ export function BotModulesShowcase({ onNavigate, embedded = false }: BotModulesP
                           {mod.shortTitle}
                         </div>
                         <div className="text-[10px] font-mono text-slate-400 truncate">
-                          {mod.includedInBase ? 'Incluido en planes base' : `+${formatCop(mod.price)} / mes`}
+                          {mod.includedInBase ? 'Incluido desde Plan Pro ($30k)' : `+${formatCop(mod.price)} / mes`}
                         </div>
                       </div>
                     </div>
@@ -637,7 +637,7 @@ export function BotModulesShowcase({ onNavigate, embedded = false }: BotModulesP
                     <div className="shrink-0">
                       {mod.includedInBase ? (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                          BASE
+                          PRO $30K+
                         </span>
                       ) : isAdded ? (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-400/40">
@@ -801,9 +801,15 @@ export function BotModulesShowcase({ onNavigate, embedded = false }: BotModulesP
                   <span>{selectedPlan.name}</span>
                   <span className="font-mono">{formatCop(selectedPlan.price)}</span>
                 </div>
-                <div className="text-[11px] text-emerald-400">
-                  ✓ Incluye Flujos Audio+Imagen, Modo Semiautomático y Ajustes con IA
-                </div>
+                {selectedPlanId !== 'starter' ? (
+                  <div className="text-[11px] text-emerald-400">
+                    ✓ Incluye Flujos Audio+Imagen+Texto (sin reenviado), Modo Semiautomático 1 Clic y Ajustes con IA
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-slate-400">
+                    • Sube a Plan Pro ($30.000) para incluir Flujos Audio+Imagen, Modo Semiautomático 1 Clic y Ajustes con IA
+                  </div>
+                )}
 
                 {pricing.picked.map(item => (
                   <div key={item.id} className="flex justify-between text-slate-400">
