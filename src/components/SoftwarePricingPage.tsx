@@ -184,7 +184,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
   const handleOpenInInspector = () => {
     setActiveTrack('bot');
     setTimeout(() => {
-      document.getElementById('calculadora-modulos')?.scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('modulos-bot')?.scrollIntoView({ behavior: 'smooth' });
     }, 60);
   };
 

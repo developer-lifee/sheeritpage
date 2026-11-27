@@ -609,7 +609,7 @@ export function BotModulesShowcase({
         <div className="text-center space-y-4">
           <div className="inline-flex flex-wrap items-center justify-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/90 border border-teal-500/35 text-[11px] font-mono text-teal-300 shadow-lg shadow-teal-950/50">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span>WHATSAPP WEB ENGINE</span>
+            <span>{embedded ? 'PASO 2 · INSPECCIONA Y ACTIVA TUS MÓDULOS' : 'WHATSAPP WEB ENGINE'}</span>
             <span className="text-slate-600">•</span>
             <span>SESIÓN REAL ANTI-BLOQUEO</span>
             <span className="text-slate-600">•</span>
@@ -628,17 +628,19 @@ export function BotModulesShowcase({
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
-            <a
-              href="#calculadora-modulos"
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-teal-900/40"
-            >
-              <Zap className="w-4 h-4" /> Armar y cotizar mi Suite
-            </a>
+            {!embedded && (
+              <a
+                href="#calculadora-modulos"
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-teal-900/40"
+              >
+                <Zap className="w-4 h-4" /> Armar y cotizar mi Suite
+              </a>
+            )}
             {onNavigate && (
               <button
                 type="button"
                 onClick={() => onNavigate('mibot')}
-                className="px-5 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-slate-100 font-semibold text-xs sm:text-sm flex items-center gap-2"
+                className="px-5 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-slate-100 font-semibold text-xs sm:text-sm flex items-center gap-2 cursor-pointer"
               >
                 <Bot className="w-4 h-4 text-teal-400" /> Abrir Panel Bot Studio (/mi-bot)
               </button>
@@ -651,11 +653,19 @@ export function BotModulesShowcase({
           <div className="flex flex-wrap items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-800/80">
             <div className="text-xs font-mono text-slate-300 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-teal-400" />
-              INSPECTOR INTERACTIVO DE MÓDULOS — Selecciona un módulo para ver ejemplo real y simulación en vivo
+              INSPECTOR INTERACTIVO DE MÓDULOS — Haz clic para ver simulación y activar en tu plan
             </div>
-            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
-              15% OFF automático al activar 3+ módulos
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {pricing.freeSlots > 0 && (
+                <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-teal-500/15 border border-teal-400/40 text-teal-200">
+                  Cupos gratis en {selectedPlan.name}: {pricing.includedPicked.length}/{pricing.freeSlots}
+                  {pricing.remainingFreeSlots > 0 && ` · ¡Elige ${pricing.remainingFreeSlots} más sin costo!`}
+                </span>
+              )}
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
+                15% OFF automático en 3+ extras
+              </span>
+            </div>
           </div>
 
           <div className="grid lg:grid-cols-12 gap-6 items-start">
@@ -665,13 +675,22 @@ export function BotModulesShowcase({
                 const Icon = mod.icon;
                 const isActive = activeModId === mod.id;
                 const isAdded = !mod.includedInBase && selectedAddons.includes(mod.id);
+                const isIncludedFree = !mod.includedInBase && pricing.includedPicked.some(i => i.id === mod.id);
+                const canTakeFree = !mod.includedInBase && !isAdded && pricing.remainingFreeSlots > 0;
 
                 return (
-                  <button
+                  <div
                     key={mod.id}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setActiveModId(mod.id)}
-                    className={`w-full text-left p-3 rounded-2xl border transition flex items-center justify-between gap-3 ${
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setActiveModId(mod.id);
+                      }
+                    }}
+                    className={`w-full text-left p-3 rounded-2xl border transition flex items-center justify-between gap-3 cursor-pointer ${
                       isActive
                         ? 'bg-gradient-to-r from-teal-500/20 via-slate-900 to-slate-900 border-teal-400/70 shadow-lg shadow-teal-950/40'
                         : 'bg-slate-950/70 border-slate-800/90 hover:border-slate-700 text-slate-300'
@@ -702,15 +721,34 @@ export function BotModulesShowcase({
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                           PRO $30K+
                         </span>
-                      ) : isAdded ? (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-400/40">
-                          ✓ En cotización
-                        </span>
                       ) : (
-                        <ArrowRight className={`w-4 h-4 ${isActive ? 'text-teal-400' : 'text-slate-600'}`} />
+                        <button
+                          type="button"
+                          onClick={e => {
+                            e.stopPropagation();
+                            toggleAddon(mod.id);
+                          }}
+                          className={`text-[10px] font-bold px-2.5 py-1 rounded-full border transition cursor-pointer ${
+                            isIncludedFree
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/50 hover:bg-emerald-500/30'
+                              : isAdded
+                                ? 'bg-teal-500/20 text-teal-300 border-teal-400/50 hover:bg-teal-500/30'
+                                : canTakeFree
+                                  ? 'bg-cyan-500/10 text-emerald-300 border-emerald-400/40 hover:bg-emerald-500/20'
+                                  : 'bg-slate-900 text-teal-300 border-slate-700 hover:border-teal-400/50'
+                          }`}
+                        >
+                          {isIncludedFree
+                            ? '✓ Incluido ($0)'
+                            : isAdded
+                              ? '✓ Agregado'
+                              : canTakeFree
+                                ? '+ Elegir gratis'
+                                : '+ Agregar'}
+                        </button>
                       )}
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -731,27 +769,44 @@ export function BotModulesShowcase({
                   </div>
                 </div>
 
-                {!activeMod.includedInBase && (
-                  <button
-                    type="button"
-                    onClick={() => toggleAddon(activeMod.id)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition ${
-                      selectedAddons.includes(activeMod.id)
-                        ? 'bg-emerald-600 hover:bg-emerald-500 border-emerald-400 text-white'
-                        : 'bg-slate-900 hover:bg-slate-800 border-teal-500/40 text-teal-300'
-                    }`}
-                  >
-                    {selectedAddons.includes(activeMod.id) ? (
-                      <>
-                        <Check className="w-3.5 h-3.5" /> Agregado a cotización
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-3.5 h-3.5" /> Agregar (+{formatCop(activeMod.price)})
-                      </>
-                    )}
-                  </button>
-                )}
+                {!activeMod.includedInBase && (() => {
+                  const activeIsAdded = selectedAddons.includes(activeMod.id);
+                  const activeIsIncludedFree = pricing.includedPicked.some(i => i.id === activeMod.id);
+                  const activeCanTakeFree = !activeIsAdded && pricing.remainingFreeSlots > 0;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => toggleAddon(activeMod.id)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition cursor-pointer ${
+                        activeIsIncludedFree
+                          ? 'bg-emerald-600 hover:bg-emerald-500 border-emerald-400 text-white'
+                          : activeIsAdded
+                            ? 'bg-teal-600 hover:bg-teal-500 border-teal-400 text-white'
+                            : activeCanTakeFree
+                              ? 'bg-slate-900 hover:bg-slate-800 border-emerald-400/50 text-emerald-300'
+                              : 'bg-slate-900 hover:bg-slate-800 border-teal-500/40 text-teal-300'
+                      }`}
+                    >
+                      {activeIsIncludedFree ? (
+                        <>
+                          <Check className="w-3.5 h-3.5" /> Incluido en tu plan ($0)
+                        </>
+                      ) : activeIsAdded ? (
+                        <>
+                          <Check className="w-3.5 h-3.5" /> Agregado (+{formatCop(activeMod.price)})
+                        </>
+                      ) : activeCanTakeFree ? (
+                        <>
+                          <Plus className="w-3.5 h-3.5" /> Elegir gratis en mi plan
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-3.5 h-3.5" /> Agregar (+{formatCop(activeMod.price)})
+                        </>
+                      )}
+                    </button>
+                  );
+                })()}
               </div>
 
               {/* Live Visual HUD Preview */}
@@ -776,7 +831,8 @@ export function BotModulesShowcase({
           </div>
         </div>
 
-        {/* Interactive Calculator & Quote Builder */}
+        {/* Interactive Calculator & Quote Builder (hidden when embedded in /software to avoid duplicate checkout) */}
+        {!embedded && (
         <div
           id="calculadora-modulos"
           className="bg-gradient-to-br from-slate-900 via-slate-950 to-teal-950/35 border border-teal-500/35 rounded-3xl p-6 sm:p-8 shadow-2xl"
@@ -954,6 +1010,7 @@ export function BotModulesShowcase({
             </div>
           </div>
         </div>
+        )}
       </div>
     </section>
   );
