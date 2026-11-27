@@ -59,8 +59,10 @@ interface TenantData {
 }
 
 interface SessionState {
-  status: 'DISCONNECTED' | 'CONNECTING' | 'QR_READY' | 'CONNECTED' | string;
+  status: 'DISCONNECTED' | 'CONNECTING' | 'QR_READY' | 'PAIRING_CODE_READY' | 'CONNECTED' | string;
   qrDataUrl: string | null;
+  pairingCode?: string | null;
+  qrUpdatedAt?: number | null;
   phone: string | null;
   lastError: string | null;
 }
@@ -186,6 +188,7 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
   const [generalQuestion, setGeneralQuestion] = useState('');
   const [improvements, setImprovements] = useState<ImprovementItem[]>([]);
   const [logsSubTab, setLogsSubTab] = useState<'history' | 'proposals' | 'applied'>('history');
+  const [pairingPhone, setPairingPhone] = useState('');
   const [activeTab, setActiveTab] = useState<'whatsapp' | 'generator' | 'elevenlabs' | 'logs'>('whatsapp');
   const [bannerMsg, setBannerMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
@@ -299,7 +302,7 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
   }, [token]);
 
   useEffect(() => {
-    if (!token || (session.status !== 'CONNECTING' && session.status !== 'QR_READY')) return;
+    if (!token || (session.status !== 'CONNECTING' && session.status !== 'QR_READY' && session.status !== 'PAIRING_CODE_READY')) return;
     const timer = setInterval(async () => {
       try {
         const res = await fetch(`${apiBase}/api/saas-bot/whatsapp/status`, {
@@ -313,7 +316,7 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
           }
         }
       } catch {}
-    }, 3000);
+    }, 1500);
     return () => clearInterval(timer);
   }, [token, session.status]);
 
@@ -371,6 +374,34 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
       if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo iniciar WhatsApp');
       setSession(data.session);
       notify('ok', 'Generando código QR de WhatsApp...');
+    } catch (err: any) {
+      notify('err', err.message);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleRequestPairingCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pairingPhone.trim()) {
+      notify('err', 'Ingresa el número de WhatsApp que vas a vincular.');
+      return;
+    }
+    setBusyAction('wa_pairing');
+    setBannerMsg(null);
+    try {
+      const res = await fetch(`${apiBase}/api/saas-bot/whatsapp/pairing-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ phone: pairingPhone.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo generar el código numérico');
+      if (data.session) setSession(data.session);
+      notify('ok', '¡Código de 8 dígitos generado! Ingrésalo en tu WhatsApp.');
     } catch (err: any) {
       notify('err', err.message);
     } finally {
@@ -1053,12 +1084,14 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                 <span className={`font-bold px-2.5 py-1 rounded-full ${
                   session.status === 'CONNECTED'
                     ? 'bg-emerald-500/15 text-emerald-300'
-                    : session.status === 'QR_READY'
+                    : session.status === 'QR_READY' || session.status === 'PAIRING_CODE_READY'
                     ? 'bg-amber-500/15 text-amber-300'
                     : 'bg-slate-800 text-slate-300'
                 }`}>
                   {session.status === 'CONNECTED'
                     ? `Conectado ${session.phone ? `(+${session.phone})` : ''}`
+                    : session.status === 'PAIRING_CODE_READY'
+                    ? 'Código numérico listo'
                     : session.status === 'QR_READY'
                     ? 'Esperando escaneo QR'
                     : session.status === 'CONNECTING'
@@ -1067,17 +1100,45 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                 </span>
               </div>
 
-              <div className="flex flex-wrap gap-3">
-                {session.status !== 'CONNECTED' ? (
-                  <button
-                    onClick={handleConnectWhatsApp}
-                    disabled={busyAction === 'wa_connect'}
-                    className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 font-semibold text-sm flex items-center gap-2 disabled:opacity-50"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${busyAction === 'wa_connect' ? 'animate-spin' : ''}`} />
-                    {session.status === 'QR_READY' ? 'Refrescar estado' : 'Conectar y generar QR'}
-                  </button>
-                ) : (
+              {session.status !== 'CONNECTED' ? (
+                <div className="space-y-3">
+                  <form onSubmit={handleRequestPairingCode} className="p-3.5 rounded-xl bg-teal-500/10 border border-teal-500/30 space-y-2.5">
+                    <div className="text-xs font-semibold text-teal-300">
+                      Opción recomendada: Vincular con código de 8 dígitos
+                    </div>
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                      Más estable que el QR porque no cambia cada pocos segundos. Escribe el número de WhatsApp que vas a conectar:
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        value={pairingPhone}
+                        onChange={e => setPairingPhone(e.target.value)}
+                        placeholder="Ej: 3001234567"
+                        className="flex-1 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs outline-none focus:border-teal-400"
+                      />
+                      <button
+                        type="submit"
+                        disabled={busyAction === 'wa_pairing'}
+                        className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-500 disabled:opacity-50 font-semibold text-xs text-white whitespace-nowrap"
+                      >
+                        {busyAction === 'wa_pairing' ? 'Generando código...' : 'Generar código 8 dígitos'}
+                      </button>
+                    </div>
+                  </form>
+
+                  <div className="flex flex-wrap gap-3 items-center">
+                    <button
+                      onClick={handleConnectWhatsApp}
+                      disabled={busyAction === 'wa_connect'}
+                      className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 font-semibold text-xs flex items-center gap-2 disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${busyAction === 'wa_connect' ? 'animate-spin' : ''}`} />
+                      {session.status === 'QR_READY' ? 'Refrescar QR' : 'O conectar escaneando código QR'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-3">
                   <button
                     onClick={handleDisconnectWhatsApp}
                     disabled={busyAction === 'wa_disconnect'}
@@ -1085,8 +1146,8 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                   >
                     Desconectar WhatsApp
                   </button>
-                )}
-              </div>
+                </div>
+              )}
               {session.lastError && (
                 <p className="text-xs text-amber-400">Nota: {session.lastError}</p>
               )}
@@ -1099,15 +1160,27 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                   <p className="font-bold text-emerald-300">¡WhatsApp conectado y respondiendo!</p>
                   <p className="text-xs text-slate-400">Línea activa: +{session.phone || 'Vinculada'}</p>
                 </div>
+              ) : session.pairingCode ? (
+                <div className="text-center space-y-3 w-full">
+                  <div className="text-xs text-teal-300 font-semibold">Código de vinculación WhatsApp</div>
+                  <div className="inline-block px-5 py-3 rounded-xl bg-slate-900 border border-teal-500/40 font-mono text-2xl font-bold tracking-[0.25em] text-white select-all">
+                    {session.pairingCode.length === 8 ? `${session.pairingCode.slice(0, 4)}-${session.pairingCode.slice(4)}` : session.pairingCode}
+                  </div>
+                  <ol className="text-[11px] text-slate-400 space-y-1 text-left max-w-xs mx-auto pt-1">
+                    <li>1. Abre WhatsApp en tu celular → <strong className="text-slate-200">Dispositivos vinculados</strong>.</li>
+                    <li>2. Toca <strong className="text-slate-200">Vincular un dispositivo</strong>.</li>
+                    <li>3. Abajo elige <strong className="text-teal-300">Vincular con el número de teléfono</strong> e ingresa este código.</li>
+                  </ol>
+                </div>
               ) : session.qrDataUrl ? (
                 <div className="text-center space-y-3">
                   <img src={session.qrDataUrl} alt="QR WhatsApp" className="w-56 h-56 rounded-xl bg-white p-2 mx-auto" />
-                  <p className="text-xs text-slate-400">Escanea este código desde tu WhatsApp</p>
+                  <p className="text-xs text-slate-400">Escanea este código desde tu WhatsApp (se actualiza en vivo)</p>
                 </div>
               ) : (
                 <div className="text-center text-slate-500 space-y-2">
                   <QrCode className="w-12 h-12 mx-auto opacity-40" />
-                  <p className="text-xs">Haz clic en "Conectar y generar QR" para iniciar</p>
+                  <p className="text-xs">Genera un código numérico o un QR para vincular tu WhatsApp</p>
                 </div>
               )}
             </div>
