@@ -94,6 +94,32 @@ interface LogEntry {
   direction: 'in' | 'out';
   message_type: string;
   body: string;
+  decision_meta?: {
+    mode?: string;
+    audioIds?: number[];
+    audioTitles?: string[];
+    reason?: string;
+  } | null;
+  created_at: string;
+}
+
+interface ImprovementItem {
+  id: number;
+  tenant_id: number;
+  message_log_id: number | null;
+  customer_jid: string | null;
+  incoming_text: string | null;
+  bot_reply: string | null;
+  client_question: string;
+  explanation_plain: string | null;
+  scope: 'tenant_config' | 'core_engine';
+  practical_proposal: string | null;
+  proposed_prompt_addition: string | null;
+  proposed_audio_id: number | null;
+  proposed_audio_trigger: string | null;
+  status: 'proposed' | 'applied' | 'reverted' | 'escalated_core' | 'dismissed';
+  applied_at: string | null;
+  reverted_at: string | null;
   created_at: string;
 }
 
@@ -151,6 +177,15 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
     lastError: null
   });
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [logsHasMore, setLogsHasMore] = useState(true);
+  const [logsNextBeforeId, setLogsNextBeforeId] = useState<number | null>(null);
+  const [logsSearch, setLogsSearch] = useState('');
+  const [expandedWhyId, setExpandedWhyId] = useState<number | null>(null);
+  const [activeImproveMsgId, setActiveImproveMsgId] = useState<number | null>(null);
+  const [inlineQuestion, setInlineQuestion] = useState('');
+  const [generalQuestion, setGeneralQuestion] = useState('');
+  const [improvements, setImprovements] = useState<ImprovementItem[]>([]);
+  const [logsSubTab, setLogsSubTab] = useState<'history' | 'proposals' | 'applied'>('history');
   const [activeTab, setActiveTab] = useState<'whatsapp' | 'generator' | 'elevenlabs' | 'logs'>('whatsapp');
   const [bannerMsg, setBannerMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
@@ -242,7 +277,14 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
       if (data.success && data.tenant) {
         syncFormFromTenant(data.tenant);
         if (data.session) setSession(data.session);
-        if (Array.isArray(data.logs)) setLogs(data.logs);
+        if (Array.isArray(data.logs)) {
+          setLogs(data.logs);
+          setLogsHasMore(data.logs.length >= 40);
+          setLogsNextBeforeId(data.logs.length > 0 ? data.logs[data.logs.length - 1].id : null);
+        }
+        if (Array.isArray(data.improvements)) {
+          setImprovements(data.improvements);
+        }
       }
       fetchAudios(activeToken);
     } catch (err) {
@@ -608,6 +650,129 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
     }
   };
 
+  const handleLoadMoreLogs = async (reset = false) => {
+    setBusyAction('load_logs');
+    try {
+      const qs = new URLSearchParams({ limit: '40' });
+      if (!reset && logsNextBeforeId) qs.set('beforeId', String(logsNextBeforeId));
+      if (logsSearch.trim()) qs.set('search', logsSearch.trim());
+
+      const res = await fetch(`${apiBase}/api/saas-bot/logs?${qs.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Error cargando historial');
+
+      const incoming: LogEntry[] = Array.isArray(data.logs) ? data.logs : [];
+      setLogs(prev => {
+        if (reset) return incoming;
+        const seen = new Set(prev.map(x => x.id));
+        return [...prev, ...incoming.filter(x => !seen.has(x.id))];
+      });
+      setLogsHasMore(Boolean(data.hasMore));
+      setLogsNextBeforeId(data.nextBeforeId || null);
+    } catch (err: any) {
+      notify('err', err.message);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleCreateImprovement = async (messageLogId: number | null, questionText: string) => {
+    const cleanQ = questionText.trim();
+    if (cleanQ.length < 4) {
+      notify('err', 'Escribe brevemente qué quieres consultar o mejorar.');
+      return;
+    }
+    setBusyAction(messageLogId ? `imp_msg_${messageLogId}` : 'imp_general');
+    setBannerMsg(null);
+    try {
+      const res = await fetch(`${apiBase}/api/saas-bot/improvements`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ messageLogId, clientQuestion: cleanQ })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo analizar el ajuste');
+
+      setImprovements(prev => [data.improvement, ...prev]);
+      if (messageLogId) {
+        setActiveImproveMsgId(null);
+        setInlineQuestion('');
+      } else {
+        setGeneralQuestion('');
+      }
+      setLogsSubTab('proposals');
+      notify('ok', 'Análisis listo en Ajustes de Mejora. Revisa la propuesta y decide si deseas aplicarla.');
+    } catch (err: any) {
+      notify('err', err.message);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleApplyImprovement = async (impId: number) => {
+    setBusyAction(`imp_apply_${impId}`);
+    try {
+      const res = await fetch(`${apiBase}/api/saas-bot/improvements/${impId}/apply`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo aplicar el ajuste');
+
+      setImprovements(prev => prev.map(x => (x.id === impId ? data.improvement : x)));
+      if (data.tenant) syncFormFromTenant(data.tenant);
+      fetchAudios(token);
+      notify('ok', '¡Ajuste aplicado a tu bot! Si quieres volver atrás, puedes deshacerlo en "Cambios Aplicados".');
+    } catch (err: any) {
+      notify('err', err.message);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleRevertImprovement = async (impId: number) => {
+    setBusyAction(`imp_revert_${impId}`);
+    try {
+      const res = await fetch(`${apiBase}/api/saas-bot/improvements/${impId}/revert`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo deshacer el ajuste');
+
+      setImprovements(prev => prev.map(x => (x.id === impId ? data.improvement : x)));
+      if (data.tenant) syncFormFromTenant(data.tenant);
+      fetchAudios(token);
+      notify('ok', 'Ajuste deshecho. Tu bot volvió exactamente a como estaba antes.');
+    } catch (err: any) {
+      notify('err', err.message);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleDismissImprovement = async (impId: number) => {
+    setBusyAction(`imp_dismiss_${impId}`);
+    try {
+      const res = await fetch(`${apiBase}/api/saas-bot/improvements/${impId}/dismiss`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo descartar');
+      setImprovements(prev => prev.map(x => (x.id === impId ? { ...x, status: 'dismissed' } : x)));
+    } catch (err: any) {
+      notify('err', err.message);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
   if (!token) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-10">
@@ -851,7 +1016,7 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
             { id: 'whatsapp', label: '1. Conectar WhatsApp', icon: QrCode },
             { id: 'generator', label: '2. Generador IA & Prompt', icon: Sparkles },
             { id: 'elevenlabs', label: '3. Mis Audios & Decididor IA', icon: Volume2 },
-            { id: 'logs', label: '4. Mensajes Recientes', icon: MessageSquare }
+            { id: 'logs', label: '4. Historial y Mejoras', icon: MessageSquare }
           ].map(tab => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -1458,39 +1623,354 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
           </div>
         )}
 
-        {/* Tab 4: Logs */}
-        {activeTab === 'logs' && (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-teal-400" /> Últimos mensajes del bot
-              </h2>
-              <button
-                onClick={() => fetchDashboard(token)}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs flex items-center gap-1.5"
-              >
-                <RefreshCw className="w-3.5 h-3.5" /> Actualizar
-              </button>
-            </div>
-            {logs.length === 0 ? (
-              <p className="text-xs text-slate-500 py-8 text-center">Aún no hay conversaciones registradas.</p>
-            ) : (
-              <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
-                {logs.map(l => (
-                  <div key={l.id} className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs flex flex-col gap-1">
-                    <div className="flex items-center justify-between text-[11px] text-slate-400">
-                      <span className="font-mono">
-                        {l.direction === 'in' ? '📥 Cliente' : '🤖 Bot'} ({l.message_type}) • {l.customer_jid.replace(/@.*/, '')}
-                      </span>
-                      <span>{new Date(l.created_at).toLocaleString('es-CO')}</span>
-                    </div>
-                    <p className="text-slate-200 whitespace-pre-wrap">{l.body}</p>
-                  </div>
-                ))}
+        {/* Tab 4: Historial y Ajustes de Mejora */}
+        {activeTab === 'logs' && (() => {
+          const proposedList = improvements.filter(i => i.status === 'proposed' || i.status === 'escalated_core');
+          const appliedList = improvements.filter(i => i.status === 'applied' || i.status === 'reverted');
+
+          return (
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-bold flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5 text-teal-400" /> Historial y Ajustes de Mejora
+                  </h2>
+                  <p className="text-xs text-slate-400">
+                    Revisa qué respondió tu bot, pregunta por qué eligió cada audio y aprueba mejoras con opción de deshacer.
+                  </p>
+                </div>
+                <button
+                  onClick={() => fetchDashboard(token)}
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs flex items-center gap-1.5 self-start"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" /> Actualizar
+                </button>
               </div>
-            )}
-          </div>
-        )}
+
+              {/* Sub-pestañas */}
+              <div className="flex flex-wrap gap-2 border-b border-slate-800 pb-3">
+                <button
+                  type="button"
+                  onClick={() => setLogsSubTab('history')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                    logsSubTab === 'history' ? 'bg-teal-600 text-white' : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  Historial ({logs.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogsSubTab('proposals')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
+                    logsSubTab === 'proposals' ? 'bg-teal-600 text-white' : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" /> Ajustes de Mejora ({proposedList.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogsSubTab('applied')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
+                    logsSubTab === 'applied' ? 'bg-teal-600 text-white' : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Cambios Aplicados ({appliedList.length})
+                </button>
+              </div>
+
+              {/* Sub-tab 1: Historial paginado con ¿Por qué respondió esto? */}
+              {logsSubTab === 'history' && (
+                <div className="space-y-3">
+                  <form
+                    onSubmit={e => {
+                      e.preventDefault();
+                      handleLoadMoreLogs(true);
+                    }}
+                    className="flex gap-2"
+                  >
+                    <input
+                      value={logsSearch}
+                      onChange={e => setLogsSearch(e.target.value)}
+                      placeholder="Buscar por mensaje o número de cliente..."
+                      className="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs outline-none focus:border-teal-500"
+                    />
+                    <button
+                      type="submit"
+                      disabled={busyAction === 'load_logs'}
+                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold"
+                    >
+                      Buscar
+                    </button>
+                  </form>
+
+                  {logs.length === 0 ? (
+                    <p className="text-xs text-slate-500 py-8 text-center">Aún no hay conversaciones registradas.</p>
+                  ) : (
+                    <div className="space-y-2.5 max-h-[520px] overflow-y-auto pr-1">
+                      {logs.map(l => {
+                        const isOut = l.direction === 'out';
+                        const hasWhy = isOut && (l.decision_meta?.reason || (l.decision_meta?.audioTitles && l.decision_meta.audioTitles.length > 0));
+                        const isWhyOpen = expandedWhyId === l.id;
+                        const isImproveOpen = activeImproveMsgId === l.id;
+
+                        return (
+                          <div key={l.id} className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs space-y-2">
+                            <div className="flex items-center justify-between text-[11px] text-slate-400">
+                              <span className="font-mono">
+                                {l.direction === 'in' ? '📥 Cliente' : '🤖 Bot'} ({l.message_type}) • {l.customer_jid.replace(/@.*/, '')}
+                              </span>
+                              <span>{new Date(l.created_at).toLocaleString('es-CO')}</span>
+                            </div>
+                            <p className="text-slate-200 whitespace-pre-wrap">{l.body}</p>
+
+                            {isOut && (
+                              <div className="flex flex-wrap items-center gap-2 pt-1">
+                                {hasWhy && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setExpandedWhyId(isWhyOpen ? null : l.id)}
+                                    className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] text-slate-300 flex items-center gap-1"
+                                  >
+                                    {isWhyOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                    ¿Por qué respondió esto?
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveImproveMsgId(isImproveOpen ? null : l.id);
+                                    setInlineQuestion('');
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 text-[11px] text-teal-300 flex items-center gap-1"
+                                >
+                                  <Sparkles className="w-3 h-3" /> Consultar o ajustar respuesta
+                                </button>
+                              </div>
+                            )}
+
+                            {isWhyOpen && l.decision_meta && (
+                              <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 text-[11px] text-slate-300 space-y-1">
+                                {l.decision_meta.audioTitles && l.decision_meta.audioTitles.length > 0 && (
+                                  <div>
+                                    <span className="text-teal-400 font-semibold">Audio(s) elegido(s):</span>{' '}
+                                    {l.decision_meta.audioTitles.join(' + ')}
+                                  </div>
+                                )}
+                                {l.decision_meta.reason && (
+                                  <div>
+                                    <span className="text-teal-400 font-semibold">Motivo:</span> {l.decision_meta.reason}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {isImproveOpen && (
+                              <div className="p-3 rounded-lg bg-slate-900 border border-teal-500/30 space-y-2">
+                                <label className="block text-[11px] text-teal-300 font-semibold">
+                                  ¿Qué quieres saber o ajustar sobre esta respuesta?
+                                </label>
+                                <textarea
+                                  rows={2}
+                                  value={inlineQuestion}
+                                  onChange={e => setInlineQuestion(e.target.value)}
+                                  placeholder="Ej: ¿Por qué envió este audio? Prefiero que cuando pregunten por precio en Bogotá envíe el audio de cobertura..."
+                                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs outline-none focus:border-teal-500"
+                                />
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setActiveImproveMsgId(null)}
+                                    className="px-3 py-1.5 rounded-lg bg-slate-800 text-[11px] text-slate-300"
+                                  >
+                                    Cancelar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={busyAction === `imp_msg_${l.id}`}
+                                    onClick={() => handleCreateImprovement(l.id, inlineQuestion)}
+                                    className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-[11px] font-semibold text-white flex items-center gap-1"
+                                  >
+                                    <Send className="w-3 h-3" />
+                                    {busyAction === `imp_msg_${l.id}` ? 'Analizando...' : 'Analizar con Asistente'}
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {logsHasMore && logs.length > 0 && (
+                    <div className="flex justify-center pt-2">
+                      <button
+                        type="button"
+                        disabled={busyAction === 'load_logs'}
+                        onClick={() => handleLoadMoreLogs(false)}
+                        className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-xs font-semibold text-slate-200"
+                      >
+                        {busyAction === 'load_logs' ? 'Cargando más...' : 'Cargar más historial'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Sub-tab 2: Ajustes de Mejora */}
+              {logsSubTab === 'proposals' && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                    <label className="block text-xs font-semibold text-teal-300 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4" /> Solicitar una nueva mejora o hacer una pregunta sobre tu bot
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={generalQuestion}
+                      onChange={e => setGeneralQuestion(e.target.value)}
+                      placeholder="Ej: Cuando un cliente escriba solo 'hola', quiero que salude con el audio de inicio sin mandar texto largo..."
+                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs outline-none focus:border-teal-500"
+                    />
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        disabled={busyAction === 'imp_general'}
+                        onClick={() => handleCreateImprovement(null, generalQuestion)}
+                        className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-xs font-semibold flex items-center gap-1.5"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        {busyAction === 'imp_general' ? 'Analizando ajuste...' : 'Analizar y proponer ajuste'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {proposedList.length === 0 ? (
+                    <p className="text-xs text-slate-500 py-6 text-center">
+                      No tienes ajustes pendientes por aprobar. Puedes consultar cualquier mensaje desde la pestaña Historial o escribir una idea arriba.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {proposedList.map(imp => (
+                        <div key={imp.id} className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 text-xs">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <span className="font-semibold text-teal-300">Ajuste sugerido #{imp.id}</span>
+                            <span className="text-[11px] text-slate-500">{new Date(imp.created_at).toLocaleString('es-CO')}</span>
+                          </div>
+
+                          <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+                            <span className="text-slate-400 font-semibold">Tu consulta: </span>
+                            {imp.client_question}
+                          </div>
+
+                          {imp.explanation_plain && (
+                            <div className="space-y-1">
+                              <div className="text-[11px] font-semibold text-slate-400">¿Qué pasó?</div>
+                              <p className="text-slate-200 leading-relaxed">{imp.explanation_plain}</p>
+                            </div>
+                          )}
+
+                          {imp.practical_proposal && (
+                            <div className="p-3 rounded-lg bg-teal-500/10 border border-teal-500/25 space-y-1">
+                              <div className="text-[11px] font-semibold text-teal-300">Ajuste recomendado para tu bot</div>
+                              <p className="text-slate-100 leading-relaxed">{imp.practical_proposal}</p>
+                            </div>
+                          )}
+
+                          {imp.scope === 'core_engine' || imp.status === 'escalated_core' ? (
+                            <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-200 text-[11px]">
+                              Esta mejora aplica para toda la plataforma y ya fue compartida con el equipo de Sheerit para evaluarla.
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+                              <button
+                                type="button"
+                                disabled={busyAction === `imp_dismiss_${imp.id}`}
+                                onClick={() => handleDismissImprovement(imp.id)}
+                                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300"
+                              >
+                                No aplicar
+                              </button>
+                              <button
+                                type="button"
+                                disabled={busyAction === `imp_apply_${imp.id}`}
+                                onClick={() => handleApplyImprovement(imp.id)}
+                                className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-semibold text-white flex items-center gap-1.5"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                {busyAction === `imp_apply_${imp.id}` ? 'Aplicando...' : 'Aplicar a mi bot'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Sub-tab 3: Cambios Aplicados (con Deshacer) */}
+              {logsSubTab === 'applied' && (
+                <div className="space-y-3">
+                  {appliedList.length === 0 ? (
+                    <p className="text-xs text-slate-500 py-8 text-center">
+                      Aún no has aplicado ningún ajuste de mejora. Cuando apruebes uno aparecerá aquí por si deseas deshacerlo.
+                    </p>
+                  ) : (
+                    appliedList.map(imp => {
+                      const isApplied = imp.status === 'applied';
+                      return (
+                        <div key={imp.id} className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5 text-xs">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-slate-200">Ajuste #{imp.id}</span>
+                              <span
+                                className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${
+                                  isApplied
+                                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                    : 'bg-slate-800 text-slate-400 border-slate-700'
+                                }`}
+                              >
+                                {isApplied ? 'Activo en tu bot' : 'Deshecho'}
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-slate-500">
+                              {imp.applied_at ? `Aplicado: ${new Date(imp.applied_at).toLocaleString('es-CO')}` : ''}
+                            </span>
+                          </div>
+
+                          <p className="text-slate-300">{imp.practical_proposal || imp.client_question}</p>
+
+                          <div className="flex justify-end">
+                            {isApplied ? (
+                              <button
+                                type="button"
+                                disabled={busyAction === `imp_revert_${imp.id}`}
+                                onClick={() => handleRevertImprovement(imp.id)}
+                                className="px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-semibold flex items-center gap-1.5"
+                              >
+                                <ArrowLeft className="w-3.5 h-3.5" />
+                                {busyAction === `imp_revert_${imp.id}` ? 'Revirtiendo...' : 'Deshacer ajuste'}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={busyAction === `imp_apply_${imp.id}`}
+                                onClick={() => handleApplyImprovement(imp.id)}
+                                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
+                              >
+                                Volver a aplicar
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
