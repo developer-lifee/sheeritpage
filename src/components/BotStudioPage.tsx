@@ -48,6 +48,7 @@ interface TenantData {
   system_prompt: string | null;
   knowledge_base: string | null;
   bot_tone: string | null;
+  human_pause_minutes?: number;
   elevenlabs_enabled: number | boolean;
   has_elevenlabs_key?: boolean;
   elevenlabs_api_key_masked?: string;
@@ -73,9 +74,23 @@ interface LibraryAudio {
   title: string;
   trigger_description: string;
   original_filename: string | null;
+  image_filename?: string | null;
+  followup_text?: string | null;
+  has_image?: number | boolean;
   duration_sec: number;
   is_active: number | boolean;
   created_at: string;
+}
+
+interface LiveChatSummary {
+  chatId: string;
+  phone: string;
+  lastBody: string;
+  lastDirection: 'in' | 'out';
+  lastType: string;
+  lastAt: string;
+  isPaused: boolean;
+  pausedUntil: number | null;
 }
 
 interface VoiceOption {
@@ -189,7 +204,7 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
   const [improvements, setImprovements] = useState<ImprovementItem[]>([]);
   const [logsSubTab, setLogsSubTab] = useState<'history' | 'proposals' | 'applied'>('history');
   const [pairingPhone, setPairingPhone] = useState('');
-  const [activeTab, setActiveTab] = useState<'whatsapp' | 'generator' | 'elevenlabs' | 'logs'>('whatsapp');
+  const [activeTab, setActiveTab] = useState<'whatsapp' | 'generator' | 'elevenlabs' | 'logs' | 'chats'>('whatsapp');
   const [bannerMsg, setBannerMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
 
@@ -201,12 +216,22 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
   const [cfgSystemPrompt, setCfgSystemPrompt] = useState('');
   const [cfgKnowledgeBase, setCfgKnowledgeBase] = useState('');
   const [cfgBotActive, setCfgBotActive] = useState(true);
+  const [cfgPauseMinutes, setCfgPauseMinutes] = useState(30);
+
+  // Live chats & manual 1-click flow control
+  const [liveChats, setLiveChats] = useState<LiveChatSummary[]>([]);
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [chatMessages, setChatMessages] = useState<LogEntry[]>([]);
+  const [selectedChatPaused, setSelectedChatPaused] = useState(false);
+  const [manualChatText, setManualChatText] = useState('');
 
   // Uploaded audio library + AI decider
   const [audios, setAudios] = useState<LibraryAudio[]>([]);
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadTrigger, setUploadTrigger] = useState('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadImageFile, setUploadImageFile] = useState<File | null>(null);
+  const [uploadFollowupText, setUploadFollowupText] = useState('');
   const [selectedAudioIds, setSelectedAudioIds] = useState<number[]>([]);
   const [libPauseMs, setLibPauseMs] = useState(350);
   const [libSendPhone, setLibSendPhone] = useState('');
@@ -247,6 +272,7 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
     setCfgSystemPrompt(t.system_prompt || '');
     setCfgKnowledgeBase(t.knowledge_base || '');
     setCfgBotActive(Boolean(t.is_bot_active));
+    setCfgPauseMinutes(t.human_pause_minutes !== undefined ? Number(t.human_pause_minutes) : 30);
     setElEnabled(Boolean(t.elevenlabs_enabled));
     setElVoiceId(t.elevenlabs_voice_id || '');
     setElModelId(t.elevenlabs_model_id || 'eleven_multilingual_v2');
@@ -477,6 +503,7 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
           knowledge_base: cfgKnowledgeBase,
           bot_tone: cfgTone,
           is_bot_active: nextActive,
+          human_pause_minutes: cfgPauseMinutes,
           elevenlabs_enabled: elEnabled,
           ...(elApiKeyInput.trim() ? { elevenlabs_api_key: elApiKeyInput.trim() } : {}),
           elevenlabs_voice_id: elVoiceId,
@@ -509,6 +536,8 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
       form.append('title', uploadTitle.trim());
       form.append('trigger_description', uploadTrigger.trim());
       form.append('audio', uploadFile);
+      if (uploadImageFile) form.append('image', uploadImageFile);
+      if (uploadFollowupText.trim()) form.append('followup_text', uploadFollowupText.trim());
 
       const res = await fetch(`${apiBase}/api/saas-bot/audios/upload`, {
         method: 'POST',
@@ -522,7 +551,9 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
       setUploadTitle('');
       setUploadTrigger('');
       setUploadFile(null);
-      notify('ok', `Audio "${data.audio.title}" subido y normalizado (${data.audio.duration_sec}s) para notas de voz sin reenviado.`);
+      setUploadImageFile(null);
+      setUploadFollowupText('');
+      notify('ok', `Flujo "${data.audio.title}" guardado (${data.audio.duration_sec}s) sin etiqueta de reenviado.`);
     } catch (err: any) {
       notify('err', err.message);
     } finally {
@@ -804,6 +835,93 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
     }
   };
 
+  const fetchLiveChats = async () => {
+    if (!token) return;
+    setBusyAction('load_chats');
+    try {
+      const res = await fetch(`${apiBase}/api/saas-bot/chats`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.chats)) {
+        setLiveChats(data.chats);
+        const firstId = selectedChatId || data.chats[0]?.chatId || null;
+        if (firstId) {
+          await openLiveChat(firstId);
+        }
+      }
+    } catch {} finally {
+      setBusyAction(null);
+    }
+  };
+
+  const openLiveChat = async (chatId: string) => {
+    setSelectedChatId(chatId);
+    try {
+      const res = await fetch(`${apiBase}/api/saas-bot/chats/${encodeURIComponent(chatId)}/messages`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setChatMessages(Array.isArray(data.messages) ? data.messages : []);
+        setSelectedChatPaused(Boolean(data.pauseState?.isPaused));
+      }
+    } catch {}
+  };
+
+  const handleToggleChatPause = async (chatId: string, nextPaused: boolean) => {
+    setBusyAction('pause_chat');
+    try {
+      const res = await fetch(`${apiBase}/api/saas-bot/chats/${encodeURIComponent(chatId)}/pause`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ paused: nextPaused, minutes: cfgPauseMinutes || 30 })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo actualizar estado del chat');
+      setSelectedChatPaused(Boolean(data.pauseState?.isPaused));
+      setLiveChats(prev => prev.map(c => (c.chatId === chatId ? { ...c, isPaused: Boolean(data.pauseState?.isPaused) } : c)));
+      notify('ok', nextPaused ? 'Bot pausado en este chat (control manual activo).' : 'Bot reactivado en modo automático para este chat.');
+    } catch (err: any) {
+      notify('err', err.message);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleSendManualFlow = async ({ audioIds = [], text = '' }: { audioIds?: number[]; text?: string }) => {
+    if (!selectedChatId) {
+      notify('err', 'Selecciona una conversación primero.');
+      return;
+    }
+    setBusyAction(audioIds.length > 0 ? `manual_flow_${audioIds[0]}` : 'manual_text');
+    try {
+      const res = await fetch(`${apiBase}/api/saas-bot/chats/${encodeURIComponent(selectedChatId)}/send-manual`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ audioIds, text })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo enviar al chat');
+
+      if (text) setManualChatText('');
+      setSelectedChatPaused(Boolean(data.pauseState?.isPaused));
+      await openLiveChat(selectedChatId);
+      setLiveChats(prev => prev.map(c => (c.chatId === selectedChatId ? { ...c, lastBody: data.summary, isPaused: Boolean(data.pauseState?.isPaused) } : c)));
+      notify('ok', audioIds.length > 0 ? 'Flujo enviado como nota de voz fresca (sin reenviado).' : 'Mensaje enviado al cliente.');
+    } catch (err: any) {
+      notify('err', err.message);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
   if (!token) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-10">
@@ -1042,19 +1160,23 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
         )}
 
         {/* Navigation tabs */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           {[
             { id: 'whatsapp', label: '1. Conectar WhatsApp', icon: QrCode },
             { id: 'generator', label: '2. Generador IA & Prompt', icon: Sparkles },
-            { id: 'elevenlabs', label: '3. Mis Audios & Decididor IA', icon: Volume2 },
-            { id: 'logs', label: '4. Historial y Mejoras', icon: MessageSquare }
+            { id: 'elevenlabs', label: '3. Audios y Flujos', icon: Volume2 },
+            { id: 'chats', label: '4. Chats en Vivo', icon: Send },
+            { id: 'logs', label: '5. Historial y Mejoras', icon: MessageSquare }
           ].map(tab => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => {
+                  setActiveTab(tab.id as any);
+                  if (tab.id === 'chats') fetchLiveChats();
+                }}
                 className={`p-3 rounded-xl border text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition ${
                   active
                     ? 'bg-teal-600 border-teal-500 text-white shadow-lg shadow-teal-900/30'
@@ -1232,6 +1354,20 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                   </select>
                 </div>
                 <div>
+                  <label className="block text-xs text-slate-400 mb-1">Pausa automática al intervenir tú (minutos)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={1440}
+                    value={cfgPauseMinutes}
+                    onChange={e => setCfgPauseMinutes(Number(e.target.value))}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-sm outline-none focus:border-teal-500"
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Si respondes desde tu WhatsApp, el bot pausa ese chat estos minutos y luego se reactiva solo (0 = nunca pausar).
+                  </p>
+                </div>
+                <div>
                   <label className="block text-xs text-slate-400 mb-1">Descripción de tu negocio</label>
                   <textarea
                     rows={3}
@@ -1315,28 +1451,28 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                 </p>
               </div>
 
-              <form onSubmit={handleUploadAudio} className="grid md:grid-cols-3 gap-3 bg-slate-950 border border-slate-800 rounded-xl p-4">
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Título del audio</label>
-                  <input
-                    required
-                    value={uploadTitle}
-                    onChange={e => setUploadTitle(e.target.value)}
-                    placeholder="Ej: Audio 1 - Saludo y precios"
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs outline-none focus:border-teal-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">¿Cuándo debe enviarlo el decididor IA?</label>
-                  <input
-                    required
-                    value={uploadTrigger}
-                    onChange={e => setUploadTrigger(e.target.value)}
-                    placeholder="Ej: Cuando saluda o pregunta precios del servicio"
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs outline-none focus:border-teal-500"
-                  />
-                </div>
-                <div className="flex flex-col justify-between gap-2">
+              <form onSubmit={handleUploadAudio} className="space-y-3 bg-slate-950 border border-slate-800 rounded-xl p-4">
+                <div className="grid md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Título del audio o flujo</label>
+                    <input
+                      required
+                      value={uploadTitle}
+                      onChange={e => setUploadTitle(e.target.value)}
+                      placeholder="Ej: Audio 1 - Saludo y precios"
+                      className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">¿Cuándo debe enviarlo el decididor IA?</label>
+                    <input
+                      required
+                      value={uploadTrigger}
+                      onChange={e => setUploadTrigger(e.target.value)}
+                      placeholder="Ej: Cuando saluda o pregunta precios del servicio"
+                      className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs outline-none focus:border-teal-500"
+                    />
+                  </div>
                   <div>
                     <label className="block text-xs text-slate-400 mb-1">Archivo de audio (.mp3, .ogg, .wav, .m4a)</label>
                     <input
@@ -1346,13 +1482,34 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                       className="w-full text-xs text-slate-300 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700"
                     />
                   </div>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-3 items-end pt-1 border-t border-slate-800/70">
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Imagen después del audio (opcional)</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={e => setUploadImageFile(e.target.files?.[0] || null)}
+                      className="w-full text-xs text-slate-300 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Texto complementario después del audio (opcional)</label>
+                    <input
+                      value={uploadFollowupText}
+                      onChange={e => setUploadFollowupText(e.target.value)}
+                      placeholder="Ej: Tabla de precios o texto junto a la imagen"
+                      className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs outline-none focus:border-teal-500"
+                    />
+                  </div>
                   <button
                     type="submit"
                     disabled={busyAction === 'upload_audio'}
-                    className="w-full py-2 rounded-xl bg-teal-600 hover:bg-teal-500 font-semibold text-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    className="w-full py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 font-semibold text-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
                   >
                     <Upload className="w-3.5 h-3.5" />
-                    {busyAction === 'upload_audio' ? 'Procesando y normalizando...' : 'Subir Audio a Biblioteca'}
+                    {busyAction === 'upload_audio' ? 'Procesando y normalizando...' : 'Subir Audio / Flujo'}
                   </button>
                 </div>
               </form>
@@ -1434,6 +1591,20 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                           <p className="text-xs text-slate-400">
                             <strong className="text-teal-400">Cuándo enviarlo:</strong> {audio.trigger_description}
                           </p>
+                          {(Boolean(audio.has_image) || Boolean(audio.followup_text)) && (
+                            <div className="flex flex-wrap gap-2 text-[11px]">
+                              {Boolean(audio.has_image) && (
+                                <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/30 text-indigo-300">
+                                  🖼️ Imagen adjunta: {audio.image_filename || 'Sí'}
+                                </span>
+                              )}
+                              {audio.followup_text && (
+                                <span className="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300">
+                                  💬 Texto después del audio: "{audio.followup_text}"
+                                </span>
+                              )}
+                            </div>
+                          )}
 
                           <audio
                             controls
@@ -1696,7 +1867,170 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
           </div>
         )}
 
-        {/* Tab 4: Historial y Ajustes de Mejora */}
+        {/* Tab 4: Chats en Vivo y Control Manual (Modo Semiautomático) */}
+        {activeTab === 'chats' && (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold flex items-center gap-2">
+                  <Send className="w-5 h-5 text-teal-400" /> Chats en Vivo y Envío Manual con 1 Clic
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Cuando respondes desde tu WhatsApp o desde aquí, el bot se pausa automáticamente {cfgPauseMinutes} min en ese chat para no interrumpir tu cierre.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={fetchLiveChats}
+                disabled={busyAction === 'load_chats'}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs flex items-center gap-1.5 self-start"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${busyAction === 'load_chats' ? 'animate-spin' : ''}`} /> Actualizar chats
+              </button>
+            </div>
+
+            {liveChats.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-500 bg-slate-950 border border-slate-800 rounded-xl">
+                Aún no hay conversaciones registradas. En cuanto lleguen clientes a tu WhatsApp aparecerán aquí para tomar control manual o disparar audios con 1 clic.
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-3 gap-4">
+                {/* Lista de chats */}
+                <div className="bg-slate-950 border border-slate-800 rounded-xl p-2 space-y-1.5 max-h-[540px] overflow-y-auto">
+                  {liveChats.map(chat => {
+                    const selected = selectedChatId === chat.chatId;
+                    return (
+                      <button
+                        key={chat.chatId}
+                        type="button"
+                        onClick={() => openLiveChat(chat.chatId)}
+                        className={`w-full text-left p-3 rounded-lg border transition text-xs space-y-1 ${
+                          selected
+                            ? 'bg-teal-600/15 border-teal-500/50 text-white'
+                            : 'bg-slate-900/60 border-slate-800/80 text-slate-300 hover:bg-slate-900'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono font-semibold truncate">+{chat.phone}</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                              chat.isPaused
+                                ? 'bg-amber-500/20 text-amber-300'
+                                : 'bg-emerald-500/15 text-emerald-300'
+                            }`}
+                          >
+                            {chat.isPaused ? '👤 Manual' : '🤖 Auto'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 truncate">{chat.lastBody}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Conversación activa + Botones rápidos */}
+                <div className="md:col-span-2 bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col gap-3">
+                  {!selectedChatId ? (
+                    <div className="flex-1 flex items-center justify-center text-xs text-slate-500 py-16">
+                      Selecciona una conversación de la izquierda.
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-800">
+                        <div>
+                          <div className="text-sm font-bold font-mono text-white">+{selectedChatId.replace(/@.*/, '')}</div>
+                          <div className="text-[11px] text-slate-400">
+                            {selectedChatPaused ? '👤 En control manual (bot pausado en este chat)' : '🤖 Atención automática activa'}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={busyAction === 'pause_chat'}
+                          onClick={() => handleToggleChatPause(selectedChatId, !selectedChatPaused)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
+                            selectedChatPaused
+                              ? 'bg-emerald-600/20 border-emerald-500/40 text-emerald-300 hover:bg-emerald-600/30'
+                              : 'bg-amber-500/15 border-amber-500/30 text-amber-300 hover:bg-amber-500/25'
+                          }`}
+                        >
+                          {selectedChatPaused ? 'Reactivar Bot Automático' : 'Pausar Bot (Tomar Control)'}
+                        </button>
+                      </div>
+
+                      <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                        {chatMessages.map(m => (
+                          <div
+                            key={m.id}
+                            className={`p-2.5 rounded-xl text-xs max-w-[88%] ${
+                              m.direction === 'in'
+                                ? 'bg-slate-900 border border-slate-800 text-slate-200 mr-auto'
+                                : 'bg-teal-600/20 border border-teal-500/30 text-teal-100 ml-auto'
+                            }`}
+                          >
+                            <div className="text-[10px] text-slate-400 mb-0.5">
+                              {m.direction === 'in' ? 'Cliente' : m.message_type === 'human' ? '👤 Tú (manual)' : '🤖 Bot'} •{' '}
+                              {new Date(m.created_at).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                            <div className="whitespace-pre-wrap">{m.body}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Botones rápidos de 1 clic para flujos */}
+                      {audios.filter(a => a.is_active).length > 0 && (
+                        <div className="pt-2 border-t border-slate-800 space-y-1.5">
+                          <div className="text-[11px] font-semibold text-teal-300">
+                            ⚡ Disparo rápido con 1 clic (Audio + Imagen/Texto sin etiqueta de reenviado):
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {audios.filter(a => a.is_active).map(a => (
+                              <button
+                                key={a.id}
+                                type="button"
+                                disabled={session.status !== 'CONNECTED' || busyAction === `manual_flow_${a.id}`}
+                                onClick={() => handleSendManualFlow({ audioIds: [a.id] })}
+                                className="px-2.5 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/35 disabled:opacity-40 border border-indigo-500/30 text-[11px] text-indigo-200 font-semibold flex items-center gap-1"
+                              >
+                                <Volume2 className="w-3 h-3" />
+                                {busyAction === `manual_flow_${a.id}` ? 'Enviando...' : a.title}
+                                {Boolean(a.has_image) && <span>🖼️</span>}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Envío manual de texto */}
+                      <form
+                        onSubmit={e => {
+                          e.preventDefault();
+                          if (manualChatText.trim()) handleSendManualFlow({ text: manualChatText.trim() });
+                        }}
+                        className="flex gap-2 pt-1"
+                      >
+                        <input
+                          value={manualChatText}
+                          onChange={e => setManualChatText(e.target.value)}
+                          placeholder="Escribe un mensaje manual para cerrar la venta..."
+                          className="flex-1 px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs outline-none focus:border-teal-500"
+                        />
+                        <button
+                          type="submit"
+                          disabled={!manualChatText.trim() || session.status !== 'CONNECTED' || busyAction === 'manual_text'}
+                          className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-xs font-semibold text-white flex items-center gap-1"
+                        >
+                          <Send className="w-3.5 h-3.5" /> Enviar
+                        </button>
+                      </form>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 5: Historial y Ajustes de Mejora */}
         {activeTab === 'logs' && (() => {
           const proposedList = improvements.filter(i => i.status === 'proposed' || i.status === 'escalated_core');
           const appliedList = improvements.filter(i => i.status === 'applied' || i.status === 'reverted');
