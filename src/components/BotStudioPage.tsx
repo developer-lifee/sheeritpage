@@ -229,6 +229,7 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
   const [improvements, setImprovements] = useState<ImprovementItem[]>([]);
   const [logsSubTab, setLogsSubTab] = useState<'history' | 'proposals' | 'applied'>('history');
   const [pairingPhone, setPairingPhone] = useState('');
+  const [pairingNow, setPairingNow] = useState(() => Date.now());
   const [activeTab, setActiveTab] = useState<'whatsapp' | 'generator' | 'elevenlabs' | 'simulator' | 'chats' | 'logs'>('whatsapp');
   const [bannerMsg, setBannerMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
@@ -380,6 +381,13 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
     }, 1500);
     return () => clearInterval(timer);
   }, [token, session.status]);
+
+  useEffect(() => {
+    if (!session.pairingCode) return;
+    setPairingNow(Date.now());
+    const tick = setInterval(() => setPairingNow(Date.now()), 1000);
+    return () => clearInterval(tick);
+  }, [session.pairingCode, session.qrUpdatedAt]);
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1466,19 +1474,41 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                   <p className="font-bold text-emerald-300">¡WhatsApp conectado y respondiendo!</p>
                   <p className="text-xs text-slate-400">Línea activa: +{session.phone || 'Vinculada'}</p>
                 </div>
-              ) : session.pairingCode ? (
-                <div className="text-center space-y-3 w-full">
-                  <div className="text-xs text-teal-300 font-semibold">Código de vinculación WhatsApp</div>
-                  <div className="inline-block px-5 py-3 rounded-xl bg-slate-900 border border-teal-500/40 font-mono text-2xl font-bold tracking-[0.25em] text-white select-all">
-                    {session.pairingCode.length === 8 ? `${session.pairingCode.slice(0, 4)}-${session.pairingCode.slice(4)}` : session.pairingCode}
+              ) : session.pairingCode ? (() => {
+                const remainingSec = session.qrUpdatedAt
+                  ? Math.max(0, Math.ceil((180000 - (pairingNow - session.qrUpdatedAt)) / 1000))
+                  : 180;
+                const mins = Math.floor(remainingSec / 60);
+                const secs = String(remainingSec % 60).padStart(2, '0');
+                return (
+                  <div className="text-center space-y-3 w-full">
+                    <div className="text-xs text-teal-300 font-semibold">Código de vinculación WhatsApp</div>
+                    <div className="inline-block px-5 py-3 rounded-xl bg-slate-900 border border-teal-500/40 font-mono text-2xl font-bold tracking-[0.25em] text-white select-all">
+                      {session.pairingCode.length === 8 ? `${session.pairingCode.slice(0, 4)}-${session.pairingCode.slice(4)}` : session.pairingCode}
+                    </div>
+                    <div>
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono font-semibold border ${
+                          remainingSec === 0
+                            ? 'bg-slate-800/80 border-slate-700 text-slate-300'
+                            : remainingSec <= 30
+                              ? 'bg-amber-500/15 border-amber-400/40 text-amber-300'
+                              : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                        }`}
+                      >
+                        {remainingSec > 0
+                          ? `Vigente por ${mins}:${secs} · Se actualiza automáticamente`
+                          : 'Renovando código automáticamente...'}
+                      </span>
+                    </div>
+                    <ol className="text-[11px] text-slate-400 space-y-1 text-left max-w-xs mx-auto pt-1">
+                      <li>1. Abre WhatsApp en tu celular → <strong className="text-slate-200">Dispositivos vinculados</strong>.</li>
+                      <li>2. Toca <strong className="text-slate-200">Vincular un dispositivo</strong>.</li>
+                      <li>3. Abajo elige <strong className="text-teal-300">Vincular con el número de teléfono</strong> e ingresa este código.</li>
+                    </ol>
                   </div>
-                  <ol className="text-[11px] text-slate-400 space-y-1 text-left max-w-xs mx-auto pt-1">
-                    <li>1. Abre WhatsApp en tu celular → <strong className="text-slate-200">Dispositivos vinculados</strong>.</li>
-                    <li>2. Toca <strong className="text-slate-200">Vincular un dispositivo</strong>.</li>
-                    <li>3. Abajo elige <strong className="text-teal-300">Vincular con el número de teléfono</strong> e ingresa este código.</li>
-                  </ol>
-                </div>
-              ) : session.qrDataUrl ? (
+                );
+              })() : session.qrDataUrl ? (
                 <div className="text-center space-y-3">
                   <img src={session.qrDataUrl} alt="QR WhatsApp" className="w-56 h-56 rounded-xl bg-white p-2 mx-auto" />
                   <p className="text-xs text-slate-400">Escanea este código desde tu WhatsApp (se actualiza en vivo)</p>
