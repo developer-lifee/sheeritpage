@@ -27,6 +27,7 @@ import ClientLoginView from './components/ClientLoginView';
 import { StoreBuilderPage } from './components/StoreBuilderPage';
 import { TenantStorefrontPage } from './components/TenantStorefrontPage';
 import { BotStudioPage } from './components/BotStudioPage';
+import { BotModulesLandingPage } from './components/BotModulesLandingPage';
 import { useDarkMode } from './hooks/useDarkMode';
 import { Search, ShoppingCart, Lock, AlertCircle, Globe } from 'lucide-react';
 import { ComboCartProvider, useComboCart } from './hooks/useComboCart';
@@ -55,7 +56,7 @@ interface Platform {
   incident?: string;
 }
 
-export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software' | 'raytracing-support' | 'raytracing-privacy' | 'pueblapp-support' | 'pueblapp-privacy' | 'portafolio' | 'evaluacion' | 'crear' | 'tienda' | 'mibot';
+export type ViewState = 'home' | 'support' | 'admin' | 'verificar' | 'servicios' | 'software' | 'raytracing-support' | 'raytracing-privacy' | 'pueblapp-support' | 'pueblapp-privacy' | 'portafolio' | 'evaluacion' | 'crear' | 'tienda' | 'mibot' | 'modulos';
 
 const AUTHORIZED_ADVISORS: { [email: string]: string } = {
   'esclepiades@hotmail.com': 'Esclepiades',
@@ -493,6 +494,7 @@ function AppContent() {
     if (path === '/evaluacion' || path === '/test-asesor' || path === '/test-asesores' || path === '/simulador') return 'evaluacion';
     if (path === '/crear' || path === '/builder' || path === '/comenzar' || path === '/crear-tienda' || path === '/tienda/crear') return 'crear';
     if (path === '/mi-bot' || path === '/bot-studio') return 'mibot';
+    if (path === '/modulos' || path === '/suite' || path === '/bot-modulos') return 'modulos';
     if (path.startsWith('/tienda/')) return 'tienda';
     return 'home';
   });
@@ -564,6 +566,8 @@ function AppContent() {
       setCurrentView('crear');
     } else if (path === '/mi-bot' || path === '/bot-studio') {
       setCurrentView('mibot');
+    } else if (path === '/modulos' || path === '/suite' || path === '/bot-modulos') {
+      setCurrentView('modulos');
     } else if (path.startsWith('/tienda/')) {
       setTenantSlug(path.replace('/tienda/', '').split('/')[0] || '');
       setCurrentView('tienda');
@@ -602,6 +606,8 @@ function AppContent() {
         setCurrentView('crear');
       } else if (currentPath === '/mi-bot' || currentPath === '/bot-studio') {
         setCurrentView('mibot');
+      } else if (currentPath === '/modulos' || currentPath === '/suite' || currentPath === '/bot-modulos') {
+        setCurrentView('modulos');
       } else if (currentPath.startsWith('/tienda/')) {
         setTenantSlug(currentPath.replace('/tienda/', '').split('/')[0] || '');
         setCurrentView('tienda');
@@ -630,6 +636,7 @@ function AppContent() {
     else if (view === 'evaluacion') path = '/evaluacion';
     else if (view === 'crear') path = '/crear';
     else if (view === 'mibot') path = '/mi-bot';
+    else if (view === 'modulos') path = '/modulos';
     window.history.pushState({}, '', path);
     window.scrollTo(0, 0);
   };
@@ -969,6 +976,12 @@ function AppContent() {
       {currentView === 'mibot' && (
         <ErrorBoundary fallbackTitle="Sheerit Bot Studio">
           <BotStudioPage onNavigateHome={() => navigateTo('home')} />
+        </ErrorBoundary>
+      )}
+
+      {currentView === 'modulos' && (
+        <ErrorBoundary fallbackTitle="Módulos Sheerit Bot Studio">
+          <BotModulesLandingPage onNavigate={navigateTo} />
         </ErrorBoundary>
       )}
 
