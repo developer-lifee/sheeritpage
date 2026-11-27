@@ -33,6 +33,8 @@ interface BotModulesProps {
   externalPlanId?: BasePlanId;
   externalAddons?: ModuleId[];
   syncVersion?: number;
+  onPlanChange?: (planId: BasePlanId) => void;
+  onAddonsChange?: (addons: ModuleId[]) => void;
 }
 
 export interface BasePlan {
@@ -500,7 +502,9 @@ export function BotModulesShowcase({
   embedded = false,
   externalPlanId,
   externalAddons,
-  syncVersion
+  syncVersion,
+  onPlanChange,
+  onAddonsChange
 }: BotModulesProps) {
   const { getWaLink } = useWhatsAppContact();
   const [activeModId, setActiveModId] = useState<ModuleId>('ocr');
@@ -517,8 +521,17 @@ export function BotModulesShowcase({
   const addonModules = MODULES_CATALOG.filter(m => !m.includedInBase);
   const activeMod = MODULES_CATALOG.find(m => m.id === activeModId) || MODULES_CATALOG[2];
 
+  const handleSelectPlan = (planId: BasePlanId) => {
+    setSelectedPlanId(planId);
+    onPlanChange?.(planId);
+  };
+
   const toggleAddon = (id: ModuleId) => {
-    setSelectedAddons(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
+    const next = selectedAddons.includes(id)
+      ? selectedAddons.filter(x => x !== id)
+      : [...selectedAddons, id];
+    setSelectedAddons(next);
+    onAddonsChange?.(next);
   };
 
   const selectedPlan = BASE_PLANS.find(p => p.id === selectedPlanId) || BASE_PLANS[1];
@@ -784,7 +797,7 @@ export function BotModulesShowcase({
                     <button
                       key={p.id}
                       type="button"
-                      onClick={() => setSelectedPlanId(p.id)}
+                      onClick={() => handleSelectPlan(p.id)}
                       className={`p-3 rounded-2xl border text-left transition ${
                         selectedPlanId === p.id
                           ? 'bg-teal-500/20 border-teal-400 text-white shadow-lg shadow-teal-950/40'

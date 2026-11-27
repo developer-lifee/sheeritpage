@@ -93,21 +93,19 @@ function buildAiRecommendation(rawText: string): AiPlanRecommendation {
 export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) => void }) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isBotModalOpen, setIsBotModalOpen] = useState(false);
+  const [activeTrack, setActiveTrack] = useState<'bot' | 'apps'>('bot');
   const [needInput, setNeedInput] = useState('');
   const [aiPlan, setAiPlan] = useState<AiPlanRecommendation | null>(null);
-  const [syncToSuite, setSyncToSuite] = useState<{ planId: BasePlanId; addons: ModuleId[]; version: number }>({
-    planId: 'pro',
-    addons: ['ocr'],
-    version: 0
-  });
+  const [selectedPlanId, setSelectedPlanId] = useState<BasePlanId>('pro');
+  const [selectedAddons, setSelectedAddons] = useState<ModuleId[]>(['ocr']);
+  const [syncVersion, setSyncVersion] = useState(0);
   const { getWaLink } = useWhatsAppContact();
 
   const addonModules = useMemo(() => MODULES_CATALOG.filter(m => !m.includedInBase), []);
 
-  const aiPricing = useMemo(() => {
-    if (!aiPlan) return null;
-    const plan = BASE_PLANS.find(p => p.id === aiPlan.planId) || BASE_PLANS[1];
-    const picked = addonModules.filter(m => aiPlan.addons.includes(m.id));
+  const livePricing = useMemo(() => {
+    const plan = BASE_PLANS.find(p => p.id === selectedPlanId) || BASE_PLANS[1];
+    const picked = addonModules.filter(m => selectedAddons.includes(m.id));
     const freeSlots = plan.includedAddonSlots;
     const includedPicked = picked.slice(0, freeSlots);
     const extraPicked = picked.slice(freeSlots);
@@ -127,54 +125,67 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
       discountAmount,
       totalMonthly
     };
-  }, [aiPlan, addonModules]);
+  }, [selectedPlanId, selectedAddons, addonModules]);
+
+  const applySelection = (planId: BasePlanId, addons: ModuleId[]) => {
+    setSelectedPlanId(planId);
+    setSelectedAddons(addons);
+    setSyncVersion(v => v + 1);
+    setAiPlan(prev => (prev ? { ...prev, planId, addons } : prev));
+  };
+
+  const goToTrack = (track: 'bot' | 'apps', anchorId?: string) => {
+    setActiveTrack(track);
+    if (anchorId) {
+      setTimeout(() => {
+        document.getElementById(anchorId)?.scrollIntoView({ behavior: 'smooth' });
+      }, 80);
+    }
+  };
 
   const handleBuildAiPlan = (promptOverride?: string) => {
     const query = (promptOverride ?? needInput).trim();
-    if (!query) {
-      const fallback = 'Quiero automatizar mi WhatsApp para vender más y mejorar mis respuestas';
-      setNeedInput(fallback);
-      setAiPlan(buildAiRecommendation(fallback));
-      return;
-    }
-    if (promptOverride) setNeedInput(promptOverride);
-    setAiPlan(buildAiRecommendation(query));
+    const effectiveQuery =
+      query || 'Quiero automatizar mi WhatsApp para vender más y mejorar mis respuestas';
+    if (!query) setNeedInput(effectiveQuery);
+    else if (promptOverride) setNeedInput(promptOverride);
+
+    const rec = buildAiRecommendation(effectiveQuery);
+    setActiveTrack('bot');
+    setAiPlan(rec);
+    setSelectedPlanId(rec.planId);
+    setSelectedAddons(rec.addons);
+    setSyncVersion(v => v + 1);
   };
 
   const handleToggleAiAddon = (id: ModuleId) => {
-    setAiPlan(prev => {
-      if (!prev) return prev;
-      const exists = prev.addons.includes(id);
-      return {
-        ...prev,
-        addons: exists ? prev.addons.filter(x => x !== id) : [...prev.addons, id]
-      };
-    });
+    const exists = selectedAddons.includes(id);
+    const next = exists ? selectedAddons.filter(x => x !== id) : [...selectedAddons, id];
+    applySelection(selectedPlanId, next);
   };
 
-  const handleRequestAiPlanWhatsApp = () => {
-    if (!aiPlan || !aiPricing) return;
-    const includedLines = aiPricing.includedPicked.map(a => `• ${a.shortTitle} (Incluido en plan — $0)`);
-    const extraLines = aiPricing.extraPicked.map(a => `• ${a.shortTitle} (+${formatCop(a.price)})`);
+  const handleActivateLiveConfig = () => {
+    const includedLines = livePricing.includedPicked.map(a => `• ${a.shortTitle} (Incluido en plan — $0)`);
+    const extraLines = livePricing.extraPicked.map(a => `• ${a.shortTitle} (+${formatCop(a.price)})`);
     const modulesSummary = [...includedLines, ...extraLines];
+    const promptLine = aiPlan?.originalPrompt
+      ? `💬 *Lo que necesito:* "${aiPlan.originalPrompt}"\n`
+      : '';
     const msg =
-      `¡Hola Sheerit! Usé el Armador de Plan con IA en https://sheerit.co/software:\n\n` +
-      `💬 *Lo que necesito:* "${aiPlan.originalPrompt}"\n` +
-      `📦 *Plan elegido:* ${aiPricing.plan.name} (${formatCop(aiPricing.plan.price)}/mes)\n` +
+      `¡Hola Sheerit! Configuré mi plan en https://sheerit.co/software:\n\n` +
+      promptLine +
+      `📦 *Plan elegido:* ${livePricing.plan.name} (${formatCop(livePricing.plan.price)}/mes)\n` +
       `🧩 *Módulos configurados:*\n${modulesSummary.length > 0 ? modulesSummary.join('\n') : '• Plan base + Módulo Automejorable con IA'}\n` +
-      (aiPricing.hasBundleDiscount ? `🏷️ *Descuento combo 3+ extras (15%):* -${formatCop(aiPricing.discountAmount)}\n` : '') +
-      `\n💰 *Total mensual estimado:* ${formatCop(aiPricing.totalMonthly)} COP/mes`;
+      (livePricing.hasBundleDiscount ? `🏷️ *Descuento combo 3+ extras (15%):* -${formatCop(livePricing.discountAmount)}\n` : '') +
+      `\n💰 *Total mensual estimado:* ${formatCop(livePricing.totalMonthly)} COP/mes`;
     window.open(getWaLink(msg), '_blank');
   };
 
   const handleOpenInInspector = () => {
-    if (!aiPlan) return;
-    setSyncToSuite(prev => ({
-      planId: aiPlan.planId,
-      addons: aiPlan.addons,
-      version: prev.version + 1
-    }));
-    document.getElementById('calculadora-modulos')?.scrollIntoView({ behavior: 'smooth' });
+    setActiveTrack('bot');
+    setTimeout(() => {
+      document.getElementById('calculadora-modulos')?.scrollIntoView({ behavior: 'smooth' });
+    }, 60);
   };
 
   const handleContactWhatsApp = (planType: string) => {
@@ -239,7 +250,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
   };
 
   return (
-    <div className="min-h-screen bg-[#050A12] text-slate-100 transition-colors duration-300 animate-fadeIn">
+    <div className="min-h-screen bg-[#050A12] text-slate-100 transition-colors duration-300 animate-fadeIn pb-28">
       {/* Hero Section */}
       <section className="relative overflow-hidden pt-20 pb-16 md:pt-28 md:pb-24 border-b border-teal-500/15 bg-[#030710]">
         {/* 3D Architectural Liquid Obsidian Backdrop */}
@@ -327,7 +338,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
           </div>
 
           {/* Interactive AI Plan Result Panel */}
-          {aiPlan && aiPricing && (
+          {aiPlan && (
             <div className="mt-6 max-w-4xl mx-auto text-left bg-slate-900/90 backdrop-blur-2xl border border-teal-400/45 rounded-3xl p-5 sm:p-6 shadow-2xl shadow-teal-950/60 space-y-5">
               <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-800 pb-4">
                 <div className="space-y-1 max-w-2xl">
@@ -339,7 +350,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                 <div className="text-right shrink-0">
                   <div className="text-[11px] text-slate-400 font-semibold uppercase">Total mensual estimado</div>
                   <div className="text-2xl sm:text-3xl font-black text-teal-300">
-                    {formatCop(aiPricing.totalMonthly)}{' '}
+                    {formatCop(livePricing.totalMonthly)}{' '}
                     <span className="text-xs font-semibold text-slate-400">COP/mes</span>
                   </div>
                 </div>
@@ -352,7 +363,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                 </div>
                 <div className="grid sm:grid-cols-3 gap-2.5">
                   {BASE_PLANS.map(p => {
-                    const active = aiPlan.planId === p.id;
+                    const active = selectedPlanId === p.id;
                     const slotLabel =
                       p.includedAddonSlots === 0
                         ? '0 extras incluidos'
@@ -363,7 +374,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                       <button
                         key={p.id}
                         type="button"
-                        onClick={() => setAiPlan(prev => (prev ? { ...prev, planId: p.id } : prev))}
+                        onClick={() => applySelection(p.id, selectedAddons)}
                         className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
                           active
                             ? 'bg-teal-500/20 border-teal-400 text-white shadow-lg'
@@ -387,18 +398,18 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                   <span className="text-xs font-semibold text-slate-300">
                     2. Agrega o quita módulos a tu medida:
                   </span>
-                  {aiPricing.freeSlots > 0 && (
+                  {livePricing.freeSlots > 0 && (
                     <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
-                      Cupos gratis en {aiPricing.plan.name}: {aiPricing.includedPicked.length}/{aiPricing.freeSlots}
-                      {aiPricing.remainingFreeSlots > 0 && ` · Elige ${aiPricing.remainingFreeSlots} más sin costo`}
+                      Cupos gratis en {livePricing.plan.name}: {livePricing.includedPicked.length}/{livePricing.freeSlots}
+                      {livePricing.remainingFreeSlots > 0 && ` · Elige ${livePricing.remainingFreeSlots} más sin costo`}
                     </span>
                   )}
                 </div>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {addonModules.map(mod => {
-                    const selected = aiPlan.addons.includes(mod.id);
-                    const isIncludedFree = aiPricing.includedPicked.some(i => i.id === mod.id);
-                    const canTakeFree = !selected && aiPricing.remainingFreeSlots > 0;
+                    const selected = selectedAddons.includes(mod.id);
+                    const isIncludedFree = livePricing.includedPicked.some(i => i.id === mod.id);
+                    const canTakeFree = !selected && livePricing.remainingFreeSlots > 0;
                     return (
                       <button
                         key={mod.id}
@@ -442,7 +453,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                 <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
                   <button
                     type="button"
-                    onClick={handleRequestAiPlanWhatsApp}
+                    onClick={handleActivateLiveConfig}
                     className="flex-1 sm:flex-initial px-5 py-3 rounded-xl bg-gradient-to-r from-teal-400 to-emerald-400 hover:from-teal-300 hover:to-emerald-300 text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer"
                   >
                     <Send className="w-4 h-4" /> Activar este Plan por WhatsApp
@@ -456,12 +467,13 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                   </button>
                 </div>
                 {aiPlan.suggestAppWeb && (
-                  <a
-                    href="#constructor-interactivo"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-500/15 border border-cyan-400/35 text-xs font-bold text-cyan-300 hover:bg-cyan-500/25 transition"
+                  <button
+                    type="button"
+                    onClick={() => goToTrack('apps', 'constructor-interactivo')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-500/15 border border-cyan-400/35 text-xs font-bold text-cyan-300 hover:bg-cyan-500/25 transition cursor-pointer"
                   >
                     <Smartphone className="w-3.5 h-3.5" /> También vimos interés en App/Web ($200k / $79k) →
-                  </a>
+                  </button>
                 )}
               </div>
             </div>
@@ -469,17 +481,29 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
 
           {/* Minimal Centered Quick-Links Row */}
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-slate-400">
-            <a href="#bot-whatsapp-section" className="hover:text-teal-300 transition font-medium">
+            <button
+              type="button"
+              onClick={() => goToTrack('bot', 'bot-whatsapp')}
+              className="hover:text-teal-300 transition font-medium cursor-pointer"
+            >
               Planes Bot ($10k – $60k)
-            </a>
+            </button>
             <span className="text-slate-700">·</span>
-            <a href="#modulos-bot" className="hover:text-teal-300 transition font-medium">
+            <button
+              type="button"
+              onClick={() => goToTrack('bot', 'modulos-bot')}
+              className="hover:text-teal-300 transition font-medium cursor-pointer"
+            >
               Suite Modular IA & OCR
-            </a>
+            </button>
             <span className="text-slate-700">·</span>
-            <a href="#constructor-interactivo" className="hover:text-teal-300 transition font-medium">
+            <button
+              type="button"
+              onClick={() => goToTrack('apps', 'constructor-interactivo')}
+              className="hover:text-teal-300 transition font-medium cursor-pointer"
+            >
               Estudio App / Web ($200k / $79k)
-            </a>
+            </button>
             <span className="text-slate-700">·</span>
             <button
               type="button"
@@ -527,296 +551,42 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
         <div className="absolute top-1/3 right-1/4 -translate-y-1/2 translate-x-1/2 w-[400px] h-[400px] bg-cyan-500/10 rounded-full blur-3xl z-0 pointer-events-none"></div>
       </section>
 
-      {/* Qué hacemos / Pilares */}
-      <section className="py-16 max-w-6xl mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-extrabold text-white">
-            ¿Cómo te ayudamos a escalar?
-          </h2>
-          <p className="text-sm text-slate-400 mt-2">
-            Desarrollamos soluciones enfocadas en la eficiencia, seguridad y la total autonomía de tu operación.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-slate-900/80 p-6 rounded-2xl shadow-lg border border-slate-800 hover:border-teal-500/40 transition flex flex-col justify-between">
-            <div>
-              <div className="w-12 h-12 rounded-xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-400 mb-5">
-                <Code className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">Software & Web Apps</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Plataformas web intuitivas, paneles de control SaaS y herramientas a la medida con arquitecturas seguras y escalables.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-slate-900/80 p-6 rounded-2xl shadow-lg border border-slate-800 hover:border-cyan-500/40 transition flex flex-col justify-between">
-            <div>
-              <div className="w-12 h-12 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-5">
-                <Smartphone className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">Apps Móviles (iOS & Android)</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Desarrollo nativo e híbrido (Swift, Kotlin, React Native) con publicación oficial en <strong className="text-slate-200">App Store</strong> y <strong className="text-slate-200">Google Play</strong>.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-slate-900/80 p-6 rounded-2xl shadow-lg border border-slate-800 hover:border-emerald-500/40 transition flex flex-col justify-between">
-            <div>
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-5">
-                <Zap className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">Automatización (RPA & Bots)</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Conectamos tus sistemas (Excel, CRMs, WhatsApp, ERPs) con bots de IA para eliminar tareas repetitivas 24/7.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-slate-900/80 p-6 rounded-2xl shadow-lg border border-slate-800 hover:border-indigo-500/40 transition flex flex-col justify-between">
-            <div>
-              <div className="w-12 h-12 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-5">
-                <ArrowLeftRight className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">Integración de Datos & APIs</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Consolidación de bases de datos, generación de reportes y pasarelas de pago automáticas (Bre-B, PSE, Bold).
-              </p>
-            </div>
+      {/* Sticky Top Focus Switcher */}
+      <div className="sticky top-0 z-30 bg-[#050A12]/90 backdrop-blur-xl border-b border-slate-800/90">
+        <div className="max-w-xl mx-auto py-3 px-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-1.5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-lg">
+            <button
+              type="button"
+              onClick={() => setActiveTrack('bot')}
+              className={`px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                activeTrack === 'bot'
+                  ? 'bg-gradient-to-r from-teal-500/20 to-emerald-500/20 border-teal-400/60 text-white shadow-sm'
+                  : 'border-transparent text-slate-400 hover:text-white'
+              }`}
+            >
+              <Bot className="w-4 h-4 text-teal-400 shrink-0" />
+              <span>Bot WhatsApp IA & Suite Modular</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTrack('apps')}
+              className={`px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                activeTrack === 'apps'
+                  ? 'bg-gradient-to-r from-cyan-500/20 to-indigo-500/20 border-cyan-400/60 text-white shadow-sm'
+                  : 'border-transparent text-slate-400 hover:text-white'
+              }`}
+            >
+              <Smartphone className="w-4 h-4 text-cyan-400 shrink-0" />
+              <span>Apps ($200k), Web ($79k) & A Medida</span>
+            </button>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Sección Destacada: Aplicaciones Móviles Publicadas */}
-      <section id="mobile-apps" className="py-16 bg-[#070E1A] border-y border-slate-800/80">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <span className="px-3.5 py-1 text-xs font-mono font-bold text-teal-300 bg-teal-500/10 border border-teal-500/30 rounded-full uppercase tracking-wider">
-              Ecosistema Móvil Oficial
-            </span>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-white mt-3">
-              Nuestras Aplicaciones Móviles (iOS & Android)
-            </h2>
-            <p className="text-sm md:text-base text-slate-400 mt-2 max-w-2xl mx-auto">
-              Contamos con aplicaciones desarrolladas y publicadas para plataformas Apple iOS y Google Android con cumplimiento estricto de privacidad y rendimiento nativo.
-            </p>
-          </div>
+      {activeTrack === 'bot' ? (
+        <>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* PueblApp */}
-            <div className="bg-slate-900/85 rounded-3xl p-8 shadow-xl border border-slate-800 hover:border-teal-500/40 flex flex-col justify-between transition-all">
-              <div>
-                <div className="flex items-center justify-between mb-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white text-2xl font-black shadow-md">
-                      🏘️
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-white">PueblApp</h3>
-                      <p className="text-xs text-emerald-400 font-semibold">Turismo & Comercio Local • iOS & Android</p>
-                    </div>
-                  </div>
-                  <span className="px-2.5 py-1 text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 rounded-full">
-                    App Store / Play Store
-                  </span>
-                </div>
-
-                <p className="text-sm text-slate-300 mb-6 leading-relaxed">
-                  Plataforma móvil integral para el descubrimiento de destinos turísticos, municipios colombianos, gastronomía, eventos culturales y directorio de negocios locales con geolocalización en tiempo real.
-                </p>
-
-                <div className="grid grid-cols-2 gap-3 mb-6 bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                  <div className="text-xs">
-                    <span className="text-slate-500 block">Tecnología:</span>
-                    <strong className="text-slate-200">iOS (Swift) / Android (Kotlin)</strong>
-                  </div>
-                  <div className="text-xs">
-                    <span className="text-slate-500 block">Funciones:</span>
-                    <strong className="text-slate-200">GPS, Mapas, Notificaciones</strong>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-800">
-                <a
-                  href="/support/pueblapp"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (onNavigate) onNavigate('pueblapp-support');
-                    else { window.history.pushState({}, '', '/support/pueblapp'); window.dispatchEvent(new Event('popstate')); }
-                  }}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  Soporte PueblApp <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-                <a
-                  href="/support/pueblapp/privacy"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (onNavigate) onNavigate('pueblapp-privacy');
-                    else { window.history.pushState({}, '', '/support/pueblapp/privacy'); window.dispatchEvent(new Event('popstate')); }
-                  }}
-                  className="px-4 py-2 bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30 text-teal-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  Privacidad & Términos <Shield className="w-3.5 h-3.5" />
-                </a>
-              </div>
-            </div>
-
-            {/* RayTracing 3D Viewer */}
-            <div className="bg-slate-900/85 rounded-3xl p-8 shadow-xl border border-slate-800 hover:border-cyan-500/40 flex flex-col justify-between transition-all">
-              <div>
-                <div className="flex items-center justify-between mb-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-black shadow-md">
-                      ✨
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-white">RayTracing 3D</h3>
-                      <p className="text-xs text-cyan-400 font-semibold">Renderizado & Óptica 3D • iOS / iPadOS</p>
-                    </div>
-                  </div>
-                  <span className="px-2.5 py-1 text-[11px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 rounded-full">
-                    App Store iOS
-                  </span>
-                </div>
-
-                <p className="text-sm text-slate-300 mb-6 leading-relaxed">
-                  Aplicación interactiva de simulación de trazado de rayos (Ray Tracing) y visualización física de materiales, sombras suaves y reflexión óptica en tiempo real para dispositivos Apple con tecnología Metal.
-                </p>
-
-                <div className="grid grid-cols-2 gap-3 mb-6 bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                  <div className="text-xs">
-                    <span className="text-slate-500 block">Tecnología:</span>
-                    <strong className="text-slate-200">SwiftUI / Metal Shader</strong>
-                  </div>
-                  <div className="text-xs">
-                    <span className="text-slate-500 block">Compatibilidad:</span>
-                    <strong className="text-slate-200">iPhone, iPad, Mac</strong>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-800">
-                <a
-                  href="/support/raytracing"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (onNavigate) onNavigate('raytracing-support');
-                    else { window.history.pushState({}, '', '/support/raytracing'); window.dispatchEvent(new Event('popstate')); }
-                  }}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  Soporte RayTracing <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-                <a
-                  href="/support/raytracing/privacy"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (onNavigate) onNavigate('raytracing-privacy');
-                    else { window.history.pushState({}, '', '/support/raytracing/privacy'); window.dispatchEvent(new Event('popstate')); }
-                  }}
-                  className="px-4 py-2 bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  Privacidad & Términos <Shield className="w-3.5 h-3.5" />
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Carrusel de Casos de Uso */}
-      <section id="cases" className="py-16 bg-[#050A12]">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-extrabold text-white">
-              Casos Reales de Automatización
-            </h2>
-            <p className="text-sm text-slate-400 mt-2">
-              Explora cómo ayudamos a las empresas a simplificar y agilizar sus flujos de trabajo diarios.
-            </p>
-          </div>
-
-          {/* Carrusel Container */}
-          <div className="relative bg-slate-900/85 rounded-3xl p-8 md:p-12 shadow-xl border border-slate-800 min-h-[400px] flex flex-col justify-between transition-all duration-300">
-            
-            {/* Contenido Dinámico del Slide */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center animate-fadeIn">
-              <div>
-                <span className="px-3 py-1 text-xs font-mono font-bold text-teal-300 bg-teal-500/15 border border-teal-500/30 rounded-full uppercase tracking-wider">
-                  {cases[currentSlide].badge}
-                </span>
-                
-                <h3 className="text-2xl md:text-3xl font-black text-white mt-4 mb-6">
-                  {cases[currentSlide].title}
-                </h3>
-                
-                <p className="text-sm text-slate-300 mb-6 leading-relaxed">
-                  {cases[currentSlide].desc}
-                </p>
-                
-                <ul className="space-y-3 mb-8">
-                  {cases[currentSlide].steps.map((step, idx) => (
-                    <li key={idx} className="flex items-start gap-2.5 text-sm text-slate-300">
-                      <Check className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                      <span>{step}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              
-              <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800">
-                <h4 className="font-mono font-bold text-xs text-slate-400 uppercase tracking-wider mb-4">
-                  Impacto & Métricas Promedio
-                </h4>
-                <div className="space-y-4">
-                  {cases[currentSlide].metrics.map((metric, idx) => (
-                    <div key={idx} className="flex justify-between items-center border-b border-slate-800 pb-2 last:border-0 last:pb-0">
-                      <span className="text-xs text-slate-400">{metric.label}</span>
-                      <span className="font-bold text-emerald-400 text-sm">{metric.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Controles del Carrusel */}
-            <div className="flex items-center justify-between mt-10 pt-6 border-t border-slate-800">
-              <div className="flex gap-2">
-                {cases.map((_, idx) => (
-                  <button 
-                    key={idx}
-                    onClick={() => setCurrentSlide(idx)}
-                    className={`w-2.5 h-2.5 rounded-full transition-all ${currentSlide === idx ? 'bg-teal-400 w-6' : 'bg-slate-700'}`}
-                    aria-label={`Ir al slide ${idx + 1}`}
-                  />
-                ))}
-              </div>
-              
-              <div className="flex gap-3">
-                <button 
-                  onClick={prevSlide}
-                  className="p-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 transition-colors"
-                  aria-label="Caso anterior"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button 
-                  onClick={nextSlide}
-                  className="p-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 transition-colors"
-                  aria-label="Siguiente caso"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
+      {/* Paso 1: Bot WhatsApp IA */}
 
       
       {/* SECCIÓN ESTRELLA: BOT DE WHATSAPP AUTOGESTIÓN CON IA */}
@@ -824,18 +594,18 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-bold uppercase tracking-wider mb-3">
-              <Sparkles className="w-4 h-4" /> Autogestión WhatsApp 24/7 • Con Inteligencia Artificial
+              <Sparkles className="w-4 h-4" /> Paso 1 · Elige tu Plan Base WhatsApp IA
             </div>
             <h2 className="text-3xl md:text-5xl font-black text-white">
               Tu Asistente Personal & Negocio en WhatsApp
             </h2>
             <p className="text-sm md:text-base text-slate-300 mt-3 max-w-3xl mx-auto leading-relaxed">
-              Diseñado para clientes reales: no necesitas ser programador. Configura tu bot por audio o texto, dale personalidad y pruébalo con <strong className="text-white">20 mensajes gratis en vivo</strong> antes de pagar.
+              Diseñado para clientes reales: configura tu bot por audio o texto, pruébalo con <strong className="text-white">20 mensajes gratis en vivo</strong> y luego elige los módulos avanzados que quieras sumar abajo.
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <button
                 onClick={() => setIsBotModalOpen(true)}
-                className="px-6 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black rounded-2xl shadow-xl shadow-emerald-950/50 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm flex items-center gap-2 cursor-pointer"
+                className="px-6 py-3 bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold rounded-2xl transition-all text-sm flex items-center gap-2 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4" /> <span>Probar Demo Gratis (20 Mensajes IA)</span>
               </button>
@@ -896,7 +666,13 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
           {/* Planes del Bot */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
             {/* Starter */}
-            <div className="bg-slate-900/85 rounded-3xl p-8 shadow-xl border border-slate-800 hover:border-emerald-500/40 transition-all flex flex-col justify-between relative overflow-hidden">
+            <div
+              className={`bg-slate-900/85 rounded-3xl p-8 shadow-xl border transition-all flex flex-col justify-between relative overflow-hidden ${
+                selectedPlanId === 'starter'
+                  ? 'border-teal-400 ring-2 ring-teal-400 shadow-teal-950/50'
+                  : 'border-slate-800 hover:border-emerald-500/40'
+              }`}
+            >
               <div>
                 <span className="px-3 py-1 text-xs font-mono font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 rounded-full uppercase">
                   Plan Starter
@@ -939,15 +715,33 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                 </ul>
               </div>
               <button
-                onClick={() => setIsBotModalOpen(true)}
-                className="w-full py-3.5 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
+                type="button"
+                onClick={() => {
+                  applySelection('starter', selectedAddons);
+                  document.getElementById('modulos-bot')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className={`w-full py-3.5 px-4 font-bold rounded-2xl transition-all flex items-center justify-center gap-2 text-sm cursor-pointer ${
+                  selectedPlanId === 'starter'
+                    ? 'bg-gradient-to-r from-teal-400 to-emerald-400 text-slate-950 font-black shadow-lg'
+                    : 'bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white'
+                }`}
               >
-                <Sparkles className="w-4 h-4 text-emerald-400" /> Probar Demo / Activar ($10k)
+                {selectedPlanId === 'starter' ? (
+                  <>✓ Plan Seleccionado (Ir a Módulos ↓)</>
+                ) : (
+                  <>Elegir Plan Starter ($10k)</>
+                )}
               </button>
             </div>
 
             {/* Pro ($30.000) — Plan Estrella */}
-            <div className="bg-gradient-to-b from-teal-950/50 to-slate-900 rounded-3xl p-8 shadow-2xl border-2 border-teal-400/80 ring-1 ring-teal-500/25 transition-all flex flex-col justify-between relative overflow-hidden">
+            <div
+              className={`bg-gradient-to-b from-teal-950/50 to-slate-900 rounded-3xl p-8 shadow-2xl border-2 transition-all flex flex-col justify-between relative overflow-hidden ${
+                selectedPlanId === 'pro'
+                  ? 'border-teal-400 ring-2 ring-teal-400 shadow-teal-950/60'
+                  : 'border-teal-400/50 ring-1 ring-teal-500/20'
+              }`}
+            >
               <div className="absolute top-0 right-0 bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 text-[10px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-wider">
                 Más Elegido
               </div>
@@ -996,15 +790,33 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                 </ul>
               </div>
               <button
-                onClick={() => handleContactWhatsApp('Bot WhatsApp Plan Pro ($30.000 COP/mes)')}
-                className="w-full py-3.5 px-4 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-black rounded-2xl shadow-lg shadow-teal-950/50 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
+                type="button"
+                onClick={() => {
+                  applySelection('pro', selectedAddons);
+                  document.getElementById('modulos-bot')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className={`w-full py-3.5 px-4 font-black rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 text-sm cursor-pointer ${
+                  selectedPlanId === 'pro'
+                    ? 'bg-gradient-to-r from-teal-400 to-emerald-400 text-slate-950 shadow-teal-950/50'
+                    : 'bg-slate-800 hover:bg-slate-700 border border-teal-500/40 text-teal-300'
+                }`}
               >
-                <MessageSquare className="w-4 h-4" /> Solicitar Plan Pro ($30k)
+                {selectedPlanId === 'pro' ? (
+                  <>✓ Plan Seleccionado (Ir a Módulos ↓)</>
+                ) : (
+                  <>Elegir Plan Pro ($30k)</>
+                )}
               </button>
             </div>
 
             {/* Scale */}
-            <div className="bg-slate-900/85 rounded-3xl p-8 shadow-xl border border-slate-800 hover:border-cyan-500/40 transition-all flex flex-col justify-between">
+            <div
+              className={`bg-slate-900/85 rounded-3xl p-8 shadow-xl border transition-all flex flex-col justify-between ${
+                selectedPlanId === 'scale'
+                  ? 'border-cyan-400 ring-2 ring-cyan-400 shadow-cyan-950/50'
+                  : 'border-slate-800 hover:border-cyan-500/40'
+              }`}
+            >
               <div>
                 <span className="px-3 py-1 text-xs font-mono font-bold text-cyan-300 bg-cyan-500/15 border border-cyan-500/30 rounded-full uppercase">
                   Plan Scale
@@ -1046,25 +858,127 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                 </ul>
               </div>
               <button
-                onClick={() => handleContactWhatsApp('Bot WhatsApp Plan Scale ($60.000 COP/mes)')}
-                className="w-full py-3.5 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
+                type="button"
+                onClick={() => {
+                  applySelection('scale', selectedAddons);
+                  document.getElementById('modulos-bot')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className={`w-full py-3.5 px-4 font-bold rounded-2xl transition-all flex items-center justify-center gap-2 text-sm cursor-pointer ${
+                  selectedPlanId === 'scale'
+                    ? 'bg-gradient-to-r from-cyan-400 to-teal-400 text-slate-950 font-black shadow-lg'
+                    : 'bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white'
+                }`}
               >
-                <MessageSquare className="w-4 h-4 text-cyan-400" /> Solicitar Plan Scale ($60k)
+                {selectedPlanId === 'scale' ? (
+                  <>✓ Plan Seleccionado (Ir a Módulos ↓)</>
+                ) : (
+                  <>Elegir Plan Scale ($60k)</>
+                )}
               </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* SUITE MODULAR TECNOLÓGICA DE BOT WHATSAPP IA (OCR, TICKETERA, CRM, CONTABILIDAD, RPA) */}
+      {/* Paso 2: SUITE MODULAR TECNOLÓGICA DE BOT WHATSAPP IA */}
       <BotModulesShowcase
         embedded
         onNavigate={onNavigate}
-        externalPlanId={syncToSuite.planId}
-        externalAddons={syncToSuite.addons}
-        syncVersion={syncToSuite.version}
+        externalPlanId={selectedPlanId}
+        externalAddons={selectedAddons}
+        syncVersion={syncVersion}
+        onPlanChange={planId => {
+          setSelectedPlanId(planId);
+          setAiPlan(prev => (prev ? { ...prev, planId } : prev));
+        }}
+        onAddonsChange={addons => {
+          setSelectedAddons(addons);
+          setAiPlan(prev => (prev ? { ...prev, addons } : prev));
+        }}
       />
 
+      {/* Paso 3: Carrusel de Casos Reales en Operación */}
+      <section id="cases" className="py-16 bg-[#050A12]">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-extrabold text-white">
+              Casos Reales de Automatización
+            </h2>
+            <p className="text-sm text-slate-400 mt-2">
+              Explora cómo ayudamos a las empresas a simplificar y agilizar sus flujos de trabajo diarios.
+            </p>
+          </div>
+
+          <div className="relative bg-slate-900/85 rounded-3xl p-8 md:p-12 shadow-xl border border-slate-800 min-h-[400px] flex flex-col justify-between transition-all duration-300">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center animate-fadeIn">
+              <div>
+                <span className="px-3 py-1 text-xs font-mono font-bold text-teal-300 bg-teal-500/15 border border-teal-500/30 rounded-full uppercase tracking-wider">
+                  {cases[currentSlide].badge}
+                </span>
+                <h3 className="text-2xl md:text-3xl font-black text-white mt-4 mb-6">
+                  {cases[currentSlide].title}
+                </h3>
+                <p className="text-sm text-slate-300 mb-6 leading-relaxed">
+                  {cases[currentSlide].desc}
+                </p>
+                <ul className="space-y-3 mb-8">
+                  {cases[currentSlide].steps.map((step, idx) => (
+                    <li key={idx} className="flex items-start gap-2.5 text-sm text-slate-300">
+                      <Check className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                      <span>{step}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800">
+                <h4 className="font-mono font-bold text-xs text-slate-400 uppercase tracking-wider mb-4">
+                  Impacto & Métricas Promedio
+                </h4>
+                <div className="space-y-4">
+                  {cases[currentSlide].metrics.map((metric, idx) => (
+                    <div key={idx} className="flex justify-between items-center border-b border-slate-800 pb-2 last:border-0 last:pb-0">
+                      <span className="text-xs text-slate-400">{metric.label}</span>
+                      <span className="font-bold text-emerald-400 text-sm">{metric.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between mt-10 pt-6 border-t border-slate-800">
+              <div className="flex gap-2">
+                {cases.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentSlide(idx)}
+                    className={`w-2.5 h-2.5 rounded-full transition-all ${currentSlide === idx ? 'bg-teal-400 w-6' : 'bg-slate-700'}`}
+                    aria-label={`Ir al slide ${idx + 1}`}
+                  />
+                ))}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={prevSlide}
+                  className="p-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 transition-colors"
+                  aria-label="Caso anterior"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={nextSlide}
+                  className="p-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 transition-colors"
+                  aria-label="Siguiente caso"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+        </>
+      ) : (
+        <>
       {/* CONSTRUCTOR & ESTUDIO INTERACTIVO (APP $200k / WEB $79k) */}
       <InteractiveAppWebStudio />
 
@@ -1344,6 +1258,201 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
         </div>
       </section>
 
+      {/* Aplicaciones Móviles Publicadas */}
+      <section id="mobile-apps" className="py-16 bg-[#070E1A] border-y border-slate-800/80">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <span className="px-3.5 py-1 text-xs font-mono font-bold text-teal-300 bg-teal-500/10 border border-teal-500/30 rounded-full uppercase tracking-wider">
+              Ecosistema Móvil Oficial
+            </span>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-white mt-3">
+              Nuestras Aplicaciones Móviles (iOS & Android)
+            </h2>
+            <p className="text-sm md:text-base text-slate-400 mt-2 max-w-2xl mx-auto">
+              Contamos con aplicaciones desarrolladas y publicadas para plataformas Apple iOS y Google Android con cumplimiento estricto de privacidad y rendimiento nativo.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-slate-900/85 rounded-3xl p-8 shadow-xl border border-slate-800 hover:border-teal-500/40 flex flex-col justify-between transition-all">
+              <div>
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white text-2xl font-black shadow-md">
+                      🏘️
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">PueblApp</h3>
+                      <p className="text-xs text-emerald-400 font-semibold">Turismo & Comercio Local • iOS & Android</p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 rounded-full">
+                    App Store / Play Store
+                  </span>
+                </div>
+                <p className="text-sm text-slate-300 mb-6 leading-relaxed">
+                  Plataforma móvil integral para el descubrimiento de destinos turísticos, municipios colombianos, gastronomía, eventos culturales y directorio de negocios locales con geolocalización en tiempo real.
+                </p>
+                <div className="grid grid-cols-2 gap-3 mb-6 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                  <div className="text-xs">
+                    <span className="text-slate-500 block">Tecnología:</span>
+                    <strong className="text-slate-200">iOS (Swift) / Android (Kotlin)</strong>
+                  </div>
+                  <div className="text-xs">
+                    <span className="text-slate-500 block">Funciones:</span>
+                    <strong className="text-slate-200">GPS, Mapas, Notificaciones</strong>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-800">
+                <a
+                  href="/support/pueblapp"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (onNavigate) onNavigate('pueblapp-support');
+                    else { window.history.pushState({}, '', '/support/pueblapp'); window.dispatchEvent(new Event('popstate')); }
+                  }}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  Soporte PueblApp <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+                <a
+                  href="/support/pueblapp/privacy"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (onNavigate) onNavigate('pueblapp-privacy');
+                    else { window.history.pushState({}, '', '/support/pueblapp/privacy'); window.dispatchEvent(new Event('popstate')); }
+                  }}
+                  className="px-4 py-2 bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30 text-teal-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  Privacidad & Términos <Shield className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+
+            <div className="bg-slate-900/85 rounded-3xl p-8 shadow-xl border border-slate-800 hover:border-cyan-500/40 flex flex-col justify-between transition-all">
+              <div>
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-black shadow-md">
+                      ✨
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">RayTracing 3D</h3>
+                      <p className="text-xs text-cyan-400 font-semibold">Renderizado & Óptica 3D • iOS / iPadOS</p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 text-[11px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 rounded-full">
+                    App Store iOS
+                  </span>
+                </div>
+                <p className="text-sm text-slate-300 mb-6 leading-relaxed">
+                  Aplicación interactiva de simulación de trazado de rayos (Ray Tracing) y visualización física de materiales, sombras suaves y reflexión óptica en tiempo real para dispositivos Apple con tecnología Metal.
+                </p>
+                <div className="grid grid-cols-2 gap-3 mb-6 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                  <div className="text-xs">
+                    <span className="text-slate-500 block">Tecnología:</span>
+                    <strong className="text-slate-200">SwiftUI / Metal Shader</strong>
+                  </div>
+                  <div className="text-xs">
+                    <span className="text-slate-500 block">Compatibilidad:</span>
+                    <strong className="text-slate-200">iPhone, iPad, Mac</strong>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-800">
+                <a
+                  href="/support/raytracing"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (onNavigate) onNavigate('raytracing-support');
+                    else { window.history.pushState({}, '', '/support/raytracing'); window.dispatchEvent(new Event('popstate')); }
+                  }}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  Soporte RayTracing <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+                <a
+                  href="/support/raytracing/privacy"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (onNavigate) onNavigate('raytracing-privacy');
+                    else { window.history.pushState({}, '', '/support/raytracing/privacy'); window.dispatchEvent(new Event('popstate')); }
+                  }}
+                  className="px-4 py-2 bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  Privacidad & Términos <Shield className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Qué hacemos / Pilares */}
+      <section className="py-16 max-w-6xl mx-auto px-4">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-extrabold text-white">
+            ¿Cómo te ayudamos a escalar?
+          </h2>
+          <p className="text-sm text-slate-400 mt-2">
+            Desarrollamos soluciones enfocadas en la eficiencia, seguridad y la total autonomía de tu operación.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-slate-900/80 p-6 rounded-2xl shadow-lg border border-slate-800 hover:border-teal-500/40 transition flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-400 mb-5">
+                <Code className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Software & Web Apps</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Plataformas web intuitivas, paneles de control SaaS y herramientas a la medida con arquitecturas seguras y escalables.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-slate-900/80 p-6 rounded-2xl shadow-lg border border-slate-800 hover:border-cyan-500/40 transition flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-5">
+                <Smartphone className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Apps Móviles (iOS & Android)</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Desarrollo nativo e híbrido (Swift, Kotlin, React Native) con publicación oficial en <strong className="text-slate-200">App Store</strong> y <strong className="text-slate-200">Google Play</strong>.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-slate-900/80 p-6 rounded-2xl shadow-lg border border-slate-800 hover:border-emerald-500/40 transition flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-5">
+                <Zap className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Automatización (RPA & Bots)</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Conectamos tus sistemas (Excel, CRMs, WhatsApp, ERPs) con bots de IA para eliminar tareas repetitivas 24/7.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-slate-900/80 p-6 rounded-2xl shadow-lg border border-slate-800 hover:border-indigo-500/40 transition flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-5">
+                <ArrowLeftRight className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Integración de Datos & APIs</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Consolidación de bases de datos, generación de reportes y pasarelas de pago automáticas (Bre-B, PSE, Bold).
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+        </>
+      )}
+
       {/* FAQ / Preguntas Frecuentes */}
       <section className="py-16 max-w-4xl mx-auto px-4">
         <div className="text-center mb-12">
@@ -1408,6 +1517,62 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
           </button>
         </div>
       </section>
+
+      {/* Persistent Fixed Bottom Purchase-Confirmation Bar */}
+      {activeTrack === 'bot' && (
+        <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-1.5rem)] max-w-4xl bg-slate-950/92 backdrop-blur-2xl border border-teal-400/45 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.9)] rounded-2xl px-4 py-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="min-w-0 space-y-0.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-mono uppercase text-teal-300 font-bold tracking-wider">
+                  Tu Configuración Activa
+                </span>
+                <span className="text-[11px] font-bold text-white">
+                  · {livePricing.plan.name}
+                </span>
+              </div>
+              <div className="text-xs text-slate-300 truncate">
+                {livePricing.picked.length > 0 ? (
+                  <span>
+                    {livePricing.freeSlots > 0
+                      ? `${livePricing.includedPicked.length}/${livePricing.freeSlots} gratis: `
+                      : 'Módulos: '}
+                    {livePricing.picked.map(m => m.shortTitle).join(' + ')}
+                  </span>
+                ) : (
+                  <span className="text-slate-400">Plan base + Módulo Automejorable con IA</span>
+                )}
+                {livePricing.remainingFreeSlots > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleOpenInInspector}
+                    className="ml-2 text-emerald-300 hover:text-emerald-200 underline font-semibold cursor-pointer"
+                  >
+                    Te queda{livePricing.remainingFreeSlots > 1 ? 'n' : ''} {livePricing.remainingFreeSlots} módulo{livePricing.remainingFreeSlots > 1 ? 's' : ''} gratis ↓
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+              <div className="text-left sm:text-right">
+                <div className="text-lg sm:text-xl font-black text-teal-300 leading-none">
+                  {formatCop(livePricing.totalMonthly)}
+                </div>
+                <div className="text-[10px] text-slate-400 font-medium mt-0.5">COP / mes</div>
+              </div>
+              <button
+                type="button"
+                onClick={handleActivateLiveConfig}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-400 to-emerald-400 hover:from-teal-300 hover:to-emerald-300 text-slate-950 font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-teal-950/50 transition-all active:scale-95 cursor-pointer"
+              >
+                <Send className="w-4 h-4" />
+                <span>Activar por WhatsApp</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Simulador Interactivo */}
       <WhatsAppBotSimulatorModal
