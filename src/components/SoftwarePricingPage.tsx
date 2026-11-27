@@ -112,48 +112,67 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
             Diseñamos plataformas web de alto rendimiento, aplicaciones nativas para <strong className="text-white">iOS (App Store)</strong> y <strong className="text-white">Android (Google Play)</strong>, y bots modulares en WhatsApp Web real para escalar tu operación.
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-3">
+          {/* Tier 1: Primary Symmetrical CTA Pair */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-2xl mx-auto">
             <button
+              type="button"
               onClick={() => setIsBotModalOpen(true)}
-              className="px-7 py-3.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-black rounded-2xl shadow-xl shadow-teal-950/60 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2 cursor-pointer"
+              className="w-full px-6 py-4 bg-gradient-to-r from-teal-400 via-emerald-400 to-cyan-400 hover:from-teal-300 hover:to-cyan-300 text-slate-950 font-black rounded-2xl shadow-[0_0_28px_-6px_rgba(20,184,166,0.6)] transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center justify-center gap-2.5 cursor-pointer"
             >
-              <span>🤖 Bot WhatsApp IA ($10k - $60k)</span> <Sparkles className="w-4 h-4" />
+              <Bot className="w-5 h-5" />
+              <span>Bot WhatsApp IA ($10k – $60k)</span>
+              <Sparkles className="w-4 h-4" />
             </button>
             <a
               href="#modulos-bot"
-              className="px-7 py-3.5 bg-slate-900/85 backdrop-blur-md hover:bg-slate-800 text-teal-300 font-bold rounded-2xl shadow-lg border border-teal-500/40 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
+              className="w-full px-6 py-4 bg-slate-900/80 backdrop-blur-xl hover:bg-slate-800/90 text-white font-bold rounded-2xl shadow-lg border border-teal-400/40 hover:border-teal-300/70 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center justify-center gap-2.5"
             >
-              ⚡ Módulos IA & OCR
-            </a>
-            <a 
-              href="#constructor-interactivo"
-              className="px-6 py-3.5 bg-slate-900/85 backdrop-blur-md hover:bg-slate-800 text-slate-200 font-bold rounded-2xl border border-slate-700/80 hover:border-teal-500/40 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
-            >
-              <span>🛠️ Diseña App / Web ($200k / $79k)</span>
-            </a>
-            <button
-              onClick={() => {
-                if (onNavigate) {
-                  onNavigate('portafolio');
-                } else {
-                  window.history.pushState({}, '', '/portafolio');
-                  window.dispatchEvent(new Event('popstate'));
-                }
-              }}
-              className="px-6 py-3.5 bg-slate-900/85 backdrop-blur-md hover:bg-slate-800 text-slate-200 font-bold rounded-2xl border border-slate-700/80 hover:border-teal-500/40 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2 cursor-pointer"
-            >
-              <span>🎨 Portafolio</span> <ArrowRight className="w-4 h-4 text-teal-400" />
-            </button>
-            <a 
-              href="#pricing-comparison"
-              className="px-6 py-3.5 bg-slate-900/85 backdrop-blur-md hover:bg-slate-800 text-slate-200 font-bold rounded-2xl border border-slate-700/80 hover:border-teal-500/40 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center gap-2"
-            >
-              Ver Planes
+              <Zap className="w-4 h-4 text-teal-400" />
+              <span>Explorar Módulos IA & OCR</span>
+              <ArrowRight className="w-4 h-4 text-teal-400" />
             </a>
           </div>
 
+          {/* Tier 2: Unified Secondary Navigation Dock */}
+          <div className="mt-4 flex justify-center">
+            <div className="inline-flex flex-wrap sm:flex-nowrap items-center justify-center gap-1 p-1.5 rounded-2xl bg-slate-900/75 backdrop-blur-xl border border-slate-800/90 shadow-xl">
+              <a
+                href="#constructor-interactivo"
+                className="px-4 py-2 rounded-xl text-xs md:text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800/85 transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <Smartphone className="w-4 h-4 text-cyan-400" />
+                <span>Diseña App / Web ($200k / $79k)</span>
+              </a>
+              <span className="hidden sm:block w-px h-4 bg-slate-800" />
+              <a
+                href="#pricing-comparison"
+                className="px-4 py-2 rounded-xl text-xs md:text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800/85 transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Ver Planes</span>
+              </a>
+              <span className="hidden sm:block w-px h-4 bg-slate-800" />
+              <button
+                type="button"
+                onClick={() => {
+                  if (onNavigate) {
+                    onNavigate('portafolio');
+                  } else {
+                    window.history.pushState({}, '', '/portafolio');
+                    window.dispatchEvent(new Event('popstate'));
+                  }
+                }}
+                className="px-4 py-2 rounded-xl text-xs md:text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800/85 transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <Globe className="w-4 h-4 text-teal-400" />
+                <span>Portafolio</span>
+                <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+              </button>
+            </div>
+          </div>
+
           {/* Telemetry & Trust Strip */}
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-3 md:gap-6 text-xs text-slate-300">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3 md:gap-6 text-xs text-slate-300">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/75 backdrop-blur-md border border-slate-800">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="font-semibold text-white">WhatsApp Web Anti-Bloqueo 24/7</span>
