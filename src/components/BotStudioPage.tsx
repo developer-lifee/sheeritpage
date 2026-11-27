@@ -159,7 +159,7 @@ interface ImprovementItem {
   proposed_prompt_addition: string | null;
   proposed_audio_id: number | null;
   proposed_audio_trigger: string | null;
-  status: 'proposed' | 'applied' | 'reverted' | 'escalated_core' | 'dismissed';
+  status: 'proposed' | 'accepted' | 'applied' | 'reverted' | 'escalated_core' | 'queued_restart' | 'dismissed';
   applied_at: string | null;
   reverted_at: string | null;
   created_at: string;
@@ -227,6 +227,8 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
   const [inlineQuestion, setInlineQuestion] = useState('');
   const [generalQuestion, setGeneralQuestion] = useState('');
   const [improvements, setImprovements] = useState<ImprovementItem[]>([]);
+  const [refiningImpId, setRefiningImpId] = useState<number | null>(null);
+  const refiningInputRef = React.useRef<HTMLTextAreaElement | null>(null);
   const [logsSubTab, setLogsSubTab] = useState<'history' | 'proposals' | 'applied'>('history');
   const [pairingPhone, setPairingPhone] = useState('');
   const [pairingNow, setPairingNow] = useState(() => Date.now());
@@ -789,6 +791,11 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
       notify('err', 'Escribe brevemente qué quieres consultar o mejorar.');
       return;
     }
+    const finalQuestion =
+      !messageLogId && refiningImpId
+        ? `[Continuando Ajuste #${refiningImpId}] ${cleanQ}`
+        : cleanQ;
+
     setBusyAction(messageLogId ? `imp_msg_${messageLogId}` : 'imp_general');
     setBannerMsg(null);
     try {
@@ -798,7 +805,7 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ messageLogId, clientQuestion: cleanQ })
+        body: JSON.stringify({ messageLogId, clientQuestion: finalQuestion })
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo analizar el ajuste');
@@ -809,9 +816,29 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
         setInlineQuestion('');
       } else {
         setGeneralQuestion('');
+        setRefiningImpId(null);
       }
       setLogsSubTab('proposals');
-      notify('ok', 'Análisis listo en Ajustes de Mejora. Revisa la propuesta y decide si deseas aplicarla.');
+      notify('ok', 'Respuesta agregada al hilo de Ajustes de Mejora.');
+    } catch (err: any) {
+      notify('err', err.message);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleAcceptImprovement = async (impId: number) => {
+    setBusyAction(`imp_accept_${impId}`);
+    try {
+      const res = await fetch(`${apiBase}/api/saas-bot/improvements/${impId}/accept`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo aceptar la propuesta');
+
+      setImprovements(prev => prev.map(x => (x.id === impId ? data.improvement : x)));
+      notify('ok', 'Propuesta aceptada. Ya puedes hacer clic en Aplicar cuando quieras cargarla en tu bot.');
     } catch (err: any) {
       notify('err', err.message);
     } finally {
@@ -832,7 +859,12 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
       setImprovements(prev => prev.map(x => (x.id === impId ? data.improvement : x)));
       if (data.tenant) syncFormFromTenant(data.tenant);
       fetchAudios(token);
-      notify('ok', '¡Ajuste aplicado a tu bot! Si quieres volver atrás, puedes deshacerlo en "Cambios Aplicados".');
+      notify(
+        'ok',
+        data.queuedForRestart
+          ? 'Mejora puesta en fila para el próximo reinicio del servidor (sin interrumpir tu bot).'
+          : 'Cambio aplicado y recargado en tu instancia del bot.'
+      );
     } catch (err: any) {
       notify('err', err.message);
     } finally {
@@ -2556,10 +2588,19 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
           </div>
         )}
 
-        {/* Tab 5: Historial y Ajustes de Mejora */}
+        {/* Tab 6: Historial y Ajustes de Mejora */}
         {activeTab === 'logs' && (() => {
-          const proposedList = improvements.filter(i => i.status === 'proposed' || i.status === 'escalated_core');
-          const appliedList = improvements.filter(i => i.status === 'applied' || i.status === 'reverted');
+          const proposedList = improvements.filter(
+            i =>
+              i.status === 'proposed' ||
+              i.status === 'accepted' ||
+              i.status === 'escalated_core' ||
+              i.status === 'queued_restart'
+          );
+          const appliedList = improvements.filter(
+            i => i.status === 'applied' || i.status === 'reverted' || i.status === 'queued_restart'
+          );
+          const chatThread = [...improvements].filter(i => i.status !== 'dismissed').reverse();
 
           return (
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5">
@@ -2750,18 +2791,179 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                 </div>
               )}
 
-              {/* Sub-tab 2: Ajustes de Mejora */}
+              {/* Sub-tab 2: Ajustes de Mejora (Chat Iterativo Continuo) */}
               {logsSubTab === 'proposals' && (
                 <div className="space-y-4">
+                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 h-[460px] overflow-y-auto space-y-4">
+                    {chatThread.length === 0 ? (
+                      <div className="h-full flex flex-col items-center justify-center text-center text-slate-500 space-y-2 px-4">
+                        <Sparkles className="w-7 h-7 text-teal-400/70" />
+                        <p className="text-xs max-w-md">
+                          Este es tu chat de mejora continua con IA. Pregunta por qué tu bot respondió algo o pide un nuevo ajuste abajo, itera con <strong className="text-slate-300">Continuar</strong>, confirma con <strong className="text-slate-300">Aceptar</strong> y carga con <strong className="text-slate-300">Aplicar</strong>.
+                        </p>
+                      </div>
+                    ) : (
+                      chatThread.map(imp => {
+                        const isCore = imp.scope === 'core_engine' || imp.status === 'escalated_core' || imp.status === 'queued_restart';
+                        const statusPill =
+                          imp.status === 'applied'
+                            ? { label: '✓ Aplicada en tu instancia', cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' }
+                            : imp.status === 'queued_restart'
+                              ? { label: '⏳ En fila de reinicio', cls: 'bg-amber-500/15 text-amber-200 border-amber-500/35' }
+                              : imp.status === 'accepted'
+                                ? { label: 'Aceptada', cls: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/35' }
+                                : imp.status === 'reverted'
+                                  ? { label: 'Revertida', cls: 'bg-slate-800 text-slate-400 border-slate-700' }
+                                  : { label: 'Propuesta', cls: 'bg-teal-500/15 text-teal-300 border-teal-500/30' };
+
+                        return (
+                          <div key={imp.id} className="space-y-2.5">
+                            {/* Burbuja Cliente (derecha) */}
+                            <div className="flex justify-end">
+                              <div className="max-w-[85%] bg-teal-950/65 border border-teal-500/35 rounded-2xl rounded-tr-sm px-3.5 py-2.5 text-xs text-slate-100 space-y-1">
+                                <div className="flex items-center justify-between gap-3 text-[10px] text-teal-300 font-semibold">
+                                  <span>Tú · Ajuste #{imp.id}</span>
+                                  <span className="text-slate-400 font-normal">
+                                    {new Date(imp.created_at).toLocaleString('es-CO')}
+                                  </span>
+                                </div>
+                                <p className="whitespace-pre-wrap leading-relaxed">{imp.client_question}</p>
+                              </div>
+                            </div>
+
+                            {/* Burbuja Asistente (izquierda) */}
+                            <div className="flex justify-start">
+                              <div className="max-w-[90%] bg-slate-900 border border-slate-800 rounded-2xl rounded-tl-sm px-4 py-3 text-xs text-slate-100 space-y-2.5">
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                  <span className="text-[11px] font-semibold text-teal-300 flex items-center gap-1.5">
+                                    <Bot className="w-3.5 h-3.5" /> Asistente Sheerit IA
+                                  </span>
+                                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${statusPill.cls}`}>
+                                    {statusPill.label}
+                                  </span>
+                                </div>
+
+                                {imp.explanation_plain && (
+                                  <p className="text-slate-200 leading-relaxed">{imp.explanation_plain}</p>
+                                )}
+
+                                {imp.practical_proposal && (
+                                  <div className="p-2.5 rounded-xl bg-teal-500/10 border border-teal-500/25 space-y-1">
+                                    <div className="text-[10px] font-semibold text-teal-300 uppercase tracking-wider">
+                                      Propuesta práctica
+                                    </div>
+                                    <p className="text-slate-100 leading-relaxed">{imp.practical_proposal}</p>
+                                  </div>
+                                )}
+
+                                {imp.status === 'queued_restart' && (
+                                  <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-200 text-[11px]">
+                                    ⏳ En fila para próximo reinicio del servidor (tu instancia actual sigue operando sin cortes).
+                                  </div>
+                                )}
+
+                                {/* Botones: Continuar / Aceptar / Aplicar */}
+                                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setRefiningImpId(imp.id);
+                                        setTimeout(() => refiningInputRef.current?.focus(), 40);
+                                      }}
+                                      className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 cursor-pointer"
+                                    >
+                                      Continuar
+                                    </button>
+
+                                    {(imp.status === 'proposed' || imp.status === 'escalated_core') && (
+                                      <button
+                                        type="button"
+                                        disabled={busyAction === `imp_accept_${imp.id}`}
+                                        onClick={() => handleAcceptImprovement(imp.id)}
+                                        className="px-3 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/35 border border-cyan-500/40 text-xs font-semibold text-cyan-200 disabled:opacity-50 cursor-pointer"
+                                      >
+                                        {busyAction === `imp_accept_${imp.id}` ? 'Aceptando...' : 'Aceptar'}
+                                      </button>
+                                    )}
+
+                                    {imp.status === 'accepted' && (
+                                      <span className="px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-[11px] font-semibold text-cyan-300">
+                                        ✓ Aceptada
+                                      </span>
+                                    )}
+
+                                    {imp.status === 'applied' ? (
+                                      <button
+                                        type="button"
+                                        disabled={busyAction === `imp_revert_${imp.id}`}
+                                        onClick={() => handleRevertImprovement(imp.id)}
+                                        className="px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-semibold cursor-pointer"
+                                      >
+                                        {busyAction === `imp_revert_${imp.id}` ? 'Revirtiendo...' : 'Revertir'}
+                                      </button>
+                                    ) : imp.status !== 'queued_restart' && (
+                                      <button
+                                        type="button"
+                                        disabled={busyAction === `imp_apply_${imp.id}`}
+                                        onClick={() => handleApplyImprovement(imp.id)}
+                                        className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-semibold text-white flex items-center gap-1.5 cursor-pointer"
+                                      >
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        {busyAction === `imp_apply_${imp.id}`
+                                          ? 'Aplicando...'
+                                          : isCore
+                                            ? 'Aplicar (poner en fila)'
+                                            : 'Aplicar (reiniciar instancia)'}
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {(imp.status === 'proposed' || imp.status === 'accepted') && (
+                                    <button
+                                      type="button"
+                                      disabled={busyAction === `imp_dismiss_${imp.id}`}
+                                      onClick={() => handleDismissImprovement(imp.id)}
+                                      className="px-2.5 py-1 rounded-lg text-[11px] text-slate-400 hover:text-slate-200 hover:bg-slate-800 cursor-pointer"
+                                    >
+                                      Descartar
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Composer inferior del chat */}
                   <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
-                    <label className="block text-xs font-semibold text-teal-300 flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4" /> Solicitar una nueva mejora o hacer una pregunta sobre tu bot
-                    </label>
+                    {refiningImpId !== null && (
+                      <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-teal-500/10 border border-teal-500/30 text-[11px] text-teal-200">
+                        <span>↩️ Continuando sobre Ajuste #{refiningImpId}</span>
+                        <button
+                          type="button"
+                          onClick={() => setRefiningImpId(null)}
+                          className="text-slate-400 hover:text-white font-semibold cursor-pointer"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    )}
                     <textarea
+                      ref={refiningInputRef}
                       rows={2}
                       value={generalQuestion}
                       onChange={e => setGeneralQuestion(e.target.value)}
-                      placeholder="Ej: Cuando un cliente escriba solo 'hola', quiero que salude con el audio de inicio sin mandar texto largo..."
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleCreateImprovement(null, generalQuestion);
+                        }
+                      }}
+                      placeholder="Escribe para iterar o pedir un nuevo ajuste (Enter para enviar)..."
                       className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs outline-none focus:border-teal-500"
                     />
                     <div className="flex justify-end">
@@ -2769,75 +2971,13 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                         type="button"
                         disabled={busyAction === 'imp_general'}
                         onClick={() => handleCreateImprovement(null, generalQuestion)}
-                        className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-xs font-semibold flex items-center gap-1.5"
+                        className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
                       >
                         <Send className="w-3.5 h-3.5" />
-                        {busyAction === 'imp_general' ? 'Analizando ajuste...' : 'Analizar y proponer ajuste'}
+                        {busyAction === 'imp_general' ? 'Analizando...' : 'Enviar'}
                       </button>
                     </div>
                   </div>
-
-                  {proposedList.length === 0 ? (
-                    <p className="text-xs text-slate-500 py-6 text-center">
-                      No tienes ajustes pendientes por aprobar. Puedes consultar cualquier mensaje desde la pestaña Historial o escribir una idea arriba.
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {proposedList.map(imp => (
-                        <div key={imp.id} className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 text-xs">
-                          <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <span className="font-semibold text-teal-300">Ajuste sugerido #{imp.id}</span>
-                            <span className="text-[11px] text-slate-500">{new Date(imp.created_at).toLocaleString('es-CO')}</span>
-                          </div>
-
-                          <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
-                            <span className="text-slate-400 font-semibold">Tu consulta: </span>
-                            {imp.client_question}
-                          </div>
-
-                          {imp.explanation_plain && (
-                            <div className="space-y-1">
-                              <div className="text-[11px] font-semibold text-slate-400">¿Qué pasó?</div>
-                              <p className="text-slate-200 leading-relaxed">{imp.explanation_plain}</p>
-                            </div>
-                          )}
-
-                          {imp.practical_proposal && (
-                            <div className="p-3 rounded-lg bg-teal-500/10 border border-teal-500/25 space-y-1">
-                              <div className="text-[11px] font-semibold text-teal-300">Ajuste recomendado para tu bot</div>
-                              <p className="text-slate-100 leading-relaxed">{imp.practical_proposal}</p>
-                            </div>
-                          )}
-
-                          {imp.scope === 'core_engine' || imp.status === 'escalated_core' ? (
-                            <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-200 text-[11px]">
-                              Esta mejora aplica para toda la plataforma y ya fue compartida con el equipo de Sheerit para evaluarla.
-                            </div>
-                          ) : (
-                            <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-                              <button
-                                type="button"
-                                disabled={busyAction === `imp_dismiss_${imp.id}`}
-                                onClick={() => handleDismissImprovement(imp.id)}
-                                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300"
-                              >
-                                No aplicar
-                              </button>
-                              <button
-                                type="button"
-                                disabled={busyAction === `imp_apply_${imp.id}`}
-                                onClick={() => handleApplyImprovement(imp.id)}
-                                className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-semibold text-white flex items-center gap-1.5"
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                {busyAction === `imp_apply_${imp.id}` ? 'Aplicando...' : 'Aplicar a mi bot'}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -2851,6 +2991,7 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                   ) : (
                     appliedList.map(imp => {
                       const isApplied = imp.status === 'applied';
+                      const isQueued = imp.status === 'queued_restart';
                       return (
                         <div key={imp.id} className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5 text-xs">
                           <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -2860,10 +3001,12 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                                 className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${
                                   isApplied
                                     ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                                    : 'bg-slate-800 text-slate-400 border-slate-700'
+                                    : isQueued
+                                      ? 'bg-amber-500/15 text-amber-200 border-amber-500/35'
+                                      : 'bg-slate-800 text-slate-400 border-slate-700'
                                 }`}
                               >
-                                {isApplied ? 'Activo en tu bot' : 'Deshecho'}
+                                {isApplied ? 'Activo en tu bot' : isQueued ? '⏳ En fila de reinicio' : 'Deshecho'}
                               </span>
                             </div>
                             <span className="text-[11px] text-slate-500">
@@ -2884,6 +3027,10 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                                 <ArrowLeft className="w-3.5 h-3.5" />
                                 {busyAction === `imp_revert_${imp.id}` ? 'Revirtiendo...' : 'Deshacer ajuste'}
                               </button>
+                            ) : isQueued ? (
+                              <span className="text-[11px] text-amber-300 font-medium">
+                                Esperando próximo reinicio programado del servidor
+                              </span>
                             ) : (
                               <button
                                 type="button"
