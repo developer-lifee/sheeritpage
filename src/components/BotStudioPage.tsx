@@ -658,7 +658,7 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                     required
                     value={activationCode}
                     onChange={e => setActivationCode(e.target.value.toUpperCase())}
-                    placeholder="Ej: JOHAN-30K"
+                    placeholder="Ej: SH-XXXX-XXXX"
                     className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/40 text-sm font-mono uppercase tracking-wider text-teal-200 focus:border-teal-400 outline-none"
                   />
                   <p className="text-[11px] text-slate-400 mt-1">
@@ -671,7 +671,7 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                     required
                     value={ownerName}
                     onChange={e => setOwnerName(e.target.value)}
-                    placeholder="Ej: Johan Hernández"
+                    placeholder="Ej: Carlos Pérez"
                     className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm focus:border-teal-500 outline-none"
                   />
                 </div>
