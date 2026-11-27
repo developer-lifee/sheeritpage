@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Bot,
   Sparkles,
@@ -25,21 +25,27 @@ import {
 } from 'lucide-react';
 import { useWhatsAppContact } from '../hooks/useWhatsAppContact';
 
+export type BasePlanId = 'starter' | 'pro' | 'scale';
+
 interface BotModulesProps {
   onNavigate?: (view: any) => void;
   embedded?: boolean;
+  externalPlanId?: BasePlanId;
+  externalAddons?: ModuleId[];
+  syncVersion?: number;
 }
 
-interface BasePlan {
-  id: 'starter' | 'pro' | 'scale';
+export interface BasePlan {
+  id: BasePlanId;
   name: string;
   price: number;
   messages: string;
+  includedAddonSlots: number;
   badge?: string;
   desc: string;
 }
 
-type ModuleId =
+export type ModuleId =
   | 'flows'
   | 'semi'
   | 'ocr'
@@ -49,7 +55,7 @@ type ModuleId =
   | 'accounting'
   | 'rpa';
 
-interface ModuleSpec {
+export interface ModuleSpec {
   id: ModuleId;
   includedInBase: boolean;
   shortTitle: string;
@@ -65,32 +71,35 @@ interface ModuleSpec {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const BASE_PLANS: BasePlan[] = [
+export const BASE_PLANS: BasePlan[] = [
   {
     id: 'starter',
     name: 'Starter WhatsApp',
     price: 10000,
     messages: '50 Mensajes IA + Programables ilimitados',
-    desc: 'Ideal para empezar: menús fijos, bienvenida y cuota inicial de inteligencia artificial.'
+    includedAddonSlots: 0,
+    desc: 'Ideal para empezar: menús fijos, bienvenida, Módulo Automejorable con IA y 50 mensajes IA/mes.'
   },
   {
     id: 'pro',
     name: 'Pro Asistente IA',
     price: 30000,
     messages: '500 Mensajes IA / mes',
+    includedAddonSlots: 1,
     badge: 'Más elegido',
-    desc: 'Flujo constante con notas de voz naturales, flujos Audio+Imagen+Texto y modo semiautomático.'
+    desc: 'Todo lo de Starter + Flujos Audio+Imagen + Modo Semiautomático + 1 módulo avanzado a gusto incluido.'
   },
   {
     id: 'scale',
     name: 'Scale & Alto Volumen',
     price: 60000,
     messages: '2.000 Mensajes IA / mes',
-    desc: 'Todo el Plan Pro + Base de Datos CRM/Excel + 1 módulo extra incluido (OCR o Cobros).'
+    includedAddonSlots: 3,
+    desc: 'Todo lo de Pro + 2.000 mensajes IA + 3 módulos avanzados a gusto incluidos + panel multiagente.'
   }
 ];
 
-const MODULES_CATALOG: ModuleSpec[] = [
+export const MODULES_CATALOG: ModuleSpec[] = [
   {
     id: 'flows',
     includedInBase: true,
@@ -261,7 +270,7 @@ const MODULES_CATALOG: ModuleSpec[] = [
   }
 ];
 
-const formatCop = (val: number) =>
+export const formatCop = (val: number) =>
   new Intl.NumberFormat('es-CO', {
     style: 'currency',
     currency: 'COP',
@@ -486,16 +495,29 @@ function ModuleLiveHud({ moduleId }: { moduleId: ModuleId }) {
   }
 }
 
-export function BotModulesShowcase({ onNavigate, embedded = false }: BotModulesProps) {
+export function BotModulesShowcase({
+  onNavigate,
+  embedded = false,
+  externalPlanId,
+  externalAddons,
+  syncVersion
+}: BotModulesProps) {
   const { getWaLink } = useWhatsAppContact();
   const [activeModId, setActiveModId] = useState<ModuleId>('ocr');
-  const [selectedPlanId, setSelectedPlanId] = useState<'starter' | 'pro' | 'scale'>('pro');
-  const [selectedAddons, setSelectedAddons] = useState<string[]>(['ocr']);
+  const [selectedPlanId, setSelectedPlanId] = useState<BasePlanId>('pro');
+  const [selectedAddons, setSelectedAddons] = useState<ModuleId[]>(['ocr']);
+
+  useEffect(() => {
+    if (syncVersion && syncVersion > 0) {
+      if (externalPlanId) setSelectedPlanId(externalPlanId);
+      if (externalAddons) setSelectedAddons(externalAddons);
+    }
+  }, [syncVersion, externalPlanId, externalAddons]);
 
   const addonModules = MODULES_CATALOG.filter(m => !m.includedInBase);
   const activeMod = MODULES_CATALOG.find(m => m.id === activeModId) || MODULES_CATALOG[2];
 
-  const toggleAddon = (id: string) => {
+  const toggleAddon = (id: ModuleId) => {
     setSelectedAddons(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
   };
 
@@ -503,23 +525,41 @@ export function BotModulesShowcase({ onNavigate, embedded = false }: BotModulesP
 
   const pricing = useMemo(() => {
     const picked = addonModules.filter(m => selectedAddons.includes(m.id));
-    const addonsSubtotal = picked.reduce((acc, item) => acc + item.price, 0);
-    const hasBundleDiscount = picked.length >= 3;
+    const freeSlots = selectedPlan.includedAddonSlots;
+    const includedPicked = picked.slice(0, freeSlots);
+    const extraPicked = picked.slice(freeSlots);
+    const addonsSubtotal = extraPicked.reduce((acc, item) => acc + item.price, 0);
+    const hasBundleDiscount = extraPicked.length >= 3;
     const discountAmount = hasBundleDiscount ? Math.round(addonsSubtotal * 0.15) : 0;
     const totalMonthly = selectedPlan.price + addonsSubtotal - discountAmount;
-    return { picked, addonsSubtotal, hasBundleDiscount, discountAmount, totalMonthly };
+    const remainingFreeSlots = Math.max(0, freeSlots - picked.length);
+    return {
+      picked,
+      includedPicked,
+      extraPicked,
+      freeSlots,
+      remainingFreeSlots,
+      addonsSubtotal,
+      hasBundleDiscount,
+      discountAmount,
+      totalMonthly
+    };
   }, [selectedPlan, selectedAddons]);
 
   const handleRequestQuote = () => {
-    const addonNames = pricing.picked.length > 0
-      ? pricing.picked.map(a => `• ${a.title} (+${formatCop(a.price)})`).join('\n')
-      : '• Solo Plan Base (con Flujos Audio+Imagen y Modo Semiautomático incluidos)';
+    const includedLines = pricing.includedPicked.map(a => `• ${a.title} (Incluido en plan — $0)`);
+    const extraLines = pricing.extraPicked.map(a => `• ${a.title} (+${formatCop(a.price)})`);
+    const allLines = [...includedLines, ...extraLines];
+    const addonNames =
+      allLines.length > 0
+        ? allLines.join('\n')
+        : '• Solo Plan Base (con Módulo Automejorable con IA incluido)';
 
     const msg =
       `Hola Sheerit! Vengo de ${embedded ? 'https://sheerit.co/software' : 'https://sheerit.co/modulos'} y quiero cotizar/activar mi suite:\n\n` +
       `📦 *Plan Base:* ${selectedPlan.name} (${selectedPlan.messages}) — ${formatCop(selectedPlan.price)}/mes\n` +
       `🧩 *Módulos seleccionados:*\n${addonNames}\n` +
-      (pricing.hasBundleDiscount ? `🏷️ *Descuento combo 3+ módulos (15%):* -${formatCop(pricing.discountAmount)}\n` : '') +
+      (pricing.hasBundleDiscount ? `🏷️ *Descuento combo 3+ módulos extras (15%):* -${formatCop(pricing.discountAmount)}\n` : '') +
       `\n💰 *Total mensual estimado:* ${formatCop(pricing.totalMonthly)} COP/mes`;
 
     window.open(getWaLink(msg), '_blank');
@@ -761,18 +801,37 @@ export function BotModulesShowcase({ onNavigate, embedded = false }: BotModulesP
                       </div>
                       <div className="text-base font-black text-teal-300 mt-0.5">{formatCop(p.price)}</div>
                       <div className="text-[10px] text-slate-400 mt-0.5">{p.messages}</div>
+                      {p.includedAddonSlots > 0 && (
+                        <div className="mt-1.5 inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
+                          {p.includedAddonSlots === 1
+                            ? '1 módulo a gusto incluido'
+                            : `${p.includedAddonSlots} módulos a gusto incluidos`}
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <div className="text-xs font-semibold text-slate-300">
-                  2. Marca los módulos avanzados que deseas encender (3+ = 15% OFF en módulos):
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-xs font-semibold text-slate-300">
+                    2. Marca los módulos avanzados que deseas encender (3+ extras = 15% OFF):
+                  </div>
+                  {pricing.freeSlots > 0 && (
+                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
+                      Cupos incluidos en {selectedPlan.name}: {pricing.includedPicked.length}/{pricing.freeSlots}
+                      {pricing.remainingFreeSlots > 0
+                        ? ` · ¡Te quedan ${pricing.remainingFreeSlots} módulo(s) gratis por elegir!`
+                        : ' · Cupo lleno'}
+                    </span>
+                  )}
                 </div>
                 <div className="grid sm:grid-cols-2 gap-2">
                   {addonModules.map(m => {
                     const checked = selectedAddons.includes(m.id);
+                    const isIncludedFree = pricing.includedPicked.some(inc => inc.id === m.id);
+                    const canTakeFreeSlot = !checked && pricing.remainingFreeSlots > 0;
                     return (
                       <label
                         key={m.id}
@@ -791,7 +850,17 @@ export function BotModulesShowcase({ onNavigate, embedded = false }: BotModulesP
                           />
                           <span className="truncate font-semibold">{m.shortTitle}</span>
                         </span>
-                        <span className="font-mono text-[11px] text-emerald-300 shrink-0">+{formatCop(m.price)}</span>
+                        {isIncludedFree ? (
+                          <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 shrink-0">
+                            INCLUIDO ($0)
+                          </span>
+                        ) : canTakeFreeSlot ? (
+                          <span className="font-mono text-[10px] text-teal-300 shrink-0">
+                            Gratis en plan
+                          </span>
+                        ) : (
+                          <span className="font-mono text-[11px] text-emerald-300 shrink-0">+{formatCop(m.price)}</span>
+                        )}
                       </label>
                     );
                   })}
@@ -813,20 +882,29 @@ export function BotModulesShowcase({ onNavigate, embedded = false }: BotModulesP
                 </div>
                 {selectedPlanId === 'scale' ? (
                   <div className="text-[11px] text-emerald-400 space-y-0.5">
-                    <div>✓ Incluye todo lo del Plan Pro ($30k) + CRM/Excel</div>
-                    <div>✓ Incluye 1 módulo extra a elección (Pagos OCR o Cobros Automáticos)</div>
+                    <div>✓ Incluye todo lo del Plan Pro ($30k) + 2.000 Mensajes IA + Multiagente</div>
+                    <div>✓ Incluye 3 módulos avanzados a gusto ($0)</div>
                   </div>
                 ) : selectedPlanId === 'pro' ? (
-                  <div className="text-[11px] text-emerald-400">
-                    ✓ Incluye todo lo del Plan Starter + Flujos Audio+Imagen+Texto (sin reenviado), Modo Semiautomático 1 Clic y Ajustes con IA
+                  <div className="text-[11px] text-emerald-400 space-y-0.5">
+                    <div>✓ Incluye todo lo de Starter + Flujos Audio+Imagen + Modo Semiautomático 1 Clic</div>
+                    <div>✓ Incluye 1 módulo avanzado a gusto ($0)</div>
                   </div>
                 ) : (
-                  <div className="text-[11px] text-slate-400">
-                    • Sube a Plan Pro ($30.000) para incluir Flujos Audio+Imagen, Modo Semiautomático 1 Clic y Ajustes con IA
+                  <div className="text-[11px] text-emerald-400 space-y-0.5">
+                    <div>✓ Incluye Módulo Automejorable con IA (Ajustes de Mejora en 1 clic)</div>
+                    <div className="text-slate-400">• Sube a Pro ($30k) para tener Flujos Audio+Imagen y 1 módulo gratis</div>
                   </div>
                 )}
 
-                {pricing.picked.map(item => (
+                {pricing.includedPicked.map(item => (
+                  <div key={item.id} className="flex justify-between text-emerald-300">
+                    <span>✓ {item.shortTitle} (Incluido en plan)</span>
+                    <span className="font-mono font-bold">$0</span>
+                  </div>
+                ))}
+
+                {pricing.extraPicked.map(item => (
                   <div key={item.id} className="flex justify-between text-slate-400">
                     <span>+ {item.shortTitle}</span>
                     <span className="font-mono">{formatCop(item.price)}</span>
@@ -835,7 +913,7 @@ export function BotModulesShowcase({ onNavigate, embedded = false }: BotModulesP
 
                 {pricing.hasBundleDiscount && (
                   <div className="flex justify-between text-emerald-300 font-semibold pt-1.5 border-t border-slate-800">
-                    <span>Descuento combo 3+ módulos (15%)</span>
+                    <span>Descuento combo 3+ módulos extras (15%)</span>
                     <span className="font-mono">-{formatCop(pricing.discountAmount)}</span>
                   </div>
                 )}

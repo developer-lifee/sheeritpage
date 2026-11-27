@@ -1,15 +1,181 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useWhatsAppContact } from '../hooks/useWhatsAppContact';
 import { WhatsAppBotSimulatorModal } from './WhatsAppBotSimulatorModal';
 import { InteractiveAppWebStudio } from './InteractiveAppWebStudio';
-import { BotModulesShowcase } from './BotModulesLandingPage';
-import { Bot, Heart, MessageCircle, Film } from 'lucide-react';
+import {
+  BotModulesShowcase,
+  BASE_PLANS,
+  MODULES_CATALOG,
+  formatCop,
+  type BasePlanId,
+  type ModuleId
+} from './BotModulesLandingPage';
+import { Bot, Heart, MessageCircle, Film, Send } from 'lucide-react';
 import { Shield, Sparkles, Server, Clock, Code, Award, CheckCircle2, MessageSquare, ArrowRight, Database, Settings, Zap, ArrowLeftRight, Check, ChevronLeft, ChevronRight, Laptop, Globe, Smartphone, ExternalLink } from 'lucide-react';
+
+interface AiPlanRecommendation {
+  planId: BasePlanId;
+  addons: ModuleId[];
+  reasoning: string;
+  suggestAppWeb: boolean;
+  originalPrompt: string;
+}
+
+const normalizePrompt = (text: string) =>
+  text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+function buildAiRecommendation(rawText: string): AiPlanRecommendation {
+  const clean = normalizePrompt(rawText.trim());
+  const hasAny = (keywords: string[]) => keywords.some(k => clean.includes(k));
+
+  const detectedAddons: ModuleId[] = [];
+  if (hasAny(['pago', 'pagos', 'nequi', 'bancolombia', 'daviplata', 'comprobante', 'captura', 'transferencia', 'ocr', 'bre-v', 'brev', 'consignacion'])) {
+    detectedAddons.push('ocr');
+  }
+  if (hasAny(['cobro', 'cobros', 'cobrar', 'recordatorio', 'vencimiento', 'cartera', 'mensualidad', 'renovacion', 'mora', 'cuota'])) {
+    detectedAddons.push('billing');
+  }
+  if (hasAny(['asesor', 'asesores', 'equipo', 'turno', 'turnos', 'ticket', 'ticketera', 'soporte', 'vendedor', 'vendedores', 'multiagente', 'varios'])) {
+    detectedAddons.push('tickets');
+  }
+  if (hasAny(['excel', 'base de datos', 'crm', 'cliente', 'clientes', 'inventario', 'stock', 'onedrive', 'sql', 'registro', 'planilla'])) {
+    detectedAddons.push('crm');
+  }
+  if (hasAny(['contabilidad', 'caja', 'gasto', 'gastos', 'utilidad', 'ganancia', 'finanzas', 'balance', 'egreso', 'ingreso', 'flujo'])) {
+    detectedAddons.push('accounting');
+  }
+  if (hasAny(['codigo', 'codigos', 'otp', '2fa', 'portal', 'rpa', 'correo', 'gmail', 'streaming', 'netflix', 'pin'])) {
+    detectedAddons.push('rpa');
+  }
+
+  const suggestAppWeb = hasAny(['app', 'aplicacion', 'android', 'ios', 'web', 'pagina', 'landing', 'tienda online', 'sitio']);
+  const isScaleSignal =
+    detectedAddons.length >= 2 ||
+    hasAny(['alto volumen', 'muchos', 'empresa', 'equipo', 'asesores', 'multiagente', '2000']);
+  const isProSignal =
+    detectedAddons.length === 1 ||
+    hasAny(['audio', 'voz', 'imagen', 'foto', 'catalogo', 'semiautomatico', 'vender', 'ventas', 'tienda', 'negocio', 'bot']);
+  const isStarterSignal =
+    detectedAddons.length === 0 &&
+    hasAny(['empezar', 'basico', 'economico', 'barato', 'personal', 'menu', 'horario', 'prueba', 'sencillo', 'pequeno']);
+
+  let planId: BasePlanId = 'pro';
+  if (isScaleSignal) {
+    planId = 'scale';
+  } else if (isStarterSignal || (!isProSignal && clean.length > 0 && clean.length < 22)) {
+    planId = 'starter';
+  }
+
+  let reasoning = '';
+  if (planId === 'scale') {
+    reasoning =
+      'Por tu volumen u operación multi-módulo te conviene el Plan Scale ($60k): incluye el Módulo Automejorable, Flujos Audio+Imagen, 2.000 mensajes IA y hasta 3 módulos avanzados a gusto incluidos ($0).';
+  } else if (planId === 'pro') {
+    reasoning =
+      'El Plan Pro ($30k) encaja ideal contigo: ya incluye Módulo Automejorable, Flujos Audio+Imagen sin reenviado, Modo Semiautomático y 1 módulo avanzado a gusto sin costo extra ($0).';
+  } else {
+    reasoning =
+      'Para arrancar ágil y económico te armamos el Plan Starter ($10k): incluye menús programables, 50 mensajes IA y el Módulo Automejorable con IA integrado (y puedes sumarle módulos cuando quieras).';
+  }
+
+  return {
+    planId,
+    addons: detectedAddons,
+    reasoning,
+    suggestAppWeb,
+    originalPrompt: rawText.trim()
+  };
+}
 
 export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) => void }) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isBotModalOpen, setIsBotModalOpen] = useState(false);
+  const [needInput, setNeedInput] = useState('');
+  const [aiPlan, setAiPlan] = useState<AiPlanRecommendation | null>(null);
+  const [syncToSuite, setSyncToSuite] = useState<{ planId: BasePlanId; addons: ModuleId[]; version: number }>({
+    planId: 'pro',
+    addons: ['ocr'],
+    version: 0
+  });
   const { getWaLink } = useWhatsAppContact();
+
+  const addonModules = useMemo(() => MODULES_CATALOG.filter(m => !m.includedInBase), []);
+
+  const aiPricing = useMemo(() => {
+    if (!aiPlan) return null;
+    const plan = BASE_PLANS.find(p => p.id === aiPlan.planId) || BASE_PLANS[1];
+    const picked = addonModules.filter(m => aiPlan.addons.includes(m.id));
+    const freeSlots = plan.includedAddonSlots;
+    const includedPicked = picked.slice(0, freeSlots);
+    const extraPicked = picked.slice(freeSlots);
+    const addonsSubtotal = extraPicked.reduce((acc, item) => acc + item.price, 0);
+    const hasBundleDiscount = extraPicked.length >= 3;
+    const discountAmount = hasBundleDiscount ? Math.round(addonsSubtotal * 0.15) : 0;
+    const totalMonthly = plan.price + addonsSubtotal - discountAmount;
+    const remainingFreeSlots = Math.max(0, freeSlots - picked.length);
+    return {
+      plan,
+      picked,
+      includedPicked,
+      extraPicked,
+      freeSlots,
+      remainingFreeSlots,
+      hasBundleDiscount,
+      discountAmount,
+      totalMonthly
+    };
+  }, [aiPlan, addonModules]);
+
+  const handleBuildAiPlan = (promptOverride?: string) => {
+    const query = (promptOverride ?? needInput).trim();
+    if (!query) {
+      const fallback = 'Quiero automatizar mi WhatsApp para vender más y mejorar mis respuestas';
+      setNeedInput(fallback);
+      setAiPlan(buildAiRecommendation(fallback));
+      return;
+    }
+    if (promptOverride) setNeedInput(promptOverride);
+    setAiPlan(buildAiRecommendation(query));
+  };
+
+  const handleToggleAiAddon = (id: ModuleId) => {
+    setAiPlan(prev => {
+      if (!prev) return prev;
+      const exists = prev.addons.includes(id);
+      return {
+        ...prev,
+        addons: exists ? prev.addons.filter(x => x !== id) : [...prev.addons, id]
+      };
+    });
+  };
+
+  const handleRequestAiPlanWhatsApp = () => {
+    if (!aiPlan || !aiPricing) return;
+    const includedLines = aiPricing.includedPicked.map(a => `• ${a.shortTitle} (Incluido en plan — $0)`);
+    const extraLines = aiPricing.extraPicked.map(a => `• ${a.shortTitle} (+${formatCop(a.price)})`);
+    const modulesSummary = [...includedLines, ...extraLines];
+    const msg =
+      `¡Hola Sheerit! Usé el Armador de Plan con IA en https://sheerit.co/software:\n\n` +
+      `💬 *Lo que necesito:* "${aiPlan.originalPrompt}"\n` +
+      `📦 *Plan elegido:* ${aiPricing.plan.name} (${formatCop(aiPricing.plan.price)}/mes)\n` +
+      `🧩 *Módulos configurados:*\n${modulesSummary.length > 0 ? modulesSummary.join('\n') : '• Plan base + Módulo Automejorable con IA'}\n` +
+      (aiPricing.hasBundleDiscount ? `🏷️ *Descuento combo 3+ extras (15%):* -${formatCop(aiPricing.discountAmount)}\n` : '') +
+      `\n💰 *Total mensual estimado:* ${formatCop(aiPricing.totalMonthly)} COP/mes`;
+    window.open(getWaLink(msg), '_blank');
+  };
+
+  const handleOpenInInspector = () => {
+    if (!aiPlan) return;
+    setSyncToSuite(prev => ({
+      planId: aiPlan.planId,
+      addons: aiPlan.addons,
+      version: prev.version + 1
+    }));
+    document.getElementById('calculadora-modulos')?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const handleContactWhatsApp = (planType: string) => {
     const message = `Hola Sheerit! Estoy interesado en sus servicios de desarrollo de software, apps móviles iOS/Android y automatización (Opción: ${planType}). Me gustaría agendar una asesoría para mi proyecto.`;
@@ -112,67 +278,235 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
             Diseñamos plataformas web de alto rendimiento, aplicaciones nativas para <strong className="text-white">iOS (App Store)</strong> y <strong className="text-white">Android (Google Play)</strong>, y bots modulares en WhatsApp Web real para escalar tu operación.
           </p>
 
-          {/* Tier 1: Primary Symmetrical CTA Pair */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-2xl mx-auto">
+          {/* Single Centered AI Command Bar */}
+          <form
+            onSubmit={e => {
+              e.preventDefault();
+              handleBuildAiPlan();
+            }}
+            className="max-w-3xl mx-auto"
+          >
+            <div className="bg-slate-900/85 backdrop-blur-xl border border-teal-400/40 focus-within:border-teal-300 shadow-[0_0_40px_-12px_rgba(20,184,166,0.45)] rounded-2xl p-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 transition-all">
+              <div className="flex items-center gap-2.5 flex-1 px-3 py-1.5">
+                <Bot className="w-5 h-5 text-teal-400 shrink-0" />
+                <input
+                  type="text"
+                  value={needInput}
+                  onChange={e => setNeedInput(e.target.value)}
+                  placeholder="¿Qué necesitas? Ej: Vendo por WhatsApp con audios, validar pagos Nequi y cobrar..."
+                  className="w-full bg-transparent text-sm md:text-base text-white placeholder-slate-400 focus:outline-none"
+                />
+              </div>
+              <button
+                type="submit"
+                className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-teal-400 via-emerald-400 to-cyan-400 hover:from-teal-300 hover:to-cyan-300 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-teal-950/50 transition-all active:scale-95 cursor-pointer shrink-0"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Armar mi Plan con IA</span>
+              </button>
+            </div>
+          </form>
+
+          {/* 4 Quick-Prompt Chips */}
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2 max-w-3xl mx-auto">
+            {[
+              'Vender con audios + validar Nequi',
+              'Cobros automáticos + base de datos',
+              'Equipo de asesores + contabilidad',
+              'Bot básico económico para empezar'
+            ].map(chip => (
+              <button
+                key={chip}
+                type="button"
+                onClick={() => handleBuildAiPlan(chip)}
+                className="px-3 py-1.5 rounded-full bg-slate-900/75 hover:bg-slate-800/90 border border-slate-700/80 hover:border-teal-400/50 text-[11px] sm:text-xs font-medium text-slate-300 hover:text-white transition-all cursor-pointer"
+              >
+                ✨ {chip}
+              </button>
+            ))}
+          </div>
+
+          {/* Interactive AI Plan Result Panel */}
+          {aiPlan && aiPricing && (
+            <div className="mt-6 max-w-4xl mx-auto text-left bg-slate-900/90 backdrop-blur-2xl border border-teal-400/45 rounded-3xl p-5 sm:p-6 shadow-2xl shadow-teal-950/60 space-y-5">
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-800 pb-4">
+                <div className="space-y-1 max-w-2xl">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-500/15 border border-teal-400/35 text-[11px] font-mono font-bold text-teal-300 uppercase">
+                    <Sparkles className="w-3.5 h-3.5" /> Plan Armado por IA
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">{aiPlan.reasoning}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-[11px] text-slate-400 font-semibold uppercase">Total mensual estimado</div>
+                  <div className="text-2xl sm:text-3xl font-black text-teal-300">
+                    {formatCop(aiPricing.totalMonthly)}{' '}
+                    <span className="text-xs font-semibold text-slate-400">COP/mes</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Plan Switcher Pills */}
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-slate-300">
+                  1. Plan recomendado (cámbialo cuando quieras · todos incluyen Módulo Automejorable):
+                </div>
+                <div className="grid sm:grid-cols-3 gap-2.5">
+                  {BASE_PLANS.map(p => {
+                    const active = aiPlan.planId === p.id;
+                    const slotLabel =
+                      p.includedAddonSlots === 0
+                        ? '0 extras incluidos'
+                        : p.includedAddonSlots === 1
+                          ? '1 módulo a gusto GRATIS'
+                          : `${p.includedAddonSlots} módulos a gusto GRATIS`;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setAiPlan(prev => (prev ? { ...prev, planId: p.id } : prev))}
+                        className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
+                          active
+                            ? 'bg-teal-500/20 border-teal-400 text-white shadow-lg'
+                            : 'bg-slate-950/75 border-slate-800 text-slate-300 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-black">{p.name}</span>
+                          <span className="text-xs font-black text-teal-300">{formatCop(p.price)}</span>
+                        </div>
+                        <div className="text-[11px] text-emerald-300 font-semibold mt-1">{slotLabel}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 6-Module Toggle Grid */}
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-slate-300">
+                    2. Agrega o quita módulos a tu medida:
+                  </span>
+                  {aiPricing.freeSlots > 0 && (
+                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
+                      Cupos gratis en {aiPricing.plan.name}: {aiPricing.includedPicked.length}/{aiPricing.freeSlots}
+                      {aiPricing.remainingFreeSlots > 0 && ` · Elige ${aiPricing.remainingFreeSlots} más sin costo`}
+                    </span>
+                  )}
+                </div>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {addonModules.map(mod => {
+                    const selected = aiPlan.addons.includes(mod.id);
+                    const isIncludedFree = aiPricing.includedPicked.some(i => i.id === mod.id);
+                    const canTakeFree = !selected && aiPricing.remainingFreeSlots > 0;
+                    return (
+                      <button
+                        key={mod.id}
+                        type="button"
+                        onClick={() => handleToggleAiAddon(mod.id)}
+                        className={`p-2.5 rounded-xl border text-left flex items-center justify-between gap-2 text-xs transition cursor-pointer ${
+                          selected
+                            ? 'bg-emerald-500/15 border-emerald-400/60 text-white'
+                            : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2 min-w-0">
+                          <span
+                            className={`w-4 h-4 rounded flex items-center justify-center border shrink-0 ${
+                              selected
+                                ? 'bg-emerald-400 border-emerald-400 text-slate-950'
+                                : 'border-slate-600'
+                            }`}
+                          >
+                            {selected && <Check className="w-3 h-3 stroke-[3]" />}
+                          </span>
+                          <span className="font-semibold truncate">{mod.shortTitle}</span>
+                        </span>
+                        {isIncludedFree ? (
+                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 shrink-0">
+                            INCLUIDO ($0)
+                          </span>
+                        ) : canTakeFree ? (
+                          <span className="text-[10px] font-mono text-teal-300 shrink-0">Gratis</span>
+                        ) : (
+                          <span className="text-[10px] font-mono text-slate-400 shrink-0">+{formatCop(mod.price)}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Action Row */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-800">
+                <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={handleRequestAiPlanWhatsApp}
+                    className="flex-1 sm:flex-initial px-5 py-3 rounded-xl bg-gradient-to-r from-teal-400 to-emerald-400 hover:from-teal-300 hover:to-emerald-300 text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+                  >
+                    <Send className="w-4 h-4" /> Activar este Plan por WhatsApp
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenInInspector}
+                    className="flex-1 sm:flex-initial px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Zap className="w-4 h-4 text-teal-400" /> Ver en Inspector de Módulos
+                  </button>
+                </div>
+                {aiPlan.suggestAppWeb && (
+                  <a
+                    href="#constructor-interactivo"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-500/15 border border-cyan-400/35 text-xs font-bold text-cyan-300 hover:bg-cyan-500/25 transition"
+                  >
+                    <Smartphone className="w-3.5 h-3.5" /> También vimos interés en App/Web ($200k / $79k) →
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Minimal Centered Quick-Links Row */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-slate-400">
+            <a href="#bot-whatsapp-section" className="hover:text-teal-300 transition font-medium">
+              Planes Bot ($10k – $60k)
+            </a>
+            <span className="text-slate-700">·</span>
+            <a href="#modulos-bot" className="hover:text-teal-300 transition font-medium">
+              Suite Modular IA & OCR
+            </a>
+            <span className="text-slate-700">·</span>
+            <a href="#constructor-interactivo" className="hover:text-teal-300 transition font-medium">
+              Estudio App / Web ($200k / $79k)
+            </a>
+            <span className="text-slate-700">·</span>
+            <button
+              type="button"
+              onClick={() => {
+                if (onNavigate) {
+                  onNavigate('portafolio');
+                } else {
+                  window.history.pushState({}, '', '/portafolio');
+                  window.dispatchEvent(new Event('popstate'));
+                }
+              }}
+              className="hover:text-teal-300 transition font-medium cursor-pointer"
+            >
+              Portafolio
+            </button>
+            <span className="text-slate-700">·</span>
             <button
               type="button"
               onClick={() => setIsBotModalOpen(true)}
-              className="w-full px-6 py-4 bg-gradient-to-r from-teal-400 via-emerald-400 to-cyan-400 hover:from-teal-300 hover:to-cyan-300 text-slate-950 font-black rounded-2xl shadow-[0_0_28px_-6px_rgba(20,184,166,0.6)] transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center justify-center gap-2.5 cursor-pointer"
+              className="hover:text-teal-300 transition font-medium cursor-pointer"
             >
-              <Bot className="w-5 h-5" />
-              <span>Bot WhatsApp IA ($10k – $60k)</span>
-              <Sparkles className="w-4 h-4" />
+              Probar Demo Bot
             </button>
-            <a
-              href="#modulos-bot"
-              className="w-full px-6 py-4 bg-slate-900/80 backdrop-blur-xl hover:bg-slate-800/90 text-white font-bold rounded-2xl shadow-lg border border-teal-400/40 hover:border-teal-300/70 transition-all transform hover:-translate-y-0.5 active:scale-95 text-sm md:text-base flex items-center justify-center gap-2.5"
-            >
-              <Zap className="w-4 h-4 text-teal-400" />
-              <span>Explorar Módulos IA & OCR</span>
-              <ArrowRight className="w-4 h-4 text-teal-400" />
-            </a>
-          </div>
-
-          {/* Tier 2: Unified Secondary Navigation Dock */}
-          <div className="mt-4 flex justify-center">
-            <div className="inline-flex flex-wrap sm:flex-nowrap items-center justify-center gap-1 p-1.5 rounded-2xl bg-slate-900/75 backdrop-blur-xl border border-slate-800/90 shadow-xl">
-              <a
-                href="#constructor-interactivo"
-                className="px-4 py-2 rounded-xl text-xs md:text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800/85 transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <Smartphone className="w-4 h-4 text-cyan-400" />
-                <span>Diseña App / Web ($200k / $79k)</span>
-              </a>
-              <span className="hidden sm:block w-px h-4 bg-slate-800" />
-              <a
-                href="#pricing-comparison"
-                className="px-4 py-2 rounded-xl text-xs md:text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800/85 transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Ver Planes</span>
-              </a>
-              <span className="hidden sm:block w-px h-4 bg-slate-800" />
-              <button
-                type="button"
-                onClick={() => {
-                  if (onNavigate) {
-                    onNavigate('portafolio');
-                  } else {
-                    window.history.pushState({}, '', '/portafolio');
-                    window.dispatchEvent(new Event('popstate'));
-                  }
-                }}
-                className="px-4 py-2 rounded-xl text-xs md:text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800/85 transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <Globe className="w-4 h-4 text-teal-400" />
-                <span>Portafolio</span>
-                <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
-              </button>
-            </div>
           </div>
 
           {/* Telemetry & Trust Strip */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3 md:gap-6 text-xs text-slate-300">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3 md:gap-6 text-xs text-slate-300">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/75 backdrop-blur-md border border-slate-800">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="font-semibold text-white">WhatsApp Web Anti-Bloqueo 24/7</span>
@@ -584,6 +918,10 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                 <ul className="space-y-3 mb-8 text-xs sm:text-sm text-slate-300">
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <span><strong className="text-white">Módulo Automejorable con IA:</strong> panel de Ajustes de Mejora para consultar decisiones del bot y revertir cambios en 1 clic</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
                     <span><strong className="text-white">50 Mensajes con IA</strong> incluidos al mes</span>
                   </li>
                   <li className="flex items-start gap-2.5">
@@ -619,7 +957,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                 </span>
                 <h3 className="text-2xl font-black text-white mt-3">Pro Asistente IA</h3>
                 <p className="text-xs text-slate-300 mt-1 mb-6">
-                  Para negocios con flujo constante que venden con audios naturales y cierres semiautomáticos.
+                  Para negocios con flujo constante que venden con audios naturales, cierres semiautomáticos y 1 módulo a gusto.
                 </p>
                 <div className="mb-6">
                   <div className="flex items-baseline gap-2">
@@ -637,6 +975,10 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                 <ul className="space-y-3 mb-8 text-xs sm:text-sm text-slate-300">
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <span><strong className="text-white">1 Módulo avanzado a gusto incluido ($0):</strong> elige libremente OCR Pagos, Cobros, Ticketera, CRM, Contabilidad o RPA</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
                     <span><strong className="text-white">500 Mensajes con IA</strong> incluidos al mes</span>
                   </li>
                   <li className="flex items-start gap-2.5">
@@ -646,10 +988,6 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
                     <span><strong className="text-white">Modo Semiautomático + 1 Clic:</strong> auto-pausa al intervenir tú y botones rápidos para disparar audios en vivo</span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span><strong className="text-white">Panel de Ajustes de Mejora con IA:</strong> consulta decisiones del bot y revierte cambios en 1 clic</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
@@ -673,7 +1011,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                 </span>
                 <h3 className="text-2xl font-black text-white mt-3">Scale & Alto Volumen</h3>
                 <p className="text-xs text-slate-400 mt-1 mb-6">
-                  Para alto tráfico, sincronización con hojas de cálculo y múltiples operadores.
+                  Para alto tráfico, 3 módulos avanzados a gusto incluidos y múltiples operadores.
                 </p>
                 <div className="mb-6">
                   <div className="flex items-baseline gap-2">
@@ -691,15 +1029,11 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
                 <ul className="space-y-3 mb-8 text-xs sm:text-sm text-slate-300">
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <span><strong className="text-white">3 Módulos avanzados a gusto incluidos ($0):</strong> combina libremente OCR Pagos, Cobros, Ticketera, Base de Datos CRM/Excel, Contabilidad o RPA 2FA</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
                     <span><strong className="text-white">2.000 Mensajes con IA</strong> incluidos al mes (4x más capacidad)</span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span><strong className="text-white">Base de Datos CRM + Sincronización Excel / OneDrive / SQL</strong> incluida</span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span><strong className="text-white">1 Módulo extra incluido a elección:</strong> Validación OCR de Pagos IA o Cobros Automáticos</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
@@ -723,7 +1057,13 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
       </section>
 
       {/* SUITE MODULAR TECNOLÓGICA DE BOT WHATSAPP IA (OCR, TICKETERA, CRM, CONTABILIDAD, RPA) */}
-      <BotModulesShowcase embedded onNavigate={onNavigate} />
+      <BotModulesShowcase
+        embedded
+        onNavigate={onNavigate}
+        externalPlanId={syncToSuite.planId}
+        externalAddons={syncToSuite.addons}
+        syncVersion={syncToSuite.version}
+      />
 
       {/* CONSTRUCTOR & ESTUDIO INTERACTIVO (APP $200k / WEB $79k) */}
       <InteractiveAppWebStudio />
