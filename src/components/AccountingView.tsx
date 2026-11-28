@@ -110,6 +110,8 @@ export function AccountingView() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'excel' | 'projections' | 'real' | 'payments' | 'refunds' | 'saas'>('excel');
   const [rows, setRows] = useState<AccountingRow[]>([]);
+  const [families, setFamilies] = useState<any[]>([]);
+  const [excelGrouping, setExcelGrouping] = useState<'families' | 'platforms'>('families');
   const [redFlags, setRedFlags] = useState<any[]>([]);
   const [totals, setTotals] = useState<AccountingTotals | null>(null);
   const [realData, setRealData] = useState<RealCashFlowData | null>(null);
@@ -221,6 +223,7 @@ export function AccountingView() {
       const accData = await accRes.json();
       if (accData.rows) {
         setRows(accData.rows);
+        setFamilies(Array.isArray(accData.families) ? accData.families : []);
         setTotals(accData.totals);
         setRedFlags(Array.isArray(accData.red_flags) ? accData.red_flags : []);
       }
@@ -904,15 +907,47 @@ export function AccountingView() {
       {/* Main Table View */}
       {viewMode === 'excel' ? (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 overflow-hidden">
-          <div className="px-6 py-4 border-b dark:border-gray-700 flex justify-between items-center">
-            <h3 className="font-bold dark:text-white text-sm">Contabilidad de Cartera Total (Modelo Excel)</h3>
-            <span className="text-xs text-gray-400">Totales mensuales de compras de cuentas vs ventas a clientes</span>
+          <div className="px-6 py-4 border-b dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="font-bold dark:text-white text-sm">
+                {excelGrouping === 'families' && families.length > 0
+                  ? 'Contabilidad por Familias Ligadas (Catálogo Vigente)'
+                  : 'Contabilidad de Cartera Total (Catálogo Vigente)'}
+              </h3>
+              <span className="text-xs text-gray-400">
+                {excelGrouping === 'families' && families.length > 0
+                  ? 'Agrupa cuenta matriz + planes derivados (Netflix + Extra, Apple One + TV, Owners) con precios reales de streaming_prices'
+                  : 'Totales mensuales de compras de cuentas vs ventas con precios de streaming_prices y combos'}
+              </span>
+            </div>
+            <div className="bg-gray-100 dark:bg-gray-750 p-1 rounded-xl flex gap-1 self-start sm:self-auto">
+              <button
+                onClick={() => setExcelGrouping('families')}
+                className={`px-3 py-1.5 rounded-lg text-xxs font-bold transition-all ${
+                  excelGrouping === 'families'
+                    ? 'bg-white dark:bg-gray-800 text-brand-primary shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                }`}
+              >
+                🔗 Familias Ligadas
+              </button>
+              <button
+                onClick={() => setExcelGrouping('platforms')}
+                className={`px-3 py-1.5 rounded-lg text-xxs font-bold transition-all ${
+                  excelGrouping === 'platforms'
+                    ? 'bg-white dark:bg-gray-800 text-brand-primary shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                }`}
+              >
+                📦 Por Plataforma
+              </button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-900/50 font-bold text-gray-500 uppercase">
-                  <th className="px-6 py-3">Streaming</th>
+                  <th className="px-6 py-3">{excelGrouping === 'families' && families.length > 0 ? 'Familia / Streaming' : 'Streaming'}</th>
                   <th className="px-6 py-3 text-center">Cupos Vendidos</th>
                   <th className="px-6 py-3 text-center">Cuentas Compradas</th>
                   <th className="px-6 py-3 text-right">Ingreso Mensual</th>
@@ -923,40 +958,87 @@ export function AccountingView() {
                 </tr>
               </thead>
               <tbody className="divide-y dark:divide-gray-700 text-sm">
-                {rows.map((row: any, i) => (
-                  <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-750/30 text-xs">
-                    <td className="px-6 py-3.5 font-bold dark:text-white uppercase">{row.platform}</td>
-                    <td className="px-6 py-3.5 text-center text-gray-500 font-semibold">{row.active_profiles}</td>
-                    <td className="px-6 py-3.5 text-center text-indigo-400 font-bold">
-                      {row.is_implicit_cost || row.accounts_needed === 0 ? (
-                        <span className="text-[10px] px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded font-semibold" title="Costo de cuenta matriz ya incluido en el plan principal">
-                          0 (En Matriz)
-                        </span>
-                      ) : (
-                        row.accounts_needed ?? Math.ceil(row.active_profiles / 5)
-                      )}
-                    </td>
-                    <td className="px-6 py-3.5 text-right text-green-600 dark:text-green-400 font-semibold">
-                      ${Math.round(row.monthly_income || row.monthly_client_income || (row.ingreso_total * 30)).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-3.5 text-right text-red-650 dark:text-red-400 font-medium">
-                      ${Math.round(row.monthly_expense || row.monthly_inventory_cost || (row.egreso_total * 30)).toLocaleString()}
-                    </td>
-                    <td className={`px-6 py-3.5 text-center font-bold ${row.indicador_gan < 0 ? 'text-rose-600 dark:text-rose-400' : row.indicador_gan >= 30 ? 'text-green-500' : 'text-yellow-500'}`}>
-                      {row.is_implicit_cost ? '100% (Matriz)' : `${row.indicador_gan.toFixed(0)}%`}
-                    </td>
-                    <td className={`px-6 py-3.5 text-right font-bold ${
-                      ((row.monthly_income || row.monthly_client_income || (row.ingreso_total * 30)) - (row.monthly_expense || row.monthly_inventory_cost || (row.egreso_total * 30))) < 0
+                {excelGrouping === 'families' && families.length > 0 ? (
+                  families.map((fam: any, i) => {
+                    const marginColor =
+                      fam.margin_pct < 0
                         ? 'text-rose-600 dark:text-rose-400'
-                        : 'text-brand-primary'
-                    }`}>
-                      ${Math.round((row.monthly_income || row.monthly_client_income || (row.ingreso_total * 30)) - (row.monthly_expense || row.monthly_inventory_cost || (row.egreso_total * 30))).toLocaleString()}
-                    </td>
-                    <td className={`px-6 py-3.5 text-right font-semibold ${row.utilidad_total < 0 ? 'text-rose-600 dark:text-rose-400' : 'dark:text-gray-300'}`}>
-                      ${Math.round(row.utilidad_total).toLocaleString()} / día
-                    </td>
-                  </tr>
-                ))}
+                        : fam.margin_pct >= 25
+                        ? 'text-green-500'
+                        : 'text-yellow-500';
+                    return (
+                      <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-750/30 text-xs">
+                        <td className="px-6 py-3.5 font-bold dark:text-white uppercase">
+                          <div>{fam.family}</div>
+                          {Array.isArray(fam.members) && fam.members.length > 1 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {fam.members.map((m: string, idxM: number) => (
+                                <span
+                                  key={idxM}
+                                  className="text-[9px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-semibold"
+                                >
+                                  {m}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-3.5 text-center text-gray-500 font-semibold">{fam.active_profiles}</td>
+                        <td className="px-6 py-3.5 text-center text-indigo-400 font-bold">{fam.accounts_needed}</td>
+                        <td className="px-6 py-3.5 text-right text-green-600 dark:text-green-400 font-semibold">
+                          ${Math.round(fam.monthly_income).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-3.5 text-right text-red-650 dark:text-red-400 font-medium">
+                          ${Math.round(fam.monthly_expense).toLocaleString()}
+                        </td>
+                        <td className={`px-6 py-3.5 text-center font-bold ${marginColor}`}>
+                          {Number(fam.margin_pct || 0).toFixed(1)}%
+                        </td>
+                        <td className={`px-6 py-3.5 text-right font-bold ${fam.monthly_profit < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-brand-primary'}`}>
+                          ${Math.round(fam.monthly_profit).toLocaleString()}
+                        </td>
+                        <td className={`px-6 py-3.5 text-right font-semibold ${fam.utilidad_total < 0 ? 'text-rose-600 dark:text-rose-400' : 'dark:text-gray-300'}`}>
+                          ${Math.round(fam.utilidad_total).toLocaleString()} / día
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  rows.map((row: any, i) => (
+                    <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-gray-750/30 text-xs">
+                      <td className="px-6 py-3.5 font-bold dark:text-white uppercase">{row.platform}</td>
+                      <td className="px-6 py-3.5 text-center text-gray-500 font-semibold">{row.active_profiles}</td>
+                      <td className="px-6 py-3.5 text-center text-indigo-400 font-bold">
+                        {row.is_implicit_cost || row.accounts_needed === 0 ? (
+                          <span className="text-[10px] px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded font-semibold" title="Costo de cuenta matriz ya incluido en el plan principal">
+                            0 (En Matriz)
+                          </span>
+                        ) : (
+                          row.accounts_needed ?? Math.ceil(row.active_profiles / 5)
+                        )}
+                      </td>
+                      <td className="px-6 py-3.5 text-right text-green-600 dark:text-green-400 font-semibold">
+                        ${Math.round(row.monthly_income || row.monthly_client_income || (row.ingreso_total * 30)).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-3.5 text-right text-red-650 dark:text-red-400 font-medium">
+                        ${Math.round(row.monthly_expense || row.monthly_inventory_cost || (row.egreso_total * 30)).toLocaleString()}
+                      </td>
+                      <td className={`px-6 py-3.5 text-center font-bold ${row.indicador_gan < 0 ? 'text-rose-600 dark:text-rose-400' : row.indicador_gan >= 30 ? 'text-green-500' : 'text-yellow-500'}`}>
+                        {row.is_implicit_cost ? '100% (Matriz)' : `${row.indicador_gan.toFixed(0)}%`}
+                      </td>
+                      <td className={`px-6 py-3.5 text-right font-bold ${
+                        ((row.monthly_income || row.monthly_client_income || (row.ingreso_total * 30)) - (row.monthly_expense || row.monthly_inventory_cost || (row.egreso_total * 30))) < 0
+                          ? 'text-rose-600 dark:text-rose-400'
+                          : 'text-brand-primary'
+                      }`}>
+                        ${Math.round((row.monthly_income || row.monthly_client_income || (row.ingreso_total * 30)) - (row.monthly_expense || row.monthly_inventory_cost || (row.egreso_total * 30))).toLocaleString()}
+                      </td>
+                      <td className={`px-6 py-3.5 text-right font-semibold ${row.utilidad_total < 0 ? 'text-rose-600 dark:text-rose-400' : 'dark:text-gray-300'}`}>
+                        ${Math.round(row.utilidad_total).toLocaleString()} / día
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
               {totals && (
                 <tfoot>
