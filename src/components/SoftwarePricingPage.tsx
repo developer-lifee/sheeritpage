@@ -250,7 +250,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
   };
 
   return (
-    <div className="min-h-screen bg-[#050A12] text-slate-100 transition-colors duration-300 animate-fadeIn pb-28">
+    <div className="min-h-screen bg-[#050A12] text-slate-100 transition-colors duration-300 animate-fadeIn software-page-root">
       {/* Hero Section */}
       <section className="relative overflow-hidden pt-20 pb-16 md:pt-28 md:pb-24 border-b border-teal-500/15 bg-[#030710]">
         {/* 3D Architectural Liquid Obsidian Backdrop */}
@@ -259,7 +259,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
           style={{ backgroundImage: "url('/assets/software_hero_bg.jpg')" }}
         />
         {/* Legibility Gradient Vignette */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#050A12]/70 via-[#050A12]/55 to-[#050A12] pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050A12]/70 via-[#050A12]/55 to-[#050A12] pointer-events-none software-hero-vignette" />
         {/* Subtle Cyber Grid */}
         <div
           className="absolute inset-0 pointer-events-none opacity-80"
@@ -1503,7 +1503,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
       </section>
 
       {/* CTA Final */}
-      <section className="bg-gradient-to-r from-teal-950/60 via-slate-900 to-cyan-950/50 text-white py-16 text-center border-t border-teal-500/25">
+      <section className="bg-gradient-to-r from-teal-950/60 via-slate-900 to-cyan-950/50 text-white pt-16 pb-28 text-center border-t border-teal-500/25 software-final-cta">
         <div className="max-w-4xl mx-auto px-4">
           <h2 className="text-3xl font-extrabold mb-4 text-white">¿Tienes una idea o proceso que deseas automatizar?</h2>
           <p className="text-slate-300 mb-8 max-w-lg mx-auto text-sm md:text-base">
@@ -1520,7 +1520,7 @@ export function SoftwarePricingPage({ onNavigate }: { onNavigate?: (view: any) =
 
       {/* Persistent Fixed Bottom Purchase-Confirmation Bar */}
       {activeTrack === 'bot' && (
-        <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-1.5rem)] max-w-4xl bg-slate-950/92 backdrop-blur-2xl border border-teal-400/45 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.9)] rounded-2xl px-4 py-3">
+        <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-1.5rem)] max-w-4xl bg-slate-950/35 backdrop-blur-2xl backdrop-saturate-150 border border-white/20 ring-1 ring-inset ring-white/10 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.55)] rounded-2xl px-4 py-3 software-glass-bar">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="min-w-0 space-y-0.5">
               <div className="flex flex-wrap items-center gap-2">

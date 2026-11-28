@@ -102,3 +102,131 @@ html:not(.dark) .mibot-workspace button[class*="bg-rose-6"] *,
 html:not(.dark) .mibot-workspace button[class*="bg-sky-6"] * {
   color: #ffffff !important;
 }
+
+/* Light theme support scoped to /software (Desarrollo de Software & Bot Suite) */
+html:not(.dark) .software-page-root {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+html:not(.dark) .software-page-root [class*="bg-[#030710]"],
+html:not(.dark) .software-page-root [class*="bg-[#050A12]"],
+html:not(.dark) .software-page-root [class*="bg-[#070E1A]"],
+html:not(.dark) .software-page-root [class*="bg-[#080F1D]"] {
+  background-color: #f8fafc !important;
+}
+html:not(.dark) .software-page-root [class*="bg-[#050A12]/90"] {
+  background-color: rgba(248, 250, 252, 0.9) !important;
+}
+html:not(.dark) .software-page-root [class*="bg-[#060B14]"] {
+  background-color: #f1f5f9 !important;
+}
+html:not(.dark) .software-page-root [class*="bg-[#060B14]/85"],
+html:not(.dark) .software-page-root [class*="bg-[#0B1220]"],
+html:not(.dark) .software-page-root .bg-slate-900,
+html:not(.dark) .software-page-root .bg-slate-900\/60,
+html:not(.dark) .software-page-root .bg-slate-900\/75,
+html:not(.dark) .software-page-root .bg-slate-900\/80,
+html:not(.dark) .software-page-root .bg-slate-900\/85,
+html:not(.dark) .software-page-root .bg-slate-900\/90,
+html:not(.dark) .software-page-root .bg-slate-950\/70,
+html:not(.dark) .software-page-root .bg-slate-950\/75,
+html:not(.dark) .software-page-root .bg-slate-950\/80 {
+  background-color: rgba(255, 255, 255, 0.86) !important;
+  box-shadow: 0 8px 28px -12px rgba(15, 23, 42, 0.08);
+}
+html:not(.dark) .software-page-root .bg-slate-950,
+html:not(.dark) .software-page-root .bg-slate-950\/90,
+html:not(.dark) .software-page-root .bg-slate-950\/50,
+html:not(.dark) .software-page-root .bg-slate-950\/60,
+html:not(.dark) .software-page-root .bg-slate-950\/40 {
+  background-color: rgba(241, 245, 249, 0.92) !important;
+}
+html:not(.dark) .software-page-root .bg-slate-800,
+html:not(.dark) .software-page-root .bg-slate-800\/60,
+html:not(.dark) .software-page-root .bg-slate-800\/70,
+html:not(.dark) .software-page-root .bg-slate-800\/90 {
+  background-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+html:not(.dark) .software-page-root .bg-slate-800:hover,
+html:not(.dark) .software-page-root .hover\:bg-slate-800:hover {
+  background-color: #cbd5e1 !important;
+}
+html:not(.dark) .software-page-root [style*="software_hero_bg.jpg"],
+html:not(.dark) .software-page-root [style*="software_suite_bg.jpg"] {
+  filter: invert(1) hue-rotate(180deg) brightness(1.08) saturate(1.15);
+  opacity: 0.42 !important;
+}
+html:not(.dark) .software-page-root .software-hero-vignette {
+  background: linear-gradient(to bottom, rgba(248, 250, 252, 0.55), rgba(248, 250, 252, 0.42), #f8fafc) !important;
+}
+html:not(.dark) .software-page-root .software-glass-bar {
+  background-color: rgba(255, 255, 255, 0.52) !important;
+  border-color: rgba(20, 184, 166, 0.35) !important;
+  box-shadow: 0 12px 36px -8px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.85) !important;
+}
+html:not(.dark) .software-page-root .software-final-cta {
+  background: linear-gradient(135deg, #ecfeff 0%, #f0fdfa 50%, #e0f2fe 100%) !important;
+  border-top-color: rgba(20, 184, 166, 0.3) !important;
+}
+html:not(.dark) .software-page-root .border-slate-800,
+html:not(.dark) .software-page-root .border-slate-800\/80,
+html:not(.dark) .software-page-root .border-slate-700,
+html:not(.dark) .software-page-root .border-slate-700\/80 {
+  border-color: #cbd5e1 !important;
+}
+html:not(.dark) .software-page-root input,
+html:not(.dark) .software-page-root textarea,
+html:not(.dark) .software-page-root select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+html:not(.dark) .software-page-root .text-white,
+html:not(.dark) .software-page-root .text-slate-100,
+html:not(.dark) .software-page-root .text-slate-200 {
+  color: #0f172a !important;
+}
+html:not(.dark) .software-page-root .text-slate-300 {
+  color: #334155 !important;
+}
+html:not(.dark) .software-page-root .text-slate-400 {
+  color: #475569 !important;
+}
+html:not(.dark) .software-page-root .text-slate-500 {
+  color: #64748b !important;
+}
+html:not(.dark) .software-page-root .text-teal-300,
+html:not(.dark) .software-page-root .text-teal-400 {
+  color: #0f766e !important;
+}
+html:not(.dark) .software-page-root .text-emerald-300,
+html:not(.dark) .software-page-root .text-emerald-400 {
+  color: #047857 !important;
+}
+html:not(.dark) .software-page-root .text-cyan-300,
+html:not(.dark) .software-page-root .text-cyan-400 {
+  color: #0e7490 !important;
+}
+html:not(.dark) .software-page-root .text-amber-300,
+html:not(.dark) .software-page-root .text-amber-400 {
+  color: #b45309 !important;
+}
+html:not(.dark) .software-page-root button[class*="from-teal-400"],
+html:not(.dark) .software-page-root button[class*="from-teal-500"] {
+  color: #0f172a !important;
+}
+html:not(.dark) .software-page-root button[class*="from-teal-400"] *,
+html:not(.dark) .software-page-root button[class*="from-teal-500"] * {
+  color: #0f172a !important;
+}
+html:not(.dark) .software-page-root button[class*="bg-teal-6"],
+html:not(.dark) .software-page-root button[class*="bg-emerald-6"],
+html:not(.dark) .software-page-root button[class*="bg-indigo-6"] {
+  color: #ffffff !important;
+}
+html:not(.dark) .software-page-root button[class*="bg-teal-6"] *,
+html:not(.dark) .software-page-root button[class*="bg-emerald-6"] *,
+html:not(.dark) .software-page-root button[class*="bg-indigo-6"] * {
+  color: #ffffff !important;
+}
