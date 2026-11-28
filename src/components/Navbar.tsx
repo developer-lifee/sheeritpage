@@ -81,6 +81,49 @@ export function Navbar({ isDark, toggleDark, onNavigate, currentView, agentName,
     );
   }
 
+  if (currentView === 'mibot') {
+    return (
+      <nav className="bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 text-white sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14">
+            <div className="flex items-center gap-3">
+              <div
+                className="flex items-center cursor-pointer"
+                onClick={() => onNavigate('home')}
+              >
+                <img
+                  src="/faviconsheerit.png"
+                  alt="Sheerit Logo"
+                  className="h-7 w-auto mr-1.5"
+                />
+                <span className="text-lg font-extrabold tracking-tight">SHEERIT</span>
+              </div>
+              <span className="h-4 w-px bg-slate-700/80" />
+              <span className="px-2.5 py-0.5 rounded-full bg-teal-500/15 border border-teal-500/30 text-teal-300 text-xs font-semibold">
+                Bot Studio
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 sm:gap-3">
+              <button
+                onClick={() => onNavigate('software')}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors"
+              >
+                Planes y Módulos
+              </button>
+              <button
+                onClick={() => onNavigate('home')}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors"
+              >
+                Inicio
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
   return (
     <nav className="bg-brand-primary dark:bg-gray-800 text-white shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

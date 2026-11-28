@@ -822,7 +822,7 @@ function AppContent() {
 
 
   return (
-    <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 transition-all duration-300 ${isComboOpen ? 'md:pr-96' : ''}`}>
+    <div className={`min-h-screen ${currentView === 'mibot' ? 'bg-slate-950' : 'bg-gray-50 dark:bg-gray-900'} transition-all duration-300 ${isComboOpen && currentView !== 'mibot' ? 'md:pr-96' : ''}`}>
       <Navbar 
         isDark={isDark} 
         toggleDark={() => toggleDark(!isDark)} 
@@ -1005,10 +1005,10 @@ function AppContent() {
       {currentView !== 'admin' && <WhatsAppButton />}
       
       {/* Floating Custom Combo Cart Button */}
-      <FloatingCartButton />
+      {currentView !== 'mibot' && <FloatingCartButton />}
       
       {/* Global Combo Cart Modal */}
-      <ComboMenu />
+      {currentView !== 'mibot' && <ComboMenu />}
 
       {/* Modal Simulador Interactivo Global */}
       <WhatsAppBotSimulatorModal
