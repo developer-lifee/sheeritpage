@@ -822,7 +822,7 @@ function AppContent() {
 
 
   return (
-    <div className={`min-h-screen ${currentView === 'mibot' ? 'bg-slate-950' : 'bg-gray-50 dark:bg-gray-900'} transition-all duration-300 ${isComboOpen && currentView !== 'mibot' ? 'md:pr-96' : ''}`}>
+    <div className={`min-h-screen ${currentView === 'mibot' ? 'bg-slate-100 dark:bg-slate-950' : 'bg-gray-50 dark:bg-gray-900'} transition-all duration-300 ${isComboOpen && currentView !== 'mibot' ? 'md:pr-96' : ''}`}>
       <Navbar 
         isDark={isDark} 
         toggleDark={() => toggleDark(!isDark)} 

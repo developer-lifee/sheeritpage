@@ -204,6 +204,9 @@ interface ImprovementItem {
   created_at: string;
 }
 
+export const BOT_STUDIO_VERSION = 'v2.5.0';
+export const BOT_STUDIO_RELEASE_NOTE = 'Vista panorámica responsive, modo claro/oscuro completo y conexión /crear ↔ /mi-bot';
+
 const TOKEN_STORAGE_KEY = 'sheerit_saas_bot_token';
 
 const getApiBase = () => {
@@ -1505,7 +1508,7 @@ export function BotStudioPage({ onNavigateHome, onNavigateCreate }: BotStudioPag
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-10">
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-10 mibot-workspace transition-colors">
         <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -1513,7 +1516,12 @@ export function BotStudioPage({ onNavigateHome, onNavigateCreate }: BotStudioPag
                 <Bot className="w-5 h-5" />
               </div>
               <div>
-                <h1 className="text-lg font-bold">Sheerit Bot Studio</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-lg font-bold">Sheerit Bot Studio</h1>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
+                    {BOT_STUDIO_VERSION}
+                  </span>
+                </div>
                 <p className="text-xs text-slate-400">WhatsApp IA + Audios Naturales Anti-Bloqueo</p>
               </div>
             </div>
@@ -1648,19 +1656,25 @@ export function BotStudioPage({ onNavigateHome, onNavigateCreate }: BotStudioPag
   const usagePct = Math.min(100, Math.round((usedMsgs / Math.max(1, limitMsgs)) * 100));
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 px-4 py-6">
-      <div className="max-w-5xl mx-auto space-y-5">
+    <div className="min-h-screen bg-slate-950 text-slate-100 px-3 sm:px-5 lg:px-6 py-5 mibot-workspace transition-colors">
+      <div className="max-w-[96%] mx-auto space-y-5">
         {/* Topbar */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-400">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-400 shrink-0">
               <Bot className="w-6 h-6" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-lg font-bold">{tenant?.business_name || 'Mi Bot WhatsApp'}</h1>
                 <span className="text-[11px] px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30 font-semibold">
                   {tenant?.plan_name || 'Plan Básico 30K'}
+                </span>
+                <span
+                  title={BOT_STUDIO_RELEASE_NOTE}
+                  className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300"
+                >
+                  Sheerit Bot Studio · {BOT_STUDIO_VERSION}
                 </span>
                 {tenant?.expires_at && (() => {
                   const expDate = new Date(tenant.expires_at);
@@ -1684,7 +1698,7 @@ export function BotStudioPage({ onNavigateHome, onNavigateCreate }: BotStudioPag
                   );
                 })()}
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-400 truncate">
                 Hola, {tenant?.owner_name} • {tenant?.email}
               </p>
             </div>
@@ -1741,7 +1755,7 @@ export function BotStudioPage({ onNavigateHome, onNavigateCreate }: BotStudioPag
         )}
 
         {/* Navigation tabs */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+        <div className="flex overflow-x-auto sm:grid sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-2 pb-1 sm:pb-0">
           {[
             { id: 'whatsapp', label: '1. Conectar WhatsApp', icon: QrCode },
             { id: 'generator', label: '2. Generador IA & Prompt', icon: Sparkles },
@@ -1761,7 +1775,7 @@ export function BotStudioPage({ onNavigateHome, onNavigateCreate }: BotStudioPag
                   if (tab.id === 'chats') fetchLiveChats();
                   if (tab.id === 'data') fetchDataSources();
                 }}
-                className={`p-3 rounded-xl border text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition ${
+                className={`p-3 rounded-xl border text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition shrink-0 whitespace-nowrap sm:whitespace-normal ${
                   active
                     ? 'bg-teal-600 border-teal-500 text-white shadow-lg shadow-teal-900/30'
                     : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'

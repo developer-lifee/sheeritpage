@@ -3,6 +3,7 @@ import { Menu, User, HelpCircle, Home, X, ShoppingCart, Code, Layers, Store } fr
 import { ThemeToggle } from './ThemeToggle';
 import { CurrencyToggle } from './CurrencyToggle';
 import { useComboCart } from '../hooks/useComboCart';
+import { BOT_STUDIO_VERSION, BOT_STUDIO_RELEASE_NOTE } from './BotStudioPage';
 
 // Removed ComboMenu import since we'll move it to Hero
 import { ViewState } from '../App';
@@ -83,12 +84,12 @@ export function Navbar({ isDark, toggleDark, onNavigate, currentView, agentName,
 
   if (currentView === 'mibot') {
     return (
-      <nav className="bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 text-white sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14">
-            <div className="flex items-center gap-3">
+      <nav className="bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 text-slate-900 dark:text-white sticky top-0 z-30 transition-colors">
+        <div className="max-w-[96%] mx-auto px-3 sm:px-5 lg:px-6">
+          <div className="flex items-center justify-between h-14 gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <div
-                className="flex items-center cursor-pointer"
+                className="flex items-center cursor-pointer shrink-0"
                 onClick={() => onNavigate('home')}
               >
                 <img
@@ -98,25 +99,33 @@ export function Navbar({ isDark, toggleDark, onNavigate, currentView, agentName,
                 />
                 <span className="text-lg font-extrabold tracking-tight">SHEERIT</span>
               </div>
-              <span className="h-4 w-px bg-slate-700/80" />
-              <span className="px-2.5 py-0.5 rounded-full bg-teal-500/15 border border-teal-500/30 text-teal-300 text-xs font-semibold">
+              <span className="h-4 w-px bg-slate-300 dark:bg-slate-700/80 shrink-0" />
+              <span className="px-2.5 py-0.5 rounded-full bg-teal-500/15 border border-teal-500/30 text-teal-700 dark:text-teal-300 text-xs font-semibold truncate">
                 Bot Studio
+              </span>
+              <span
+                title={BOT_STUDIO_RELEASE_NOTE}
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 text-[10px] font-mono font-bold shrink-0"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {BOT_STUDIO_VERSION}
               </span>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
               <button
                 onClick={() => onNavigate('software')}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors"
+                className="hidden sm:inline-flex px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors"
               >
                 Planes y Módulos
               </button>
               <button
                 onClick={() => onNavigate('home')}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors"
+                className="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors"
               >
                 Inicio
               </button>
+              <ThemeToggle isDark={isDark} toggle={toggleDark} />
             </div>
           </div>
         </div>
