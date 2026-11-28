@@ -1735,6 +1735,16 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                       <RefreshCw className={`w-4 h-4 ${busyAction === 'wa_connect' ? 'animate-spin' : ''}`} />
                       {session.status === 'QR_READY' ? 'Refrescar QR' : 'O conectar escaneando código QR'}
                     </button>
+                    {(session.status === 'CONNECTING' || session.status === 'QR_READY' || session.status === 'PAIRING_CODE_READY') && (
+                      <button
+                        type="button"
+                        onClick={handleDisconnectWhatsApp}
+                        disabled={busyAction === 'wa_disconnect'}
+                        className="px-4 py-2.5 rounded-xl bg-rose-600/15 border border-rose-500/35 text-rose-300 hover:bg-rose-600/25 font-semibold text-xs disabled:opacity-50"
+                      >
+                        {busyAction === 'wa_disconnect' ? 'Reiniciando...' : 'Reiniciar conexión'}
+                      </button>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -1798,6 +1808,12 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
                 <div className="text-center space-y-3">
                   <img src={session.qrDataUrl} alt="QR WhatsApp" className="w-56 h-56 rounded-xl bg-white p-2 mx-auto" />
                   <p className="text-xs text-slate-400">Escanea este código desde tu WhatsApp (se actualiza en vivo)</p>
+                </div>
+              ) : session.status === 'CONNECTING' ? (
+                <div className="text-center text-slate-300 space-y-2.5">
+                  <RefreshCw className="w-10 h-10 mx-auto text-teal-400 animate-spin" />
+                  <p className="text-sm font-semibold text-white">Iniciando sesión de WhatsApp Web...</p>
+                  <p className="text-xs text-slate-400 max-w-xs mx-auto">Esto tarda entre 10 y 25 segundos. El QR aparecerá aquí automáticamente.</p>
                 </div>
               ) : (
                 <div className="text-center text-slate-500 space-y-2">
