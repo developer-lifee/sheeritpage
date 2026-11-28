@@ -1,5 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { Bot, RefreshCcw, Send, CalendarPlus, CheckCircle2, AlertCircle, Database } from 'lucide-react';
+import { Bot, RefreshCcw, Send, CalendarPlus, CheckCircle2, AlertCircle, Database, Bug, Save } from 'lucide-react';
+
+interface SaasBugTicketAdminItem {
+  id: number;
+  tenant_id: number;
+  business_name?: string;
+  owner_name?: string;
+  wa_phone?: string | null;
+  title: string;
+  category: string;
+  description: string;
+  steps_to_reproduce?: string | null;
+  status: 'reported' | 'in_review' | 'in_progress' | 'resolved' | 'closed';
+  admin_notes?: string | null;
+  whatsapp_notified: number | boolean;
+  created_at: string;
+}
 
 interface SaasTenantAdminItem {
   id: number;
@@ -35,6 +51,8 @@ const getApiUrl = () =>
 
 export const SaasBotsAdminTab: React.FC<SaasBotsAdminTabProps> = ({ adminPassword, onBalanceChanged }) => {
   const [tenants, setTenants] = useState<SaasTenantAdminItem[]>([]);
+  const [bugTickets, setBugTickets] = useState<SaasBugTicketAdminItem[]>([]);
+  const [ticketDrafts, setTicketDrafts] = useState<Record<number, { status: SaasBugTicketAdminItem['status']; admin_notes: string }>>({});
   const [loading, setLoading] = useState(true);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [banner, setBanner] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
@@ -42,15 +60,52 @@ export const SaasBotsAdminTab: React.FC<SaasBotsAdminTabProps> = ({ adminPasswor
   const fetchTenants = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${getApiUrl()}/api/admin/saas-bots?password=${encodeURIComponent(adminPassword)}`);
-      const data = await res.json();
+      const [res, bugsRes] = await Promise.all([
+        fetch(`${getApiUrl()}/api/admin/saas-bots?password=${encodeURIComponent(adminPassword)}`),
+        fetch(`${getApiUrl()}/api/admin/saas-bots/bug-tickets?password=${encodeURIComponent(adminPassword)}`)
+      ]);
+      const [data, bugsData] = await Promise.all([res.json(), bugsRes.json()]);
       if (data.success && Array.isArray(data.tenants)) {
         setTenants(data.tenants);
+      }
+      if (bugsData.success && Array.isArray(bugsData.tickets)) {
+        setBugTickets(bugsData.tickets);
+        const drafts: Record<number, { status: SaasBugTicketAdminItem['status']; admin_notes: string }> = {};
+        bugsData.tickets.forEach((tk: SaasBugTicketAdminItem) => {
+          drafts[tk.id] = { status: tk.status, admin_notes: tk.admin_notes || '' };
+        });
+        setTicketDrafts(drafts);
       }
     } catch {
       setBanner({ type: 'err', text: 'No se pudo cargar la lista de Bots SaaS.' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveBugTicket = async (ticketId: number) => {
+    const draft = ticketDrafts[ticketId];
+    if (!draft) return;
+    setBusyKey(`bug_${ticketId}`);
+    setBanner(null);
+    try {
+      const res = await fetch(`${getApiUrl()}/api/admin/saas-bots/bug-tickets/${ticketId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          password: adminPassword,
+          status: draft.status,
+          admin_notes: draft.admin_notes
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo actualizar el ticket');
+      setBugTickets(prev => prev.map(t => (t.id === ticketId ? data.ticket : t)));
+      setBanner({ type: 'ok', text: `Ticket #${ticketId} actualizado a "${draft.status}".` });
+    } catch (err: any) {
+      setBanner({ type: 'err', text: err.message });
+    } finally {
+      setBusyKey(null);
     }
   };
 
@@ -256,6 +311,96 @@ export const SaasBotsAdminTab: React.FC<SaasBotsAdminTabProps> = ({ adminPasswor
                     >
                       <CalendarPlus className="w-3.5 h-3.5" />
                       Renovar +30 días
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Ticketera de Bugs Reportados por Clientes SaaS */}
+      <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+              <Bug className="w-4 h-4 text-rose-500" /> Ticketera de Bugs Reportados ({bugTickets.length})
+            </h3>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              Cada ticket creado en /mi-bot → Soporte & Bugs se envía automáticamente al grupo Errors bot; aquí puedes cambiar estado y responderle al cliente.
+            </p>
+          </div>
+        </div>
+
+        {bugTickets.length === 0 ? (
+          <div className="text-xs text-gray-400 py-6 text-center">
+            No hay tickets de bugs reportados todavía.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {bugTickets.map(tk => {
+              const draft = ticketDrafts[tk.id] || { status: tk.status, admin_notes: tk.admin_notes || '' };
+              return (
+                <div
+                  key={tk.id}
+                  className="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/70 border border-gray-200 dark:border-gray-700 space-y-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-xs font-extrabold text-gray-900 dark:text-white">
+                      #{tk.id} · {tk.title}
+                      <span className="ml-2 text-[11px] font-normal text-gray-500 dark:text-gray-400">
+                        ({tk.business_name || `Tenant #${tk.tenant_id}`} · {tk.category})
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-gray-400">
+                      {new Date(tk.created_at).toLocaleString('es-CO')}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{tk.description}</p>
+                  {tk.steps_to_reproduce && (
+                    <div className="text-[11px] text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 p-2 rounded-lg border dark:border-gray-700 whitespace-pre-wrap">
+                      <strong>Pasos:</strong> {tk.steps_to_reproduce}
+                    </div>
+                  )}
+
+                  <div className="flex flex-col md:flex-row gap-2 items-stretch md:items-center pt-1">
+                    <select
+                      value={draft.status}
+                      onChange={e =>
+                        setTicketDrafts(prev => ({
+                          ...prev,
+                          [tk.id]: { ...draft, status: e.target.value as SaasBugTicketAdminItem['status'] }
+                        }))
+                      }
+                      className="px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-800 dark:text-gray-200"
+                    >
+                      <option value="reported">Reportado</option>
+                      <option value="in_review">En revisión</option>
+                      <option value="in_progress">En progreso</option>
+                      <option value="resolved">Resuelto</option>
+                      <option value="closed">Cerrado</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={draft.admin_notes}
+                      onChange={e =>
+                        setTicketDrafts(prev => ({
+                          ...prev,
+                          [tk.id]: { ...draft, admin_notes: e.target.value }
+                        }))
+                      }
+                      placeholder="Nota técnica / respuesta que verá el cliente en /mi-bot..."
+                      className="flex-1 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs text-gray-800 dark:text-gray-200"
+                    />
+                    <button
+                      type="button"
+                      disabled={busyKey === `bug_${tk.id}`}
+                      onClick={() => handleSaveBugTicket(tk.id)}
+                      className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shrink-0"
+                    >
+                      <Save className="w-3.5 h-3.5" /> Guardar estado
                     </button>
                   </div>
                 </div>

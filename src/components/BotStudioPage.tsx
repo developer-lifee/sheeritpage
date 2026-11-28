@@ -34,9 +34,11 @@ import {
   X,
   Database,
   Store,
-  ExternalLink
+  ExternalLink,
+  Bug
 } from 'lucide-react';
 import { useWhatsAppContact } from '../hooks/useWhatsAppContact';
+import { SaasBugTicketsTab } from './SaasBugTicketsTab';
 
 interface DataSourceItem {
   id: number;
@@ -80,6 +82,7 @@ interface SimChatMessage {
   mode?: string;
   reason?: string;
   pausedByHuman?: boolean;
+  silentHandoff?: boolean;
   audios?: SimAudioItem[];
   timestamp: string;
 }
@@ -274,7 +277,7 @@ export function BotStudioPage({ onNavigateHome, onNavigateCreate }: BotStudioPag
   const [logsSubTab, setLogsSubTab] = useState<'history' | 'proposals' | 'applied'>('history');
   const [pairingPhone, setPairingPhone] = useState('');
   const [pairingNow, setPairingNow] = useState(() => Date.now());
-  const [activeTab, setActiveTab] = useState<'whatsapp' | 'generator' | 'elevenlabs' | 'simulator' | 'chats' | 'logs' | 'data'>('whatsapp');
+  const [activeTab, setActiveTab] = useState<'whatsapp' | 'generator' | 'elevenlabs' | 'simulator' | 'chats' | 'logs' | 'data' | 'bugs'>('whatsapp');
   const [bannerMsg, setBannerMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
 
@@ -1443,7 +1446,7 @@ export function BotStudioPage({ onNavigateHome, onNavigateCreate }: BotStudioPag
             timestamp: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
           }
         ]);
-        setSimHistory(prev => [...prev, { role: 'user', content: sim.incomingText }].slice(-12));
+        setSimHistory(prev => [...prev, { role: 'user' as const, content: `[Durante pausa humana] ${sim.incomingText}` }].slice(-16));
         return;
       }
 
@@ -1451,14 +1454,19 @@ export function BotStudioPage({ onNavigateHome, onNavigateCreate }: BotStudioPag
         ensureSimMediaLoaded(sim.pickedAudios);
       }
 
+      const isSilentHandoff = Boolean(
+        sim.silentHandoff || (!String(sim.replyText || '').trim() && (!Array.isArray(sim.pickedAudios) || sim.pickedAudios.length === 0))
+      );
+
       setSimMessages(prev => [
         ...prev,
         {
           id: botBubbleId,
           sender: 'bot',
           text: sim.replyText || '',
-          mode: sim.mode,
+          mode: isSilentHandoff ? 'handoff' : sim.mode,
           reason: sim.reason,
+          silentHandoff: isSilentHandoff,
           audios: sim.pickedAudios || [],
           timestamp: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
         }
@@ -1468,10 +1476,10 @@ export function BotStudioPage({ onNavigateHome, onNavigateCreate }: BotStudioPag
         [
           ...prev,
           { role: 'user' as const, content: sim.incomingText },
-          ...(sim.assistantHistorySummary
+          ...(!isSilentHandoff && sim.assistantHistorySummary
             ? [{ role: 'assistant' as const, content: String(sim.assistantHistorySummary) }]
             : [])
-        ].slice(-12)
+        ].slice(-16)
       );
     } catch (err: any) {
       notify('err', err.message);
@@ -1493,7 +1501,7 @@ export function BotStudioPage({ onNavigateHome, onNavigateCreate }: BotStudioPag
         timestamp: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
       }
     ]);
-    setSimHistory(prev => [...prev, { role: 'assistant', content: msg }].slice(-12));
+    setSimHistory(prev => [...prev, { role: 'assistant', content: `[Asesor humano]: ${msg}` }].slice(-16));
     setSimHumanReply('');
   };
 
@@ -1755,7 +1763,7 @@ export function BotStudioPage({ onNavigateHome, onNavigateCreate }: BotStudioPag
         )}
 
         {/* Navigation tabs */}
-        <div className="flex overflow-x-auto sm:grid sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-2 pb-1 sm:pb-0">
+        <div className="flex overflow-x-auto sm:grid sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-8 gap-2 pb-1 sm:pb-0">
           {[
             { id: 'whatsapp', label: '1. Conectar WhatsApp', icon: QrCode },
             { id: 'generator', label: '2. Generador IA & Prompt', icon: Sparkles },
@@ -1763,7 +1771,8 @@ export function BotStudioPage({ onNavigateHome, onNavigateCreate }: BotStudioPag
             { id: 'simulator', label: '4. Modo Prueba', icon: Play },
             { id: 'chats', label: '5. Chats en Vivo', icon: Send },
             { id: 'logs', label: '6. Historial y Mejoras', icon: MessageSquare },
-            { id: 'data', label: '7. Datos & Sheets', icon: Database }
+            { id: 'data', label: '7. Datos & Sheets', icon: Database },
+            { id: 'bugs', label: '8. Soporte & Bugs', icon: Bug }
           ].map(tab => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -3025,6 +3034,35 @@ export function BotStudioPage({ onNavigateHome, onNavigateCreate }: BotStudioPag
                     );
                   }
 
+                  if (msg.silentHandoff) {
+                    return (
+                      <div key={msg.id} className="flex justify-center">
+                        <div className="px-4 py-2.5 rounded-xl bg-sky-500/10 border border-sky-500/30 text-[11px] text-sky-200 max-w-lg text-center space-y-1.5">
+                          <div>
+                            🧑‍💼 <strong>Pendiente de asesor humano</strong> — el bot guardó silencio y <strong>no cuenta</strong> como mensaje enviado.
+                          </div>
+                          {msg.reason && (
+                            <div>
+                              <button
+                                type="button"
+                                onClick={() => setSimExpandedWhyId(prev => (prev === msg.id ? null : msg.id))}
+                                className="text-[10px] font-semibold text-sky-300 hover:text-sky-200 inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                {simExpandedWhyId === msg.id ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                ¿Por qué eligió silencio?
+                              </button>
+                              {simExpandedWhyId === msg.id && (
+                                <div className="mt-1 p-2 rounded-lg bg-slate-950/90 border border-sky-500/20 text-[11px] text-slate-300 text-left">
+                                  {msg.reason}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div key={msg.id} className="flex justify-end">
                       <div className="max-w-[85%] bg-teal-950/60 border border-teal-500/35 rounded-2xl rounded-tr-sm px-3.5 py-2.5 text-xs text-slate-100 space-y-2.5">
@@ -3891,6 +3929,11 @@ export function BotStudioPage({ onNavigateHome, onNavigateCreate }: BotStudioPag
               </div>
             )}
           </div>
+        )}
+
+        {/* Tab 8: Soporte & Ticketera de Bugs */}
+        {activeTab === 'bugs' && (
+          <SaasBugTicketsTab apiBase={apiBase} token={token} onNotify={notify} />
         )}
       </div>
     </div>
