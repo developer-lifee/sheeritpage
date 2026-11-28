@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Calculator, Save, Plus, Trash2, Edit2, TrendingUp, CreditCard, RefreshCcw, DollarSign, Calendar, Eye, EyeOff, Receipt, CheckCircle2, X, Users, Wallet, ChevronDown, ChevronUp, UserCheck } from 'lucide-react';
 import { isDemoMode, DEMO_ACCOUNTING } from '../utils/demoMode';
 import { ValidatedPaymentsTab } from './ValidatedPaymentsTab';
+import { RefundsTab } from './RefundsTab';
+import { SaasBotsAdminTab } from './SaasBotsAdminTab';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -55,6 +57,8 @@ interface AccountingTotals {
   mensual_egreso: number;
   mensual_utilidad: number;
   salaries_projection?: SalariesProjection;
+  fixed_infra_monthly?: number;
+  fixed_infra_breakdown?: { vps: number; deepseek: number };
   mensual_utilidad_post_salarios?: number;
   diario_utilidad_post_salarios?: number;
 }
@@ -104,7 +108,7 @@ interface AccountRenewal {
 
 export function AccountingView() {
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'excel' | 'projections' | 'real' | 'payments'>('excel');
+  const [viewMode, setViewMode] = useState<'excel' | 'projections' | 'real' | 'payments' | 'refunds' | 'saas'>('excel');
   const [rows, setRows] = useState<AccountingRow[]>([]);
   const [redFlags, setRedFlags] = useState<any[]>([]);
   const [totals, setTotals] = useState<AccountingTotals | null>(null);
@@ -118,7 +122,7 @@ export function AccountingView() {
 
   // Estados para evaluación interactiva de deducción de salarios de asesores
   const [deductSalaries, setDeductSalaries] = useState<boolean>(true);
-  const [salariesMode, setSalariesMode] = useState<'last_month' | 'rules' | 'custom'>('last_month');
+  const [salariesMode, setSalariesMode] = useState<'last_month' | 'rules' | 'custom'>('rules');
   const [customSalaryAmount, setCustomSalaryAmount] = useState<number>(2600000);
   const [showSalariesBreakdown, setShowSalariesBreakdown] = useState<boolean>(false);
 
@@ -449,7 +453,8 @@ export function AccountingView() {
       ? defaultByRules 
       : customSalaryAmount;
 
-  const netProfitPostSalaries = (totals?.mensual_utilidad || 0) - (deductSalaries ? activeSalaryAmount : 0);
+  const fixedInfraMonthly = Number(totals?.fixed_infra_monthly ?? 46000);
+  const netProfitPostSalaries = (totals?.mensual_utilidad || 0) - fixedInfraMonthly - (deductSalaries ? activeSalaryAmount : 0);
   const dailyProfitPostSalaries = netProfitPostSalaries / 30;
   const netMarginPostSalaries = (totals?.mensual_ingreso || 0) > 0 
     ? (netProfitPostSalaries / totals!.mensual_ingreso) * 100 
@@ -462,7 +467,7 @@ export function AccountingView() {
           <h2 className="text-xl font-bold dark:text-white">Contabilidad y Configuración de Precios</h2>
           <p className="text-xs text-gray-500 dark:text-gray-400">Control de ingresos, costos operativos y precios de venta.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Botón interactivo para Deducir Salarios de Asesores */}
           <button
             onClick={() => setDeductSalaries(!deductSalaries)}
@@ -479,7 +484,7 @@ export function AccountingView() {
           </button>
 
           {/* View mode toggle */}
-          <div className="bg-gray-100 dark:bg-gray-750 p-1 rounded-xl flex">
+          <div className="bg-gray-100 dark:bg-gray-750 p-1 rounded-xl flex flex-wrap gap-1">
             <button
               onClick={() => setViewMode('excel')}
               className={`px-3 py-1.5 rounded-lg text-xxs font-bold transition-all ${
@@ -520,6 +525,26 @@ export function AccountingView() {
             >
               🔑 Pagos y Renovaciones (Llave)
             </button>
+            <button
+              onClick={() => setViewMode('refunds')}
+              className={`px-3 py-1.5 rounded-lg text-xxs font-bold transition-all ${
+                viewMode === 'refunds'
+                  ? 'bg-white dark:bg-gray-800 text-rose-600 dark:text-rose-400 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-800'
+              }`}
+            >
+              💸 Reembolsos
+            </button>
+            <button
+              onClick={() => setViewMode('saas')}
+              className={`px-3 py-1.5 rounded-lg text-xxs font-bold transition-all ${
+                viewMode === 'saas'
+                  ? 'bg-white dark:bg-gray-800 text-teal-600 dark:text-teal-400 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-800'
+              }`}
+            >
+              🤖 Bots SaaS
+            </button>
           </div>
           <button 
             onClick={fetchData}
@@ -532,6 +557,8 @@ export function AccountingView() {
       </div>
 
       {viewMode === 'payments' && <ValidatedPaymentsTab />}
+      {viewMode === 'refunds' && <RefundsTab adminPassword={adminPassword} onRefundChanged={fetchData} />}
+      {viewMode === 'saas' && <SaasBotsAdminTab adminPassword={adminPassword} onBalanceChanged={fetchData} />}
 
       {/* Totales Resumen - Cartera Excel (Mensual) */}
       {viewMode === 'excel' && totals && (
