@@ -952,7 +952,10 @@ function AppContent() {
 
       {currentView === 'crear' && (
         <ErrorBoundary fallbackTitle="Creador de Tiendas Retailer OS">
-          <StoreBuilderPage onNavigateHome={() => navigateTo('home')} />
+          <StoreBuilderPage
+            onNavigateHome={() => navigateTo('home')}
+            onNavigateBotStudio={() => navigateTo('mibot')}
+          />
         </ErrorBoundary>
       )}
 
@@ -968,7 +971,10 @@ function AppContent() {
 
       {currentView === 'mibot' && (
         <ErrorBoundary fallbackTitle="Sheerit Bot Studio">
-          <BotStudioPage onNavigateHome={() => navigateTo('home')} />
+          <BotStudioPage
+            onNavigateHome={() => navigateTo('home')}
+            onNavigateCreate={() => navigateTo('crear')}
+          />
         </ErrorBoundary>
       )}
 

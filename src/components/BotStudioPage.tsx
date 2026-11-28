@@ -32,7 +32,9 @@ import {
   Pencil,
   Star,
   X,
-  Database
+  Database,
+  Store,
+  ExternalLink
 } from 'lucide-react';
 import { useWhatsAppContact } from '../hooks/useWhatsAppContact';
 
@@ -40,13 +42,25 @@ interface DataSourceItem {
   id: number;
   tenant_id: number;
   name: string;
-  source_type: 'google_sheets' | 'uploaded_table';
+  source_type: 'google_sheets' | 'uploaded_table' | 'retailer_store';
   sheet_url?: string | null;
   headers: string[];
   previewRows: Record<string, string>[];
   row_count: number;
   last_synced_at?: string | null;
   is_active: boolean;
+}
+
+interface LinkedStoreData {
+  slug: string;
+  storeName: string;
+  businessType?: string;
+  ownerPhone?: string;
+  city?: string;
+  url: string;
+  productsCount: number;
+  status?: string;
+  updatedAt?: string | null;
 }
 
 interface SimAudioItem {
@@ -72,6 +86,7 @@ interface SimChatMessage {
 
 interface BotStudioPageProps {
   onNavigateHome?: () => void;
+  onNavigateCreate?: () => void;
 }
 
 interface TenantData {
@@ -205,7 +220,7 @@ const base64Mp3ToBlobUrl = (b64: string) => {
   return URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
 };
 
-export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
+export function BotStudioPage({ onNavigateHome, onNavigateCreate }: BotStudioPageProps) {
   const [token, setToken] = useState<string>(() => {
     try {
       if (typeof window !== 'undefined') {
@@ -260,9 +275,12 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
   const [bannerMsg, setBannerMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
 
-  // #7 Datos & Sheets (Módulo Pro crm_sheets)
+  // #7 Datos & Sheets (Módulo Pro crm_sheets) + Conexión Retailer OS (/crear)
   const [dataSources, setDataSources] = useState<DataSourceItem[]>([]);
   const [dataModuleEnabled, setDataModuleEnabled] = useState(false);
+  const [linkedStore, setLinkedStore] = useState<LinkedStoreData | null>(null);
+  const [storeSlugInput, setStoreSlugInput] = useState('');
+  const [storeBusy, setStoreBusy] = useState(false);
   const [dataSheetName, setDataSheetName] = useState('');
   const [dataSheetUrl, setDataSheetUrl] = useState('');
   const [dataUploadName, setDataUploadName] = useState('');
@@ -405,6 +423,7 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
       const data = await res.json();
       if (data.success && data.tenant) {
         syncFormFromTenant(data.tenant);
+        setLinkedStore(data.linkedStore || null);
         if (data.session) setSession(data.session);
         if (Array.isArray(data.logs)) {
           setLogs(data.logs);
@@ -419,6 +438,93 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
       fetchDataSources(activeToken);
     } catch (err) {
       console.error('Error cargando Bot Studio:', err);
+    }
+  };
+
+  const handleLinkStore = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!storeSlugInput.trim()) {
+      notify('err', 'Ingresa el identificador (slug) o enlace de tu tienda en /tienda/...');
+      return;
+    }
+    setStoreBusy(true);
+    setBannerMsg(null);
+    try {
+      const res = await fetch(`${apiBase}/api/saas-bot/store/link`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ slug: storeSlugInput.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo vincular la tienda');
+      setLinkedStore(data.linkedStore || null);
+      setStoreSlugInput('');
+      fetchDashboard(token);
+      notify('ok', `Tienda conectada (${data.syncedProductsCount || 0} productos sincronizados en el bot).`);
+    } catch (err: any) {
+      notify('err', err.message);
+    } finally {
+      setStoreBusy(false);
+    }
+  };
+
+  const handleSyncStore = async () => {
+    setStoreBusy(true);
+    setBannerMsg(null);
+    try {
+      const res = await fetch(`${apiBase}/api/saas-bot/store/sync`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo sincronizar la tienda');
+      setLinkedStore(data.linkedStore || null);
+      fetchDashboard(token);
+      notify('ok', `Catálogo sincronizado (${data.syncedProductsCount || 0} productos actualizados).`);
+    } catch (err: any) {
+      notify('err', err.message);
+    } finally {
+      setStoreBusy(false);
+    }
+  };
+
+  const handleUnlinkStore = async () => {
+    setStoreBusy(true);
+    setBannerMsg(null);
+    try {
+      const res = await fetch(`${apiBase}/api/saas-bot/store/unlink`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo desvincular la tienda');
+      setLinkedStore(null);
+      fetchDataSources(token);
+      notify('ok', 'Tienda desvinculada del bot.');
+    } catch (err: any) {
+      notify('err', err.message);
+    } finally {
+      setStoreBusy(false);
+    }
+  };
+
+  const handleGoCreateStore = () => {
+    try {
+      localStorage.setItem(
+        'sheerit_prefill_store_from_bot',
+        JSON.stringify({
+          businessName: cfgBusinessName || tenant?.business_name || '',
+          phone: session?.phone || tenant?.wa_phone || ''
+        })
+      );
+    } catch {}
+    if (onNavigateCreate) {
+      onNavigateCreate();
+    } else {
+      window.location.href = '/crear';
     }
   };
 
@@ -1828,6 +1934,86 @@ export function BotStudioPage({ onNavigateHome }: BotStudioPageProps) {
         {/* Tab 2: AI Auto Generator & Prompt */}
         {activeTab === 'generator' && (
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5">
+            {/* Conexión Bidireccional Tienda Web (/crear <-> /mi-bot) */}
+            <div className="bg-slate-950/90 border border-teal-500/30 rounded-xl p-4 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-bold text-teal-300 flex items-center gap-2">
+                    <Store className="w-4 h-4" /> 🏪 Tienda Web Conectada (Retailer OS)
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Conecta tu tienda creada en <span className="font-mono text-slate-300">/crear</span> para sincronizar precios, productos y enlace de compra en vivo con tu bot.
+                  </p>
+                </div>
+                {linkedStore && (
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-semibold self-start">
+                    {linkedStore.productsCount} productos sincronizados
+                  </span>
+                )}
+              </div>
+
+              {linkedStore ? (
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-900/90 border border-slate-800 rounded-lg p-3">
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="text-xs font-bold text-white truncate">
+                      {linkedStore.storeName} {linkedStore.city ? `· ${linkedStore.city}` : ''}
+                    </div>
+                    <a
+                      href={linkedStore.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-mono text-teal-400 hover:underline truncate"
+                    >
+                      <ExternalLink className="w-3 h-3 shrink-0" />
+                      {linkedStore.url}
+                    </a>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleSyncStore}
+                      disabled={storeBusy}
+                      className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${storeBusy ? 'animate-spin' : ''}`} />
+                      🔄 Sincronizar catálogo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleUnlinkStore}
+                      disabled={storeBusy}
+                      className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-rose-950/60 border border-slate-700 hover:border-rose-500/40 text-slate-300 hover:text-rose-300 text-xs font-semibold disabled:opacity-50"
+                    >
+                      Desvincular
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleLinkStore} className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                  <input
+                    value={storeSlugInput}
+                    onChange={e => setStoreSlugInput(e.target.value)}
+                    placeholder="Ej: cafe-de-la-sierra o https://sheerit.co/tienda/..."
+                    className="flex-1 px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white outline-none focus:border-teal-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={storeBusy}
+                    className="px-3.5 py-2 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold whitespace-nowrap disabled:opacity-50"
+                  >
+                    {storeBusy ? 'Vinculando...' : 'Vincular tienda'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleGoCreateStore}
+                    className="px-3.5 py-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/35 border border-indigo-500/40 text-indigo-300 text-xs font-semibold whitespace-nowrap"
+                  >
+                    ✨ Crear tienda web en /crear
+                  </button>
+                </form>
+              )}
+            </div>
+
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-bold flex items-center gap-2">

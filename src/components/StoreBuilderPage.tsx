@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Store,
   Coffee,
@@ -25,11 +25,13 @@ import {
   ChevronRight,
   HelpCircle,
   Clock,
-  Zap
+  Zap,
+  Bot
 } from 'lucide-react';
 
 interface StoreBuilderPageProps {
   onNavigateHome?: () => void;
+  onNavigateBotStudio?: () => void;
 }
 
 interface RecipeIngredient {
@@ -40,12 +42,21 @@ interface RecipeIngredient {
   unitCost: number;
 }
 
-export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
+export function StoreBuilderPage({ onNavigateHome, onNavigateBotStudio }: StoreBuilderPageProps) {
   const [step, setStep] = useState<number>(1);
   const [loadingPayment, setLoadingPayment] = useState<boolean>(false);
   const [demoActivated, setDemoActivated] = useState<boolean>(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [copiedJson, setCopiedJson] = useState<boolean>(false);
+
+  // Conexión directa con Bot Studio (/mi-bot)
+  const [showBotConnectBox, setShowBotConnectBox] = useState<boolean>(false);
+  const [botOwnerName, setBotOwnerName] = useState<string>('');
+  const [botEmail, setBotEmail] = useState<string>('');
+  const [botPassword, setBotPassword] = useState<string>('');
+  const [botInviteCode, setBotInviteCode] = useState<string>('');
+  const [botLinking, setBotLinking] = useState<boolean>(false);
+  const [botLinkError, setBotLinkError] = useState<string | null>(null);
 
   // Paso 1: Identidad
   const [storeName, setStoreName] = useState<string>('Café de la Sierra');
@@ -112,6 +123,152 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
       .replace(/^-+|-+$/g, '');
     setSlug(generatedSlug || 'mi-tienda');
   };
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('sheerit_prefill_store_from_bot');
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      localStorage.removeItem('sheerit_prefill_store_from_bot');
+      if (parsed?.businessName) {
+        handleNameChange(String(parsed.businessName));
+      }
+      if (parsed?.phone) {
+        const cleanDigits = String(parsed.phone).replace(/\D/g, '');
+        if (cleanDigits.length >= 10) {
+          setOwnerPhone(cleanDigits.startsWith('57') && cleanDigits.length > 10 ? cleanDigits.slice(2) : cleanDigits);
+        }
+      }
+    } catch {}
+  }, []);
+
+  const handleBootstrapBotFromStore = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBotLinkError(null);
+    const cleanEmail = botEmail.trim().toLowerCase();
+    const cleanPass = botPassword.trim();
+    if (!cleanEmail || cleanPass.length < 6) {
+      setBotLinkError('Ingresa un correo válido y una contraseña de al menos 6 caracteres.');
+      return;
+    }
+
+    const apiUrl = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+      ? 'http://localhost:3000'
+      : window.location.origin;
+
+    const productsToSave = catalogProducts.length > 0
+      ? catalogProducts
+      : [{ id: 'p1', name: sampleProductName, price: sampleSalePrice, category: 'Destacado', description: '' }];
+
+    setBotLinking(true);
+    try {
+      if (!demoActivated) {
+        const checkRes = await fetch(`${apiUrl}/api/public/stores/${encodeURIComponent(slug)}`);
+        if (checkRes.status === 404) {
+          await fetch(`${apiUrl}/api/public/stores`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              slug,
+              storeName,
+              businessType,
+              ownerPhone,
+              city,
+              logoUrl,
+              accentColor,
+              modules,
+              products: productsToSave,
+              status: isScratchupDemo ? 'active' : 'pending_payment'
+            })
+          });
+        }
+      }
+
+      const res = await fetch(`${apiUrl}/api/saas-bot/bootstrap-from-store`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug,
+          email: cleanEmail,
+          password: cleanPass,
+          ownerName: botOwnerName.trim() || storeName,
+          activationCode: botInviteCode.trim()
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.token) {
+        throw new Error(data.message || 'No se pudo vincular la tienda con Bot Studio.');
+      }
+
+      localStorage.setItem('sheerit_saas_bot_token', data.token);
+      if (onNavigateBotStudio) {
+        onNavigateBotStudio();
+      } else {
+        window.location.href = '/mi-bot';
+      }
+    } catch (err: any) {
+      setBotLinkError(err.message || 'Error conectando con Bot Studio.');
+    } finally {
+      setBotLinking(false);
+    }
+  };
+
+  const renderBotConnectForm = (title: string, subtitle: string) => (
+    <form
+      onSubmit={handleBootstrapBotFromStore}
+      className="mt-3 p-4 rounded-xl bg-slate-900 border border-teal-500/40 text-white space-y-2.5"
+    >
+      <div className="flex items-center gap-2 text-xs font-extrabold text-teal-300">
+        <Bot className="w-4 h-4" />
+        <span>{title}</span>
+      </div>
+      <p className="text-[11px] text-slate-300 leading-relaxed">{subtitle}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <input
+          type="email"
+          required
+          value={botEmail}
+          onChange={(e) => setBotEmail(e.target.value)}
+          placeholder="Correo de Bot Studio *"
+          className="px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white outline-none focus:border-teal-400"
+        />
+        <input
+          type="password"
+          required
+          minLength={6}
+          value={botPassword}
+          onChange={(e) => setBotPassword(e.target.value)}
+          placeholder="Contraseña (mín. 6 caracteres) *"
+          className="px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white outline-none focus:border-teal-400"
+        />
+        <input
+          type="text"
+          value={botOwnerName}
+          onChange={(e) => setBotOwnerName(e.target.value)}
+          placeholder="Tu nombre (opcional)"
+          className="px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white outline-none focus:border-teal-400"
+        />
+        <input
+          type="text"
+          value={botInviteCode}
+          onChange={(e) => setBotInviteCode(e.target.value)}
+          placeholder="Código de activación (opcional)"
+          className="px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white outline-none focus:border-teal-400"
+        />
+      </div>
+      {botLinkError && (
+        <div className="text-[11px] text-rose-300 font-semibold">⚠️ {botLinkError}</div>
+      )}
+      <button
+        type="submit"
+        disabled={botLinking}
+        className="w-full sm:w-auto px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-extrabold flex items-center justify-center gap-2 disabled:opacity-50"
+      >
+        <Bot className="w-4 h-4" />
+        {botLinking ? 'Conectando tienda con Bot Studio...' : 'Crear / Vincular Bot y abrir /mi-bot'}
+      </button>
+    </form>
+  );
 
   const handleAddIngredient = () => {
     const newIng: RecipeIngredient = {
@@ -960,6 +1117,12 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
                       </button>
                     )}
                   </div>
+
+                  {/* Conectar tienda recién activada con Bot Studio (/mi-bot) */}
+                  {renderBotConnectForm(
+                    '🤖 Conectar esta tienda con tu Bot IA (/mi-bot)',
+                    'Crea tu acceso de Bot Studio (o inicia sesión con uno existente) para que tu bot de WhatsApp responda usando este mismo catálogo en vivo.'
+                  )}
                 </div>
               ) : (
                 <>
@@ -998,6 +1161,25 @@ export function StoreBuilderPage({ onNavigateHome }: StoreBuilderPageProps) {
                       ? '🔓 Bypass de demostración habilitado para scratchup. Al hacer clic se activará al instante.'
                       : <>🔒 Pago 100% seguro a través de <strong>Bold</strong> (Nequi, Daviplata, Bancolombia, PSE y Tarjetas). Tu tienda se habilita inmediatamente al confirmar el pago.</>}
                   </p>
+
+                  {modules.whatsappBot && (
+                    <div className="max-w-xl mx-auto pt-2 text-left">
+                      <button
+                        type="button"
+                        onClick={() => setShowBotConnectBox(prev => !prev)}
+                        className="mx-auto flex items-center gap-1.5 text-xs font-bold text-teal-600 dark:text-teal-400 hover:underline"
+                      >
+                        <Bot className="w-4 h-4" />
+                        <span>{showBotConnectBox ? 'Ocultar conexión directa a Bot Studio' : 'Ya tengo tienda activa o código / Conectar Bot ahora'}</span>
+                      </button>
+
+                      {showBotConnectBox &&
+                        renderBotConnectForm(
+                          `🤖 Conectar "${storeName}" con Bot Studio (/mi-bot)`,
+                          'Si ya tienes cuenta en Bot Studio, tu tienda ya está activa o cuentas con un código de activación, vincúlala ahora mismo en 1 clic.'
+                        )}
+                    </div>
+                  )}
                 </>
               )}
             </div>
